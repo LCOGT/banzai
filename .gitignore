@@ -47,3 +47,5 @@ distribute-*.tar.gz
 .DS_Store
 
 *.xml
+
+*.iml
