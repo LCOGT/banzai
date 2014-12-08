@@ -27,10 +27,10 @@ def ingest(list_image,table,_force):
                     'ra0': readkey(hdr, 'RA'), 'dec0': readkey(hdr, 'DEC'),'obstype': readkey(hdr, 'OBSTYPE'),
                     'reqnum': readkey(hdr, 'REQNUM'),'groupid': readkey(hdr, 'GROUPID'),
                     'propid': readkey(hdr, 'PROPID'), 'userid': readkey(hdr, 'USERID'),
-                    'dateobs': readkey(hdr, 'DATE-OBS')}
+                    'dateobs': readkey(hdr, 'DATE-OBS'), 'ccdsum': readkey(hdr, 'CCDSUM')}
                 dictionary['filename'] = string.split(img, '/')[-1]
-                dictionary['filepath'] = pylcogt.utils.pymysql.workingdirectory + '1mtel/' + \
-                                     readkey(hdr, 'DAY-OBS') + '/'
+                dictionary['filepath'] = pylcogt.utils.pymysql.rawdata + string.split(img, '/')[-1][0:3] + '/' +\
+                                         readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/raw/'
             elif _instrument in pylcogt.utils.pymysql.instrument0['spectral']:
                 print '2m telescope'
                 dictionary = {'dayobs': readkey(hdr, 'DAY-OBS'), 'exptime': readkey(hdr, 'exptime'),
@@ -41,10 +41,12 @@ def ingest(list_image,table,_force):
                     'ra0': readkey(hdr, 'RA'), 'dec0': readkey(hdr, 'DEC'),'obstype': readkey(hdr, 'OBSTYPE'),
                     'reqnum': readkey(hdr, 'REQNUM'),'groupid': readkey(hdr, 'GROUPID'),
                     'propid': readkey(hdr, 'PROPID'), 'userid': readkey(hdr, 'USERID'),
-                    'dateobs': readkey(hdr, 'DATE-OBS')}
+                    'dateobs': readkey(hdr, 'DATE-OBS'),'ccdsum': readkey(hdr, 'CCDSUM')}
                 dictionary['namefile'] = string.split(img, '/')[-1]
-                dictionary['filepath'] = pylcogt.utils.pymysql.workingdirectory + '1mtel/' + \
-                                    readkey(hdr, 'DAY-OBS') + '/'
+                dictionary['filepath'] = pylcogt.utils.pymysql.rawdata + string.split(img, '/')[-1][0:3] +\
+                    readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/raw/'
+#                dictionary['filepath'] = pylcogt.utils.pymysql.rawdata + '1mtel/' + \
+#                                    readkey(hdr, 'DAY-OBS') + '/'
             else:
                 dictionary = ''
         else:
@@ -60,7 +62,8 @@ def ingest(list_image,table,_force):
                 print 'update values'
                 for voce in dictionary:
                     print voce
-                    for voce in ['filepath','ra0','dec0','mjd','exptime','filter']:
+                    #for voce in ['filepath','ra0','dec0','mjd','exptime','filter','ccdsum']:
+                    for voce in ['ccdsum','filepath']:
                             pylcogt.utils.pymysql.updatevalue(conn,table,voce,dictionary[voce],
                                                               string.split(img,'/')[-1],'filename')
         else:
@@ -68,7 +71,7 @@ def ingest(list_image,table,_force):
 
 #################################################################################################################
 
-def run_ingest(telescope,listepoch):
+def run_ingest(telescope,listepoch,_force):
     import glob
     import pylcogt
     import string
@@ -100,7 +103,7 @@ def run_ingest(telescope,listepoch):
                 print imglist
                 if len(imglist):
                     print 'ingest'
-                    ingest(imglist,'lcogtraw','no')
+                    ingest(imglist,'lcogtraw',_force)
 
 ######################################################################################################################
 
@@ -114,6 +117,8 @@ def run_makebias(imagenames, outfilename, minimages=5):
         d = biascombiner.median_combine()
         ccdproc.CCDData.write(d, outfilename)
 
+#####################################################################################################################
+
 
 def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=False):
     ims = []
@@ -124,3 +129,4 @@ def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=False):
         d = ccdproc.subtract_bias(im, masterbias)
         ccdproc.CCDData.write(d, outfilenames[i], clobber=clobber)
 
+#####################################################################################################################

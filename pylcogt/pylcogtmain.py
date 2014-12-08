@@ -52,7 +52,7 @@ if __name__ == "__main__":
     print _stage
     print listepoch
     if _stage == 'ingest':
-        pylcogt.utils.lcogtsteps.run_ingest(_telescope,listepoch)
+        pylcogt.utils.lcogtsteps.run_ingest(_telescope,listepoch,'update')
     else:
         conn = pylcogt.utils.pymysql.getconnection()
         if len(listepoch) == 1:
@@ -76,6 +76,22 @@ if __name__ == "__main__":
 
         if _stage == 'makebias':
             print 'select bias and make bias'
+            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['BIAS'])])
+            listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
+            listbin=ll0['ccdsum'][ww]
+            listinst=ll0['instrument'][ww]
+            listday=ll0['dayobs'][ww]
+            for k in set(listinst):
+                for i in set(listbin):
+                    for j in set(listday):
+                        print k,j,i
+                        listbias=np.array(listfile)[(listbin==i) & (listday==j)]
+                        _output='bias_'+str(k)+'_'+re.sub('-','',str(j))+'_bin'+re.sub(' ','x',i)+'.fits'
+                        pylcogt.utils.lcogtsteps.run_makebias(listbias, _output, minimages=5)
+                        print _output
+                        print 'cp '+_output+' '+pylcogt.utils.pymysql.workingdirectory+listbias[0][0:3]+'/'+k+'/'
+                        os.system('cp '+_output+' '+pylcogt.utils.pymysql.workingdirectory+listbias[0][0:3]+'/'+k+'/')
+#                listfile[i]
         elif _stage == 'makeflat':
             print 'select flat and make flat'
         elif _stage == 'applybias':
