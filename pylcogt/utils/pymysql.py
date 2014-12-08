@@ -284,7 +284,7 @@ def readkey(hdr, keyword):
                        'type': 'OBSTYPE',
                        'telescop': 'TELID'}
     else:
-        useful_keys = {'object': 'OBJECT', \
+        useful_keys = {'object': 'OBJECT',
                        'date-obs': 'DATE-OBS'}
 
     if keyword in useful_keys:
