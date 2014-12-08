@@ -1,20 +1,21 @@
 import pylcogt
-from astropy import units as u
-import ccdproc
+import numpy as np
+import numpy.ma as ma
+import pyfits
 
-def ingest(list_image,table,_force):
+def ingest(list_image, table, _force):
     import pyfits
     from pylcogt.utils.pymysql import readkey
     from pylcogt.utils.pymysql import getconnection
     import string
 
-    conn=getconnection()
+    conn = getconnection()
     for img in list_image:
-        img0 = string.split(img,'/')[-1]
-        command=['select filename from '+str(table)+' where filename="'+str(img0)+'"']
-        exist = pylcogt.query(command,conn)
+        img0 = string.split(img, '/')[-1]
+        command = ['select filename from ' + str(table) + ' where filename="' + str(img0) + '"']
+        exist = pylcogt.query(command, conn)
 
-        if not exist or _force in ['update','yes']:
+        if not exist or _force in ['update', 'yes']:
             hdr = pyfits.getheader(img)
             _instrument = readkey(hdr, 'instrume')
             if _instrument in pylcogt.utils.pymysql.instrument0['sbig'] + pylcogt.utils.pymysql.instrument0['sinistro']:
@@ -24,8 +25,8 @@ def ingest(list_image,table,_force):
                     'telescope': readkey(hdr, 'telescop'), 'airmass': readkey(hdr, 'airmass'),
                     'object': readkey(hdr, 'object'), 'ut': readkey(hdr, 'ut'),
                     'tracknum': readkey(hdr, 'TRACKNUM'), 'instrument': readkey(hdr, 'instrume'),
-                    'ra0': readkey(hdr, 'RA'), 'dec0': readkey(hdr, 'DEC'),'obstype': readkey(hdr, 'OBSTYPE'),
-                    'reqnum': readkey(hdr, 'REQNUM'),'groupid': readkey(hdr, 'GROUPID'),
+                    'ra0': readkey(hdr, 'RA'), 'dec0': readkey(hdr, 'DEC'), 'obstype': readkey(hdr, 'OBSTYPE'),
+                    'reqnum': readkey(hdr, 'REQNUM'), 'groupid': readkey(hdr, 'GROUPID'),
                     'propid': readkey(hdr, 'PROPID'), 'userid': readkey(hdr, 'USERID'),
                     'dateobs': readkey(hdr, 'DATE-OBS')}
                 dictionary['filename'] = string.split(img, '/')[-1]
@@ -38,8 +39,8 @@ def ingest(list_image,table,_force):
                     'telescope': readkey(hdr, 'telescop'), 'airmass': readkey(hdr, 'airmass'),
                     'object': readkey(hdr, 'object'), 'ut': readkey(hdr, 'ut'),
                     'tracknum': readkey(hdr, 'TRACKNUM'), 'instrument': readkey(hdr, 'instrume'),
-                    'ra0': readkey(hdr, 'RA'), 'dec0': readkey(hdr, 'DEC'),'obstype': readkey(hdr, 'OBSTYPE'),
-                    'reqnum': readkey(hdr, 'REQNUM'),'groupid': readkey(hdr, 'GROUPID'),
+                    'ra0': readkey(hdr, 'RA'), 'dec0': readkey(hdr, 'DEC'), 'obstype': readkey(hdr, 'OBSTYPE'),
+                    'reqnum': readkey(hdr, 'REQNUM'), 'groupid': readkey(hdr, 'GROUPID'),
                     'propid': readkey(hdr, 'PROPID'), 'userid': readkey(hdr, 'USERID'),
                     'dateobs': readkey(hdr, 'DATE-OBS')}
                 dictionary['namefile'] = string.split(img, '/')[-1]
@@ -54,65 +55,77 @@ def ingest(list_image,table,_force):
         if dictionary:
             if not exist:
                 print 'insert values'
-                pylcogt.utils.pymysql.insert_values(conn,table,dictionary)
+                pylcogt.utils.pymysql.insert_values(conn, table, dictionary)
             else:
                 print table
                 print 'update values'
                 for voce in dictionary:
                     print voce
-                    for voce in ['filepath','ra0','dec0','mjd','exptime','filter']:
-                            pylcogt.utils.pymysql.updatevalue(conn,table,voce,dictionary[voce],
-                                                              string.split(img,'/')[-1],'filename')
+                    for voce in ['filepath', 'ra0', 'dec0', 'mjd', 'exptime', 'filter']:
+                            pylcogt.utils.pymysql.updatevalue(conn, table, voce, dictionary[voce],
+                                                              string.split(img, '/')[-1], 'filename')
         else:
             print 'dictionary empty'
 
 #################################################################################################################
 
-def run_ingest(telescope,listepoch):
+def run_ingest(telescope, listepoch):
     import glob
     import pylcogt
     import string
 
     pylcogt.utils.pymysql.site0
-    if telescope=='all':
-        tellist=pylcogt.utils.pymysql.site0
-    elif telescope in pylcogt.utils.pymysql.telescope0['elp']+['elp']:
-        tellist=['elp']
-    elif telescope in pylcogt.utils.pymysql.telescope0['lsc']+['lsc']:
-        tellist=['lsc']
-    elif telescope in pylcogt.utils.pymysql.telescope0['cpt']+['cpt']:
-        tellist=['cpt']
-    elif telescope in pylcogt.utils.pymysql.telescope0['coj']+['coj','fts']:
-        tellist=['coj']
-    elif telescope in pylcogt.utils.pymysql.telescope0['ogg']+['ftn']:
-        tellist=['ogg']
+    if telescope == 'all':
+        tellist = pylcogt.utils.pymysql.site0
+    elif telescope in pylcogt.utils.pymysql.telescope0['elp'] + ['elp']:
+        tellist = ['elp']
+    elif telescope in pylcogt.utils.pymysql.telescope0['lsc'] + ['lsc']:
+        tellist = ['lsc']
+    elif telescope in pylcogt.utils.pymysql.telescope0['cpt'] + ['cpt']:
+        tellist = ['cpt']
+    elif telescope in pylcogt.utils.pymysql.telescope0['coj'] + ['coj', 'fts']:
+        tellist = ['coj']
+    elif telescope in pylcogt.utils.pymysql.telescope0['ogg'] + ['ftn']:
+        tellist = ['ogg']
 
 
-    if telescope in ['ftn','fts','2m0-01','2m0-02']:
+    if telescope in ['ftn', 'fts', '2m0-01', '2m0-02']:
         instrumentlist = pylcogt.utils.pymysql.instrument0['spectral']
     else:
-        instrumentlist = pylcogt.utils.pymysql.instrument0['sinistro']+pylcogt.utils.pymysql.instrument0['sbig']
+        instrumentlist = pylcogt.utils.pymysql.instrument0['sinistro'] + pylcogt.utils.pymysql.instrument0['sbig']
 
     for epoch in listepoch:
         for tel in tellist:
             for instrument in instrumentlist:
-                imglist = glob.glob(pylcogt.utils.pymysql.rawdata+tel+'/'+instrument+'/'+epoch+'/raw/*')
+                imglist = glob.glob(pylcogt.utils.pymysql.rawdata + tel + '/' + instrument + '/' + epoch + '/raw/*')
                 print imglist
                 if len(imglist):
                     print 'ingest'
-                    ingest(imglist,'lcogtraw','no')
+                    ingest(imglist, 'lcogtraw', 'no')
 
 ######################################################################################################################
+
+def tofits(filename, data, hdr=None, clobber=False):
+    """simple pyfits wrapper to make saving fits files easier."""
+    from pyfits import PrimaryHDU, HDUList
+    hdu = PrimaryHDU(data)
+    if not hdr is None:
+        hdu.header = hdr
+    hdulist = HDUList([hdu])
+    hdulist.writeto(filename, clobber=clobber, output_verify='ignore')
 
 
 def run_makebias(imagenames, outfilename, minimages=5):
     biasims = []
-    for f in imagenames:
-        biasims.append(ccdproc.CCDData.read(f, unit=u.adu))
+    # Assume the files are all the same number of pixels, should add error checking
+    nx = pyfits.getval(imagenames[0], ('NAXIS1'))
+    ny = pyfits.getval(imagenames[0], ('NAXIS2'))
+    biasdata = np.zeros((len(imagenames), ny, nx))
+    for i, f in enumerate(imagenames):
+        biasdata[i, :, :] = pyfits.getdata(f)[:, :]
     if len(biasims) >= minimages:
-        biascombiner = ccdproc.Combiner(biasims)
-        d = biascombiner.median_combine()
-        ccdproc.CCDData.write(d, outfilename)
+        medbias = np.median(biasdata, axis=0)
+        tofits(outfilename, medbias, clobber=True)
 
 
 def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=False):
@@ -123,4 +136,15 @@ def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=False):
     for i, im in enumerate(ims):
         d = ccdproc.subtract_bias(im, masterbias)
         ccdproc.CCDData.write(d, outfilenames[i], clobber=clobber)
+
+
+def run_makeflat(imagenames, outfilename, minimages=5):
+    # Flats should already be bias subtracted
+    flatims = []
+    for f in imagenames:
+        flatims.append(ccdproc.CCDData.read(f, unit=u.adu))
+    if len(flatims) >= minimages:
+        flatcombiner = ccdproc.Combiner(flatims)
+        d = flatcombiner.median_combine()
+        ccdproc.CCDData.write(d, outfilename)
 
