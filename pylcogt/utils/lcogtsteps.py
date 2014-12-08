@@ -113,3 +113,14 @@ def run_makebias(imagenames, outfilename, minimages=5):
         biascombiner = ccdproc.Combiner(biasims)
         d = biascombiner.median_combine()
         ccdproc.CCDData.write(d, outfilename)
+
+
+def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=False):
+    ims = []
+    for f in imagenames:
+        ims.append(ccdproc.CCDData.read(f, unit=u.adu))
+    masterbias = ccdproc.CCDData.read(masterbiasname, unit=u.adu)
+    for i, im in enumerate(ims):
+        d = ccdproc.subtract_bias(im, masterbias)
+        ccdproc.CCDData.write(d, outfilenames[i], clobber=clobber)
+
