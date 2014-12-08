@@ -1,4 +1,6 @@
 import pylcogt
+from astropy import units as u
+import ccdproc
 
 def ingest(list_image,table,_force):
     import pyfits
@@ -102,3 +104,12 @@ def run_ingest(telescope,listepoch):
 
 ######################################################################################################################
 
+
+def run_makebias(imagenames, outfilename, minimages=5):
+    biasims = []
+    for f in imagenames:
+        biasims.append(ccdproc.CCDData.read(f, unit=u.adu))
+    if len(biasims) >= minimages:
+        biascombiner = ccdproc.Combiner(biasims)
+        d = biascombiner.median_combine()
+        ccdproc.CCDData.write(d, outfilename)
