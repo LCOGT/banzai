@@ -99,9 +99,10 @@ if __name__ == "__main__":
                         directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
                         if not os.path.isdir(directory): 
                             os.mkdir(directory)
-                        print 'cp '+_output+' '+directory
-                        os.system('cp '+_output+' '+directory)
+                        print 'mv '+_output+' '+directory
                         pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
+                        os.system('mv '+_output+' '+directory)
+
 
         elif _stage == 'makeflat':
             print 'select flat and make flat'
@@ -122,9 +123,10 @@ if __name__ == "__main__":
                             print _output
                             siteid=pyfits.getheader(_output)['SITEID']
                             directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
-                            print 'cp '+_output+' '+directory
-                            os.system('cp '+_output+' '+directory)
+                            print 'mv '+_output+' '+directory
                             pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
+                            os.system('mv '+_output+' '+directory)
+
 
         elif _stage == 'applybias':
             print 'apply bias to science frame'
@@ -140,21 +142,24 @@ if __name__ == "__main__":
                     for j in set(listday):
                         print j,k,i
                         listimg = np.array(listfile)[(listbin == i) & (listday == j)]
-                        outfilenames = [re.sub('e00.fits','e90.fits',i) for i in listimg]
+                        outfilenames = [re.sub('e00.fits','e90.fits',string.split(ii,'/')[-1]) for ii in listimg]
                         listmjd0=np.array(listmjd)[(listbin == i) & (listday == j)]
-                        command=['select filename, mjd-'+str(listmjd0[0])+' as diff from lcogtredu where ccdsum="'+i+'" and instrument = "'+\
-                                 k+'" and obstype="BIAS" order by diff']
-                        biasgood=pylcogt.utils.pymysql.query(command, conn)
-                        if len(biasgood)>=1:
-                            masterbiasname=biasgood[0]['filename']
-                            pylcogt.utils.lcogtsteps.run_subtractbias(listimg, outfilenames, masterbiasname, False)
-                            for img in outfilenames:
-                                print img
-                                siteid=pyfits.getheader(img)['SITEID']
-                                directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
-                                print 'cp '+_output+' '+directory
-                                os.system('cp '+_output+' '+directory)
-                                pylcogt.utils.lcogtsteps.ingest([img], 'lcogtredu', 'yes')
+                        if len(listimg):
+                            command=['select filepath,filename, mjd-'+str(listmjd0[0])+
+                                     ' as diff from lcogtredu where ccdsum="'+str(i)+'" and instrument = "'+\
+                                     str(k) +'" and obstype = "BIAS" order by diff']
+                            biasgood=pylcogt.utils.pymysql.query(command, conn)
+                            if len(biasgood)>=1:
+                                masterbiasname=biasgood[0]['filepath']+biasgood[0]['filename']
+                                pylcogt.utils.lcogtsteps.run_subtractbias(listimg, outfilenames, masterbiasname, True)
+                                for img in outfilenames:
+                                    print img
+                                    siteid=pyfits.getheader(img)['SITEID']
+                                    directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
+                                    print 'mv '+img+' '+directory
+                                    pylcogt.utils.lcogtsteps.ingest([img], 'lcogtredu', 'no')
+                                    os.system('mv '+img+' '+directory)
+
 
         elif _stage == 'applyflat':
             print 'apply flat to science frame'
@@ -172,14 +177,17 @@ if __name__ == "__main__":
                             print j,k,i,filt
                             listimg=np.array(listfile)[(listbin == i) & (listday == j) & (listfilt == filt)]
                             listmjd0=np.array(listmjd)[(listbin == i) & (listday == j) & (listfilt == filt)]
-                            command=['select filename, mjd-'+str(listmjd0[0])+' as diff from lcogtredu where ccdsum="'+i+'" and instrument = "'+\
-                                         k+'" and filter = '+str(filt)+'and obstype="SKYFLAT" order by diff']
-                            flatgood=pylcogt.utils.pymysql.query(command, conn)
-                            if len(flatgood) >= 1:
-                                masterflatname = flatgood[0]['filename']
-                                print masterflatname
-                                print listimg
-                                print 'apply flat to science frame'
+                            if len(listimg)>0:
+                                command=['select filepath,filename, mjd-'+str(listmjd0[0])+' as diff from lcogtredu where ccdsum="'+\
+                                         str(i)+'" and instrument = "'+\
+                                         str(k)+'" and filter = "'+str(filt)+'" and obstype="SKYFLAT" order by diff']
+                                flatgood=pylcogt.utils.pymysql.query(command, conn)
+                                if len(flatgood) >= 1:
+                                    masterflatname = flatgood[0]['filepath']+flatgood[0]['filename']
+                                    print masterflatname
+                                    print listimg
+                                    print 'apply flat to science frame'
+                                    pylcogt.utils.lcogtsteps.run_flatten(listimg, listimg, masterflatname, True)
 
         elif _stage == 'cosmic':
             print 'select science images and correct for cosmic'

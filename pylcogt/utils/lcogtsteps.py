@@ -155,7 +155,7 @@ def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=True):
     for i, im in enumerate(imagenames):
         hdu = pyfits.open(im)
         imdata = hdu[0].data.copy()
-        imhdr = hdu[0].hdr.copy()
+        imhdr = hdu[0].header.copy()
         hdu.close()
         imdata -= biasdata
         tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
@@ -188,7 +188,7 @@ def run_flatten(imagenames, outfilenames, masterflatname, clobber=True):
     for i, im in enumerate(imagenames):
         hdu = pyfits.open(im)
         imdata = hdu[0].data.copy()
-        imhdr = hdu[0].hdr.copy()
+        imhdr = hdu[0].header.copy()
         hdu.close()
         imdata /= flatdata
         tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
