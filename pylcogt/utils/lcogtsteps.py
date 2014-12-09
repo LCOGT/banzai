@@ -121,20 +121,30 @@ def tofits(filename, data, hdr=None, clobber=False):
     hdulist.writeto(filename, clobber=clobber, output_verify='ignore')
 
 
-def run_makebias(imagenames, outfilename, minimages=5):
-    biasims = []
+def run_makebias(imagenames, outfilename, minimages=5, clobber=True):
     # Assume the files are all the same number of pixels, should add error checking
     nx = pyfits.getval(imagenames[0], ('NAXIS1'))
     ny = pyfits.getval(imagenames[0], ('NAXIS2'))
     biasdata = np.zeros((len(imagenames), ny, nx))
     for i, f in enumerate(imagenames):
         biasdata[i, :, :] = pyfits.getdata(f)[:, :]
-    if len(biasims) >= minimages:
+    if len(imagenames) >= minimages:
         medbias = np.median(biasdata, axis=0)
-        tofits(outfilename, medbias, clobber=True)
+        tofits(outfilename, medbias, hdr=pyfits.getheader(imagenames[0]), clobber=clobber)
 
 #####################################################################################################################
 
+
+def mode(imagearr, precision = 0.01):
+    #make a histogram of the pixel values with 30 bins (which is arbitrary)
+    hist = np.histogram(imagearr, 200)
+    #Find the maximum
+    #Enter a while loop
+    #while the bin width/2 > desired precision
+    #calculate a new histogram covering the maximum bin +-1 bin
+    #Find the new maximum
+    #end while
+    #return the mode (the peak of the pixel distribution)
 
 def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=False):
     ims = []
