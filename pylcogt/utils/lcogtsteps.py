@@ -21,6 +21,11 @@ def ingest(list_image, table, _force):
         if not exist or _force in ['update', 'yes']:
             hdr = pyfits.getheader(img)
             _instrument = readkey(hdr, 'instrume')
+            if table in ['lcogtraw']:
+                dire = pylcogt.utils.pymysql.rawdata + readkey(hdr,'SITEID') + '/' + readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/raw/'
+            elif table in ['lcogtredu']:
+                dire = pylcogt.utils.pymysql.workingdirectory + readkey(hdr,'SITEID') + '/' + readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/'
+
             if _instrument in pylcogt.utils.pymysql.instrument0['sbig'] + pylcogt.utils.pymysql.instrument0['sinistro']:
                 print '1m telescope'
                 dictionary = {'dayobs': readkey(hdr, 'DAY-OBS'), 'exptime': readkey(hdr, 'exptime'),
@@ -33,8 +38,8 @@ def ingest(list_image, table, _force):
                     'propid': readkey(hdr, 'PROPID'), 'userid': readkey(hdr, 'USERID'),
                     'dateobs': readkey(hdr, 'DATE-OBS'), 'ccdsum': readkey(hdr, 'CCDSUM')}
                 dictionary['filename'] = string.split(img, '/')[-1]
-                dictionary['filepath'] = pylcogt.utils.pymysql.rawdata + string.split(img, '/')[-1][0:3] + '/' +\
-                                         readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/raw/'
+                dictionary['filepath'] = dire
+
             elif _instrument in pylcogt.utils.pymysql.instrument0['spectral']:
                 print '2m telescope'
                 dictionary = {'dayobs': readkey(hdr, 'DAY-OBS'), 'exptime': readkey(hdr, 'exptime'),
@@ -47,10 +52,7 @@ def ingest(list_image, table, _force):
                     'propid': readkey(hdr, 'PROPID'), 'userid': readkey(hdr, 'USERID'),
                     'dateobs': readkey(hdr, 'DATE-OBS'),'ccdsum': readkey(hdr, 'CCDSUM')}
                 dictionary['namefile'] = string.split(img, '/')[-1]
-                dictionary['filepath'] = pylcogt.utils.pymysql.rawdata + string.split(img, '/')[-1][0:3] +\
-                    readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/raw/'
-#                dictionary['filepath'] = pylcogt.utils.pymysql.rawdata + '1mtel/' + \
-#                                    readkey(hdr, 'DAY-OBS') + '/'
+                dictionary['filepath'] = dire
             else:
                 dictionary = ''
         else:
@@ -66,7 +68,6 @@ def ingest(list_image, table, _force):
                 print 'update values'
                 for voce in dictionary:
                     print voce
-
                     #for voce in ['filepath','ra0','dec0','mjd','exptime','filter','ccdsum']:
                     for voce in ['ccdsum','filepath']:
                             pylcogt.utils.pymysql.updatevalue(conn,table,voce,dictionary[voce],
@@ -77,8 +78,7 @@ def ingest(list_image, table, _force):
 #################################################################################################################
 
 
-def run_ingest(telescope,listepoch,_force):
-
+def run_ingest(telescope,listepoch,_force,table='lcogtraw'):
 
     pylcogt.utils.pymysql.site0
     if telescope == 'all':
@@ -107,7 +107,7 @@ def run_ingest(telescope,listepoch,_force):
                 print imglist
                 if len(imglist):
                     print 'ingest'
-                    ingest(imglist,'lcogtraw',_force)
+                    ingest(imglist,table,_force)
 
 ######################################################################################################################
 
