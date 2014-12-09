@@ -53,7 +53,6 @@ def ingest(list_image, table, _force):
                     'dateobs': readkey(hdr, 'DATE-OBS'), 'ccdsum': readkey(hdr, 'CCDSUM')}
                 dictionary['namefile'] = string.split(img, '/')[-1]
                 dictionary['filepath'] = dire
-
             else:
                 dictionary = ''
         else:
@@ -77,8 +76,6 @@ def ingest(list_image, table, _force):
             print 'dictionary empty'
 
 #################################################################################################################
-
-
 
 def run_ingest(telescope,listepoch,_force,table='lcogtraw'):
     pylcogt.utils.pymysql.site0
@@ -145,7 +142,6 @@ def flatfieldmode(imagearr):
     m = np.argmax(hist[0])
     return hist[1][m] + 0.25
 
-
 def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=True):
     # Assume the files are all the same number of pixels, should add error checking
     biashdu = pyfits.open(masterbiasname)
@@ -155,10 +151,11 @@ def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=True):
     for i, im in enumerate(imagenames):
         hdu = pyfits.open(im)
         imdata = hdu[0].data.copy()
-        imhdr = hdu[0].header.copy()
+        imhdr = hdu[0].header.copy()
         hdu.close()
         imdata -= biasdata
         tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
+
 
 
 def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
