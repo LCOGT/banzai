@@ -154,6 +154,7 @@ if __name__ == "__main__":
                                 pylcogt.utils.lcogtsteps.run_subtractbias(listimg, outfilenames, masterbiasname, True)
                                 for img in outfilenames:
                                     print img
+                                    pylcogt.utils.pymysql.updateheader(img,0, {'BIASCOR':[string.split(masterbiasname,'/')[-1],' bias frame']})
                                     siteid=pyfits.getheader(img)['SITEID']
                                     directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
                                     print 'mv '+img+' '+directory
@@ -188,6 +189,8 @@ if __name__ == "__main__":
                                     print listimg
                                     print 'apply flat to science frame'
                                     pylcogt.utils.lcogtsteps.run_flatten(listimg, listimg, masterflatname, True)
+                                    for img in listimg:
+                                        pylcogt.utils.pymysql.updateheader(img,0, {'FLATCOR':[string.split(masterflatname,'/')[-1],' flat frame']})
 
         elif _stage == 'cosmic':
             print 'select science images and correct for cosmic'

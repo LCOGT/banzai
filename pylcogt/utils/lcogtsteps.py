@@ -1,32 +1,29 @@
 import pylcogt
 import numpy as np
-import numpy.ma as ma
 import pyfits
 import glob
+from pylcogt.utils import pymysql
+from pylcogt.utils.pymysql import readkey
 import string
-import ccdproc
+
 
 def ingest(list_image, table, _force):
-    import pyfits
-    from pylcogt.utils.pymysql import readkey
-    from pylcogt.utils.pymysql import getconnection
-    import string
-
-    conn = getconnection()
+    conn = pymysql.getconnection()
     for img in list_image:
         img0 = string.split(img, '/')[-1]
-        command = ['select filename from ' + str(table) + ' where filename="' + str(img0) + '"']
+        command = ['select filename from ' + str(table) + ' where filename="'
+                   + str(img0) + '"']
         exist = pylcogt.query(command, conn)
 
         if not exist or _force in ['update', 'yes']:
             hdr = pyfits.getheader(img)
             _instrument = readkey(hdr, 'instrume')
             if table in ['lcogtraw']:
-                dire = pylcogt.utils.pymysql.rawdata + readkey(hdr,'SITEID') + '/' + readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/raw/'
+                dire = pymysql.rawdata + readkey(hdr,'SITEID') + '/' + readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/raw/'
             elif table in ['lcogtredu']:
-                dire = pylcogt.utils.pymysql.workingdirectory + readkey(hdr,'SITEID') + '/' + readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/'
+                dire = pymysql.workingdirectory + readkey(hdr,'SITEID') + '/' + readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/'
 
-            if _instrument in pylcogt.utils.pymysql.instrument0['sbig'] + pylcogt.utils.pymysql.instrument0['sinistro']:
+            if _instrument in pymysql.instrument0['sbig'] + pymysql.instrument0['sinistro']:
                 print '1m telescope'
                 dictionary = {'dayobs': readkey(hdr, 'DAY-OBS'), 'exptime': readkey(hdr, 'exptime'),
                     'filter': readkey(hdr, 'filter'), 'mjd': readkey(hdr, 'MJD'),
@@ -39,8 +36,7 @@ def ingest(list_image, table, _force):
                     'dateobs': readkey(hdr, 'DATE-OBS'), 'ccdsum': readkey(hdr, 'CCDSUM')}
                 dictionary['filename'] = string.split(img, '/')[-1]
                 dictionary['filepath'] = dire
-
-            elif _instrument in pylcogt.utils.pymysql.instrument0['spectral']:
+            elif _instrument in pymysql.instrument0['spectral']:
                 print '2m telescope'
                 dictionary = {'dayobs': readkey(hdr, 'DAY-OBS'), 'exptime': readkey(hdr, 'exptime'),
                     'filter': readkey(hdr, 'filter'), 'mjd': readkey(hdr, 'MJD'),
@@ -53,7 +49,6 @@ def ingest(list_image, table, _force):
                     'dateobs': readkey(hdr, 'DATE-OBS'), 'ccdsum': readkey(hdr, 'CCDSUM')}
                 dictionary['namefile'] = string.split(img, '/')[-1]
                 dictionary['filepath'] = dire
-
             else:
                 dictionary = ''
         else:
@@ -63,7 +58,7 @@ def ingest(list_image, table, _force):
         if dictionary:
             if not exist:
                 print 'insert values'
-                pylcogt.utils.pymysql.insert_values(conn, table, dictionary)
+                pymysql.insert_values(conn, table, dictionary)
             else:
                 print table
                 print 'update values'
@@ -71,7 +66,7 @@ def ingest(list_image, table, _force):
                     print voce
                     # for voce in ['filepath','ra0','dec0','mjd','exptime','filter','ccdsum']:
                     for voce in ['ccdsum', 'filepath']:
-                            pylcogt.utils.pymysql.updatevalue(conn, table, voce, dictionary[voce],
+                            pymysql.updatevalue(conn, table, voce, dictionary[voce],
                                                               string.split(img, '/')[-1], 'filename')
         else:
             print 'dictionary empty'
@@ -79,32 +74,30 @@ def ingest(list_image, table, _force):
 #################################################################################################################
 
 
-
 def run_ingest(telescope,listepoch,_force,table='lcogtraw'):
-    pylcogt.utils.pymysql.site0
+    pymysql.site0
     if telescope == 'all':
-        tellist = pylcogt.utils.pymysql.site0
-    elif telescope in pylcogt.utils.pymysql.telescope0['elp'] + ['elp']:
+        tellist = pymysql.site0
+    elif telescope in pymysql.telescope0['elp'] + ['elp']:
         tellist = ['elp']
-    elif telescope in pylcogt.utils.pymysql.telescope0['lsc'] + ['lsc']:
+    elif telescope in pymysql.telescope0['lsc'] + ['lsc']:
         tellist = ['lsc']
-    elif telescope in pylcogt.utils.pymysql.telescope0['cpt'] + ['cpt']:
+    elif telescope in pymysql.telescope0['cpt'] + ['cpt']:
         tellist = ['cpt']
-    elif telescope in pylcogt.utils.pymysql.telescope0['coj'] + ['coj', 'fts']:
+    elif telescope in pymysql.telescope0['coj'] + ['coj', 'fts']:
         tellist = ['coj']
-    elif telescope in pylcogt.utils.pymysql.telescope0['ogg'] + ['ftn']:
+    elif telescope in pymysql.telescope0['ogg'] + ['ftn']:
         tellist = ['ogg']
 
-
     if telescope in ['ftn', 'fts', '2m0-01', '2m0-02']:
-        instrumentlist = pylcogt.utils.pymysql.instrument0['spectral']
+        instrumentlist = pymysql.instrument0['spectral']
     else:
-        instrumentlist = pylcogt.utils.pymysql.instrument0['sinistro'] + pylcogt.utils.pymysql.instrument0['sbig']
+        instrumentlist = pymysql.instrument0['sinistro'] + pymysql.instrument0['sbig']
 
     for epoch in listepoch:
         for tel in tellist:
             for instrument in instrumentlist:
-                imglist = glob.glob(pylcogt.utils.pymysql.rawdata + tel + '/' + instrument + '/' + epoch + '/raw/*')
+                imglist = glob.glob(pymysql.rawdata + tel + '/' + instrument + '/' + epoch + '/raw/*')
                 print imglist
                 if len(imglist):
                     print 'ingest'
@@ -112,11 +105,12 @@ def run_ingest(telescope,listepoch,_force,table='lcogtraw'):
 
 ######################################################################################################################
 
+
 def tofits(filename, data, hdr=None, clobber=False):
     """simple pyfits wrapper to make saving fits files easier."""
     from pyfits import PrimaryHDU, HDUList
     hdu = PrimaryHDU(data)
-    if not hdr is None:
+    if not (hdr is None):
         hdu.header = hdr
     hdulist = HDUList([hdu])
     hdulist.writeto(filename, clobber=clobber, output_verify='ignore')
@@ -173,7 +167,7 @@ def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
     flatdata = np.zeros((len(imagenames), ny, nx))
     for i, im in enumerate(imagenames):
         flatdata[i, :, :] = pyfits.getdata(im)[:, :]
-        flatdata[i, :, :] /= flatfieldmode(flatdata[i, :, :])
+        flatdata[i, :, :] /= flatfieldmode(flatdata[i])
     if len(imagenames) >= minimages:
         medflat = np.median(flatdata, axis=0)
         tofits(outfilename, medflat, hdr=pyfits.getheader(imagenames[0]),
