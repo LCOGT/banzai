@@ -8,8 +8,9 @@ import pylcogt
 import datetime
 import string
 import re
+import os
 import numpy as np
-
+import pyfits
 from optparse import OptionParser
 
 if __name__ == "__main__":
@@ -52,14 +53,19 @@ if __name__ == "__main__":
     print _stage
     print listepoch
     if _stage == 'ingest':
-        pylcogt.utils.lcogtsteps.run_ingest(_telescope,listepoch,'update')
+        pylcogt.utils.lcogtsteps.run_ingest(_telescope,listepoch,'update','lcogtraw')
     else:
+        if _stage in ['makebias', 'makeflat', 'applybias']:
+            _table = 'lcogtraw'
+        else:
+            _table = 'lcogtredu'
+
         conn = pylcogt.utils.pymysql.getconnection()
         if len(listepoch) == 1:
-            listimg = pylcogt.utils.pymysql.getlistfromraw(conn, 'lcogtraw', 'dayobs', str(listepoch[0]), '', '*',
+            listimg = pylcogt.utils.pymysql.getlistfromraw(conn, _table, 'dayobs', str(listepoch[0]), '', '*',
                                                 _telescope)
         else:
-            listimg = pylcogt.utils.pymysql.getlistfromraw(conn, 'lcogtraw', 'dayobs', str(listepoch[0]),
+            listimg = pylcogt.utils.pymysql.getlistfromraw(conn, _table, 'dayobs', str(listepoch[0]),
                                                 str(listepoch[-1]), '*', _telescope)
 
         if listimg:
@@ -89,15 +95,92 @@ if __name__ == "__main__":
                         _output='bias_'+str(k)+'_'+re.sub('-','',str(j))+'_bin'+re.sub(' ','x',i)+'.fits'
                         pylcogt.utils.lcogtsteps.run_makebias(listbias, _output, minimages=5)
                         print _output
-                        print 'cp '+_output+' '+pylcogt.utils.pymysql.workingdirectory+listbias[0][0:3]+'/'+k+'/'
-                        os.system('cp '+_output+' '+pylcogt.utils.pymysql.workingdirectory+listbias[0][0:3]+'/'+k+'/')
-#                listfile[i]
+                        siteid=pyfits.getheader(_output)['SITEID']
+                        directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
+                        if not os.path.isdir(directory): 
+                            os.mkdir(directory)
+                        print 'cp '+_output+' '+directory
+                        os.system('cp '+_output+' '+directory)
+                        pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
+
         elif _stage == 'makeflat':
             print 'select flat and make flat'
+            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['SKYFLAT'])])
+            listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
+            listbin=ll0['ccdsum'][ww]
+            listinst=ll0['instrument'][ww]
+            listday=ll0['dayobs'][ww]
+            listfilt=ll0['filter'][ww]
+            for filt in set(listfilt):
+                for k in set(listinst):
+                    for i in set(listbin):
+                        for j in set(listday):
+                            print k,j,i
+                            listflat=np.array(listfile)[(listbin == i) & (listday == j) & (listfilt == filt)]
+                            _output='flat_'+str(k)+'_'+re.sub('-','',str(j))+'_SKYFLAT_bin'+re.sub(' ','x',i)+'_'+str(filt)+'.fits'
+                            pylcogt.utils.lcogtsteps.run_makeflat(listflat, _output, minimages=5)
+                            print _output
+                            siteid=pyfits.getheader(_output)['SITEID']
+                            directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
+                            print 'cp '+_output+' '+directory
+                            os.system('cp '+_output+' '+directory)
+                            pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
+
         elif _stage == 'applybias':
             print 'apply bias to science frame'
+            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['EXPOSE'])])
+            listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
+            listbin=ll0['ccdsum'][ww]
+            listinst=ll0['instrument'][ww]
+            listday=ll0['dayobs'][ww]
+            listmjd=ll0['mjd'][ww]
+            listfilt=ll0['filter'][ww]
+            for k in set(listinst):
+                for i in set(listbin):
+                    for j in set(listday):
+                        print j,k,i
+                        listimg = np.array(listfile)[(listbin == i) & (listday == j)]
+                        outfilenames = [re.sub('e00.fits','e90.fits',i) for i in listimg]
+                        listmjd0=np.array(listmjd)[(listbin == i) & (listday == j)]
+                        command=['select filename, mjd-'+str(listmjd0[0])+' as diff from lcogtredu where ccdsum="'+i+'" and instrument = "'+\
+                                 k+'" and obstype="BIAS" order by diff']
+                        biasgood=pylcogt.utils.pymysql.query(command, conn)
+                        if len(biasgood)>=1:
+                            masterbiasname=biasgood[0]['filename']
+                            pylcogt.utils.lcogtsteps.run_subtractbias(listimg, outfilenames, masterbiasname, False)
+                            for img in outfilenames:
+                                print img
+                                siteid=pyfits.getheader(img)['SITEID']
+                                directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
+                                print 'cp '+_output+' '+directory
+                                os.system('cp '+_output+' '+directory)
+                                pylcogt.utils.lcogtsteps.ingest([img], 'lcogtredu', 'yes')
+
         elif _stage == 'applyflat':
             print 'apply flat to science frame'
+            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['EXPOSE'])])
+            listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
+            listbin=ll0['ccdsum'][ww]
+            listinst=ll0['instrument'][ww]
+            listday=ll0['dayobs'][ww]
+            listmjd=ll0['mjd'][ww]
+            listfilt=ll0['filter'][ww]
+            for filt in set(listfilt):
+                for k in set(listinst):
+                    for i in set(listbin):
+                        for j in set(listday):
+                            print j,k,i,filt
+                            listimg=np.array(listfile)[(listbin == i) & (listday == j) & (listfilt == filt)]
+                            listmjd0=np.array(listmjd)[(listbin == i) & (listday == j) & (listfilt == filt)]
+                            command=['select filename, mjd-'+str(listmjd0[0])+' as diff from lcogtredu where ccdsum="'+i+'" and instrument = "'+\
+                                         k+'" and filter = '+str(filt)+'and obstype="SKYFLAT" order by diff']
+                            flatgood=pylcogt.utils.pymysql.query(command, conn)
+                            if len(flatgood) >= 1:
+                                masterflatname = flatgood[0]['filename']
+                                print masterflatname
+                                print listimg
+                                print 'apply flat to science frame'
+
         elif _stage == 'cosmic':
             print 'select science images and correct for cosmic'
         elif _stage == 'wcs':
