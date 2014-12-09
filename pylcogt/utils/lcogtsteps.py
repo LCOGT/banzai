@@ -50,9 +50,10 @@ def ingest(list_image, table, _force):
                     'ra0': readkey(hdr, 'RA'), 'dec0': readkey(hdr, 'DEC'), 'obstype': readkey(hdr, 'OBSTYPE'),
                     'reqnum': readkey(hdr, 'REQNUM'), 'groupid': readkey(hdr, 'GROUPID'),
                     'propid': readkey(hdr, 'PROPID'), 'userid': readkey(hdr, 'USERID'),
-                    'dateobs': readkey(hdr, 'DATE-OBS'),'ccdsum': readkey(hdr, 'CCDSUM')}
+                    'dateobs': readkey(hdr, 'DATE-OBS'), 'ccdsum': readkey(hdr, 'CCDSUM')}
                 dictionary['namefile'] = string.split(img, '/')[-1]
                 dictionary['filepath'] = dire
+
             else:
                 dictionary = ''
         else:
@@ -68,18 +69,18 @@ def ingest(list_image, table, _force):
                 print 'update values'
                 for voce in dictionary:
                     print voce
-                    #for voce in ['filepath','ra0','dec0','mjd','exptime','filter','ccdsum']:
-                    for voce in ['ccdsum','filepath']:
-                            pylcogt.utils.pymysql.updatevalue(conn,table,voce,dictionary[voce],
-                                                              string.split(img,'/')[-1],'filename')
+                    # for voce in ['filepath','ra0','dec0','mjd','exptime','filter','ccdsum']:
+                    for voce in ['ccdsum', 'filepath']:
+                            pylcogt.utils.pymysql.updatevalue(conn, table, voce, dictionary[voce],
+                                                              string.split(img, '/')[-1], 'filename')
         else:
             print 'dictionary empty'
 
 #################################################################################################################
 
 
-def run_ingest(telescope,listepoch,_force,table='lcogtraw'):
 
+def run_ingest(telescope,listepoch,_force,table='lcogtraw'):
     pylcogt.utils.pymysql.site0
     if telescope == 'all':
         tellist = pylcogt.utils.pymysql.site0
@@ -135,35 +136,60 @@ def run_makebias(imagenames, outfilename, minimages=5, clobber=True):
 #####################################################################################################################
 
 
-def mode(imagearr, precision = 0.01):
-    #make a histogram of the pixel values with 30 bins (which is arbitrary)
-    hist = np.histogram(imagearr, 200)
-    #Find the maximum
-    #Enter a while loop
-    #while the bin width/2 > desired precision
-    #calculate a new histogram covering the maximum bin +-1 bin
-    #Find the new maximum
-    #end while
-    #return the mode (the peak of the pixel distribution)
-
-def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=False):
-    ims = []
-    for f in imagenames:
-        ims.append(ccdproc.CCDData.read(f, unit=u.adu))
-    masterbias = ccdproc.CCDData.read(masterbiasname, unit=u.adu)
-    for i, im in enumerate(ims):
-        d = ccdproc.subtract_bias(im, masterbias)
-        ccdproc.CCDData.write(d, outfilenames[i], clobber=clobber)
+def flatfieldmode(imagearr):
+    # Note that currently we are just bias subtracting and since we are
+    # median combining the bias frames, pixels can only have integer values or 0.5
+    hist = np.histogram(imagearr,
+                        np.round(np.max(imagearr) - np.min(imagearr)) * 2 + 1,
+                        (np.min(imagearr) - 0.25, np.max(imagearr) + 0.25))
+    m = np.argmax(hist[0])
+    return hist[1][m] + 0.25
 
 
-def run_makeflat(imagenames, outfilename, minimages=5):
+def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=True):
+    # Assume the files are all the same number of pixels, should add error checking
+    biashdu = pyfits.open(masterbiasname)
+    biasdata = biashdu[0].data.copy()
+    biashdu.close()
+
+    for i, im in enumerate(imagenames):
+        hdu = pyfits.open(im)
+        imdata = hdu[0].data.copy()
+        imhdr = hdu[0].hdr.copy()
+        hdu.close()
+        imdata -= biasdata
+        tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
+
+
+def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
     # Flats should already be bias subtracted
-    flatims = []
-    for f in imagenames:
-        flatims.append(ccdproc.CCDData.read(f, unit=u.adu))
-    if len(flatims) >= minimages:
-        flatcombiner = ccdproc.Combiner(flatims)
-        d = flatcombiner.median_combine()
-        ccdproc.CCDData.write(d, outfilename)
 
+    # Load all of the images in normalizing by the mode of the pixel distribution
+    # Assume all of the images have the same size,
+    # FIXME Add error checking
+    nx = pyfits.getval(imagenames[0], ('NAXIS1'))
+    ny = pyfits.getval(imagenames[0], ('NAXIS2'))
+
+    flatdata = np.zeros((len(imagenames), ny, nx))
+    for i, im in enumerate(imagenames):
+        flatdata[i, :, :] = pyfits.getdata(im)[:, :]
+        flatdata[i, :, :] /= flatfieldmode(flatdata[i, :, :])
+    if len(imagenames) >= minimages:
+        medflat = np.median(flatdata, axis=0)
+        tofits(outfilename, medflat, hdr=pyfits.getheader(imagenames[0]),
+               clobber=clobber)
+
+
+def run_flatten(imagenames, outfilenames, masterflatname, clobber=True):
+    flathdu = pyfits.open(masterflatname)
+    flatdata = flathdu[0].data.copy()
+    flathdu.close()
+
+    for i, im in enumerate(imagenames):
+        hdu = pyfits.open(im)
+        imdata = hdu[0].data.copy()
+        imhdr = hdu[0].hdr.copy()
+        hdu.close()
+        imdata /= flatdata
+        tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
 
