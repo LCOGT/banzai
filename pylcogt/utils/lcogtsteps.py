@@ -111,7 +111,7 @@ def tofits(filename, data, hdr=None, clobber=False):
     from pyfits import PrimaryHDU, HDUList
     hdu = PrimaryHDU(data)
     if not (hdr is None):
-        hdu.header = hdr
+        hdu.header += hdr
     hdulist = HDUList([hdu])
     hdulist.writeto(filename, clobber=clobber, output_verify='ignore')
 
@@ -125,7 +125,8 @@ def run_makebias(imagenames, outfilename, minimages=5, clobber=True):
         biasdata[i, :, :] = pyfits.getdata(f)[:, :]
     if len(imagenames) >= minimages:
         medbias = np.median(biasdata, axis=0)
-        tofits(outfilename, medbias, hdr=pyfits.getheader(imagenames[0]), clobber=clobber)
+        hdr = sanitizeheader(pyfits.getheader(imagenames[0]))
+        tofits(outfilename, medbias, hdr=hdr, clobber=clobber)
 
 #####################################################################################################################
 
@@ -154,6 +155,26 @@ def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=True):
         imdata -= biasdata
         tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
 
+def sanitizeheader(hdr):
+    # Remove the mandatory keywords from a header so it can be copied to a new
+    # image.
+    hdr = hdr.copy()
+
+    # Let the new data decide what these values should be
+    for i in ['SIMPLE', 'BITPIX']:
+        if hdr.has_key(i):
+            hdr.pop(i)
+
+    if hdr.has_key('NAXIS'):
+        naxis = hdr.pop('NAXIS')
+        for i in range(naxis):
+            hdr.pop('NAXIS%i'%(i+1))
+
+    if True:
+        hdr.pop('BSCALE')
+        hdr.pop('BZERO')
+        
+    return hdr
 
 def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
     # Flats should already be bias subtracted
@@ -168,9 +189,12 @@ def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
     for i, im in enumerate(imagenames):
         flatdata[i, :, :] = pyfits.getdata(im)[:, :]
         flatdata[i, :, :] /= flatfieldmode(flatdata[i])
+
     if len(imagenames) >= minimages:
         medflat = np.median(flatdata, axis=0)
-        tofits(outfilename, medflat, hdr=pyfits.getheader(imagenames[0]),
+        hdr = pyfits.getheader(imagenames[0])
+        hdr = sanitizeheader(hdr, removebkeys=True)
+        tofits(outfilename, medflat, hdr=hdr,
                clobber=clobber)
 
 
@@ -183,6 +207,7 @@ def run_flatten(imagenames, outfilenames, masterflatname, clobber=True):
         hdu = pyfits.open(im)
         imdata = hdu[0].data.copy()
         imhdr = hdu[0].header.copy()
+        imhdr =sanitizeheader(imhdr)
         hdu.close()
         imdata /= flatdata
         tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
