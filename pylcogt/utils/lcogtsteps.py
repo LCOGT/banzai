@@ -5,7 +5,7 @@ import glob
 from pylcogt.utils import pymysql
 from pylcogt.utils.pymysql import readkey
 import string
-
+from sklearn.gaussian_process import GaussianProcess
 
 def ingest(list_image, table, _force):
     conn = pymysql.getconnection()
@@ -131,14 +131,43 @@ def run_makebias(imagenames, outfilename, minimages=5, clobber=True):
 #####################################################################################################################
 
 
-def flatfieldmode(imagearr):
-    # Note that currently we are just bias subtracting and since we are
-    # median combining the bias frames, pixels can only have integer values or 0.5
-    hist = np.histogram(imagearr,
-                        np.round(np.max(imagearr) - np.min(imagearr)) * 2 + 1,
-                        (np.min(imagearr) - 0.25, np.max(imagearr) + 0.25))
-    m = np.argmax(hist[0])
-    return hist[1][m] + 0.25
+def imagemode(imagearr,nbins):
+    #Calculate the mode of an image
+    minval = np.floor(np.min(imagearr))
+    maxval = np.ceil(np.max(imagearr))
+    #Pad the bins to be an integer value
+    #nbins = int(maxval) - int(minval)
+    hist = np.histogram(imagearr, nbins, (minval, maxval))
+    binwidth = (maxval -minval)/nbins
+    xmax = hist[1][np.argmax(hist[0])] + binwidth/2.0
+
+    # Get the optimal bin size from the Gaussian Kernel Density Estimator
+    imstd = np.std(imagearr)
+    finalbinwidth = 1.06 * (imagearr.shape[0]* imagearr.shape[1])**-0.2 * imstd
+    
+    finalrange = (xmax - 2.0*binwidth, xmax + 2.0*binwidth)
+    finalnbins = (finalrange[1] - finalrange[0])/finalbinwidth
+    hist2 = np.histogram(imagearr, finalnbins, finalrange)
+
+    y = hist2[0]
+    w = y > 0
+    y = y[w]
+    X = hist2[1][:-1] + (hist2[1][1] - hist2[1][0])/2.0
+    X = X[w]
+    X = np.atleast_2d(X).T
+
+    gp = GaussianProcess(corr='squared_exponential', theta0=1e-1,
+                     thetaL=1e-3, thetaU=1,
+                     nugget=1.0/y,
+                     random_start=10)
+    # Fit to data using Maximum Likelihood Estimation of the parameters
+    gp.fit(X, y)
+    
+
+    x = np.atleast_2d(np.linspace(min(X),max(X), 10*nbins)).T    
+    y_pred = gp.predict(x)
+
+    return x[np.argmax(y_pred)][0]
 
 
 def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=True):
@@ -150,7 +179,7 @@ def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=True):
     for i, im in enumerate(imagenames):
         hdu = pyfits.open(im)
         imdata = hdu[0].data.copy()
-        imhdr = hdu[0].header.copy()
+        imhdr = sanitizeheader(hdu[0].header)
         hdu.close()
         imdata -= biasdata
         tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
@@ -161,7 +190,7 @@ def sanitizeheader(hdr):
     hdr = hdr.copy()
 
     # Let the new data decide what these values should be
-    for i in ['SIMPLE', 'BITPIX']:
+    for i in ['SIMPLE', 'BITPIX', 'BSCALE','BZERO']:
         if hdr.has_key(i):
             hdr.pop(i)
 
@@ -169,15 +198,47 @@ def sanitizeheader(hdr):
         naxis = hdr.pop('NAXIS')
         for i in range(naxis):
             hdr.pop('NAXIS%i'%(i+1))
-
-    if True:
-        hdr.pop('BSCALE')
-        hdr.pop('BZERO')
         
     return hdr
 
+def run_makedark(imagenames, outfilename, minimages=3, clobber=True):
+    # Darks should already be bias subtracted
+
+    # Load all of the images in normalizing by the mode of the pixel distribution
+    # Assume all of the images have the same size,
+    # FIXME Add error checking
+    nx = pyfits.getval(imagenames[0], ('NAXIS1'))
+    ny = pyfits.getval(imagenames[0], ('NAXIS2'))
+    
+    darkdata = np.zeros((len(imagenames), ny, nx))
+    for i, im in enumerate(imagenames):
+        darkdata[i, :, :] = pyfits.getdata(im)[:, :]
+        darkdata[i, :, :] /= float(pyfits.getval(im,'EXPTIME'))
+
+    if len(imagenames) >= minimages:
+        meddark = np.median(darkdata, axis=0)
+        hdr = pyfits.getheader(imagenames[0])
+        hdr = sanitizeheader(hdr)
+        tofits(outfilename, meddark, hdr=hdr, clobber=clobber)
+
+def run_applydark(imagenames, outfilenames, masterdarkname, clobber=True):
+    darkhdu = pyfits.open(masterdarkname)
+    darkdata = darkhdu[0].data.copy()
+    darkhdu.close()
+
+    for i, im in enumerate(imagenames):
+        hdu = pyfits.open(im)
+        imdata = hdu[0].data.copy()
+        imhdr = hdu[0].header.copy()
+        imhdr = sanitizeheader(imhdr)
+        exptime = float(imhdr['EXPTIME'])
+        hdu.close()
+        imdata -= darkdata * exptime
+        tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
+
+    
 def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
-    # Flats should already be bias subtracted
+    # Flats should already be bias subtracted and dark corrected
 
     # Load all of the images in normalizing by the mode of the pixel distribution
     # Assume all of the images have the same size,
@@ -188,17 +249,16 @@ def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
     flatdata = np.zeros((len(imagenames), ny, nx))
     for i, im in enumerate(imagenames):
         flatdata[i, :, :] = pyfits.getdata(im)[:, :]
-        flatdata[i, :, :] /= flatfieldmode(flatdata[i])
+        flatdata[i, :, :] /= imagemode(flatdata[i],200)
 
     if len(imagenames) >= minimages:
         medflat = np.median(flatdata, axis=0)
         hdr = pyfits.getheader(imagenames[0])
-        hdr = sanitizeheader(hdr, removebkeys=True)
-        tofits(outfilename, medflat, hdr=hdr,
-               clobber=clobber)
+        hdr = sanitizeheader(hdr)
+        tofits(outfilename, medflat, hdr=hdr, clobber=clobber)
 
 
-def run_flatten(imagenames, outfilenames, masterflatname, clobber=True):
+def run_applyflat(imagenames, outfilenames, masterflatname, clobber=True):
     flathdu = pyfits.open(masterflatname)
     flatdata = flathdu[0].data.copy()
     flathdu.close()

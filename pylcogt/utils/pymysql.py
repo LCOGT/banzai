@@ -3,7 +3,7 @@
 # here we define the filepath where raw data and reduced data will end
 #
 
-workingdirectory = '/science/supernova/pylcogt/'
+workingdirectory = '/nethome/supernova/pylcogt/'
 rawdata = '/archive/engineering/'
 realpass = 'configure'
 

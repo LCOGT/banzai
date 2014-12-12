@@ -55,8 +55,10 @@ if __name__ == "__main__":
     if _stage == 'ingest':
         pylcogt.utils.lcogtsteps.run_ingest(_telescope,listepoch,'update','lcogtraw')
     else:
-        if _stage in ['makebias', 'makeflat', 'applybias']:
+        if _stage in ['makebias', 'applybias']:
             _table = 'lcogtraw'
+        elif _stage in ['makeflat', 'applyflat', 'cosmic']:
+            _table = 'lcogtredu'
         else:
             _table = 'lcogtredu'
 
@@ -91,7 +93,7 @@ if __name__ == "__main__":
                 for i in set(listbin):
                     for j in set(listday):
                         print k,j,i
-                        listbias=np.array(listfile)[(listbin==i) & (listday==j)]
+                        listbias=np.array(listfile)[(listbin==i) & (listinst==k) & (listday==j)]
                         _output='bias_'+str(k)+'_'+re.sub('-','',str(j))+'_bin'+re.sub(' ','x',i)+'.fits'
                         pylcogt.utils.lcogtsteps.run_makebias(listbias, _output, minimages=5)
                         print _output
@@ -102,7 +104,6 @@ if __name__ == "__main__":
                         print 'mv '+_output+' '+directory
                         pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
                         os.system('mv '+_output+' '+directory)
-
 
         elif _stage == 'makeflat':
             print 'select flat and make flat'
@@ -127,10 +128,9 @@ if __name__ == "__main__":
                             pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
                             os.system('mv '+_output+' '+directory)
 
-
         elif _stage == 'applybias':
             print 'apply bias to science frame'
-            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['EXPOSE'])])
+            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['EXPOSE','SKYFLAT'])])
             listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
             listbin=ll0['ccdsum'][ww]
             listinst=ll0['instrument'][ww]
@@ -142,7 +142,7 @@ if __name__ == "__main__":
                     for j in set(listday):
                         print j,k,i
                         listimg = np.array(listfile)[(listbin == i) & (listday == j)]
-                        outfilenames = [re.sub('e00.fits','e90.fits',string.split(ii,'/')[-1]) for ii in listimg]
+                        outfilenames = [re.sub('00.fits','90.fits',string.split(ii,'/')[-1]) for ii in listimg]
                         listmjd0=np.array(listmjd)[(listbin == i) & (listday == j)]
                         if len(listimg):
                             command=['select filepath,filename, mjd-'+str(listmjd0[0])+
