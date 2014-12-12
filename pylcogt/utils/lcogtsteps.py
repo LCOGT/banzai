@@ -191,10 +191,11 @@ def sanitizeheader(hdr):
 
     # Let the new data decide what these values should be
     for i in ['SIMPLE', 'BITPIX', 'BSCALE','BZERO']:
-        if hdr.has_key(i):
+        if i in hdr.keys():
             hdr.pop(i)
 
-    if hdr.has_key('NAXIS'):
+#    if hdr.has_key('NAXIS'):
+    if 'NAXIS' in hdr.keys():
         naxis = hdr.pop('NAXIS')
         for i in range(naxis):
             hdr.pop('NAXIS%i'%(i+1))
