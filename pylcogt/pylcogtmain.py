@@ -244,9 +244,11 @@ if __name__ == "__main__":
                                     print masterflatname
                                     print listimg
                                     print 'apply flat to science frame'
-                                    pylcogt.utils.lcogtsteps.run_flatten(listimg, listimg, masterflatname, True)
+                                    pylcogt.utils.lcogtsteps.run_applyflat(listimg, listimg, masterflatname, True)
                                     for img in listimg:
                                         pylcogt.utils.pymysql.updateheader(img,0, {'FLATCOR':[string.split(masterflatname,'/')[-1],' flat frame']})
+                                else:
+                                    print 'no flat for this setup '+str(filt)+' '+str(i)
 
         elif _stage == 'cosmic':
             print 'select science images and correct for cosmic'
