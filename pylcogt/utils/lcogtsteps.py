@@ -154,7 +154,7 @@ def imagecov(imagearr):
     mu20 /= M00
     mu02 /= M00
     mu11 /= M00
-    return (mu20 / M99 ,mu02,mu11)
+    return (mu20, mu02, mu11)
 
 def imagemode(imagearr,nbins):
     #Calculate the mode of an image
@@ -197,7 +197,35 @@ def imagemode(imagearr,nbins):
 
     return x[np.argmax(y_pred)][0]
 
+def imagemad(imagearr):
+    immad = np.median(np.abs(imagearr - np.median(imagearr)))
+    return immad
 
+def goodflat(imagename, previousgoodimagename):
+    imarr = pyfits.getdata(imagename)
+    goodarr = pyfits.getdata(previousgoodimagename)
+    
+    good=True
+    
+    # If the std and median absolute devition differ by a huge factor 
+    # likely bad
+    if np.std(imarr)/ imagemad(imarr) > 10:
+        good=False
+    
+    # If the diagonal part of the of the image covariance matrix is large
+    # likely bad
+    elif np.abs(imagecov(imarr))**0.5 > 30:
+        good = False
+    
+    # If the image std of the ratio of this flat and the previous flat is large
+    # likely bad
+    # This assumes the flats change slowly over time
+    # If that is not the case, manual override is necessary
+    elif np.std( imarr / imagemode(imarr,200) / (goodarr / imagemode(goodarr, 200))) > 0.05:
+        good = False
+    
+    return good
+    
 def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=True):
     # Assume the files are all the same number of pixels, should add error checking
     biashdu = pyfits.open(masterbiasname)
