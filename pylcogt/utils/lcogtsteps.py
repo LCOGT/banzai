@@ -142,9 +142,12 @@ def imagemode(imagearr,nbins):
     xmax = hist[1][np.argmax(hist[0])] + binwidth/2.0
 
     # Get the optimal bin size from the Gaussian Kernel Density Estimator
-    imstd = np.std(imagearr)
-    finalbinwidth = 1.06 * (imagearr.shape[0]* imagearr.shape[1])**-0.2 * imstd
+    immad = np.median(np.abs(imagearr - np.median(imagearr)))
+    finalbinwidth = 1.06 * (imagearr.shape[0]* imagearr.shape[1])**-0.2 * immad
     
+    #Sanity check
+    if finalbinwidth > 0.2 * binwidth:
+        finalbinwidth = binwidth/20.0 
     finalrange = (xmax - 2.0*binwidth, xmax + 2.0*binwidth)
     finalnbins = (finalrange[1] - finalrange[0])/finalbinwidth
     hist2 = np.histogram(imagearr, finalnbins, finalrange)
@@ -248,6 +251,7 @@ def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
     ny = pyfits.getval(imagenames[0], ('NAXIS2'))
 
     flatdata = np.zeros((len(imagenames), ny, nx))
+    import pdb; pdb.set_trace()
     for i, im in enumerate(imagenames):
         flatdata[i, :, :] = pyfits.getdata(im)[:, :]
         flatdata[i, :, :] /= imagemode(flatdata[i],200)
