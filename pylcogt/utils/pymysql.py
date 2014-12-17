@@ -142,7 +142,8 @@ def updateheader(image, dimension, headerdict):
         imm = pyfits.open(image, mode='update')
         _header = imm[dimension].header
         for i in headerdict.keys():
-            _header.update(i, headerdict[i][0], headerdict[i][1])
+            _header[i]=(headerdict[i][0], headerdict[i][1])
+            #_header.update(i, headerdict[i][0], headerdict[i][1])
         imm.flush()
         imm.close()
     except:
