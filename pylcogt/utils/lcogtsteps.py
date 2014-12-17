@@ -251,7 +251,6 @@ def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
     ny = pyfits.getval(imagenames[0], ('NAXIS2'))
 
     flatdata = np.zeros((len(imagenames), ny, nx))
-    import pdb; pdb.set_trace()
     for i, im in enumerate(imagenames):
         flatdata[i, :, :] = pyfits.getdata(im)[:, :]
         flatdata[i, :, :] /= imagemode(flatdata[i],200)
