@@ -129,7 +129,32 @@ def run_makebias(imagenames, outfilename, minimages=5, clobber=True):
         tofits(outfilename, medbias, hdr=hdr, clobber=clobber)
 
 #####################################################################################################################
+def imagecov(imagearr):
+    M00 = imagearr.sum()
+    ny, nx = imagearr.shape
+    x = np.linspace(1, nx, nx)
+    y = np.linspace(1, ny, ny)
+    #Grid the x and y values
+    x2d, y2d = np.meshgrid(x,y)
 
+    M10 = (x2d * imagearr).sum()
+    M01 = (y2d * imagearr).sum()    
+    M20 = (x2d * x2d * imagearr).sum()
+    M02 = (y2d * y2d * imagearr).sum()
+    
+    M11 = (x2d * y2d * imagearr).sum()
+    
+    xbar = M10 / M00
+    ybar = M01 / M00
+    
+    mu20 = M20 - xbar * M10
+    mu02 = M02 - ybar * M01
+    mu11 = M11 - xbar * M01
+    
+    mu20 /= M00
+    mu02 /= M00
+    mu11 /= M00
+    return (mu20 / M99 ,mu02,mu11)
 
 def imagemode(imagearr,nbins):
     #Calculate the mode of an image
