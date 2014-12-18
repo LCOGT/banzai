@@ -2,6 +2,9 @@
 #
 # here we define the filepath where raw data and reduced data will end
 #
+import numpy as np
+import string
+import re
 
 workingdirectory = '/nethome/supernova/pylcogt/'
 rawdata = '/archive/engineering/'
@@ -396,3 +399,86 @@ def getlistfromraw(conn, table, column, value1, value2, column2='*', telescope='
     return resultSet
 
     ################################################################################
+
+
+def filtralist(ll2, _filter, _id, _name, _ra, _dec, _bin):
+
+    ll1 = {}
+    for key in ll2.keys():
+        ll1[key] = ll2[key][:]
+
+    if _filter:  #       select by filter
+        if _filter == 'sloan':
+            ww = np.asarray([i for i in range(len(ll1['filter'])) if (
+            (ll1['filter'][i] in ['zs', 'up', 'gp', 'ip', 'rp', 'SDSS-G', 'SDSS-R', 'SDSS-I', 'Pan-Starrs-Z']))])
+        elif _filter == 'landolt':
+            ww = np.asarray([i for i in range(len(ll1['filter'])) if (
+            (ll1['filter'][i] in ['U', 'B', 'V', 'R', 'I', 'Bessell-B', 'Bessell-V', 'Bessell-R', 'Bessell-I']))])
+        elif _filter == 'apass':
+            ww = np.asarray([i for i in range(len(ll1['filter'])) if ((ll1['filter'][i] in ['B', 'V', 'Bessell-B',
+                                                                                         'Bessell-V', 'gp', 'ip', 'rp',
+                                                                                         'SDSS-G', 'SDSS-R',
+                                                                                         'SDSS-I']))])
+        elif _filter in ['w','zs', 'up', 'gp', 'ip', 'rp', 'U', 'B', 'V', 'R', 'I', 'SDSS-G', 'SDSS-R', 'SDSS-I',
+                         'Pan-Starrs-Z', 'Bessell-B', 'Bessell-V', 'Bessell-R', 'Bessell-I']:
+            ww = np.asarray([i for i in range(len(ll1['filter'])) if ((ll1['filter'][i] in [_filter]))])
+        else:
+            ww=np.asarray([])
+#            lista = []
+#            for fil in _filter:
+#                try:
+#                    lista.append(agnkey.sites.filterst('lsc')[fil])
+#                except:
+#                    try:
+#                        lista.append(agnkey.sites.filterst('fts')[fil])
+#                    except:
+#                        pass
+#            ww = asarray([i for i in range(len(ll1['filter'])) if ((ll1['filter'][i] in lista))])
+        if len(ww) > 0:
+            for jj in ll1.keys():
+                ll1[jj] = np.array(ll1[jj])[ww]
+        else:
+            for jj in ll1.keys():
+                ll1[jj] = []
+
+    if _bin:  #    select only one type of binning
+        ww = np.asarray([i for i in range(len(ll1['filter'])) if ( (re.sub("x"," ",_bin) in ll1['ccdsum'][i]))])
+        if len(ww) > 0:
+            for jj in ll1.keys():
+                ll1[jj] = np.array(ll1[jj])[ww]
+        else:
+            for jj in ll1.keys():
+                ll1[jj] = []
+
+    if _id:  # select by ID
+        try:
+            xx = '0000'[len(_id):] + _id
+            ww = np.asarray([i for i in range(len(ll1['filter'])) if ((_id in string.split(ll1['filename'][i], '-')[3]))])
+        except:
+            ww = np.asarray([i for i in range(len(ll1['filter'])) if (_id in ll1['filename'][i])])
+        if len(ww) > 0:
+            for jj in ll1.keys():
+                ll1[jj] = np.array(ll1[jj])[ww]
+        else:
+            for jj in ll1.keys():
+                ll1[jj] = []
+    if _name:  #    select by name
+        ww = np.asarray([i for i in range(len(ll1['filter'])) if ((_name in ll1['object'][i]))])
+        if len(ww) > 0:
+            for jj in ll1.keys():
+                ll1[jj] = np.array(ll1[jj])[ww]
+        else:
+            for jj in ll1.keys():
+                ll1[jj] = []
+    if _ra and _dec:        #    select using ra and dec
+        ww = np.asarray([i for i in range(len(ll1['ra0'])) if (
+        np.abs(float(ll1['ra0'][i]) - float(_ra)) < .5 and abs(float(ll1['dec0'][i]) - float(_dec)) < .5 )])
+        if len(ww) > 0:
+            for jj in ll1.keys():
+                ll1[jj] = np.array(ll1[jj])[ww]
+        else:
+            for jj in ll1.keys():
+                ll1[jj] = []
+    return ll1
+
+#################################################################################################

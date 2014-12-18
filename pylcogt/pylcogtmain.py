@@ -23,6 +23,10 @@ if __name__ == "__main__":
     parser.add_option("-s", "--stage", dest="stage", default='', type="str",
                        help='-s stage [ingest,makebias, makeflat, makedark, applybias, applydark, '
                             'applyflat, cosmic, wcs] \t [%default]')
+    parser.add_option("-f", "--filter", dest="filter", default='', type="str",
+                      help="-f filter [sloan,landolt,apass,u,g,r,i,z,U,B,V,R,I] \t [%default]")
+    parser.add_option("-b", "--bin", dest="bin", default='', type="str",
+                      help="-b bin [1x1, 2x2 ] \t [%default]")
 
     option, args = parser.parse_args()
     # _instrument=option.instrument
@@ -30,6 +34,8 @@ if __name__ == "__main__":
     _telescope = option.telescope
     _stage = option.stage
     epoch = option.epoch
+    _filter = option.filter
+    _bin = option.bin
 
     if _telescope not in pylcogt.utils.pymysql.telescope0['all'] + pylcogt.utils.pymysql.site0 + \
             ['all', 'ftn', 'fts', '1m0', 'kb', 'fl']:
@@ -83,6 +89,9 @@ if __name__ == "__main__":
             for i in ll0.keys():
                 ll0[i] = np.take(ll0[i], inds)
             print ll0['filename']
+
+        if _filter or _bin:
+            ll0 = pylcogt.utils.pymysql.filtralist(ll0, _filter, '', '', '', '', _bin)
 
         if _stage == 'makebias':
             print 'select bias and make bias'
@@ -234,6 +243,13 @@ if __name__ == "__main__":
                             print j,k,i,filt
                             listimg=np.array(listfile)[(listbin == i) & (listday == j) & (listfilt == filt)]
                             listmjd0=np.array(listmjd)[(listbin == i) & (listday == j) & (listfilt == filt)]
+
+                            #    select only images where flat was not apply
+                            jj = np.asarray([i for i in range(0,len(listimg))
+                                             if not pyfits.getheader(listimg[i]).get('FLATCOR')])
+                            listimg=np.array(listimg)[jj]
+                            listmjd0=np.array(listmjd0)[jj]
+
                             if len(listimg)>0:
                                 command=['select filepath,filename, mjd-'+str(listmjd0[0])+' as diff from lcogtredu where ccdsum="'+\
                                          str(i)+'" and instrument = "'+\
