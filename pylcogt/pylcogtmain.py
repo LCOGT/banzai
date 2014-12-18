@@ -88,10 +88,14 @@ if __name__ == "__main__":
             inds = np.argsort(ll0['mjd'])  # sort by mjd
             for i in ll0.keys():
                 ll0[i] = np.take(ll0[i], inds)
-            print ll0['filename']
 
-        if _filter or _bin:
-            ll0 = pylcogt.utils.pymysql.filtralist(ll0, _filter, '', '', '', '', _bin)
+            if _filter or _bin:
+                ll0 = pylcogt.utils.pymysql.filtralist(ll0, _filter, '', '', '', '', _bin)
+            if not len(ll0['id']):
+                sys.exit('no images selected')
+            print ll0['filename']
+        else:
+            sys.exit('no images selected')
 
         if _stage == 'makebias':
             print 'select bias and make bias'
@@ -177,6 +181,16 @@ if __name__ == "__main__":
                         listimg = np.array(listfile)[(listbin == i) & (listday == j)]
                         outfilenames = [re.sub('00.fits','90.fits',string.split(ii,'/')[-1]) for ii in listimg]
                         listmjd0=np.array(listmjd)[(listbin == i) & (listday == j)]
+
+                        #    select only images where flat was not apply
+                        jj = np.asarray([ii for ii in range(0,len(listimg))
+                                             if not pyfits.getheader(listimg[ii]).get('BIASCOR')])
+                        if len(jj):
+                            listimg=np.array(listimg)[jj]
+                            listmjd0=np.array(listmjd0)[jj]
+                        else:
+                            listimg=[]
+
                         if len(listimg):
                             command=['select filepath,filename, mjd-'+str(listmjd0[0])+
                                      ' as diff from lcogtredu where ccdsum="'+str(i)+'" and instrument = "'+\
@@ -210,6 +224,17 @@ if __name__ == "__main__":
                         listimg = np.array(listfile)[(listbin == i) & (listday == j)]
                         outfilenames = [re.sub('00.fits','90.fits',string.split(ii,'/')[-1]) for ii in listimg]
                         listmjd0=np.array(listmjd)[(listbin == i) & (listday == j)]
+
+                        #    select only images where flat was not apply
+                        jj = np.asarray([ii for ii in range(0,len(listimg))
+                                             if not pyfits.getheader(listimg[ii]).get('DARKCOR')])
+                        if len(jj):
+                                listimg=np.array(listimg)[jj]
+                                listmjd0=np.array(listmjd0)[jj]
+                        else:
+                                listimg=[]
+
+
                         if len(listimg):
                             command=['select filepath,filename, mjd-'+str(listmjd0[0])+
                                      ' as diff from lcogtredu where ccdsum="'+str(i)+'" and instrument = "'+\
@@ -245,10 +270,13 @@ if __name__ == "__main__":
                             listmjd0=np.array(listmjd)[(listbin == i) & (listday == j) & (listfilt == filt)]
 
                             #    select only images where flat was not apply
-                            jj = np.asarray([i for i in range(0,len(listimg))
-                                             if not pyfits.getheader(listimg[i]).get('FLATCOR')])
-                            listimg=np.array(listimg)[jj]
-                            listmjd0=np.array(listmjd0)[jj]
+                            jj = np.asarray([ii for ii in range(0,len(listimg))
+                                             if not pyfits.getheader(listimg[ii]).get('FLATCOR')])
+                            if len(jj):
+                                listimg=np.array(listimg)[jj]
+                                listmjd0=np.array(listmjd0)[jj]
+                            else:
+                                listimg=[]
 
                             if len(listimg)>0:
                                 command=['select filepath,filename, mjd-'+str(listmjd0[0])+' as diff from lcogtredu where ccdsum="'+\
