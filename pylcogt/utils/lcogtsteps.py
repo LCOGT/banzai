@@ -18,8 +18,14 @@ def ingest(list_image, table, _force):
         if not exist or _force in ['update', 'yes']:
             hdr = pyfits.getheader(img)
             _instrument = readkey(hdr, 'instrume')
+
+            if _instrument in pymysql.instrument0['sinistro']:
+                dir2='preproc/'
+            else:
+                dir2='raw/'
+
             if table in ['lcogtraw']:
-                dire = pymysql.rawdata + readkey(hdr,'SITEID') + '/' + readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/raw/'
+                dire = pymysql.rawdata + readkey(hdr,'SITEID') + '/' + readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/'+dir2
             elif table in ['lcogtredu']:
                 dire = pymysql.workingdirectory + readkey(hdr,'SITEID') + '/' + readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/'
 
@@ -97,7 +103,11 @@ def run_ingest(telescope,listepoch,_force,table='lcogtraw'):
     for epoch in listepoch:
         for tel in tellist:
             for instrument in instrumentlist:
-                imglist = glob.glob(pymysql.rawdata + tel + '/' + instrument + '/' + epoch + '/raw/*')
+                if instrument in pymysql.instrument0['sinistro']:
+                    dir2='/preproc/'
+                else:
+                    dir2='/raw/'
+                imglist = glob.glob(pymysql.rawdata + tel + '/' + instrument + '/' + epoch + dir2 + '*')
                 print imglist
                 if len(imglist):
                     print 'ingest'
@@ -328,4 +338,14 @@ def run_applyflat(imagenames, outfilenames, masterflatname, clobber=True):
         hdu.close()
         imdata /= flatdata
         tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
+
+
+def make_bpm(imagename, masterbpmfile):
+    return
+
+def run_lacosmicx(imagename):
+    return
+
+def run_astrometry(imagename):
+    return
 

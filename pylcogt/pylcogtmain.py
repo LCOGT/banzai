@@ -68,7 +68,7 @@ if __name__ == "__main__":
         elif _stage in ['makedark','makeflat', 'applydark', 'applyflat', 'cosmic']:
             _table = 'lcogtredu'
         else:
-            _table = 'lcogtredu'
+            _table = 'lcogtraw'
 
         conn = pylcogt.utils.pymysql.getconnection()
         if len(listepoch) == 1:
@@ -179,7 +179,8 @@ if __name__ == "__main__":
                     for j in set(listday):
                         print j,k,i
                         listimg = np.array(listfile)[(listbin == i) & (listday == j)]
-                        outfilenames = [re.sub('00.fits','90.fits',string.split(ii,'/')[-1]) for ii in listimg]
+                        outfilenames = [re.sub('00.fits','90.fits',re.sub('02.fits','00.fits',string.split(ii,'/')[-1]))
+                                        for ii in listimg]
                         listmjd0=np.array(listmjd)[(listbin == i) & (listday == j)]
 
                         #    select only images where flat was not apply
