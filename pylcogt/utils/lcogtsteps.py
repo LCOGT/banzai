@@ -20,14 +20,14 @@ def ingest(list_image, table, _force):
             _instrument = readkey(hdr, 'instrume')
 
             if _instrument in pymysql.instrument0['sinistro']:
-                dir2='preproc/'
+                dir2 = 'preproc/'
             else:
-                dir2='raw/'
+                dir2 = 'raw/'
 
             if table in ['lcogtraw']:
-                dire = pymysql.rawdata + readkey(hdr,'SITEID') + '/' + readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/'+dir2
+                dire = pymysql.rawdata + readkey(hdr, 'SITEID') + '/' + readkey(hdr, 'instrume') + '/' + readkey(hdr, 'DAY-OBS') + '/' + dir2
             elif table in ['lcogtredu']:
-                dire = pymysql.workingdirectory + readkey(hdr,'SITEID') + '/' + readkey(hdr, 'instrume')+ '/' + readkey(hdr, 'DAY-OBS') + '/'
+                dire = pymysql.workingdirectory + readkey(hdr, 'SITEID') + '/' + readkey(hdr, 'instrume') + '/' + readkey(hdr, 'DAY-OBS') + '/'
 
             if _instrument in pymysql.instrument0['sbig'] + pymysql.instrument0['sinistro']:
                 print '1m telescope'
@@ -80,7 +80,7 @@ def ingest(list_image, table, _force):
 #################################################################################################################
 
 
-def run_ingest(telescope,listepoch,_force,table='lcogtraw'):
+def run_ingest(telescope, listepoch, _force, table='lcogtraw'):
     pymysql.site0
     if telescope == 'all':
         tellist = pymysql.site0
@@ -104,14 +104,14 @@ def run_ingest(telescope,listepoch,_force,table='lcogtraw'):
         for tel in tellist:
             for instrument in instrumentlist:
                 if instrument in pymysql.instrument0['sinistro']:
-                    dir2='/preproc/'
+                    dir2 = '/preproc/'
                 else:
-                    dir2='/raw/'
+                    dir2 = '/raw/'
                 imglist = glob.glob(pymysql.rawdata + tel + '/' + instrument + '/' + epoch + dir2 + '*')
                 print imglist
                 if len(imglist):
                     print 'ingest'
-                    ingest(imglist,table,_force)
+                    ingest(imglist, table, _force)
 
 ######################################################################################################################
 
@@ -144,65 +144,65 @@ def imagecov(imagearr):
     ny, nx = imagearr.shape
     x = np.linspace(1, nx, nx)
     y = np.linspace(1, ny, ny)
-    #Grid the x and y values
-    x2d, y2d = np.meshgrid(x,y)
+    # Grid the x and y values
+    x2d, y2d = np.meshgrid(x, y)
 
     M10 = (x2d * imagearr).sum()
-    M01 = (y2d * imagearr).sum()    
+    M01 = (y2d * imagearr).sum()
     M20 = (x2d * x2d * imagearr).sum()
     M02 = (y2d * y2d * imagearr).sum()
-    
+
     M11 = (x2d * y2d * imagearr).sum()
-    
+
     xbar = M10 / M00
     ybar = M01 / M00
-    
+
     mu20 = M20 - xbar * M10
     mu02 = M02 - ybar * M01
     mu11 = M11 - xbar * M01
-    
+
     mu20 /= M00
     mu02 /= M00
     mu11 /= M00
     return (mu20, mu02, mu11)
 
-def imagemode(imagearr,nbins):
-    #Calculate the mode of an image
+def imagemode(imagearr, nbins):
+    # Calculate the mode of an image
     minval = np.floor(np.min(imagearr))
     maxval = np.ceil(np.max(imagearr))
-    #Pad the bins to be an integer value
-    #nbins = int(maxval) - int(minval)
+    # Pad the bins to be an integer value
+    # nbins = int(maxval) - int(minval)
     hist = np.histogram(imagearr, nbins, (minval, maxval))
-    binwidth = (maxval -minval)/nbins
-    xmax = hist[1][np.argmax(hist[0])] + binwidth/2.0
+    binwidth = (maxval - minval) / nbins
+    xmax = hist[1][np.argmax(hist[0])] + binwidth / 2.0
 
     # Get the optimal bin size from the Gaussian Kernel Density Estimator
     immad = np.median(np.abs(imagearr - np.median(imagearr)))
-    finalbinwidth = 1.06 * (imagearr.shape[0]* imagearr.shape[1])**-0.2 * immad
-    
-    #Sanity check
+    finalbinwidth = 1.06 * (imagearr.shape[0] * imagearr.shape[1]) ** -0.2 * immad
+
+    # Sanity check
     if finalbinwidth > 0.2 * binwidth:
-        finalbinwidth = binwidth/20.0 
-    finalrange = (xmax - 2.0*binwidth, xmax + 2.0*binwidth)
-    finalnbins = (finalrange[1] - finalrange[0])/finalbinwidth
+        finalbinwidth = binwidth / 20.0
+    finalrange = (xmax - 2.0 * binwidth, xmax + 2.0 * binwidth)
+    finalnbins = (finalrange[1] - finalrange[0]) / finalbinwidth
     hist2 = np.histogram(imagearr, finalnbins, finalrange)
 
     y = hist2[0]
     w = y > 0
     y = y[w]
-    X = hist2[1][:-1] + (hist2[1][1] - hist2[1][0])/2.0
+    X = hist2[1][:-1] + (hist2[1][1] - hist2[1][0]) / 2.0
     X = X[w]
     X = np.atleast_2d(X).T
 
     gp = GaussianProcess(corr='squared_exponential', theta0=1e-1,
                      thetaL=1e-3, thetaU=1,
-                     nugget=1.0/y,
+                     nugget=1.0 / y,
                      random_start=10)
     # Fit to data using Maximum Likelihood Estimation of the parameters
     gp.fit(X, y)
-    
 
-    x = np.atleast_2d(np.linspace(min(X),max(X), 10*nbins)).T    
+
+    x = np.atleast_2d(np.linspace(min(X), max(X), 10 * nbins)).T
     y_pred = gp.predict(x)
 
     return x[np.argmax(y_pred)][0]
@@ -214,28 +214,28 @@ def imagemad(imagearr):
 def goodflat(imagename, previousgoodimagename):
     imarr = pyfits.getdata(imagename)
     goodarr = pyfits.getdata(previousgoodimagename)
-    
-    good=True
-    
-    # If the std and median absolute devition differ by a huge factor 
+
+    good = True
+
+    # If the std and median absolute devition differ by a huge factor
     # likely bad
-    if np.std(imarr)/ imagemad(imarr) > 10:
-        good=False
-    
+    if np.std(imarr) / imagemad(imarr) > 10:
+        good = False
+
     # If the diagonal part of the of the image covariance matrix is large
     # likely bad
-    elif np.abs(imagecov(imarr))**0.5 > 30:
+    elif np.abs(imagecov(imarr)) ** 0.5 > 30:
         good = False
-    
+
     # If the image std of the ratio of this flat and the previous flat is large
     # likely bad
     # This assumes the flats change slowly over time
     # If that is not the case, manual override is necessary
-    elif np.std( imarr / imagemode(imarr,200) / (goodarr / imagemode(goodarr, 200))) > 0.05:
+    elif np.std(imarr / imagemode(imarr, 200) / (goodarr / imagemode(goodarr, 200))) > 0.05:
         good = False
-    
+
     return good
-    
+
 def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=True):
     # Assume the files are all the same number of pixels, should add error checking
     biashdu = pyfits.open(masterbiasname)
@@ -256,7 +256,7 @@ def sanitizeheader(hdr):
     hdr = hdr.copy()
 
     # Let the new data decide what these values should be
-    for i in ['SIMPLE', 'BITPIX', 'BSCALE','BZERO']:
+    for i in ['SIMPLE', 'BITPIX', 'BSCALE', 'BZERO']:
         if i in hdr.keys():
             hdr.pop(i)
 
@@ -264,8 +264,8 @@ def sanitizeheader(hdr):
     if 'NAXIS' in hdr.keys():
         naxis = hdr.pop('NAXIS')
         for i in range(naxis):
-            hdr.pop('NAXIS%i'%(i+1))
-        
+            hdr.pop('NAXIS%i' % (i + 1))
+
     return hdr
 
 def run_makedark(imagenames, outfilename, minimages=3, clobber=True):
@@ -276,11 +276,11 @@ def run_makedark(imagenames, outfilename, minimages=3, clobber=True):
     # FIXME Add error checking
     nx = pyfits.getval(imagenames[0], ('NAXIS1'))
     ny = pyfits.getval(imagenames[0], ('NAXIS2'))
-    
+
     darkdata = np.zeros((len(imagenames), ny, nx))
     for i, im in enumerate(imagenames):
         darkdata[i, :, :] = pyfits.getdata(im)[:, :]
-        darkdata[i, :, :] /= float(pyfits.getval(im,'EXPTIME'))
+        darkdata[i, :, :] /= float(pyfits.getval(im, 'EXPTIME'))
 
     if len(imagenames) >= minimages:
         meddark = np.median(darkdata, axis=0)
@@ -303,7 +303,7 @@ def run_applydark(imagenames, outfilenames, masterdarkname, clobber=True):
         imdata -= darkdata * exptime
         tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
 
-    
+
 def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
     # Flats should already be bias subtracted and dark corrected
 
@@ -316,7 +316,7 @@ def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
     flatdata = np.zeros((len(imagenames), ny, nx))
     for i, im in enumerate(imagenames):
         flatdata[i, :, :] = pyfits.getdata(im)[:, :]
-        flatdata[i, :, :] /= imagemode(flatdata[i],200)
+        flatdata[i, :, :] /= imagemode(flatdata[i], 200)
 
     if len(imagenames) >= minimages:
         medflat = np.median(flatdata, axis=0)
@@ -334,18 +334,49 @@ def run_applyflat(imagenames, outfilenames, masterflatname, clobber=True):
         hdu = pyfits.open(im)
         imdata = hdu[0].data.copy()
         imhdr = hdu[0].header.copy()
-        imhdr =sanitizeheader(imhdr)
+        imhdr = sanitizeheader(imhdr)
         hdu.close()
         imdata /= flatdata
         tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
 
 
-def make_bpm(imagename, masterbpmfile):
-    return
+def run_crreject(imagenames, outputnames, clobber=True):
+    # We can grab a master BPM here if we like
+    for i, im in enumerate(imagenames):
+        hdu = pyfits.open(im)
+        imdata = hdu[0].data.copy()
+        imhdr = hdu[0].header.copy()
+        imhdr = sanitizeheader(imhdr)
+        hdu.close()
+        gain= float(imhdr['GAIN'])
+        saturate = float(imhdr['SATURATE'])
+        rdnoise = float(imhdr['RDNOISE'])
+        #Calculate observed noise level (median absolute deviation)
+        mad = imagemad(imdata)
+        med = np.median(imdata)  #Presumably the sky level
+        #We expect that the sqrt(gain * median + RDNoise^2) should = MAD
+        #Inverting this (MAD^2 - RDNOISE^2) / gain = median
+        pssl = (mad * mad - rdnoise * rdnoise)/gain - med
+        m = lacosmicx.lacosmicx(imdata,sigclip=4.5, sigfrac=0.3, objlim=5.0,
+                                pssl = pssl, gain = gain, cleantype='idw',
+                                satlevel = saturate, readnoise=rdnoise )
+        tofits(outputnames[i], np.array(m,dtype=np.uint8), hdr=imhdr, clobber=clobber)
 
-def run_lacosmicx(imagename):
-    return
 
-def run_astrometry(imagename):
-    return
-
+def run_astrometry(imagenames, outputnames, clobber=True):
+    for i, im in enumerate(imagenames):
+        # Run astrometry.net
+        ra = pyfits.getval(im,'RA')
+        dec = pyfits.getval(im,'DEC')
+        cmd = 'solve-field --crpix-center --no-tweak --no-verify --no-fits2fits'
+        cmd +=' --radius 1.0 --ra %s --dec %s --guess-scale '%(ra,dec)
+        cmd +='--scale-units arcsecperpix --scale-low 0.1 --scale-high 1.0 '
+        cmd +='--no-plots --use-sextractor -N tmpwcs.fits '
+        if clobber: cmd += '--overwrite '
+        cmd +='--solved none --match none --rdls none --wcs none --corr none '
+        cmd +='%s'%im
+        os.system(cmd)
+        basename = im[:-5]
+        os.remove(basename+'.axy')
+        os.remove(basename+'-indx.xyls')
+        shutil.move('tmpwcs.fits',outputnames[i])
