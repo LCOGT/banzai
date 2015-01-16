@@ -5,7 +5,10 @@ import glob
 from pylcogt.utils import pymysql
 from pylcogt.utils.pymysql import readkey
 import string
+import lacosmicx
 from sklearn.gaussian_process import GaussianProcess
+import os
+import shutil
 
 def ingest(list_image, table, _force):
     conn = pymysql.getconnection()
@@ -343,6 +346,7 @@ def run_applyflat(imagenames, outfilenames, masterflatname, clobber=True):
 def run_crreject(imagenames, outputnames, clobber=True):
     # We can grab a master BPM here if we like
     for i, im in enumerate(imagenames):
+        print 'cosmic rejection for image '+str(im)
         hdu = pyfits.open(im)
         imdata = hdu[0].data.copy()
         imhdr = hdu[0].header.copy()
@@ -365,6 +369,7 @@ def run_crreject(imagenames, outputnames, clobber=True):
 
 def run_astrometry(imagenames, outputnames, clobber=True):
     for i, im in enumerate(imagenames):
+        print 'astrometry for image '+str(im)
         # Run astrometry.net
         ra = pyfits.getval(im,'RA')
         dec = pyfits.getval(im,'DEC')

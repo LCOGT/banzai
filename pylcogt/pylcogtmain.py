@@ -11,6 +11,7 @@ import re
 import os
 import numpy as np
 import pyfits
+
 from optparse import OptionParser
 
 if __name__ == "__main__":
@@ -65,7 +66,7 @@ if __name__ == "__main__":
     else:
         if _stage in ['makebias', 'applybias']:
             _table = 'lcogtraw'
-        elif _stage in ['makedark','makeflat', 'applydark', 'applyflat', 'cosmic']:
+        elif _stage in ['makedark','makeflat', 'applydark', 'applyflat', 'cosmic','wcs']:
             _table = 'lcogtredu'
         else:
             _table = 'lcogtraw'
@@ -297,6 +298,37 @@ if __name__ == "__main__":
 
         elif _stage == 'cosmic':
             print 'select science images and correct for cosmic'
+            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['EXPOSE'])])
+            listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
+
+            #    select only images where flat, bias and dark are applyed
+            jj = np.asarray([ii for ii in range(0,len(listfile))
+                             if (pyfits.getheader(listfile[ii]).get('BIASCOR')) and
+                                 pyfits.getheader(listfile[ii]).get('DARKCOR') and
+                                 pyfits.getheader(listfile[ii]).get('FLATCOR') ])
+            listfile = np.array(listfile)[jj]
+            outfilenames = [re.sub('.fits','.bpm.fits',ii)   for ii in listfile]
+
+            #raw_input('ddd')
+            pylcogt.utils.lcogtsteps.run_crreject(listfile, outfilenames, clobber=True)
+
         elif _stage == 'wcs':
             print 'select science image and do astrometry'
+            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['EXPOSE'])])
+            listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
 
+            #    select only images where flat, bias and dark are applyed
+            jj = np.asarray([ii for ii in range(0,len(listfile))
+                             if (pyfits.getheader(listfile[ii]).get('BIASCOR')) and
+                                 pyfits.getheader(listfile[ii]).get('DARKCOR') and
+                                 pyfits.getheader(listfile[ii]).get('FLATCOR') ])
+            listfile = np.array(listfile)[jj]
+            #outfilenames = [re.sub('.fits','.bpm.fits',ii)   for ii in listfile]
+
+            #raw_input('ddd')
+            pylcogt.utils.lcogtsteps.run_astrometry(listfile, listfile, clobber=True)
+            for im in listfile:
+                if pyfits.getheader(im).get('IMAGEH'):
+                    pylcogt.utils.pymysql.updateheader(im,0, {'WCSERR':[0,' ASTROMETRY']})
+                else:
+                    pylcogt.utils.pymysql.updateheader(im,0, {'WCSERR':[1,' ASTROMETRY']})
