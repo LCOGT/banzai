@@ -19,7 +19,7 @@ if __name__ == "__main__":
     parser.add_option("-e", "--epoch",dest="epoch",default='20121212',type="str",
                   help='epoch to reduce  \t [%default]')
     parser.add_option("-T", "--telescope", dest="telescope", default='all', type="str",
-                      help='-T telescope ' + ', '.join(pylcogt.utils.pymysql.telescope0['all']) + ', '.join(
+                      help='-T telescope ' + ', '.join(pylcogt.utils.pymysql.telescope0['all']) +' '+ ', '.join(
                           pylcogt.utils.pymysql.site0) + ', fts, ftn, 1m0, kb, fl \t [%default]')
     parser.add_option("-s", "--stage", dest="stage", default='', type="str",
                        help='-s stage [ingest,makebias, makeflat, makedark, applybias, applydark, '
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     _bin = option.bin
 
     if _telescope not in pylcogt.utils.pymysql.telescope0['all'] + pylcogt.utils.pymysql.site0 + \
-            ['all', 'ftn', 'fts', '1m0', 'kb', 'fl']:
+            ['all', 'ftn', 'fts', '1m0', 'kb', 'fl', 'fs']:
             sys.argv.append('--help')
 
     if _stage not in ['makebias', 'makedark', 'makeflat', 'applybias', 'applydark', 'applyflat', 'wcs',
