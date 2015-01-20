@@ -286,7 +286,7 @@ def readkey(hdr, keyword):
                        'ron': 'RDNOISE',
                        'airmass': 'AIRMASS',
                        'type': 'OBSTYPE',
-                       'telescop': 'TELID'}
+                       'telescop': 'TELESCOP'}
     else:
         useful_keys = {'object': 'OBJECT',
                        'date-obs': 'DATE-OBS'}
@@ -333,19 +333,20 @@ def readkey(hdr, keyword):
                     value = value[0]
             elif keyword == 'RA':
                 import string, re
-
-                value = (((float(string.split(value, ':')[2]) / 60 + float(string.split(value, ':')[1])) / 60) \
+                print value
+                if value!='NaN':
+                    value = (((float(string.split(value, ':')[2]) / 60 + float(string.split(value, ':')[1])) / 60) \
                          + float(string.split(value, ':')[0])) * 15
             elif keyword == 'DEC':
                 import string, re
-
-                if string.count(string.split(value, ':')[0], '-') == 0:
-                    value = ((float(string.split(value, ':')[2]) / 60 + float(string.split(value, ':')[1])) / 60) \
-                            + float(string.split(value, ':')[0])
-                else:
-                    value = (-1) * (
-                        ((abs(float(string.split(value, ':')[2]) / 60) + float(string.split(value, ':')[1])) / 60) \
-                        + abs(float(string.split(value, ':')[0])))
+                if value!='NaN':
+                    if string.count(string.split(value, ':')[0], '-') == 0:
+                        value = ((float(string.split(value, ':')[2]) / 60 + float(string.split(value, ':')[1])) / 60) \
+                                + float(string.split(value, ':')[0])
+                    else:
+                        value = (-1) * (
+                            ((abs(float(string.split(value, ':')[2]) / 60) + float(string.split(value, ':')[1])) / 60) \
+                            + abs(float(string.split(value, ':')[0])))
     else:
         if keyword in hdr:
             value = hdr.get(keyword)
