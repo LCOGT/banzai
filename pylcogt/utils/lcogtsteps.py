@@ -233,13 +233,13 @@ def goodflat(imagenames, previousgoodimagename):
             good = False
         # If the std and median absolute devition differ by a huge factor
         # likely bad
-        if np.std(imarr) / imagemad(imarr) > 10:
-            good = False
+        #if np.std(imarr) / imagemad(imarr) > 10:
+        #    good = False
     
         # If the diagonal part of the of the image covariance matrix is large
         # likely bad
-        elif np.abs(imagecov(imarr)) ** 0.5 > 30:
-            good = False
+        #elif np.abs(imagecov(imarr)[0]) ** 0.5 > 30:
+        #    good = False
     
         # If the image std of the ratio of this flat and the previous flat is large
         # likely bad
@@ -331,6 +331,9 @@ def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
     
     goodflats = goodflat(imagenames, None)
     print goodflats
+    if goodflats.sum() <= 1:
+        print('No good flats')
+        return 
     flatdata = np.zeros((goodflats.sum(), ny, nx))
 
     for i, im in enumerate(imagenames[goodflats]):
@@ -344,7 +347,7 @@ def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
         hdr = pyfits.getheader(imagenames[0])
         hdr = sanitizeheader(hdr)
         tofits(outfilename, medflat, hdr=hdr, clobber=clobber)
-
+    return outfilename
 
 def run_applyflat(imagenames, outfilenames, masterflatname, clobber=True):
     flathdu = pyfits.open(masterflatname)
@@ -400,6 +403,9 @@ def run_astrometry(imagenames, outputnames, clobber=True):
         cmd += '%s' % im
         os.system(cmd)
         basename = im[:-5]
-        os.remove(basename + '.axy')
-        os.remove(basename + '-indx.xyls')
-        shutil.move('tmpwcs.fits', outputnames[i])
+        if os.path.exists(basename + '.axy'):
+            os.remove(basename + '.axy')
+        if os.path.exists(basename + '-indx.xyls'):
+            os.remove(basename + '-indx.xyls')
+        if os.path.exists('tmpwcs'):
+            shutil.move('tmpwcs.fits', outputnames[i])
