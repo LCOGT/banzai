@@ -123,7 +123,9 @@ if __name__ == "__main__":
 
         elif _stage == 'makeflat':
             print 'select flat and make flat'
-            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['SKYFLAT'])])
+            #ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['SKYFLAT'])])
+            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['SKYFLAT'] and
+                                                                        'SKYFLAT_bin' not in ll0['filename'][i])])
             listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
             listbin=ll0['ccdsum'][ww]
             listinst=ll0['instrument'][ww]
@@ -136,17 +138,20 @@ if __name__ == "__main__":
                             print k,j,i
                             listflat=np.array(listfile)[(listbin == i) & (listday == j) & (listfilt == filt)]
                             _output='flat_'+str(k)+'_'+re.sub('-','',str(j))+'_SKYFLAT_bin'+re.sub(' ','x',i)+'_'+str(filt)+'.fits'
-                            pylcogt.utils.lcogtsteps.run_makeflat(listflat, _output, minimages=5)
-                            print _output
-                            siteid=pyfits.getheader(_output)['SITEID']
-                            directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
-                            print 'mv '+_output+' '+directory
-                            pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
-                            os.system('mv '+_output+' '+directory)
+                            _output = pylcogt.utils.lcogtsteps.run_makeflat(listflat, _output, minimages=5)
+                            
+                            if not _output is None:
+                                print _output
+                                siteid=pyfits.getheader(_output)['SITEID']
+                                directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
+                                print 'mv '+_output+' '+directory
+                                pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
+                                os.system('mv '+_output+' '+directory)
 
         elif _stage == 'makedark':
             print 'select dark and make dark'
-            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['DARK'])])
+            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['DARK'] and
+                                                                            'dark_' not in ll0['filename'][i])])
             listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
             listbin=ll0['ccdsum'][ww]
             listinst=ll0['instrument'][ww]
@@ -212,7 +217,8 @@ if __name__ == "__main__":
 
         elif _stage == 'applydark':
             print 'apply dark to science frame and flat'
-            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['EXPOSE', 'SKYFLAT'])])
+            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in ['EXPOSE', 'SKYFLAT']
+                                                                        and  'SKYFLAT' not in ll0['filename'][i])])
             listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
             listbin=ll0['ccdsum'][ww]
             listinst=ll0['instrument'][ww]
@@ -332,3 +338,4 @@ if __name__ == "__main__":
                     pylcogt.utils.pymysql.updateheader(im,0, {'WCSERR':[0,' ASTROMETRY']})
                 else:
                     pylcogt.utils.pymysql.updateheader(im,0, {'WCSERR':[1,' ASTROMETRY']})
+                    
