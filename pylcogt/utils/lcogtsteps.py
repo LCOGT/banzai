@@ -394,12 +394,13 @@ def run_astrometry(imagenames, outputnames, clobber=True):
         # Run astrometry.net
         ra = pyfits.getval(im, 'RA')
         dec = pyfits.getval(im, 'DEC')
-        cmd = 'solve-field --crpix-center --no-tweak --no-verify --no-fits2fits'
+        cmd = 'solve-field --crpix-center --no-verify --no-fits2fits' #--no-tweak
         cmd += ' --radius 1.0 --ra %s --dec %s --guess-scale ' % (ra, dec)
         cmd += '--scale-units arcsecperpix --scale-low 0.1 --scale-high 1.0 '
-        cmd += '--no-plots --use-sextractor -N tmpwcs.fits '
+        cmd += '--no-plots -N tmpwcs.fits '
         if clobber: cmd += '--overwrite '
         cmd += '--solved none --match none --rdls none --wcs none --corr none '
+        cmd += ' --downsample 4 '
         cmd += '%s' % im
         os.system(cmd)
         basename = im[:-5]
@@ -407,5 +408,5 @@ def run_astrometry(imagenames, outputnames, clobber=True):
             os.remove(basename + '.axy')
         if os.path.exists(basename + '-indx.xyls'):
             os.remove(basename + '-indx.xyls')
-        if os.path.exists('tmpwcs'):
+        if os.path.exists('tmpwcs.fits'):
             shutil.move('tmpwcs.fits', outputnames[i])
