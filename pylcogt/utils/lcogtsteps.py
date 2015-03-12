@@ -250,6 +250,14 @@ def goodflat(imagenames, previousgoodimagename):
         goodflats[i] = good
     return goodflats
 
+
+def run_applygain(imagenames, outputnames, clobber=True):
+    for i, im in enumerate(images):
+        hdu = pyfits.open(im)
+        imdata *= float(hdu[0].header['GAIN'])
+        hdu[0].header['GAIN'] = 1.0
+        hdu.writeto(outputnames[i], clobber=clobber)
+        
 def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=True):
     # Assume the files are all the same number of pixels, should add error checking
     biashdu = pyfits.open(masterbiasname)
