@@ -186,7 +186,7 @@ if __name__ == "__main__":
                         for i in set(listbin):
                             for j in set(listday):
                                 print k,j,i
-                                listflat=np.array(listfile)[(listbin == i) & (listday == j) & (listfilt == filt)]
+                                listflat=np.array(listfile)[(listbin == i) & (listday == j) & (listinst==k) & (listfilt == filt)]
                                 if listflat.size:
                                     _output='flat_'+str(k)+'_'+re.sub('-','',str(j))+'_SKYFLAT_bin'+re.sub(' ','x',i)+'_'+str(filt)+'.fits'
                                     _output = pylcogt.utils.lcogtsteps.run_makeflat(listflat, _output, minimages=5)                            
@@ -217,7 +217,7 @@ if __name__ == "__main__":
                     for i in set(listbin):
                         for j in set(listday):
                             print k,j,i
-                            listdark=np.array(listfile)[(listbin == i) & (listday == j)]
+                            listdark=np.array(listfile)[(listbin == i) &  (listinst==k) & (listday == j)]
                             if listdark.size:
                                 _output='dark_'+str(k)+'_'+re.sub('-','',str(j))+'_bin'+re.sub(' ','x',i)+'.fits'
                                 pylcogt.utils.lcogtsteps.run_makedark(listdark, _output, minimages=5)
@@ -253,7 +253,7 @@ if __name__ == "__main__":
                             listimg = np.array(listfile)[(listbin == i) & (listday == j) & (listinst == k)]
                             outfilenames = [re.sub('00.fits','90.fits',re.sub('02.fits','00.fits',string.split(ii,'/')[-1]))
                                         for ii in listimg]
-                            listmjd0=np.array(listmjd)[(listbin == i) & (listday == j)]
+                            listmjd0=np.array(listmjd)[(listbin == i) & (listday == j) & (listinst == k)]
 
                             #    select only images where flat was not apply
                             jj = np.asarray([ii for ii in range(0,len(listimg))
@@ -302,15 +302,15 @@ if __name__ == "__main__":
                             print j,k,i
                             #  filter also by instrument
                             listimg = np.array(listfile)[(listbin == i) & (listday == j) & (listinst == k)]
+                            listmjd0=np.array(listmjd)[(listbin == i) & (listday == j) & (listinst == k)]
                             outfilenames = [re.sub('00.fits','90.fits',string.split(ii,'/')[-1]) for ii in listimg]
-                            listmjd0=np.array(listmjd)[(listbin == i) & (listday == j)]
-
                             #    select only images where flat was not apply
                             jj = np.asarray([ii for ii in range(0,len(listimg))
                                              if not pyfits.getheader(listimg[ii]).get('DARKCOR')])
                             if len(jj):
                                 listimg=np.array(listimg)[jj]
                                 listmjd0=np.array(listmjd0)[jj]
+                                outfilenames=np.array(outfilenames)[jj]
                             else:
                                 listimg=[]
 
@@ -350,8 +350,8 @@ if __name__ == "__main__":
                         for i in set(listbin):
                             for j in set(listday):
                                 print j,k,i,filt
-                                listimg=np.array(listfile)[(listbin == i) & (listday == j) & (listfilt == filt)]
-                                listmjd0=np.array(listmjd)[(listbin == i) & (listday == j) & (listfilt == filt)]
+                                listimg=np.array(listfile)[(listbin == i) &  (listinst==k) & (listday == j) & (listfilt == filt)]
+                                listmjd0=np.array(listmjd)[(listbin == i) &  (listinst==k) & (listday == j) & (listfilt == filt)]
 
                                 #    select only images where flat was not apply
                                 jj = np.asarray([ii for ii in range(0,len(listimg))
