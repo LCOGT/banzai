@@ -143,6 +143,9 @@ def run_makebias(imagenames, outfilename, minimages=5, clobber=True):
         medbias = np.median(biasdata, axis=0)
         hdr = sanitizeheader(pyfits.getheader(imagenames[0]))
         tofits(outfilename, medbias, hdr=hdr, clobber=clobber)
+        return outfilename
+    else:
+        return None
 
 #####################################################################################################################
 def imagecov(imagearr):
@@ -310,6 +313,9 @@ def run_makedark(imagenames, outfilename, minimages=3, clobber=True):
         hdr = pyfits.getheader(imagenames[0])
         hdr = sanitizeheader(hdr)
         tofits(outfilename, meddark, hdr=hdr, clobber=clobber)
+        return outfilename
+    else:
+        return None
 
 def run_applydark(imagenames, outfilenames, masterdarkname, clobber=True):
     darkhdu = pyfits.open(masterdarkname)
@@ -339,9 +345,9 @@ def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
     
     goodflats = goodflat(imagenames, None)
     print goodflats
-    if goodflats.sum() <= 1:
+    if goodflats.sum() < minimages:
         print('No good flats')
-        return 
+        return None
     flatdata = np.zeros((goodflats.sum(), ny, nx))
 
     for i, im in enumerate(imagenames[goodflats]):
@@ -349,13 +355,13 @@ def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
         print("Finding the mode of flat field %s" % im)
         flatdata[i, :, :] /= imagemode(flatdata[i], 200)
     print("Median combining flat fields.")
-    if len(imagenames) >= minimages:
-        medflat = np.median(flatdata, axis=0)
-        print("Finishing median combine.")
-        hdr = pyfits.getheader(imagenames[0])
-        hdr = sanitizeheader(hdr)
-        tofits(outfilename, medflat, hdr=hdr, clobber=clobber)
+    medflat = np.median(flatdata, axis=0)
+    print("Finishing median combine.")
+    hdr = pyfits.getheader(imagenames[0])
+    hdr = sanitizeheader(hdr)
+    tofits(outfilename, medflat, hdr=hdr, clobber=clobber)
     return outfilename
+
 
 def run_applyflat(imagenames, outfilenames, masterflatname, clobber=True):
     flathdu = pyfits.open(masterflatname)
@@ -417,4 +423,79 @@ def run_astrometry(imagenames, outputnames, clobber=True):
         if os.path.exists(basename + '-indx.xyls'):
             os.remove(basename + '-indx.xyls')
         if os.path.exists('tmpwcs.fits'):
-            shutil.move('tmpwcs.fits', outputnames[i])
+            #shutil.move('tmpwcs.fits', outputnames[i])
+            hdrt = pyfits.getheader('tmpwcs.fits')
+            dictionary = {
+                'CTYPE1'  : [ 'RA---TAN', 'TAN (gnomic) projection'],
+                'CTYPE2'  : ['DEC--TAN' , 'TAN (gnomic) projection'],
+                'WCSAXES' : [ hdrt['WCSAXES'] , 'no comment'],
+                'EQUINOX' : [ hdrt['EQUINOX'] , 'Equatorial coordinates definition (yr)'],
+                'LONPOLE' : [ hdrt['LONPOLE'] , 'no comment'],
+                'LATPOLE' : [ hdrt['LATPOLE'] , 'no comment'],
+                'CRVAL1'  : [ hdrt['CRVAL1']  , 'RA  of reference point'],
+                'CRVAL2'  : [ hdrt['CRVAL2'] , 'DEC of reference point'],
+                'CRPIX1'  : [ hdrt['CRPIX1']     , 'X reference pixel'],
+                'CRPIX2'  : [ hdrt['CRPIX2']     , 'Y reference pixel'],
+                'CUNIT1'  : ['deg     ' , 'X pixel scale units'],
+                'CUNIT2'  : ['deg     ' , 'Y pixel scale units'],
+                'CD1_1'   : [ hdrt['CD1_1'] , 'Transformation matrix'],
+                'CD1_2'   : [ hdrt['CD1_2'] , 'no comment'],
+                'CD2_1'   : [ hdrt['CD2_1'] , 'no comment'],
+                'CD2_2'   : [ hdrt['CD2_2'] , 'no comment'],
+                'IMAGEW'  : [ hdrt['IMAGEW']  , 'Image width,  in pixels.'],
+                'IMAGEH'  : [ hdrt['IMAGEH']  , 'Image height, in pixels.']}
+            pylcogt.utils.pymysql.updateheader(im,0, dictionary)
+            os.remove('tmpwcs.fits')
+
+def run_sextractor(im):
+        _sat = pyfits.getval(im, ('SATURATE'))
+        if not _sat:
+            _sat = 55000 
+        line='NUMBER\nX_IMAGE\nY_IMAGE\nMAG_BEST\nMAGERR_BEST\nFLAGS\nCLASS_STAR\n'+\
+            'FLUX_RADIUS\nELLIPTICITY\nBACKGROUND\nTHRESHOLD\n'
+        f = open('default.param','w')
+        f.write(line)
+        f.close()
+
+        line='CONV NORM\n# 3x3 ``all-ground'' convolution mask with FWHM = 2 pixels.\n'+\
+            '1 2 1\n2 4 2\n1 2 1'
+        f = open('default.conv','w')
+        f.write(line)
+        f.close()
+
+        line='NNW\n# Neural Network Weights for the SExtractor star/galaxy classifier (V1.3)\n'+\
+            '# inputs:	9 for profile parameters + 1 for seeing.\n# outputs:	``Stellarity index'' (0.0 to 1.0)\n'+\
+            '# Seeing FWHM range: from 0.025 to 5.5'' (images must have 1.5 < FWHM < 5 pixels)\n'+\
+            '# Optimized for Moffat profiles with 2<= beta <= 4.\n\n 3 10 10  1\n\n'+\
+            '-1.56604e+00 -2.48265e+00 -1.44564e+00 -1.24675e+00 -9.44913e-01 -5.22453e-01  4.61342e-02  8.31957e-01  2.15505e+00  2.64769e-01\n'+\
+            '3.03477e+00  2.69561e+00  3.16188e+00  3.34497e+00  3.51885e+00  3.65570e+00  3.74856e+00  3.84541e+00  4.22811e+00  3.27734e+00\n\n'+\
+            '-3.22480e-01 -2.12804e+00  6.50750e-01 -1.11242e+00 -1.40683e+00 -1.55944e+00 -1.84558e+00 -1.18946e-01  5.52395e-01 -4.36564e-01 -5.30052e+00\n'+\
+            ' 4.62594e-01 -3.29127e+00  1.10950e+00 -6.01857e-01  1.29492e-01  1.42290e+00  2.90741e+00  2.44058e+00 -9.19118e-01  8.42851e-01 -4.69824e+00\n'+\
+            '-2.57424e+00  8.96469e-01  8.34775e-01  2.18845e+00  2.46526e+00  8.60878e-02 -6.88080e-01 -1.33623e-02  9.30403e-02  1.64942e+00 -1.01231e+00\n'+\
+            ' 4.81041e+00  1.53747e+00 -1.12216e+00 -3.16008e+00 -1.67404e+00 -1.75767e+00 -1.29310e+00  5.59549e-01  8.08468e-01 -1.01592e-02 -7.54052e+00\n'+\
+            ' 1.01933e+01 -2.09484e+01 -1.07426e+00  9.87912e-01  6.05210e-01 -6.04535e-02 -5.87826e-01 -7.94117e-01 -4.89190e-01 -8.12710e-02 -2.07067e+01\n'+\
+            '-5.31793e+00  7.94240e+00 -4.64165e+00 -4.37436e+00 -1.55417e+00  7.54368e-01  1.09608e+00  1.45967e+00  1.62946e+00 -1.01301e+00  1.13514e-01\n'+\
+            ' 2.20336e-01  1.70056e+00 -5.20105e-01 -4.28330e-01  1.57258e-03 -3.36502e-01 -8.18568e-02 -7.16163e+00  8.23195e+00 -1.71561e-02 -1.13749e+01\n'+\
+            ' 3.75075e+00  7.25399e+00 -1.75325e+00 -2.68814e+00 -3.71128e+00 -4.62933e+00 -2.13747e+00 -1.89186e-01  1.29122e+00 -7.49380e-01  6.71712e-01\n'+\
+            '-8.41923e-01  4.64997e+00  5.65808e-01 -3.08277e-01 -1.01687e+00  1.73127e-01 -8.92130e-01  1.89044e+00 -2.75543e-01 -7.72828e-01  5.36745e-01\n'+\
+            '-3.65598e+00  7.56997e+00 -3.76373e+00 -1.74542e+00 -1.37540e-01 -5.55400e-01 -1.59195e-01  1.27910e-01  1.91906e+00  1.42119e+00 -4.35502e+00\n\n'+\
+            '-1.70059e+00 -3.65695e+00  1.22367e+00 -5.74367e-01 -3.29571e+00  2.46316e+00  5.22353e+00  2.42038e+00  1.22919e+00 -9.22250e-01 -2.32028e+00\n\n'+\
+            '0.00000e+00 \n 1.00000e+00 \n'
+        f = open('default.nnw','w')
+        f.write(line)
+        f.close()
+
+        os.system('sex -d > default.sex')
+        line = 'sex '+im+' -CLEAN YES -PHOT_FLUXFRAC 0.5 -CATALOG_NAME detections.cat -SATUR_LEVEL '+str(_sat)+\
+               ' -PIXEL_SCALE  .5 -SEEING_FWHM  2  -DETECT_MINAREA  10 -PARAMETERS_NAME default.param '+\
+               ' > _logsex'
+        os.system(line)
+        data = np.genfromtxt('detections.cat')
+        num,xpix,ypix,cm,cmerr,flag,cl,fw,ell,bkg,fl=zip(*data)
+        return  num,xpix,ypix,cm,cmerr,flag,cl,fw,ell,bkg,fl
+
+
+
+
+
+
