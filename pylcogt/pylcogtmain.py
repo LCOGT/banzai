@@ -23,13 +23,19 @@ if __name__ == "__main__":
                           pylcogt.utils.pymysql.site0) + ', fts, ftn, 1m0, kb, fl \t [%default]')
     parser.add_option("-s", "--stage", dest="stage", default='', type="str",
                        help='-s stage [ingest,makebias, makeflat, makedark, applybias, applydark, '
-                            'applyflat, cosmic, wcs] \t [%default]')
+                            'applyflat, cosmic, wcs, checkimg] \t [%default]')
     parser.add_option("-f", "--filter", dest="filter", default='', type="str",
                       help="-f filter [sloan,landolt,apass,u,g,r,i,z,U,B,V,R,I] \t [%default]")
     parser.add_option("-b", "--bin", dest="bin", default='', type="str",
                       help="-b bin [1x1, 2x2 ] \t [%default]")
     parser.add_option("--table", dest="table", default='', type="str",
                       help="--table lcogtraw [lcogtraw,lcogtredu] \t [%default]")
+    parser.add_option("--type", dest="type", default='SKYFLAT', type="str",
+                      help="--type SKYFLAT [EXPOSE,BIAS,DARK] \t [%default]")
+    parser.add_option("-n", "--name", dest="name", default='', type="str",
+                      help='-n image name   \t [%default]')
+    parser.add_option("-d", "--id", dest="id", default='', type="str",
+                      help='-d identification id   \t [%default]')
 
     option, args = parser.parse_args()
     # _instrument=option.instrument
@@ -37,9 +43,12 @@ if __name__ == "__main__":
     _telescope = option.telescope
     _table = option.table
     _stage = option.stage
+    _type = option.type
     epoch = option.epoch
     _filter = option.filter
     _bin = option.bin
+    _id = option.id
+    _name = option.name
 
     if _telescope not in pylcogt.utils.pymysql.telescope0['all'] + pylcogt.utils.pymysql.site0 + \
             ['all', 'ftn', 'fts', '1m0', 'kb', 'fl', 'fs']:
@@ -49,7 +58,7 @@ if __name__ == "__main__":
             sys.argv.append('--help')
 
     if _stage not in ['makebias', 'makedark', 'makeflat', 'applybias', 'applydark', 'applyflat', 'wcs',
-                      'cosmic','ingest','']:
+                      'cosmic','ingest','checkimg','']:
             sys.argv.append('--help')
 
     option, args = parser.parse_args()
@@ -68,12 +77,12 @@ if __name__ == "__main__":
     print _stage
     print listepoch
     if _stage == 'ingest':
-        pylcogt.utils.lcogtsteps.run_ingest(_telescope,listepoch,'update','lcogtraw')
+       pylcogt.utils.lcogtsteps.run_ingest(_telescope,listepoch,'update','lcogtraw')
     else:
         if not _table:
             if _stage in ['makebias', 'applybias']:
                 _table = 'lcogtraw'
-            elif _stage in ['makedark','makeflat', 'applydark', 'applyflat', 'cosmic','wcs']:
+            elif _stage in ['makedark','makeflat', 'applydark', 'applyflat', 'cosmic','wcs', 'checkimg']:
                 _table = 'lcogtredu'
             else:
                 _table = 'lcogtraw'
@@ -97,8 +106,8 @@ if __name__ == "__main__":
             for i in ll0.keys():
                 ll0[i] = np.take(ll0[i], inds)
 
-            if _filter or _bin:
-                ll0 = pylcogt.utils.pymysql.filtralist(ll0, _filter, '', '', '', '', _bin)
+            if _filter or _bin or _name or _id:
+                ll0 = pylcogt.utils.pymysql.filtralist(ll0, _filter, _id, _name, '', '', _bin)
             if not len(ll0['id']):
                 sys.exit('no images selected')
 
@@ -155,16 +164,16 @@ if __name__ == "__main__":
                             print k,j,i
                             listbias=np.array(listfile)[(listbin==i) & (listinst==k) & (listday==j)]
                             if listbias.size:
-                                _output='bias_'+str(k)+'_'+re.sub('-','',str(j))+'_bin'+re.sub(' ','x',i)+'.fits'
-                                pylcogt.utils.lcogtsteps.run_makebias(listbias, _output, minimages=5)
-                                print _output
-                                siteid=pyfits.getheader(_output)['SITEID']
-                                directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
-                                if not os.path.isdir(directory): 
-                                    os.mkdir(directory)
-                                print 'mv '+_output+' '+directory
-                                pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
-                                os.system('mv '+_output+' '+directory)
+                                _output = 'bias_'+str(k)+'_'+re.sub('-','',str(j))+'_bin'+re.sub(' ','x',i)+'.fits'
+                                _output = pylcogt.utils.lcogtsteps.run_makebias(listbias, _output, minimages=5)
+                                if _output is not None:
+                                    siteid=pyfits.getheader(_output)['SITEID']
+                                    directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
+                                    if not os.path.isdir(directory): 
+                                        os.mkdir(directory)
+                                    print 'mv '+_output+' '+directory
+                                    pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
+                                    os.system('mv '+_output+' '+directory)
                             else:
                                 print 'no bias selected '+' '.join([str(k)+str(j)+str(i)])
             else:
@@ -190,7 +199,7 @@ if __name__ == "__main__":
                                 if listflat.size:
                                     _output='flat_'+str(k)+'_'+re.sub('-','',str(j))+'_SKYFLAT_bin'+re.sub(' ','x',i)+'_'+str(filt)+'.fits'
                                     _output = pylcogt.utils.lcogtsteps.run_makeflat(listflat, _output, minimages=5)                            
-                                    if not _output is None:
+                                    if _output is not None:
                                         print _output
                                         siteid=pyfits.getheader(_output)['SITEID']
                                         directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
@@ -220,15 +229,15 @@ if __name__ == "__main__":
                             listdark=np.array(listfile)[(listbin == i) &  (listinst==k) & (listday == j)]
                             if listdark.size:
                                 _output='dark_'+str(k)+'_'+re.sub('-','',str(j))+'_bin'+re.sub(' ','x',i)+'.fits'
-                                pylcogt.utils.lcogtsteps.run_makedark(listdark, _output, minimages=5)
-                                print _output
-                                siteid=pyfits.getheader(_output)['SITEID']
-                                directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
-                                if not os.path.isdir(directory): 
-                                    os.mkdir(directory)
-                                print 'mv '+_output+' '+directory
-                                pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
-                                os.system('mv '+_output+' '+directory)
+                                _output = pylcogt.utils.lcogtsteps.run_makedark(listdark, _output, minimages=5)
+                                if _output is not None:
+                                    siteid=pyfits.getheader(_output)['SITEID']
+                                    directory=pylcogt.utils.pymysql.workingdirectory+siteid+'/'+k+'/'+re.sub('-','',str(j))+'/'
+                                    if not os.path.isdir(directory): 
+                                        os.mkdir(directory)
+                                    print 'mv '+_output+' '+directory
+                                    pylcogt.utils.lcogtsteps.ingest([_output], 'lcogtredu', 'yes')
+                                    os.system('mv '+_output+' '+directory)
                             else:
                                 print 'no dark selected '+' '.join([str(k)+str(j)+str(i)])
             else:
@@ -255,7 +264,7 @@ if __name__ == "__main__":
                                         for ii in listimg]
                             listmjd0=np.array(listmjd)[(listbin == i) & (listday == j) & (listinst == k)]
 
-                            #    select only images where flat was not apply
+                            #    select only images where bias was not apply
                             jj = np.asarray([ii for ii in range(0,len(listimg))
                                              if not pyfits.getheader(listimg[ii]).get('BIASCOR')])
                             if len(jj):
@@ -304,7 +313,7 @@ if __name__ == "__main__":
                             listimg = np.array(listfile)[(listbin == i) & (listday == j) & (listinst == k)]
                             listmjd0=np.array(listmjd)[(listbin == i) & (listday == j) & (listinst == k)]
                             outfilenames = [re.sub('00.fits','90.fits',string.split(ii,'/')[-1]) for ii in listimg]
-                            #    select only images where flat was not apply
+                            #    select only images where Dark was not apply
                             jj = np.asarray([ii for ii in range(0,len(listimg))
                                              if not pyfits.getheader(listimg[ii]).get('DARKCOR')])
                             if len(jj):
@@ -411,9 +420,50 @@ if __name__ == "__main__":
 
                 pylcogt.utils.lcogtsteps.run_astrometry(listfile, listfile, clobber=True)
                 for im in listfile:
-                    if pyfits.getheader(im).get('IMAGEH'):
-                        pylcogt.utils.pymysql.updateheader(im,0, {'WCSERR':[0,' ASTROMETRY']})
+                    num,xpix,ypix,cm,cmerr,flag,cl,fw,ell,bkg,fl = pylcogt.utils.lcogtsteps.run_sextractor(im)
+                    if len(fw)>1:
+                        _instrume =  pyfits.getheader(im)['instrume']
+                        if _instrume in pylcogt.instrument0['sbig']:
+                            fwhm = np.median(np.array(fw))*.68*2.35*0.467
+                        elif _instrume in pylcogt.instrument0['sinistro']:
+                            fwhm = np.median(np.array(fw))*.68*2.35*0.467          #  need to check
+                        elif _instrume in ['fs01','fs02','fs03']:
+                            fwhm = median(np.array(fw))*.68*2.35*0.30
+                        elif _instrume in ['em03','em01']:
+                            fwhm = np.median(np.array(fw))*.68*2.35*0.278
+                        else:
+                            fwhm = 5
                     else:
-                        pylcogt.utils.pymysql.updateheader(im,0, {'WCSERR':[1,' ASTROMETRY']})
+                        fwhm = 5
+                    if pyfits.getheader(im).get('IMAGEH'):
+                        pylcogt.utils.pymysql.updateheader(im,0, 
+                                                           {'WCSERR':[0,' ASTROMETRY'],
+                                                            'ASTROMET': ['1 1 1', 'rmsx rmsy nstars'],
+                                                            'PSF_FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
+                                                            })
+                    else:
+                        pylcogt.utils.pymysql.updateheader(im,0, {'WCSERR':[1,' ASTROMETRY'],
+                                                                  'PSF_FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
+                                                                  })
             else:
                 print 'no exposures selected'
+        elif _stage == 'checkimg':
+            print 'select flat image'
+            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in [_type])])
+            if ww.size:
+                listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
+                from pyraf import iraf
+                for img in listfile:
+                    iraf.display(img,frame=1, fill='yes')
+                    print img
+                    answ = raw_input('good [y/n] [y] ')
+                    if answ in ['n','No','NO']:
+                        answ='n'
+                        print 'delete image'
+                        os.system('mv '+img+' '+'/nethome/supernova/pylcogt/bad/')
+                        gg=pylcogt.utils.pymysql.getlistfromraw(conn, _table, 'filename', string.split(img,'/')[-1], 
+                                                                '', column2='*', telescope='all')
+                        if len(gg):
+                            command = ['delete from lcogtredu where filename = "'+string.split(img,'/')[-1]+'"']
+                            deletefromdb=pylcogt.utils.pymysql.query(command, conn)
+                            print deletefromdb

@@ -452,11 +452,11 @@ def filtralist(ll2, _filter, _id, _name, _ra, _dec, _bin):
                 ll1[jj] = []
 
     if _id:  # select by ID
-        try:
-            xx = '0000'[len(_id):] + _id
-            ww = np.asarray([i for i in range(len(ll1['filter'])) if ((_id in string.split(ll1['filename'][i], '-')[3]))])
-        except:
-            ww = np.asarray([i for i in range(len(ll1['filter'])) if (_id in ll1['filename'][i])])
+#        try:
+#            xx = '0000'[len(_id):] + _id
+#            ww = np.asarray([i for i in range(len(ll1['filter'])) if ((_id in string.split(ll1['filename'][i], '-')[3]))])
+#        except:
+        ww = np.asarray([i for i in range(len(ll1['filter'])) if (_id in ll1['filename'][i])])
         if len(ww) > 0:
             for jj in ll1.keys():
                 ll1[jj] = np.array(ll1[jj])[ww]
