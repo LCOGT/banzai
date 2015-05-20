@@ -13,6 +13,7 @@ import shutil
 def ingest(list_image, table, _force):
     conn = pymysql.getconnection()
     for img in list_image:
+        print img
         img0 = string.split(img, '/')[-1]
         command = ['select filename from ' + str(table) + ' where filename="'
                    + str(img0) + '"']
@@ -28,7 +29,9 @@ def ingest(list_image, table, _force):
                 dir2 = 'raw/'
 
             if table in ['lcogtraw']:
-                dire = pymysql.rawdata + readkey(hdr, 'SITEID') + '/' + readkey(hdr, 'instrume') + '/' + readkey(hdr, 'DAY-OBS') + '/' + dir2
+                #dire = pymysql.rawdata + readkey(hdr, 'SITEID') + '/' + readkey(hdr, 'instrume') + '/' + readkey(hdr, 'DAY-OBS') + '/' + dir2
+                dire = os.path.split(img)[0]+'/'
+                #pymysql.rawdata + readkey(hdr, 'SITEID') + '/' + readkey(hdr, 'instrume') + '/' + readkey(hdr, 'DAY-OBS') + '/' + dir2
             elif table in ['lcogtredu']:
                 dire = pymysql.workingdirectory + readkey(hdr, 'SITEID') + '/' + readkey(hdr, 'instrume') + '/' + readkey(hdr, 'DAY-OBS') + '/'
 
@@ -110,7 +113,7 @@ def run_ingest(telescope, listepoch, _force, table='lcogtraw'):
                     dir2 = '/preproc/'
                 else:
                     dir2 = '/raw/'
-                imglist = glob.glob(pymysql.rawdata + tel + '/' + instrument + '/' + epoch + dir2 + '*')
+                imglist = glob.glob(pymysql.rawdata + tel + '/' + instrument + '/' + epoch + dir2 + '*.fits')
                 print imglist
                 if len(imglist):
                     print 'ingest'

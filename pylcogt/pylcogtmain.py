@@ -440,10 +440,12 @@ if __name__ == "__main__":
                                                            {'WCSERR':[0,' ASTROMETRY'],
                                                             'ASTROMET': ['1 1 1', 'rmsx rmsy nstars'],
                                                             'PSF_FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
+                                                            'L1FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
                                                             })
                     else:
                         pylcogt.utils.pymysql.updateheader(im,0, {'WCSERR':[1,' ASTROMETRY'],
                                                                   'PSF_FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
+                                                                  'L1FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
                                                                   })
             else:
                 print 'no exposures selected'
