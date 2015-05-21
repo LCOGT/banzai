@@ -29,12 +29,9 @@ def ingest(list_image, table, _force):
                 dir2 = 'raw/'
 
             if table in ['lcogtraw']:
-                #dire = pymysql.rawdata + readkey(hdr, 'SITEID') + '/' + readkey(hdr, 'instrume') + '/' + readkey(hdr, 'DAY-OBS') + '/' + dir2
                 dire = os.path.split(img)[0]+'/'
-                #pymysql.rawdata + readkey(hdr, 'SITEID') + '/' + readkey(hdr, 'instrume') + '/' + readkey(hdr, 'DAY-OBS') + '/' + dir2
             elif table in ['lcogtredu']:
                 dire = pymysql.workingdirectory + readkey(hdr, 'SITEID') + '/' + readkey(hdr, 'instrume') + '/' + readkey(hdr, 'DAY-OBS') + '/'
-
             if _instrument in pymysql.instrument0['sbig'] + pymysql.instrument0['sinistro']:
                 print '1m telescope'
                 dictionary = {'dayobs': readkey(hdr, 'DAY-OBS'), 'exptime': readkey(hdr, 'exptime'),
@@ -86,7 +83,7 @@ def ingest(list_image, table, _force):
 #################################################################################################################
 
 
-def run_ingest(telescope, listepoch, _force, table='lcogtraw'):
+def run_ingest(telescope, _instrument, listepoch, _force, table='lcogtraw'):
     pymysql.site0
     if telescope == 'all':
         tellist = pymysql.site0
@@ -101,10 +98,13 @@ def run_ingest(telescope, listepoch, _force, table='lcogtraw'):
     elif telescope in pymysql.telescope0['ogg'] + ['ftn']:
         tellist = ['ogg']
 
-    if telescope in ['ftn', 'fts', '2m0-01', '2m0-02']:
-        instrumentlist = pymysql.instrument0['spectral']
+    if _instrument in pylcogt.pymysql.instrument0['all']:
+        instrumentlist = [_instrument]
     else:
-        instrumentlist = pymysql.instrument0['sinistro'] + pymysql.instrument0['sbig']
+        if telescope in ['ftn', 'fts', '2m0-01', '2m0-02']:
+            instrumentlist = pymysql.instrument0['spectral']
+        else:
+            instrumentlist = pymysql.instrument0['sinistro'] + pymysql.instrument0['sbig']
 
     for epoch in listepoch:
         for tel in tellist:

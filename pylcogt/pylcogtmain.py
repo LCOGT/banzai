@@ -21,6 +21,8 @@ if __name__ == "__main__":
     parser.add_option("-T", "--telescope", dest="telescope", default='all', type="str",
                       help='-T telescope ' + ', '.join(pylcogt.utils.pymysql.telescope0['all']) +' '+ ', '.join(
                           pylcogt.utils.pymysql.site0) + ', fts, ftn, 1m0, kb, fl \t [%default]')
+    parser.add_option("--instrument", dest="instrument", default='', type="str",
+                      help='--instrument ' + ', '.join(pylcogt.utils.pymysql.instrument0['all']) +' \t [%default]')
     parser.add_option("-s", "--stage", dest="stage", default='', type="str",
                        help='-s stage [ingest,makebias, makeflat, makedark, applybias, applydark, '
                             'applyflat, cosmic, wcs, checkimg] \t [%default]')
@@ -41,6 +43,7 @@ if __name__ == "__main__":
     # _instrument=option.instrument
 
     _telescope = option.telescope
+    _instrument = option.instrument
     _table = option.table
     _stage = option.stage
     _type = option.type
@@ -77,7 +80,7 @@ if __name__ == "__main__":
     print _stage
     print listepoch
     if _stage == 'ingest':
-       pylcogt.utils.lcogtsteps.run_ingest(_telescope,listepoch,'update','lcogtraw')
+       pylcogt.utils.lcogtsteps.run_ingest(_telescope,_instrument,listepoch,'update','lcogtraw')
     else:
         if not _table:
             if _stage in ['makebias', 'applybias']:
