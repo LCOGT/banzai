@@ -497,8 +497,35 @@ def run_sextractor(im):
         num,xpix,ypix,cm,cmerr,flag,cl,fw,ell,bkg,fl=zip(*data)
         return  num,xpix,ypix,cm,cmerr,flag,cl,fw,ell,bkg,fl
 
+#########################################################################
+def run_hdupdate(listfile):
+    for im in listfile:
+        _instrume =  pyfits.getheader(im)['instrume']
+        if _instrume in pylcogt.instrument0['sbig']:
+            fwscale = .68*2.35*0.467
+            saturation = 46000
+        elif _instrume in pylcogt.instrument0['sinistro']:
+            fwscale = .68*2.35*0.467          #  need to check
+            saturation = 99750
+        elif _instrume in ['fs01','fs02','fs03']:
+            fwscale = .68*2.35*0.30
+            saturation = 60000
+        elif _instrume in ['em03','em01']:
+            fwscale = .68*2.35*0.278
+            saturation = 60000
+        else:
+            fwscale = .68*2.35*0.467          #  need to check
+            saturation = 46000
 
-
-
-
-
+        num,xpix,ypix,cm,cmerr,flag,cl,fw,ell,bkg,fl = pylcogt.utils.lcogtsteps.run_sextractor(im)
+        if len(fw)>1:
+            fwhm = np.median(np.array(fw))*fwscale
+        else:
+            fwhm = 5
+        
+        pylcogt.utils.pymysql.updateheader(im,0, 
+                                           {'SATURATE' : [saturation, '[ADU] Saturation level used'],
+                                            'PSF_FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
+                                            'L1FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
+                                            })
+#######################################################################

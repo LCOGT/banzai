@@ -24,7 +24,7 @@ if __name__ == "__main__":
     parser.add_option("--instrument", dest="instrument", default='', type="str",
                       help='--instrument ' + ', '.join(pylcogt.utils.pymysql.instrument0['all']) +' \t [%default]')
     parser.add_option("-s", "--stage", dest="stage", default='', type="str",
-                       help='-s stage [ingest,makebias, makeflat, makedark, applybias, applydark, '
+                       help='-s stage [ingest,makebias, makeflat, makedark, applybias, applydark, hdupdate'
                             'applyflat, cosmic, wcs, checkimg] \t [%default]')
     parser.add_option("-f", "--filter", dest="filter", default='', type="str",
                       help="-f filter [sloan,landolt,apass,u,g,r,i,z,U,B,V,R,I] \t [%default]")
@@ -32,7 +32,7 @@ if __name__ == "__main__":
                       help="-b bin [1x1, 2x2 ] \t [%default]")
     parser.add_option("--table", dest="table", default='', type="str",
                       help="--table lcogtraw [lcogtraw,lcogtredu] \t [%default]")
-    parser.add_option("--type", dest="type", default='SKYFLAT', type="str",
+    parser.add_option("--type", dest="type", default='', type="str",
                       help="--type SKYFLAT [EXPOSE,BIAS,DARK] \t [%default]")
     parser.add_option("-n", "--name", dest="name", default='', type="str",
                       help='-n image name   \t [%default]')
@@ -61,7 +61,7 @@ if __name__ == "__main__":
             sys.argv.append('--help')
 
     if _stage not in ['makebias', 'makedark', 'makeflat', 'applybias', 'applydark', 'applyflat', 'wcs',
-                      'cosmic','ingest','checkimg','']:
+                      'cosmic','ingest','checkimg','hdupdate','']:
             sys.argv.append('--help')
 
     option, args = parser.parse_args()
@@ -85,7 +85,7 @@ if __name__ == "__main__":
         if not _table:
             if _stage in ['makebias', 'applybias']:
                 _table = 'lcogtraw'
-            elif _stage in ['makedark','makeflat', 'applydark', 'applyflat', 'cosmic','wcs', 'checkimg']:
+            elif _stage in ['makedark','makeflat', 'applydark', 'applyflat', 'cosmic','wcs', 'checkimg','hdupdate']:
                 _table = 'lcogtredu'
             else:
                 _table = 'lcogtraw'
@@ -420,41 +420,23 @@ if __name__ == "__main__":
                                  pyfits.getheader(listfile[ii]).get('FLATCOR') ])
                 listfile = np.array(listfile)[jj]
                 #outfilenames = [re.sub('.fits','.bpm.fits',ii)   for ii in listfile]
-
                 pylcogt.utils.lcogtsteps.run_astrometry(listfile, listfile, clobber=True)
                 for im in listfile:
-                    num,xpix,ypix,cm,cmerr,flag,cl,fw,ell,bkg,fl = pylcogt.utils.lcogtsteps.run_sextractor(im)
-                    if len(fw)>1:
-                        _instrume =  pyfits.getheader(im)['instrume']
-                        if _instrume in pylcogt.instrument0['sbig']:
-                            fwhm = np.median(np.array(fw))*.68*2.35*0.467
-                        elif _instrume in pylcogt.instrument0['sinistro']:
-                            fwhm = np.median(np.array(fw))*.68*2.35*0.467          #  need to check
-                        elif _instrume in ['fs01','fs02','fs03']:
-                            fwhm = median(np.array(fw))*.68*2.35*0.30
-                        elif _instrume in ['em03','em01']:
-                            fwhm = np.median(np.array(fw))*.68*2.35*0.278
-                        else:
-                            fwhm = 5
-                    else:
-                        fwhm = 5
                     if pyfits.getheader(im).get('IMAGEH'):
                         pylcogt.utils.pymysql.updateheader(im,0, 
                                                            {'WCSERR':[0,' ASTROMETRY'],
-                                                            'ASTROMET': ['1 1 1', 'rmsx rmsy nstars'],
-                                                            'PSF_FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
-                                                            'L1FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
+                                                            'ASTROMET': ['1 1 1', 'rmsx rmsy nstars']
                                                             })
                     else:
-                        pylcogt.utils.pymysql.updateheader(im,0, {'WCSERR':[1,' ASTROMETRY'],
-                                                                  'PSF_FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
-                                                                  'L1FWHM': [fwhm, 'FHWM (arcsec) - computed with sectractor'], 
+                        pylcogt.utils.pymysql.updateheader(im,0, {'WCSERR':[1,' ASTROMETRY']
                                                                   })
             else:
                 print 'no exposures selected'
         elif _stage == 'checkimg':
-            print 'select flat image'
-            ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in [_type])])
+            if _type:
+                ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in [_type])])
+            else:
+                ww = np.asarray([i for i in range(len(ll0['filename']))])
             if ww.size:
                 listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
                 from pyraf import iraf
@@ -472,3 +454,11 @@ if __name__ == "__main__":
                             command = ['delete from lcogtredu where filename = "'+string.split(img,'/')[-1]+'"']
                             deletefromdb=pylcogt.utils.pymysql.query(command, conn)
                             print deletefromdb
+        elif _stage == 'hdupdate':
+            if _type:
+                ww = np.asarray([i for i in range(len(ll0['filename'])) if (ll0['obstype'][i] in [_type])])
+            else:
+                ww = np.asarray([i for i in range(len(ll0['filename']))])
+            if ww.size:
+                listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
+                pylcogt.utils.lcogtsteps.run_hdupdate(listfile)
