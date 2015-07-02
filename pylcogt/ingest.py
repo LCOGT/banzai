@@ -1,3 +1,12 @@
+"""
+ingest.py - Module containing routines to ingest meta from raw images into the database.
+
+Authors
+    Curtis McCully
+
+July 2015
+"""
+from __future__ import absolute_import, print_function
 __author__ = 'cmccully'
 
 import glob
