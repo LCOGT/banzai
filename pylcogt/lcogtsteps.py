@@ -1,139 +1,88 @@
-import pylcogt
+from __future__ import absolute_import, print_function
+
 import numpy as np
-import pyfits
 import glob
-from pylcogt.utils import pymysql
-from pylcogt.utils.pymysql import readkey
-import string
-import lacosmicx
-from sklearn.gaussian_process import GaussianProcess
+from . import dbs
+import logging
 import os
-import shutil
+from astropy.io import fits
+from astropy import time
 
-def ingest(list_image, table, _force):
-    conn = pymysql.getconnection()
-    for img in list_image:
-        print img
-        img0 = string.split(img, '/')[-1]
-        command = ['select filename from ' + str(table) + ' where filename="'
-                   + str(img0) + '"']
-        exist = pylcogt.query(command, conn)
 
-        if not exist or _force in ['update', 'yes']:
-            hdr = pyfits.getheader(img)
-            _instrument = readkey(hdr, 'instrume')
+def ingest_raw_data(raw_image_list, processed_directory):
+    logger = logging.getLogger('Ingest')
+    db_session = dbs.get_session()
+    for image_file in raw_image_list:
+        image_filename = os.path.basename(image_file)
+        logger.info('Ingesting {image_name}'.format(image_name=image_filename))
 
-            if _instrument in pymysql.instrument0['sinistro']:
-                dir2 = 'preproc/'
-            else:
-                dir2 = 'raw/'
+        # Check and see if the filename is already in the database
+        image_query = db_session.query(dbs.Image)
+        image_query = image_query.filter(dbs.Image.filename == image_filename).all()
 
-            if table in ['lcogtraw']:
-                dire = os.path.split(img)[0]+'/'
-            elif table in ['lcogtredu']:
-                dire = pymysql.workingdirectory + readkey(hdr, 'SITEID') + '/' + readkey(hdr, 'instrume') + '/' + readkey(hdr, 'DAY-OBS') + '/'
-            if _instrument in pymysql.instrument0['sbig'] + pymysql.instrument0['sinistro']:
-                print '1m telescope'
-                dictionary = {'dayobs': readkey(hdr, 'DAY-OBS'), 'exptime': readkey(hdr, 'exptime'),
-                    'filter': readkey(hdr, 'filter'), 'mjd': readkey(hdr, 'MJD'),
-                    'telescope': readkey(hdr, 'telescop'), 'airmass': readkey(hdr, 'airmass'),
-                    'object': readkey(hdr, 'object'), 'ut': readkey(hdr, 'ut'),
-                    'tracknum': readkey(hdr, 'TRACKNUM'), 'instrument': readkey(hdr, 'instrume'),
-                    'ra0': readkey(hdr, 'RA'), 'dec0': readkey(hdr, 'DEC'), 'obstype': readkey(hdr, 'OBSTYPE'),
-                    'reqnum': readkey(hdr, 'REQNUM'), 'groupid': readkey(hdr, 'GROUPID'),
-                    'propid': readkey(hdr, 'PROPID'), 'userid': readkey(hdr, 'USERID'),
-                    'dateobs': readkey(hdr, 'DATE-OBS'), 'ccdsum': readkey(hdr, 'CCDSUM')}
-                dictionary['filename'] = string.split(img, '/')[-1]
-                dictionary['filepath'] = dire
-            elif _instrument in pymysql.instrument0['spectral']:
-                print '2m telescope'
-                dictionary = {'dayobs': readkey(hdr, 'DAY-OBS'), 'exptime': readkey(hdr, 'exptime'),
-                    'filter': readkey(hdr, 'filter'), 'mjd': readkey(hdr, 'MJD'),
-                    'telescope': readkey(hdr, 'telescop'), 'airmass': readkey(hdr, 'airmass'),
-                    'object': readkey(hdr, 'object'), 'ut': readkey(hdr, 'ut'),
-                    'tracknum': readkey(hdr, 'TRACKNUM'), 'instrument': readkey(hdr, 'instrume'),
-                    'ra0': readkey(hdr, 'RA'), 'dec0': readkey(hdr, 'DEC'), 'obstype': readkey(hdr, 'OBSTYPE'),
-                    'reqnum': readkey(hdr, 'REQNUM'), 'groupid': readkey(hdr, 'GROUPID'),
-                    'propid': readkey(hdr, 'PROPID'), 'userid': readkey(hdr, 'USERID'),
-                    'dateobs': readkey(hdr, 'DATE-OBS'), 'ccdsum': readkey(hdr, 'CCDSUM')}
-                dictionary['filename'] = string.split(img, '/')[-1]
-                dictionary['filepath'] = dire
-            else:
-                dictionary = ''
+        if len(image_query) == 0:
+            # Create a new row
+            image = dbs.Image(rawfilename=image_filename)
         else:
-            print 'data already there'
-            dictionary = ''
+            # Otherwise update the existing data
+            # In principle we could just skip this, but this should be fast
+            image = image_query[0]
 
-        if dictionary:
-            if not exist:
-                print 'insert values'
-                pymysql.insert_values(conn, table, dictionary)
-            else:
-                print table
-                print 'update values'
-                for voce in dictionary:
-                    print voce
-                    # for voce in ['filepath','ra0','dec0','mjd','exptime','filter','ccdsum']:
-                    for voce in ['ccdsum', 'filepath']:
-                            pymysql.updatevalue(conn, table, voce, dictionary[voce],
-                                                              string.split(img, '/')[-1], 'filename')
+        image.rawpath = os.path.dirname(image_file)
+
+        image_header = fits.getheader(image_file)
+
+        # Save the image_header keywords into a record
+        image.dayobs = image_header['DAY-OBS']
+        image.exptime = image_header['EXPTIME']
+        image.filter_name = image_header['FILTER']
+        image.mjd = image_header['MJD-OBS']
+        image.telescope = image_header['TELESCOP']
+        image.siteid = image_header['SITEID']
+        image.airmass = image_header['AIRMASS']
+        image.object_name = image_header['OBJECT']
+        image.tracknum = image_header['TRACKNUM']
+        image.instrument = image_header['INSTRUME']
+        image.ra = image_header['RA']
+        image.dec = image_header['DEC']
+        image.obstype = image_header['OBSTYPE']
+        image.reqnum = image_header['REQNUM']
+        image.groupid = image_header['GROUPID']
+        image.propid = image_header['PROPID']
+        image.userid = image_header['USERID']
+        image.ccdsum = image_header['CCDSUM']
+        image.instrument = image_header['INSTRUME']
+
+        date_obs = time.Time(image_header['DATE-OBS'])
+        image.dateobs = date_obs.datetime.date()
+        image.ut = date_obs.datetime.time()
+
+        image.filename = image_filename[:-7] + '90.fits'
+
+        image.filepath = os.path.join(processed_directory, image.siteid, image.telescope,
+                                      image.dayobs.replace('-', ''))
+
+        db_session.add(image)
+
+    # Write out to the database
+    db_session.commit()
+    db_session.close()
+
+
+def run_ingest(raw_data_directory, site, instrument, epoch_list, processed_directory):
+    logger = logging.getLogger('Ingest')
+    for epoch in epoch_list:
+        logmsg = 'Ingesting data for {site}/{instrument} on {epoch}'
+        logger.info(logmsg.format(site=site, instrument=instrument, epoch=epoch))
+        search_path = os.path.join(raw_data_directory, site, instrument, epoch)
+        if os.path.exists(os.path.join(search_path, 'preproc')):
+            search_path = os.path.join(search_path, 'preproc')
         else:
-            print 'dictionary empty'
-
-#################################################################################################################
-
-
-def run_ingest(telescope, _instrument, listepoch, _force, table='lcogtraw'):
-    pymysql.site0
-    if telescope == 'all':
-        tellist = pymysql.site0
-    elif telescope in pymysql.telescope0['elp'] + ['elp']:
-        tellist = ['elp']
-    elif telescope in pymysql.telescope0['lsc'] + ['lsc']:
-        tellist = ['lsc']
-    elif telescope in pymysql.telescope0['cpt'] + ['cpt']:
-        tellist = ['cpt']
-    elif telescope in pymysql.telescope0['coj'] + ['coj', 'fts']:
-        tellist = ['coj']
-    elif telescope in pymysql.telescope0['ogg'] + ['ftn']:
-        tellist = ['ogg']
-
-    if _instrument in pylcogt.pymysql.instrument0['all']:
-        instrumentlist = [_instrument]
-    else:
-        if telescope in ['ftn', 'fts', '2m0-01', '2m0-02']:
-            instrumentlist = pymysql.instrument0['spectral']
-        else:
-            instrumentlist = pymysql.instrument0['sinistro'] + pymysql.instrument0['sbig']
-
-    for epoch in listepoch:
-        for tel in tellist:
-            for instrument in instrumentlist:
-                if instrument in pymysql.instrument0['sinistro']:
-                    dir2 = '/preproc/'
-                else:
-                    dir2 = '/raw/'
-                imglist = glob.glob(pymysql.rawdata + tel + '/' + instrument + '/' + epoch + dir2 + '*.fits')
-                print imglist
-                if len(imglist):
-                    print 'ingest'
-                    ingest(imglist, table, _force)
-
-######################################################################################################################
+            search_path = os.path.join(search_path, 'raw')
+        image_list = glob.glob(search_path + '/*.fits')
+        ingest_raw_data(image_list, processed_directory)
 
 
-def tofits(filename, data, hdr=None, clobber=False):
-    """simple pyfits wrapper to make saving fits files easier."""
-    from pyfits import PrimaryHDU, HDUList
-    hdu = PrimaryHDU(data)
-    if not (hdr is None):
-        hdu.header += hdr
-    hdulist = HDUList([hdu])
-    hdulist.writeto(filename, clobber=clobber, output_verify='ignore')
-
-#Combine images stored in a 3d array. Do a mean, rejecting pixels that are n MAD away from the median
-def imcombine():
-    return
 def run_makebias(imagenames, outfilename, minimages=5, clobber=True):
     # Assume the files are all the same number of pixels, should add error checking
     nx = pyfits.getval(imagenames[0], ('NAXIS1'))
