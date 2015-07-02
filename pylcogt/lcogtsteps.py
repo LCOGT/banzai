@@ -1,16 +1,5 @@
 from __future__ import absolute_import, print_function
 
-import numpy as np
-import glob
-from . import dbs
-import logging
-import os
-from astropy.io import fits
-from astropy import time
-
-
-
-
 def run_makebias(imagenames, outfilename, minimages=5, clobber=True):
     # Assume the files are all the same number of pixels, should add error checking
     nx = pyfits.getval(imagenames[0], ('NAXIS1'))
