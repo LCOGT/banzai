@@ -19,6 +19,12 @@ from . import dbs
 
 
 def ingest_raw_data(raw_image_list, processed_directory):
+    """
+
+    :param raw_image_list:
+    :param processed_directory:
+    :return:
+    """
     logger = logging.getLogger('Ingest')
     db_session = dbs.get_session()
     for image_file in raw_image_list:
@@ -81,6 +87,15 @@ def ingest_raw_data(raw_image_list, processed_directory):
 
 
 def run_ingest(raw_data_directory, site, instrument, epoch_list, processed_directory):
+    """
+
+    :param raw_data_directory:
+    :param site:
+    :param instrument:
+    :param epoch_list:
+    :param processed_directory:
+    :return:
+    """
     logger = logging.getLogger('Ingest')
     for epoch in epoch_list:
         logmsg = 'Ingesting data for {site}/{instrument} on {epoch}'

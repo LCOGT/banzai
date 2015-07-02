@@ -1,20 +1,11 @@
-#!/usr/bin/env python
-#
+
+
 description="> main pylcogt program to call all the steps "
 usage= "%prog  -e epoch [-s stage -n name -f filter -d idnumber ]\n " \
-       "available stages [makebias, makeflat, applybias, applyflat, cosmic, wcs]\n "
-import sys
-import pylcogt
-import datetime
-import string
-import re
-import os
-import numpy as np
-import pyfits
+       "available stages [ingest, makebias, makeflat, applybias, applyflat, cosmic, wcs]\n "
 
-from optparse import OptionParser
 
-if __name__ == "__main__":
+def main():
     parser = OptionParser(usage=usage,description=description, version="%prog 1.0")
     parser.add_option("-e", "--epoch",dest="epoch",default='20121212',type="str",
                   help='epoch to reduce  \t [%default]')
