@@ -105,6 +105,6 @@ setup(name=PACKAGENAME,
       cmdclass=cmdclassd,
       zip_safe=False,
       use_2to3=True,
-      entry_points={'console_scripts': ['pylcogt=pylcogt.main:main']}
+      entry_points={'console_scripts': ['pylcogt=pylcogt.main:main']},
       **package_info
 )

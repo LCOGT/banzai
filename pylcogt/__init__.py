@@ -16,6 +16,6 @@ if not _ASTROPY_SETUP_:
 
 
 from .utils.pymysql import *
-from .utils.lcogtsteps import *
+from .lcogtsteps import *
 
 __all__ = ['query']

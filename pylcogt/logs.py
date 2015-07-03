@@ -5,7 +5,7 @@ import logging
 import multiprocessing
 import sys
 
-def start_logging(log_level='info', filename=None):
+def start_logging(log_level='INFO', filename=None):
 
     # Set up the message queue
     queue = multiprocessing.Queue(-1)
