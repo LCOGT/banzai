@@ -14,6 +14,8 @@ import logging
 import os
 from astropy.io import fits
 from astropy import time
+from astropy.coordinates import SkyCoord
+from astropy import units
 
 from . import dbs
 
@@ -50,17 +52,19 @@ def ingest_raw_data(raw_image_list, processed_directory):
 
         # Save the image_header keywords into a record
         image.dayobs = image_header['DAY-OBS']
-        image.exptime = image_header['EXPTIME']
+        image.exptime = float(image_header['EXPTIME'])
         image.filter_name = image_header['FILTER']
-        image.mjd = image_header['MJD-OBS']
+        image.mjd = float(image_header['MJD-OBS'])
         image.telescope = image_header['TELESCOP']
         image.siteid = image_header['SITEID']
-        image.airmass = image_header['AIRMASS']
+        image.airmass = float(image_header['AIRMASS'])
         image.object_name = image_header['OBJECT']
         image.tracknum = image_header['TRACKNUM']
         image.instrument = image_header['INSTRUME']
-        image.ra = image_header['RA']
-        image.dec = image_header['DEC']
+        coordinate = SkyCoord(image_header['RA'], image_header['DEC'],
+                              unit=(units.hourangle, units.deg))
+        image.ra = coordinate.ra.deg
+        image.dec = coordinate.dec.deg
         image.obstype = image_header['OBSTYPE']
         image.reqnum = image_header['REQNUM']
         image.groupid = image_header['GROUPID']

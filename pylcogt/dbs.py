@@ -8,7 +8,7 @@ from sqlalchemy import Column, Integer, String, Float, Time, Date
 from sqlalchemy.ext.declarative import declarative_base
 
 # Define how to get to the database
-db_address = 'mysql://cmccully:password@localhost/test'
+db_address = 'mysql://cmccully:password@127.0.0.1/test'
 
 Base = declarative_base()
 

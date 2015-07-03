@@ -15,8 +15,7 @@ def parse_epoch_string(epoch_string):
         for i in range((stop - start).days + 1):
             epoch = start + datetime.timedelta(days=i)
             epoch_list.append(str(epoch).replace('-',''))
-
     else:
-        epoch_list = [epoch_string_to_date(epoch_string)]
+        epoch_list = [epoch_string]
 
     return epoch_list

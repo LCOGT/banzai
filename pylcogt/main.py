@@ -1,13 +1,16 @@
 
 import argparse
 
+import sqlalchemy
 from .dateutils import parse_epoch_string
 from .ingest import run_ingest
 from . import dbs
+from . import logs
+
 reduction_stages = ['ingest', 'make_bias', 'make_flat', 'make_dark', 'apply_bias', 'apply_dark', 'apply_flat',
                     'cr_reject', 'wcs', 'check_image', 'hdu_update']
 
-def get_telescope_info()
+def get_telescope_info():
    # Get All of the telescope information
     db_session = dbs.get_session()
     all_sites = []
@@ -35,15 +38,15 @@ def main():
     all_sites, all_instruments, all_telescope_ids, all_camera_types = get_telescope_info()
 
     parser = argparse.ArgumentParser(description='Reduce LCOGT imaging data.')
-    parser.add_argument("--epoch", required=True, type='str', help='Epoch to reduce')
+    parser.add_argument("--epoch", required=True, type=str, help='Epoch to reduce')
     parser.add_argument("--telescope", default='', choices=all_telescope_ids,
                         help='Telescope ID (e.g. 1m0-010).')
-    parser.add_argument("--instrument", default='', type="str", choices=all_instruments,
-                        help='Instrument ID (e.g. kb74)')
-    parser.add_argument("--site", default='', type="str", choices=all_sites,
+    parser.add_argument("--instrument", default='', type=str, choices=all_instruments,
+                        help='Instrument code (e.g. kb74)')
+    parser.add_argument("--site", default='', type=str, choices=all_sites,
                         help='Site code (e.g. elp)')
-    parser.add_argument("--camera_type", default='', type="str", choices=all_sites,
-                        help='Site code (e.g. elp)')
+    parser.add_argument("--camera_type", default='', type=str, choices=all_camera_types,
+                        help='Camera type (e.g. sbig)')
 
     parser.add_argument("--stage", default='all', choices=['all'] + reduction_stages,
                         help='Reduction stages to run')
@@ -51,7 +54,7 @@ def main():
     parser.add_argument("--rawpath", default='/archive/engineering',
                         help='Top level directory where the raw data is stored')
     parser.add_argument("--processedpath", default='/nethome/supernova/pylcogt',
-                        help='Top level directroy where the processed data will be stored')
+                        help='Top level directory where the processed data will be stored')
 
 
     # parser.add_argument("-f", "--filter", default='all', type="str",
@@ -67,13 +70,35 @@ def main():
 
     args = parser.parse_args()
 
+    logs.start_logging(filename='pylcogt.log')
     epoch_list = parse_epoch_string(args.epoch)
 
-    stages_to_do = []
+    stages_to_do = reduction_stages
 
+    # Get the telescopes for which we want to reduce data.
+    db_session = dbs.get_session()
+
+    telescope_query = sqlalchemy.sql.expression.true()
+
+    if args.site != '':
+        telescope_query = (dbs.Telescope.site == args.site) & (telescope_query)
+
+    if args.instrument != '':
+        telescope_query = (dbs.Telescope.instrument == args.instrument) & (telescope_query)
+
+    if args.telescope != '':
+        telescope_query = (dbs.Telescope.telescope_id == args.telescope) & (telescope_query)
+
+    if args.camera_type != '':
+        telescope_query = (dbs.Telescope.camera_type == args.camera_type) & (telescope_query)
+
+    telescope_list = db_session.query(dbs.Telescope).filter(telescope_query).all()
+
+    db_session.close()
     if 'ingest' in stages_to_do:
-        for instrument in instrument_list:
-            run_ingest(args.rawpath, site, instrument, epoch_list, args.proccessedpath)
+        for telescope in telescope_list:
+            run_ingest(args.rawpath, telescope.site, telescope.instrument,
+                       epoch_list, args.processedpath)
 
 
 
@@ -452,3 +477,4 @@ def main():
 #             if ww.size:
 #                 listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
 #                 pylcogt.utils.lcogtsteps.run_hdupdate(listfile)
+    logs.stop_logging()

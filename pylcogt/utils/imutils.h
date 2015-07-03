@@ -25,8 +25,11 @@
  * All calculations are done with 32 bit floats to keep the memory footprint
  * small.
  */
-float
-PyMedian(float* arr, int n);
+typedef uint8_t bool;
+#define true 1
+#define false 0
+
+float PyMedian(float* arr, int n);
 
 /* All of the optimized median methods below were written by
  * Nicolas Devillard and are in the public domain.
@@ -42,8 +45,7 @@ PyMedian(float* arr, int n);
  signal.
  Code adapted from Nicolas Devillard.
  --------------------------------------------------------------------------- */
-float
-PyOptMed3(float* p);
+float PyOptMed3(float* p);
 
 /* ----------------------------------------------------------------------------
  Function :   PyOptMed5()
@@ -55,8 +57,7 @@ PyOptMed3(float* p);
  signal.
  Code adapted from Nicolas Devillard.
  --------------------------------------------------------------------------- */
-float
-PyOptMed5(float* p);
+float PyOptMed5(float* p);
 
 /* ----------------------------------------------------------------------------
  Function :   PyOptMed7()
@@ -68,8 +69,7 @@ PyOptMed5(float* p);
  signal.
  Code adapted from Nicolas Devillard.
  --------------------------------------------------------------------------- */
-float
-PyOptMed7(float* p);
+float PyOptMed7(float* p);
 
 /* ----------------------------------------------------------------------------
  Function :   PyOptMed9()
@@ -86,8 +86,7 @@ PyOptMed7(float* p);
  value in middle position, but other elements are NOT sorted.
  Code adapted from Nicolas Devillard.
  --------------------------------------------------------------------------- */
-float
-PyOptMed9(float* p);
+float PyOptMed9(float* p);
 
 /* ----------------------------------------------------------------------------
  Function :   PyOptMed25()
@@ -99,8 +98,6 @@ PyOptMed9(float* p);
  Code taken from Graphic Gems.
  Code adapted from Nicolas Devillard.
  --------------------------------------------------------------------------- */
-float
-PyOptMed25(float* p);
+float PyOptMed25(float* p);
 
-void
-PyMedCombine(float* data, float* output, int nx, int ny, int nimages);
+void PyMedCombine(float* data, float* output, int nx, int ny, int nimages);
