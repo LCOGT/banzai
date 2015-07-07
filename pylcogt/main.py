@@ -4,6 +4,7 @@ import argparse
 import sqlalchemy
 from .dateutils import parse_epoch_string
 from .ingest import run_ingest
+import logging
 from . import dbs
 from . import logs
 
@@ -70,7 +71,7 @@ def main():
 
     args = parser.parse_args()
 
-    logs.start_logging(filename='pylcogt.log')
+    logs.start_logging()
     epoch_list = parse_epoch_string(args.epoch)
 
     stages_to_do = reduction_stages
@@ -95,6 +96,10 @@ def main():
     telescope_list = db_session.query(dbs.Telescope).filter(telescope_query).all()
 
     db_session.close()
+
+    logger = logs.get_logger('Main')
+    logger.info('Starting pylcogt:')
+
     if 'ingest' in stages_to_do:
         for telescope in telescope_list:
             run_ingest(args.rawpath, telescope.site, telescope.instrument,

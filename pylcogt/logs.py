@@ -5,11 +5,18 @@ import logging
 import multiprocessing
 import sys
 
+def get_logger(name):
+    logger = logging.getLogger(name)
+    # This allows us to control the logging level with the root logger.
+    logger.setLevel(logging.DEBUG)
+    return logger
+
+
 def start_logging(log_level='INFO', filename=None):
 
     # Set up the message queue
+    global queue
     queue = multiprocessing.Queue(-1)
-    queue.put_nowait(None)
 
     # Start the listener process
     global listener
@@ -26,14 +33,16 @@ def start_logging(log_level='INFO', filename=None):
     formatter = logging.Formatter('%(asctime)s %(processName)-10s %(name)s '
                                   '%(levelname)-8s %(message)s')
     root_handler.setFormatter(formatter)
+    root_handler.setLevel(logging.DEBUG)
     root_logger.addHandler(root_handler)
 
     queue_handler = logutils.queue.QueueHandler(queue)
-    root_logger.addHandler(queue_handler)
 
-    root_handler.setLevel(log_level)
+    queue_handler.setLevel(logging.DEBUG)#getattr(logging, log_level.upper(), None))
+    root_logger.addHandler(queue_handler)
 
 
 def stop_logging():
     if listener is not None:
+        queue.put_nowait(None)
         listener.stop()

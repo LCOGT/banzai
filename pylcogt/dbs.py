@@ -18,8 +18,9 @@ def get_session():
     # declaratives can be accessed through a DBSession instance
     Base.metadata.bind = engine
 
-    DBSession = sessionmaker(bind=engine)
+    DBSession = sessionmaker(bind=engine, autoflush=False)
     session = DBSession()
+
 
     return session
 
@@ -38,19 +39,15 @@ class Image(Base):
     dayobs  = Column(Date, index=True)
     exptime = Column(Float)
     filter_name = Column(String(2))
-    grism = Column(String(20))
     telescope = Column(String(20))
     instrument = Column(String(20))
     obstype = Column(String(20))
     airmass = Column(Float)
     ut = Column(Time)
-    slit = Column(String(20))
-    lamp = Column(String(20))
     ra = Column(Float)
     dec = Column(Float)
     userid = Column(String(20))
     propid = Column(String(20))
-    groupid = Column(String(20))
     tracknum = Column(String(20))
     reqnum = Column(String(20))
     ccdsum = Column(String(10))
