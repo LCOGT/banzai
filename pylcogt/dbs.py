@@ -21,8 +21,8 @@ def get_session():
     DBSession = sessionmaker(bind=engine, autoflush=False)
     session = DBSession()
 
-
     return session
+
 
 class Image(Base):
     __tablename__ = 'images'
