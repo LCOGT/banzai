@@ -1,10 +1,10 @@
+from __future__ import absolute_import, print_function
 
 import argparse
 
 import sqlalchemy
 from .dateutils import parse_epoch_string
 from .ingest import run_ingest
-import logging
 from . import dbs
 from . import logs
 
