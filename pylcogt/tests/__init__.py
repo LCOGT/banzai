@@ -2,3 +2,5 @@
 """
 This packages contains affiliated package tests.
 """
+from . test_logging import *
+__all__ = ['test_logging']
