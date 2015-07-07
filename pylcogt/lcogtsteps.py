@@ -1,21 +1,5 @@
 from __future__ import absolute_import, print_function
 
-def run_makebias(imagenames, outfilename, minimages=5, clobber=True):
-    # Assume the files are all the same number of pixels, should add error checking
-    nx = pyfits.getval(imagenames[0], ('NAXIS1'))
-    ny = pyfits.getval(imagenames[0], ('NAXIS2'))
-    biasdata = np.zeros((len(imagenames), ny, nx))
-    for i, f in enumerate(imagenames):
-        biasdata[i, :, :] = pyfits.getdata(f)[:, :]
-        #Subtract the overscan
-    if len(imagenames) >= minimages:
-        medbias = np.median(biasdata, axis=0)
-        hdr = sanitizeheader(pyfits.getheader(imagenames[0]))
-        tofits(outfilename, medbias, hdr=hdr, clobber=clobber)
-        return outfilename
-    else:
-        return None
-
 #####################################################################################################################
 def imagecov(imagearr):
     M00 = imagearr.sum()
