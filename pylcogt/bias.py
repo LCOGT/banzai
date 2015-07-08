@@ -10,11 +10,11 @@ def run_makebias(imagenames, outfilename, minimages=5, clobber=True):
     ny = fits.getval(imagenames[0], ('NAXIS2'))
     biasdata = np.zeros((len(imagenames), ny, nx))
 
-    for i, f in enumerate(imagenames):
-        biasdata[i, :, :] = fits.getdata(f)[:, :]
-        #Subtract the overscan
-
     if len(imagenames) >= minimages:
+        for i, f in enumerate(imagenames):
+            biasdata[i, :, :] = fits.getdata(f)[:, :]
+            #Subtract the overscan
+
         medbias = np.median(biasdata, axis=0)
         hdr = sanitizeheader(pyfits.getheader(imagenames[0]))
         fits.writeto(outfilename, medbias, hdr=hdr, clobber=clobber)
