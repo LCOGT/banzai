@@ -4,7 +4,7 @@ __author__ = 'cmccully'
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from sqlalchemy import Column, Integer, String, Float, Time, Date
+from sqlalchemy import Column, Integer, String, Float, Time, Date, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 
 # Define how to get to the database
@@ -30,6 +30,7 @@ class Image(Base):
     # Define the table structure
     id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String(36), index=True, unique=True)
+    telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
     filepath = Column(String(100))
     rawfilename = Column(String(36))
     rawpath = Column(String(100))
@@ -39,8 +40,6 @@ class Image(Base):
     dayobs  = Column(Date, index=True)
     exptime = Column(Float)
     filter_name = Column(String(2))
-    telescope = Column(String(20))
-    instrument = Column(String(20))
     obstype = Column(String(20))
     airmass = Column(Float)
     ut = Column(Time)
@@ -51,7 +50,8 @@ class Image(Base):
     tracknum = Column(String(20))
     reqnum = Column(String(20))
     ccdsum = Column(String(10))
-    siteid = Column(String(10))
+    gain = Column(Float)
+    readnoise = Column(Float)
 
 
 class Calibration_Image(Base):
@@ -86,29 +86,29 @@ def populate_telescope_table():
     # This only needs to be done once on initialization.
     # Any new instruments will need to be added to this table manually (or via chronjob)
     db_session = get_session()
-    db_session.add(Telescope(site='coj', telescope_id='2m0-02', instrument='fs03',
+    db_session.add(Telescope(site='coj', telescope_id='2m002', instrument='fs03',
                              camera_type='spectral'))
-    db_session.add(Telescope(site='coj', telescope_id='1m0-11', instrument='kb79',
+    db_session.add(Telescope(site='coj', telescope_id='1m011', instrument='kb79',
                              camera_type='sbig'))
-    db_session.add(Telescope(site='coj', telescope_id='1m0-03', instrument='kb71',
+    db_session.add(Telescope(site='coj', telescope_id='1m003', instrument='kb71',
                              camera_type='sbig'))
-    db_session.add(Telescope(site='elp', telescope_id='1m0-08', instrument='kb74',
+    db_session.add(Telescope(site='elp', telescope_id='1m008', instrument='kb74',
                              camera_type='sbig'))
-    db_session.add(Telescope(site='lsc', telescope_id='1m0-05', instrument='kb78',
+    db_session.add(Telescope(site='lsc', telescope_id='1m005', instrument='kb78',
                              camera_type='sbig'))
-    db_session.add(Telescope(site='lsc', telescope_id='1m0-09', instrument='fl03',
+    db_session.add(Telescope(site='lsc', telescope_id='1m009', instrument='fl03',
                              camera_type='sinistro'))
-    db_session.add(Telescope(site='lsc', telescope_id='1m0-04', instrument='fl04',
+    db_session.add(Telescope(site='lsc', telescope_id='1m004', instrument='fl04',
                              camera_type='sinistro'))
-    db_session.add(Telescope(site='cpt', telescope_id='1m0-10', instrument='kb70',
+    db_session.add(Telescope(site='cpt', telescope_id='1m010', instrument='kb70',
                              camera_type='sbig'))
-    db_session.add(Telescope(site='cpt', telescope_id='1m0-13', instrument='kb76',
+    db_session.add(Telescope(site='cpt', telescope_id='1m013', instrument='kb76',
                              camera_type='sbig'))
-    db_session.add(Telescope(site='cpt', telescope_id='1m0-12', instrument='kb75',
+    db_session.add(Telescope(site='cpt', telescope_id='1m012', instrument='kb75',
                              camera_type='sbig'))
-    db_session.add(Telescope(site='ogg', telescope_id='2m0-01', instrument='fs02',
+    db_session.add(Telescope(site='ogg', telescope_id='2m001', instrument='fs02',
                              camera_type='spectral'))
-    db_session.add(Telescope(site='ogg', telescope_id='2m0-01', instrument='em01',
+    db_session.add(Telescope(site='ogg', telescope_id='2m001', instrument='em01',
                              camera_type='merope'))
     db_session.commit()
     db_session.close()

@@ -102,8 +102,7 @@ def main():
 
     if 'ingest' in stages_to_do:
         for telescope in telescope_list:
-            run_ingest(args.rawpath, telescope.site, telescope.instrument,
-                       epoch_list, args.processedpath)
+            run_ingest(args.rawpath, telescope, epoch_list, args.processedpath)
 
 
 
