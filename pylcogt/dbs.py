@@ -57,7 +57,11 @@ class Image(Base):
 class Calibration_Image(Base):
     __tablename__ = 'calimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
-
+    type = Column(String(30), index=True)
+    filename = Column(String(30))
+    filepath = Column(String(100))
+    dayobs = Column(Date, index=True)
+    ccdsum = Column(String(20))
 
 class Reduction_Status(Base):
     __tablename__ = 'reductionstatus'
