@@ -14,7 +14,7 @@ from ._astropy_init import *
 if not _ASTROPY_SETUP_:
     from example_mod import *
 
-
+from .bias import *
 # from .utils.pymysql import *
 # from .lcogtsteps import *
 
