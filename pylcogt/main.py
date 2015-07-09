@@ -2,11 +2,16 @@ from __future__ import absolute_import, print_function
 
 import argparse
 
+import os
+import itertools
+
 import sqlalchemy
 from .dateutils import parse_epoch_string
 from .ingest import run_ingest
 from . import dbs
 from . import logs
+from .bias import run_make_bias
+
 
 reduction_stages = ['ingest', 'make_bias', 'make_flat', 'make_dark', 'apply_bias', 'apply_dark',
                     'apply_flat', 'cr_reject', 'wcs', 'check_image', 'hdu_update']
@@ -64,6 +69,9 @@ def main():
                         help="Image binning (CCDSUM)")
     parser.add_argument("--image-type", default='', choices=['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE'],
                         help="Image type to reduce.")
+
+    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
+                                                                'critical', 'fatal', 'error'])
     # parser.add_argument("-n", "--name", dest="name", default='', type="str",
     #                   help='-n image name   \t [%default]')
     # parser.add_argument("-d", "--id", dest="id", default='', type="str",
@@ -71,10 +79,13 @@ def main():
 
     args = parser.parse_args()
 
-    logs.start_logging()
+    logs.start_logging(log_level=args.log_level)
     epoch_list = parse_epoch_string(args.epoch)
 
-    stages_to_do = reduction_stages
+    if args.stage != '':
+        stages_to_do = [args.stage]
+    else:
+        stages_to_do = reduction_stages
 
     # Get the telescopes for which we want to reduce data.
     db_session = dbs.get_session()
@@ -95,14 +106,13 @@ def main():
 
     telescope_list = db_session.query(dbs.Telescope).filter(telescope_query).all()
 
-    db_session.close()
 
     logger = logs.get_logger('Main')
     logger.info('Starting pylcogt:')
 
     if 'ingest' in stages_to_do:
         for telescope in telescope_list:
-            run_ingest(args.rawpath, telescope, epoch_list, args.processedpath)
+            run_ingest(args.raw_path, telescope, epoch_list, args.processed_path)
 
     image_query = sqlalchemy.sql.expression.true()
 
@@ -114,15 +124,9 @@ def main():
         image_query = (dbs.Image.ccdsum == ccdsum) & image_query
 
     if 'make_bias' in stages_to_do:
-        for telescope in telescope_list:
-            bias_query = image_query & (dbs.Image.telescope_id == telescope.id)
-            bias_query = bias_query & (dbs.Image.obstype == 'BIAS')
-            ccdsum_query = db_session.query(dbs.Image).filter(bias_query)
-            ccdsum_list = ccdsum_query.distinct(dbs.Image.ccdsum).all()
-            for ccdsum in ccdsum_list:
-                print(ccdsum)
-                bias_image_list = bias_query & (dbs.Image.ccdsum == ccdsum)
-#
+        for telescope, epoch in itertools.product(telescope_list, epoch_list):
+            run_make_bias(telescope, epoch, image_query, args.processed_path)
+
 #     else:
 #
 #         conn = pylcogt.utils.pymysql.getconnection()
@@ -497,4 +501,5 @@ def main():
 #             if ww.size:
 #                 listfile = [k + v for k, v in zip(ll0['filepath'][ww], ll0['filename'][ww])]
 #                 pylcogt.utils.lcogtsteps.run_hdupdate(listfile)
+    db_session.close()
     logs.stop_logging()
