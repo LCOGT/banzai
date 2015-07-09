@@ -8,8 +8,8 @@ from .ingest import run_ingest
 from . import dbs
 from . import logs
 
-reduction_stages = ['ingest', 'make_bias', 'make_flat', 'make_dark', 'apply_bias', 'apply_dark', 'apply_flat',
-                    'cr_reject', 'wcs', 'check_image', 'hdu_update']
+reduction_stages = ['ingest', 'make_bias', 'make_flat', 'make_dark', 'apply_bias', 'apply_dark',
+                    'apply_flat', 'cr_reject', 'wcs', 'check_image', 'hdu_update']
 
 def get_telescope_info():
    # Get All of the telescope information
@@ -46,24 +46,24 @@ def main():
                         help='Instrument code (e.g. kb74)')
     parser.add_argument("--site", default='', type=str, choices=all_sites,
                         help='Site code (e.g. elp)')
-    parser.add_argument("--camera_type", default='', type=str, choices=all_camera_types,
+    parser.add_argument("--camera-type", default='', type=str, choices=all_camera_types,
                         help='Camera type (e.g. sbig)')
 
-    parser.add_argument("--stage", default='all', choices=['all'] + reduction_stages,
+    parser.add_argument("--stage", default='', choices=reduction_stages,
                         help='Reduction stages to run')
 
-    parser.add_argument("--rawpath", default='/archive/engineering',
+    parser.add_argument("--raw-path", default='/archive/engineering',
                         help='Top level directory where the raw data is stored')
-    parser.add_argument("--processedpath", default='/nethome/supernova/pylcogt',
+    parser.add_argument("--processed-path", default='/nethome/supernova/pylcogt',
                         help='Top level directory where the processed data will be stored')
 
-
-    # parser.add_argument("-f", "--filter", default='all', type="str",
-    #                   help="-f filter [sloan,landolt,apass,u,g,r,i,z,U,B,V,R,I] \t [%default]")
-    # parser.add_argument("-b", "--bin", dest="bin", default='', type="str",
-    #                   help="-b bin [1x1, 2x2 ] \t [%default]")
-    # parser.add_argument("--type", dest="type", default='', type="str",
-    #                   help="--type SKYFLAT [EXPOSE,BIAS,DARK] \t [%default]")
+    parser.add_argument("--filter", default='', help="Image filter",
+                        choices=['sloan','landolt', 'apass','up','gp','rp','ip','zs',
+                                 'U','B','V','R','I'])
+    parser.add_argument("--binning", default='', choices=['1x1', '2x2'],
+                        help="Image binning (CCDSUM)")
+    parser.add_argument("--image-type", default='', choices=['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE'],
+                        help="Image type to reduce.")
     # parser.add_argument("-n", "--name", dest="name", default='', type="str",
     #                   help='-n image name   \t [%default]')
     # parser.add_argument("-d", "--id", dest="id", default='', type="str",
@@ -82,16 +82,16 @@ def main():
     telescope_query = sqlalchemy.sql.expression.true()
 
     if args.site != '':
-        telescope_query = (dbs.Telescope.site == args.site) & (telescope_query)
+        telescope_query = (dbs.Telescope.site == args.site) & telescope_query
 
     if args.instrument != '':
-        telescope_query = (dbs.Telescope.instrument == args.instrument) & (telescope_query)
+        telescope_query = (dbs.Telescope.instrument == args.instrument) & telescope_query
 
     if args.telescope != '':
-        telescope_query = (dbs.Telescope.telescope_id == args.telescope) & (telescope_query)
+        telescope_query = (dbs.Telescope.telescope_id == args.telescope) & telescope_query
 
     if args.camera_type != '':
-        telescope_query = (dbs.Telescope.camera_type == args.camera_type) & (telescope_query)
+        telescope_query = (dbs.Telescope.camera_type == args.camera_type) & telescope_query
 
     telescope_list = db_session.query(dbs.Telescope).filter(telescope_query).all()
 
@@ -104,8 +104,24 @@ def main():
         for telescope in telescope_list:
             run_ingest(args.rawpath, telescope, epoch_list, args.processedpath)
 
+    image_query = sqlalchemy.sql.expression.true()
 
+    if args.filter != '':
+        image_query = (dbs.Image.filter_name == args.filter) & image_query
 
+    if args.binning != '':
+        ccdsum = args.binning.replace('x', ' ')
+        image_query = (dbs.Image.ccdsum == ccdsum) & image_query
+
+    if 'make_bias' in stages_to_do:
+        for telescope in telescope_list:
+            bias_query = image_query & (dbs.Image.telescope_id == telescope.id)
+            bias_query = bias_query & (dbs.Image.obstype == 'BIAS')
+            ccdsum_query = db_session.query(dbs.Image).filter(bias_query)
+            ccdsum_list = ccdsum_query.distinct(dbs.Image.ccdsum).all()
+            for ccdsum in ccdsum_list:
+                print(ccdsum)
+                bias_image_list = bias_query & (dbs.Image.ccdsum == ccdsum)
 #
 #     else:
 #
