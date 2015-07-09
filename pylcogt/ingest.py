@@ -26,6 +26,7 @@ def ingest_raw_data(raw_image_list, processed_directory, telescope):
 
     :param raw_image_list:
     :param processed_directory:
+    :param telescope:
     :return:
     """
     logger = logs.get_logger('Ingest')
@@ -97,8 +98,7 @@ def run_ingest(raw_data_directory, telescope, epoch_list, processed_directory):
     """
 
     :param raw_data_directory:
-    :param site:
-    :param instrument:
+    :param telescope:
     :param epoch_list:
     :param processed_directory:
     :return:
