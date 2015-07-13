@@ -5,7 +5,7 @@ from astropy.io import fits
 import numpy as np
 import os.path
 
-from .utils import stats
+from .utils import stats, fits_utils
 from . import dbs
 from . import logs
 
@@ -134,3 +134,83 @@ def make_master_bias(image_list, output_file, min_images=5, clobber=True):
         db_session.add(calibration_image)
         db_session.commit()
         db_session.close()
+
+
+def subtract_bias(image_files, output_filenames, master_bias_file, clobber=True):
+
+    master_bias_data = fits.getdata(master_bias_file)
+    master_bias_level = float(fits.getval(master_bias_file, 'BIASLVL'))
+
+    logger = logs.get_logger('Bias')
+
+    # TODO Add error checking for incorrect image sizes
+    for i, image in enumerate(image_files):
+        logger.debug('Subtracting bias for {image}'.format(image=os.path.basename(image)))
+        data = fits.getdata(image)
+        header = fits_utils.sanitizeheader(fits.getheader(image))
+
+        # Subtract the overscan first if it exists
+        overscan_region = fits_utils.parse_region_keyword(header['BIASSEC'])
+        if overscan_region is not None:
+            bias_level = stats.sigma_clipped_mean(data[overscan_region], 3)
+        else:
+            # If not, subtract the master bias level
+            bias_level = master_bias_level
+
+        logger.debug('Bias level: {bias}'.format(bias=bias_level))
+        data -= bias_level
+        data -= master_bias_data
+
+        header['BIASLVL'] = bias_level
+
+        master_bias_filename = os.path.basename(master_bias_file)
+        header.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
+
+        fits.writeto(output_filenames[i], data, header=header, clobber=clobber)
+
+
+def run_subtract_bias(telescope, epoch, image_query, processed_path):
+    db_session = dbs.get_session()
+
+    # Select only bias images
+    bias_query = image_query & (dbs.Image.telescope_id == telescope.id)
+    bias_query = bias_query & (dbs.Image.dayobs == epoch)
+    bias_query = bias_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
+
+    # Get the distinct values of ccdsum that we are making bias frames for.
+    ccdsum_list = db_session.query(dbs.Image.ccdsum).filter(bias_query).distinct()
+
+    logger = logs.get_logger('Bias')
+
+    for image_config in ccdsum_list:
+        log_message = 'Subtracting {binning} bias frame for {instrument} on {epoch}'
+        log_message = log_message.format(binning=image_config.ccdsum.replace(' ','x'),
+                                         instrument=telescope.instrument, epoch=epoch)
+        logger.info(log_message)
+
+        # Select only images with the correct binning
+        bias_ccdsum_query = bias_query & (dbs.Image.ccdsum == image_config.ccdsum)
+        bias_ccdsum_list = db_session.query(dbs.Image).filter(bias_ccdsum_query).all()
+
+        # Convert from image objects to file names
+        input_image_list = []
+        output_image_list = []
+        for image in bias_ccdsum_list:
+            input_image_list.append(os.path.join(image.rawpath, image.rawfilename))
+            output_image_list.append(os.path.join(image.filepath, image.filename))
+
+        # Create output directory if necessary
+        output_directory = os.path.join(processed_path, telescope.site,
+                                        telescope.instrument, epoch)
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+
+
+        master_bias_file = '{filepath}/bias_{instrument}_{epoch}_bin{bin}.fits'
+        master_bias_file = master_bias_file.format(filepath=output_directory,
+                                                   instrument=telescope.instrument, epoch=epoch,
+                                                   bin=image_config.ccdsum.replace(' ','x'))
+
+        subtract_bias(input_image_list, output_image_list, master_bias_file)
+
+    db_session.close()

@@ -7,14 +7,14 @@ import itertools
 
 import sqlalchemy
 from .dateutils import parse_epoch_string
-from .ingest import run_ingest
+from . import ingest
 from . import dbs
 from . import logs
-from .bias import run_make_bias
+from . import bias
 
 
-reduction_stages = ['ingest', 'make_bias', 'make_flat', 'make_dark', 'apply_bias', 'apply_dark',
-                    'apply_flat', 'cr_reject', 'wcs', 'check_image', 'hdu_update']
+reduction_stages = ['ingest', 'make_bias', 'make_flat', 'make_dark', 'subtract_bias', 'trim',
+                    'apply_dark', 'apply_flat', 'cr_reject', 'wcs', 'check_image', 'hdu_update']
 
 def get_telescope_info():
    # Get All of the telescope information
@@ -112,7 +112,7 @@ def main():
 
     if 'ingest' in stages_to_do:
         for telescope in telescope_list:
-            run_ingest(args.raw_path, telescope, epoch_list, args.processed_path)
+            ingest.run_ingest(args.raw_path, telescope, epoch_list, args.processed_path)
 
     image_query = sqlalchemy.sql.expression.true()
 
@@ -125,7 +125,11 @@ def main():
 
     if 'make_bias' in stages_to_do:
         for telescope, epoch in itertools.product(telescope_list, epoch_list):
-            run_make_bias(telescope, epoch, image_query, args.processed_path)
+            bias.run_make_bias(telescope, epoch, image_query, args.processed_path)
+
+    if 'subtract_bias' in stages_to_do:
+        for telescope, epoch in itertools.product(telescope_list, epoch_list):
+            bias.run_subtract_bias(telescope, epoch, image_query, args.processed_path)
 
 #     else:
 #
