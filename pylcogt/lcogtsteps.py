@@ -113,21 +113,6 @@ def run_applygain(imagenames, outputnames, clobber=True):
         imdata *= float(hdu[0].header['GAIN'])
         hdu[0].header['GAIN'] = 1.0
         hdu.writeto(outputnames[i], clobber=clobber)
-        
-def run_subtractbias(imagenames, outfilenames, masterbiasname, clobber=True):
-    # Assume the files are all the same number of pixels, should add error checking
-    biashdu = pyfits.open(masterbiasname)
-    biasdata = biashdu[0].data.copy()
-    biashdu.close()
-
-    for i, im in enumerate(imagenames):
-        hdu = pyfits.open(im)
-        imdata = hdu[0].data.copy()
-        imhdr = sanitizeheader(hdu[0].header)
-        hdu.close()
-        #Subtract the overscan first if it exists
-        imdata -= biasdata
-        tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
 
 def sanitizeheader(hdr):
     # Remove the mandatory keywords from a header so it can be copied to a new
