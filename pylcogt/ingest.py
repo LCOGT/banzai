@@ -78,9 +78,7 @@ def ingest_raw_data(raw_image_list, processed_directory, telescope):
 
 
         # Split date-obs into the date and time
-        date_obs = time.Time(image_header['DATE-OBS'])
-        image.dateobs = date_obs.datetime.date()
-        image.ut = date_obs.datetime.time()
+        image.dateobs = time.Time(image_header['DATE-OBS']).datetime
 
         image.filename = image_filename[:-7] + '90.fits'
 
