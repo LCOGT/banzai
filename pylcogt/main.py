@@ -6,7 +6,7 @@ import os
 import itertools
 
 import sqlalchemy
-from .dateutils import parse_epoch_string
+from .utils import date_utils
 from . import ingest
 from . import dbs
 from . import logs
@@ -80,7 +80,7 @@ def main():
     args = parser.parse_args()
 
     logs.start_logging(log_level=args.log_level)
-    epoch_list = parse_epoch_string(args.epoch)
+    epoch_list = date_utils.parse_epoch_string(args.epoch)
 
     if args.stage != '':
         stages_to_do = [args.stage]

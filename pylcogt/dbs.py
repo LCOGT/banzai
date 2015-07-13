@@ -4,7 +4,7 @@ __author__ = 'cmccully'
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from sqlalchemy import Column, Integer, String, Float, Time, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Time, Date, ForeignKey, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 
 # Define how to get to the database
@@ -36,13 +36,12 @@ class Image(Base):
     rawpath = Column(String(100))
     object_name = Column(String(50))
     mjd = Column(Float, index=True)
-    dateobs = Column(Date)
+    dateobs = Column(DateTime)
     dayobs  = Column(Date, index=True)
     exptime = Column(Float)
     filter_name = Column(String(2))
     obstype = Column(String(20))
     airmass = Column(Float)
-    ut = Column(Time)
     ra = Column(Float)
     dec = Column(Float)
     userid = Column(String(20))

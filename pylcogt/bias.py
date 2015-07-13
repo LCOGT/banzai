@@ -5,7 +5,9 @@ from astropy.io import fits
 import numpy as np
 import os.path
 
-from .utils import stats, fits_utils
+from sqlalchemy.sql import func
+
+from .utils import stats, fits_utils, date_utils
 from . import dbs
 from . import logs
 
@@ -205,11 +207,17 @@ def run_subtract_bias(telescope, epoch, image_query, processed_path):
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-
-        master_bias_file = '{filepath}/bias_{instrument}_{epoch}_bin{bin}.fits'
-        master_bias_file = master_bias_file.format(filepath=output_directory,
-                                                   instrument=telescope.instrument, epoch=epoch,
-                                                   bin=image_config.ccdsum.replace(' ','x'))
+        master_bias_query = db_session.query(dbs.Calibration_Image)
+        master_bias_query = master_bias_query.filter(dbs.Calibration_Image.type == 'BIAS')
+        master_bias_query = master_bias_query.filter(dbs.Calibration_Image.ccdsum == image_config.ccdsum)
+        epoch_datetime = date_utils.epoch_string_to_date(epoch)
+        master_bias_func = func.DATEDIFF(epoch_datetime, dbs.Calibration_Image.dayobs)
+        master_bias_func = func.ABS(master_bias_func)
+        master_bias_query = master_bias_query.order_by(master_bias_func.desc())
+        master_bias_image = master_bias_query.one()
+        master_bias_file = '{filepath}/{filename}'
+        master_bias_file = master_bias_file.format(filepath=master_bias_image.filepath,
+                                                   filename=master_bias_image.filename)
 
         subtract_bias(input_image_list, output_image_list, master_bias_file)
 
