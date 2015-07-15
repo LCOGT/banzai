@@ -10,6 +10,7 @@ from sqlalchemy.sql import func
 from .utils import stats, fits_utils, date_utils
 from . import dbs
 from . import logs
+from .stages import Stage
 
 def run_make_bias(telescope, epoch, image_query, processed_path):
     db_session = dbs.get_session()
@@ -222,3 +223,10 @@ def run_subtract_bias(telescope, epoch, image_query, processed_path):
         subtract_bias(input_image_list, output_image_list, master_bias_file)
 
     db_session.close()
+
+
+class SubtractBias(Stage):
+    def __init__(self):
+        super(SubtractBias, self).__init__(subtract_bias, self.get_master_bias)
+
+
