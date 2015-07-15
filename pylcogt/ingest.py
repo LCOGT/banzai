@@ -16,99 +16,98 @@ from astropy.io import fits
 from astropy import time
 from astropy.coordinates import SkyCoord
 from astropy import units
+import shutil
 
 from . import dbs
 from . import logs
+from . stages import Stage
 
+class Ingest(Stage):
 
-def ingest_raw_data(raw_image_list, processed_directory, telescope):
-    """
-
-    :param raw_image_list:
-    :param processed_directory:
-    :param telescope:
-    :return:
-    """
-    logger = logs.get_logger('Ingest')
-    db_session = dbs.get_session()
-    for raw_image_file in raw_image_list:
-        image_filename = os.path.basename(raw_image_file)
-        logger.debug('Ingesting {image_name}'.format(image_name=image_filename))
-
-        # Check and see if the filename is already in the database
-        image_query = db_session.query(dbs.Image)
-        image_query = image_query.filter(dbs.Image.rawfilename == image_filename).all()
-
-        if len(image_query) == 0:
-            # Create a new row
-            image = dbs.Image(rawfilename=image_filename)
-        else:
-            # Otherwise update the existing data
-            # In principle we could just skip this, but this should be fast
-            image = image_query[0]
-
-        image.rawpath = os.path.dirname(raw_image_file)
-
-        image.telescope_id = telescope.id
-
-        # Get the fits header of the raw frame
-        image_header = fits.getheader(raw_image_file)
-
-        # Save the image_header keywords into a record
-        image.dayobs = image_header['DAY-OBS']
-        image.exptime = float(image_header['EXPTIME'])
-        image.filter_name = image_header['FILTER']
-        image.mjd = float(image_header['MJD-OBS'])
-        image.airmass = float(image_header['AIRMASS'])
-        image.object_name = image_header['OBJECT']
-        image.tracknum = image_header['TRACKNUM']
-        image.obstype = image_header['OBSTYPE']
-        image.reqnum = image_header['REQNUM']
-        image.propid = image_header['PROPID']
-        image.userid = image_header['USERID']
-        image.ccdsum = image_header['CCDSUM']
-        image.gain = float(image_header['GAIN'])
-        image.readnoise = float(image_header['RDNOISE'])
-
-
-        coordinate = SkyCoord(image_header['RA'], image_header['DEC'],
-                              unit=(units.hourangle, units.deg))
-        image.ra = coordinate.ra.deg
-        image.dec = coordinate.dec.deg
-
-
-        # Split date-obs into the date and time
-        image.dateobs = time.Time(image_header['DATE-OBS']).datetime
-
-        image.filename = image_filename[:-7] + '90.fits'
-
-        image.filepath = os.path.join(processed_directory, telescope.site, telescope.instrument,
-                                      image.dayobs.replace('-', ''))
-
-        db_session.add(image)
-
-    # Write out to the database
-    db_session.commit()
-    db_session.close()
-
-
-def run_ingest(raw_data_directory, telescope, epoch_list, processed_directory):
-    """
-
-    :param raw_data_directory:
-    :param telescope:
-    :param epoch_list:
-    :param processed_directory:
-    :return:
-    """
-    logger = logs.get_logger('Ingest')
-    for epoch in epoch_list:
+    def __init__(self):
+        super(Ingest, self).__init__()
+        logger = logs.get_logger('Ingest')
         logmsg = 'Ingesting data for {site}/{instrument} on {epoch}'
         logger.info(logmsg.format(site=telescope.site, instrument=telescope.instrument, epoch=epoch))
-        search_path = os.path.join(raw_data_directory, telescope.site, telescope.instrument, epoch)
+
+
+    def ingest_raw_data(self, raw_image_list, clobber=True):
+        logger = logs.get_logger('Ingest')
+
+        for raw_image_file in raw_image_list:
+            image_filename = os.path.basename(raw_image_file)
+            logger.debug('Ingesting {image_name}'.format(image_name=image_filename))
+
+            # Check and see if the filename is already in the database
+            image_query = self.db_session.query(dbs.Image)
+            image_query = image_query.filter(dbs.Image.rawfilename == image_filename).all()
+
+            if len(image_query) == 0:
+                # Create a new row
+                image = dbs.Image(rawfilename=image_filename)
+            else:
+                # Otherwise update the existing data
+                # In principle we could just skip this, but this should be fast
+                image = image_query[0]
+
+            image.rawpath = os.path.dirname(raw_image_file)
+
+            # Get the telescope
+            telescope_query = dbs.Telescope.instrument == image_filename["INSTRUME"]
+            telescope_query = telescope_query & (dbs.Telescope.site == image_header['SITEID'])
+            telescope_query = self.db_session.query(dbs.Telescope).filter(telescope_query)
+            telescope = telescope_query.one()
+            image.telescope_id = telescope.id
+
+            # Get the fits header of the raw frame
+            image_header = fits.getheader(raw_image_file)
+
+            # Save the image_header keywords into a record
+            image.dayobs = image_header['DAY-OBS']
+            image.exptime = float(image_header['EXPTIME'])
+            image.filter_name = image_header['FILTER']
+            image.mjd = float(image_header['MJD-OBS'])
+            image.airmass = float(image_header['AIRMASS'])
+            image.object_name = image_header['OBJECT']
+            image.tracknum = image_header['TRACKNUM']
+            image.obstype = image_header['OBSTYPE']
+            image.reqnum = image_header['REQNUM']
+            image.propid = image_header['PROPID']
+            image.userid = image_header['USERID']
+            image.ccdsum = image_header['CCDSUM']
+            image.gain = float(image_header['GAIN'])
+            image.readnoise = float(image_header['RDNOISE'])
+
+            coordinate = SkyCoord(image_header['RA'], image_header['DEC'],
+                                  unit=(units.hourangle, units.deg))
+            image.ra = coordinate.ra.deg
+            image.dec = coordinate.dec.deg
+
+            # Save the dateobs as a datetime object
+            image.dateobs = time.Time(image_header['DATE-OBS']).datetime
+
+            image.filename = image_filename[:-7] + '90.fits'
+
+            image.filepath = os.path.join(self.processed_directory, telescope.site,
+                                          telescope.instrument, image.dayobs.replace('-', ''))
+
+            self.db_session.add(image)
+
+            # Copy the file into place
+            shutil.copy(os.path.join(image.rawfilepath, image.rawfilename),
+                        os.path.join(image.filepath, image.filename))
+
+        # Write out to the database
+        self.db_session.commit()
+
+
+    def select_input_images(self, telescope, epoch):
+        search_path = os.path.join(self.raw_data_directory, telescope.site,
+                                   telescope.instrument, epoch)
+
         if os.path.exists(os.path.join(search_path, 'preproc')):
             search_path = os.path.join(search_path, 'preproc')
         else:
             search_path = os.path.join(search_path, 'raw')
-        image_list = glob.glob(search_path + '/*.fits')
-        ingest_raw_data(image_list, processed_directory, telescope)
+
+        return [glob.glob(search_path + '/*.fits')]
