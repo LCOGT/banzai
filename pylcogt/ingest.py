@@ -24,12 +24,12 @@ from . stages import Stage
 
 class Ingest(Stage):
 
-    def __init__(self):
-        super(Ingest, self).__init__()
-        logger = logs.get_logger('Ingest')
-        logmsg = 'Ingesting data for {site}/{instrument} on {epoch}'
-        logger.info(logmsg.format(site=telescope.site, instrument=telescope.instrument, epoch=epoch))
+    def __init__(self, processed_path, initial_query):
 
+        log_message = 'Ingesting data for {site}/{instrument} on {epoch}'
+        super(Ingest, self).__init__(self.ingest_raw_data, processed_path=processed_path,
+                                     initial_query=initial_query, logger_name='Ingest',
+                                     log_message=log_message)
 
     def ingest_raw_data(self, raw_image_list, clobber=True):
         logger = logs.get_logger('Ingest')

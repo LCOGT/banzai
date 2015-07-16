@@ -119,16 +119,19 @@ def main():
     logger.info('Starting pylcogt:')
 
     if 'ingest' in stages_to_do:
-        ingest_stage = ingest.Ingest(args.raw_path, args.processed_path)
-        ingest_stage.run(telescope_list, epoch_list)
+        for telescope, epoch in itertools.product(telescope_list, epoch_list):
+            ingest_stage = ingest.Ingest(args.raw_path, args.processed_path)
+            ingest_stage.run(telescope, epoch)
 
     if 'make_bias' in stages_to_do:
-        make_bias = bias.MakeBias(image_query, args.processed_path)
-        make_bias.run(telescope_list, epoch_list)
+        for telescope, epoch in itertools.product(telescope_list, epoch_list):
+            make_bias = bias.MakeBias(image_query, args.processed_path)
+            make_bias.run(telescope, epoch)
 
     if 'subtract_bias' in stages_to_do:
-        subtract_bias = bias.SubtractBias(image_query, args.processed_path)
-        subtract_bias.run(telescope_list, epoch_list)
+        for telescope, epoch in itertools.product(telescope_list, epoch_list):
+            subtract_bias = bias.SubtractBias(image_query, args.processed_path)
+            subtract_bias.run(telescope, epoch)
 
     db_session.close()
     logs.stop_logging()
