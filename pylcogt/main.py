@@ -119,9 +119,8 @@ def main():
     logger.info('Starting pylcogt:')
 
     if 'ingest' in stages_to_do:
-        for telescope, epoch in itertools.product(telescope_list, epoch_list):
-            ingest_stage = ingest.Ingest(args.raw_path, args.processed_path)
-            ingest_stage.run(telescope, epoch)
+        ingest_stage = ingest.Ingest(args.raw_path, args.processed_path, image_query)
+        ingest_stage.run(epoch_list, telescope_list)
 
     if 'make_bias' in stages_to_do:
         for telescope, epoch in itertools.product(telescope_list, epoch_list):
