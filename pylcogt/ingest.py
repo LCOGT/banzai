@@ -22,14 +22,16 @@ from . import dbs
 from . import logs
 from . stages import Stage
 
+
 class Ingest(Stage):
 
-    def __init__(self, processed_path, initial_query):
+    def __init__(self, raw_path, processed_path, initial_query):
 
         log_message = 'Ingesting data for {site}/{instrument} on {epoch}'
         super(Ingest, self).__init__(self.ingest_raw_data, processed_path=processed_path,
                                      initial_query=initial_query, logger_name='Ingest',
                                      log_message=log_message)
+        self.raw_path = raw_path
 
     def ingest_raw_data(self, raw_image_list, clobber=True):
         logger = logs.get_logger('Ingest')
@@ -52,15 +54,15 @@ class Ingest(Stage):
 
             image.rawpath = os.path.dirname(raw_image_file)
 
+            # Get the fits header of the raw frame
+            image_header = fits.getheader(raw_image_file)
+
             # Get the telescope
-            telescope_query = dbs.Telescope.instrument == image_filename["INSTRUME"]
+            telescope_query = dbs.Telescope.instrument == image_header["INSTRUME"]
             telescope_query = telescope_query & (dbs.Telescope.site == image_header['SITEID'])
             telescope_query = self.db_session.query(dbs.Telescope).filter(telescope_query)
             telescope = telescope_query.one()
             image.telescope_id = telescope.id
-
-            # Get the fits header of the raw frame
-            image_header = fits.getheader(raw_image_file)
 
             # Save the image_header keywords into a record
             image.dayobs = image_header['DAY-OBS']
@@ -88,13 +90,13 @@ class Ingest(Stage):
 
             image.filename = image_filename[:-7] + '90.fits'
 
-            image.filepath = os.path.join(self.processed_directory, telescope.site,
+            image.filepath = os.path.join(self.processed_path, telescope.site,
                                           telescope.instrument, image.dayobs.replace('-', ''))
 
             self.db_session.add(image)
 
             # Copy the file into place
-            shutil.copy(os.path.join(image.rawfilepath, image.rawfilename),
+            shutil.copy(os.path.join(image.rawpath, image.rawfilename),
                         os.path.join(image.filepath, image.filename))
 
         # Write out to the database
@@ -102,7 +104,7 @@ class Ingest(Stage):
 
 
     def select_input_images(self, telescope, epoch):
-        search_path = os.path.join(self.raw_data_directory, telescope.site,
+        search_path = os.path.join(self.raw_path, telescope.site,
                                    telescope.instrument, epoch)
 
         if os.path.exists(os.path.join(search_path, 'preproc')):
@@ -110,4 +112,5 @@ class Ingest(Stage):
         else:
             search_path = os.path.join(search_path, 'raw')
 
-        return [glob.glob(search_path + '/*.fits')]
+        # return the list of file and a dummy image configuration
+        return [glob.glob(search_path + '/*.fits')], ['all']

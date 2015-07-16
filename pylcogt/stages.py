@@ -8,9 +8,9 @@ from . import dbs
 from .utils import date_utils
 from . import logs
 
-class Stage:
+class Stage(object):
     def __init__(self, stage_function, processed_path='', initial_query=None, groupby=[],
-                 logger_name='', log_message=''):
+                 logger_name='', log_message='', cal_type=''):
         self.stage_function = stage_function
         self.processed_path = processed_path
         self.initial_query = initial_query
@@ -18,6 +18,7 @@ class Stage:
         self.db_session = dbs.get_session()
         self.logger_name = logger_name
         self.log_message = log_message
+        self.cal_type = cal_type
 
     def __del__(self):
         self.db_session.close()
@@ -55,7 +56,7 @@ class Stage:
        return None
 
 
-    def make_output_directory(self, telescope, epoch):
+    def make_output_directory(self, epoch, telescope):
             # Create output directory if necessary
             output_directory = os.path.join(self.processed_path, telescope.site,
                                             telescope.instrument, epoch)
@@ -63,29 +64,29 @@ class Stage:
                 os.makedirs(output_directory)
 
     # By default we don't need to get a calibration image
-    def get_calibration_image(self, epoch, cal_type):
+    def get_calibration_image(self, epoch, image_config, cal_type):
         return None
 
 
     def run(self, epoch_list, telescope_list):
         for epoch, telescope in itertools.product(epoch_list, telescope_list):
-            self.make_output_directory(telescope, epoch)
+            self.make_output_directory(epoch, telescope)
 
             image_sets, image_configs = self.select_input_images(telescope, epoch)
             logger = logs.get_logger(self.logger_name)
 
             for images, image_config in zip(image_sets, image_configs):
-                log_message = log_message.format(instrument=telescope.instrument, epoch=epoch,
-                                                 site=telescope.site)
+                log_message = self.log_message.format(instrument=telescope.instrument, epoch=epoch,
+                                                      site=telescope.site)
                 logger.info(log_message)
 
                 stage_args = [images]
 
-                output_images = self.get_output_images()
+                output_images = self.get_output_images(telescope, epoch)
                 if output_images is not None:
                     stage_args.append(output_images)
 
-                master_cal_file = self.get_master_cal(epoch, image_config, self.cal_type)
+                master_cal_file = self.get_calibration_image(epoch, image_config, self.cal_type)
                 if master_cal_file is not None:
                     stage_args.append(master_cal_file)
 
