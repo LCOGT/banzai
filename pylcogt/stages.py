@@ -30,26 +30,33 @@ class Stage(object):
 
         if len(self.groupby) != 0:
             # Get the distinct values of ccdsum and filters
-            config_query = self.db_session.query(dbs.Image.ccdsum, dbs.Image.filter_name)
+            config_query = self.db_session.query(*self.groupby)
             config_list = config_query.filter(query).distinct().all()
 
-            if 'ccdsum' in self.groupby:
-                # Select images with the correct binning
-                image_query = query & (dbs.Image.ccdsum == image_config[0])
-            if 'filter' in self.groubpy:
-                # Select images with the correct filter
-                image_query = image_query & (dbs.Image.filter_name == image_config[1])
-        else: config_queries = [expression.true()]
+            config_queries = []
+
+            for config in config_list:
+                config_query = query
+                for i in range(len(self.groupby)):
+                    # Select images with the correct binning/filter
+                    config_query = config_query & (self.groupby[i] == config[i])
+                config_queries.append(config_query)
+
+        else:
+            config_queries = [expression.true()]
 
         input_image_list = []
+        config_list = []
         for image_config in config_queries:
             image_query = image_config & query
 
             image_list = self.db_session.query(dbs.Image).filter(image_query).all()
-            # Convert from image objects to file names
-            input_image_list.append([os.path.join(i.filepath, i.filename) for i in image_list])
 
-        return input_image_list
+            # Convert from image objects to file names
+            input_image_list.append(image_list)
+
+            config_list.append(image_list[0])
+        return input_image_list, config_list
 
     # By default don't return any output images
     def get_output_images(self, telescope, epoch):
@@ -63,8 +70,9 @@ class Stage(object):
             if not os.path.exists(output_directory):
                 os.makedirs(output_directory)
 
+
     # By default we don't need to get a calibration image
-    def get_calibration_image(self, epoch, image_config, cal_type):
+    def get_calibration_image(self, epoch, telescope, image_config):
         return None
 
 
@@ -77,7 +85,8 @@ class Stage(object):
 
             for images, image_config in zip(image_sets, image_configs):
                 log_message = self.log_message.format(instrument=telescope.instrument, epoch=epoch,
-                                                      site=telescope.site)
+                                                      site=telescope.site, binning=image_config.ccdsum,
+                                                      filter_name=image_config.filter_name)
                 logger.info(log_message)
 
                 stage_args = [images]
@@ -86,7 +95,7 @@ class Stage(object):
                 if output_images is not None:
                     stage_args.append(output_images)
 
-                master_cal_file = self.get_calibration_image(epoch, image_config, self.cal_type)
+                master_cal_file = self.get_calibration_image(epoch, telescope, image_config)
                 if master_cal_file is not None:
                     stage_args.append(master_cal_file)
 
@@ -94,13 +103,38 @@ class Stage(object):
 
 
 class MakeCalibrationImage(Stage):
-    def __init__(self):
-        super(MakeCalibrationImage, self).__init__()
+    def __init__(self, stage_function, processed_path='', initial_query=None, groupby=[],
+                 logger_name='', log_message='', cal_type=''):
+
+        query = initial_query & (dbs.Image.obstype == cal_type)
+        super(MakeCalibrationImage, self).__init__(stage_function, processed_path=processed_path,
+                                                   initial_query=query, groupby=groupby,
+                                                   logger_name=logger_name, log_message=log_message, cal_type=cal_type)
+
+    def get_calibration_image(self, epoch, telescope, image_config):
+        output_directory = os.path.join(self.processed_path, telescope.site, telescope.instrument, epoch)
+        cal_file = '{filepath}/{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
+        if dbs.Image.filter_name in self.groupby:
+            filter_str = '_{filter}'.format(filter = image_config.filter_name)
+        else:
+            filter_str = ''
+
+        cal_file = cal_file.format(filepath=output_directory, instrument=telescope.instrument, epoch=epoch,
+                                   bin=image_config.ccdsum.replace(' ','x'), cal_type=self.cal_type, filter=filter_str)
+        return cal_file
+
+    def get_output_images(self, telescope, epoch):
+        return None
+
 
 class ApplyCalibration(Stage):
-    def __init__(self):
-        super(ApplyCalibration, self).__init__()
 
+    def __init__(self, stage_function, processed_path='', initial_query=None, groupby=[],
+                 logger_name='', log_message='', cal_type=''):
+
+        super(ApplyCalibration, self).__init__(stage_function, processed_path=processed_path,
+                                                   initial_query=initial_query, groupby=groupby,
+                                                   logger_name=logger_name, log_message=log_message, cal_type=cal_type)
     def get_output_images(self, telescope, epoch):
         return self.select_input_images(telescope, epoch)
 

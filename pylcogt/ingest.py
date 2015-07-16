@@ -113,4 +113,4 @@ class Ingest(Stage):
             search_path = os.path.join(search_path, 'raw')
 
         # return the list of file and a dummy image configuration
-        return [glob.glob(search_path + '/*.fits')], ['all']
+        return [glob.glob(search_path + '/*.fits')], [dbs.Image()]

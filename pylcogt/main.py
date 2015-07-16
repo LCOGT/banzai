@@ -123,14 +123,12 @@ def main():
         ingest_stage.run(epoch_list, telescope_list)
 
     if 'make_bias' in stages_to_do:
-        for telescope, epoch in itertools.product(telescope_list, epoch_list):
-            make_bias = bias.MakeBias(image_query, args.processed_path)
-            make_bias.run(telescope, epoch)
+        make_bias = bias.MakeBias(image_query, args.processed_path)
+        make_bias.run(epoch_list, telescope_list)
 
     if 'subtract_bias' in stages_to_do:
-        for telescope, epoch in itertools.product(telescope_list, epoch_list):
-            subtract_bias = bias.SubtractBias(image_query, args.processed_path)
-            subtract_bias.run(telescope, epoch)
+        subtract_bias = bias.SubtractBias(image_query, args.processed_path)
+        subtract_bias.run(epoch_list, telescope_list)
 
     db_session.close()
     logs.stop_logging()
