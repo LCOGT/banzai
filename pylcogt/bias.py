@@ -69,14 +69,14 @@ class MakeBias(MakeCalibrationImage):
 
             header = fits.Header()
             header['CCDSUM'] = image_list[0].ccdsum
-            header['DAY-OBS'] = image_list[0].dayobs
+            header['DAY-OBS'] = str(image_list[0].dayobs)
             header['CALTYPE'] = 'BIAS'
             header['BIASLVL'] = bias_level_array.mean()
             header['RDNOISE'] = mean_read_noise
 
             header.add_history("Images combined to create master bias image:")
             for image in image_list:
-                header.add_history(os.path.basename(image))
+                header.add_history(image.filename)
 
             fits.writeto(output_file, master_bias, header=header, clobber=clobber)
 
