@@ -79,6 +79,8 @@ class Ingest(Stage):
             image.ccdsum = image_header['CCDSUM']
             image.gain = float(image_header['GAIN'])
             image.readnoise = float(image_header['RDNOISE'])
+            image.naxis1 = image_header['NAXIS1']
+            image.naxis2 = image_header['NAXIS2']
 
             coordinate = SkyCoord(image_header['RA'], image_header['DEC'],
                                   unit=(units.hourangle, units.deg))
