@@ -12,10 +12,6 @@ from . import dbs
 from . import logs
 from .stages import MakeCalibrationImage, ApplyCalibration
 
-
-
-
-
 def subtract_bias(image_files, output_filenames, master_bias_file, clobber=True):
 
     master_bias_data = fits.getdata(master_bias_file)
@@ -63,7 +59,7 @@ def run_subtract_bias(telescope, epoch, image_query, processed_path):
     logger = logs.get_logger('Bias')
 
     for image_config in ccdsum_list:
-        log_message = 'Subtracting {binning} bias frame for {instrument} on {epoch}'
+        log_message = 'Subtracting {binning} bias frame for {instrument} on {epoch}.'
         log_message = log_message.format(binning=image_config.ccdsum.replace(' ','x'),
                                          instrument=telescope.instrument, epoch=epoch)
         logger.info(log_message)
@@ -101,7 +97,8 @@ class MakeBias(MakeCalibrationImage):
     def __init__(self, initial_query, processed_path):
 
         super(MakeBias, self).__init__(self.make_master_bias, processed_path=processed_path,
-                                     initial_query=initial_query, logger_name='Bias', cal_type='bias')
+                                       initial_query=initial_query, logger_name='Bias',
+                                       cal_type='bias')
         self.log_message = 'Creating {binning} bias frame for {instrument} on {epoch}.'
         self.groupby = [dbs.Image.ccdsum]
 
@@ -114,12 +111,13 @@ class MakeBias(MakeCalibrationImage):
         else:
             # Assume the files are all the same number of pixels
             # TODO: add error checking for incorrectly sized images
-            image_file = os.path.join(image_list[0].filepath, image_list[0].filename)
-            nx = fits.getval(image_file, 'NAXIS1')
-            ny = fits.getval(image_file, 'NAXIS2')
+
+            nx = image_list[0].naxis1
+            ny = image_list[0].naxis2
             bias_data = np.zeros((ny, nx, len(image_list)))
 
             bias_level_array = np.zeros(len(image_list))
+            read_noise_array = np.zeros(len(image_list))
 
             for i, image in enumerate(image_list):
                 image_file = os.path.join(image.filepath, image.filename)
@@ -136,25 +134,22 @@ class MakeBias(MakeCalibrationImage):
 
             master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2)
 
-            # Estimate the read noise for each image
-            read_noise_array = np.zeros(len(image_list))
             for i, image in enumerate(image_list):
-                image_data = fits.getdata(image)
+                # Estimate the read noise for each image
+                read_noise = stats.robust_standard_deviation(bias_data[:,:, i] - master_bias)
+
                 # Make sure to convert to electrons and save
-                read_noise = stats.robust_standard_deviation(image_data - master_bias)
-                read_noise_array[i] = read_noise * float(fits.getval(image, 'GAIN'))
+                read_noise_array[i] = read_noise * image.gain
                 log_message = 'Read noise estimate for {file} is {rdnoise}'
-                logger.debug(log_message.format(file=os.path.basename(image), rdnoise=read_noise))
+                logger.debug(log_message.format(file=image.filename, rdnoise=read_noise))
 
             mean_read_noise = read_noise_array.mean()
             logger.info('Estimated Readnoise: {rdnoise} e-'.format(rdnoise=mean_read_noise))
             # Save the master bias image with all of the combined images in the header
-            ccdsum = fits.getval(image_list[0], 'CCDSUM')
-            dayobs = fits.getval(image_list[0], 'DAY-OBS')
 
             header = fits.Header()
-            header['CCDSUM'] = ccdsum
-            header['DAY-OBS'] = dayobs
+            header['CCDSUM'] = image_list[0].ccdsum
+            header['DAY-OBS'] = image_list[0].dayobs
             header['CALTYPE'] = 'BIAS'
             header['BIASLVL'] = bias_level_array.mean()
             header['RDNOISE'] = mean_read_noise
@@ -165,26 +160,4 @@ class MakeBias(MakeCalibrationImage):
 
             fits.writeto(output_file, master_bias, header=header, clobber=clobber)
 
-            # Store the information into the calibration table
-            # Check and see if the bias file is already in the database
-            image_query = self.db_session.query(dbs.Calibration_Image)
-            output_filename = os.path.basename(output_file)
-            image_query = image_query.filter(dbs.Calibration_Image.filename == output_filename)
-            image_query = image_query.all()
-
-            if len(image_query) == 0:
-                # Create a new row
-                calibration_image = dbs.Calibration_Image()
-            else:
-                # Otherwise update the existing data
-                # In principle we could just skip this, but this should be fast
-                calibration_image = image_query[0]
-
-            calibration_image.dayobs = dayobs
-            calibration_image.ccdsum = ccdsum
-            calibration_image.type = 'BIAS'
-            calibration_image.filename = output_filename
-            calibration_image.filepath = os.path.dirname(output_file)
-
-            self.db_session.add(calibration_image)
-            self.db_session.commit()
+            self.save_calibration_info('bias', output_file, image_list[0])

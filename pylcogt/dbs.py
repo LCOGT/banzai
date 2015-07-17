@@ -4,7 +4,7 @@ __author__ = 'cmccully'
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from sqlalchemy import Column, Integer, String, Float, Time, Date, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 
 # Define how to get to the database
@@ -51,6 +51,8 @@ class Image(Base):
     ccdsum = Column(String(10))
     gain = Column(Float)
     readnoise = Column(Float)
+    naxis1 = Column(Integer)
+    naxis2 = Column(Integer)
 
 
 class Calibration_Image(Base):
@@ -61,6 +63,7 @@ class Calibration_Image(Base):
     filepath = Column(String(100))
     dayobs = Column(Date, index=True)
     ccdsum = Column(String(20))
+    filter_name = Column(String(2))
 
 
 class Reduction_Status(Base):
