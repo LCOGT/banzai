@@ -12,86 +12,6 @@ from . import dbs
 from . import logs
 from .stages import MakeCalibrationImage, ApplyCalibration
 
-def subtract_bias(image_files, output_filenames, master_bias_file, clobber=True):
-
-    master_bias_data = fits.getdata(master_bias_file)
-    master_bias_level = float(fits.getval(master_bias_file, 'BIASLVL'))
-
-    logger = logs.get_logger('Bias')
-
-    # TODO Add error checking for incorrect image sizes
-    for i, image in enumerate(image_files):
-        logger.debug('Subtracting bias for {image}'.format(image=os.path.basename(image)))
-        data = fits.getdata(image)
-        header = fits_utils.sanitizeheader(fits.getheader(image))
-
-        # Subtract the overscan first if it exists
-        overscan_region = fits_utils.parse_region_keyword(header['BIASSEC'])
-        if overscan_region is not None:
-            bias_level = stats.sigma_clipped_mean(data[overscan_region], 3)
-        else:
-            # If not, subtract the master bias level
-            bias_level = master_bias_level
-
-        logger.debug('Bias level: {bias}'.format(bias=bias_level))
-        data -= bias_level
-        data -= master_bias_data
-
-        header['BIASLVL'] = bias_level
-
-        master_bias_filename = os.path.basename(master_bias_file)
-        header.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
-
-        fits.writeto(output_filenames[i], data, header=header, clobber=clobber)
-
-
-def run_subtract_bias(telescope, epoch, image_query, processed_path):
-    db_session = dbs.get_session()
-
-    # Select only bias images
-    bias_query = image_query & (dbs.Image.telescope_id == telescope.id)
-    bias_query = bias_query & (dbs.Image.dayobs == epoch)
-    bias_query = bias_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
-
-    # Get the distinct values of ccdsum that we are making bias frames for.
-    ccdsum_list = db_session.query(dbs.Image.ccdsum).filter(bias_query).distinct()
-
-    logger = logs.get_logger('Bias')
-
-    for image_config in ccdsum_list:
-        log_message = 'Subtracting {binning} bias frame for {instrument} on {epoch}.'
-        log_message = log_message.format(binning=image_config.ccdsum.replace(' ','x'),
-                                         instrument=telescope.instrument, epoch=epoch)
-        logger.info(log_message)
-
-        # Select only images with the correct binning
-        bias_ccdsum_query = bias_query & (dbs.Image.ccdsum == image_config.ccdsum)
-        bias_ccdsum_list = db_session.query(dbs.Image).filter(bias_ccdsum_query).all()
-
-        # Convert from image objects to file names
-        input_image_list = []
-        output_image_list = []
-        for image in bias_ccdsum_list:
-            input_image_list.append(os.path.join(image.rawpath, image.rawfilename))
-            output_image_list.append(os.path.join(image.filepath, image.filename))
-
-
-        master_bias_query = db_session.query(dbs.Calibration_Image)
-        master_bias_query = master_bias_query.filter(dbs.Calibration_Image.type == 'BIAS')
-        master_bias_query = master_bias_query.filter(dbs.Calibration_Image.ccdsum == image_config.ccdsum)
-        epoch_datetime = date_utils.epoch_string_to_date(epoch)
-        master_bias_func = func.DATEDIFF(epoch_datetime, dbs.Calibration_Image.dayobs)
-        master_bias_func = func.ABS(master_bias_func)
-        master_bias_query = master_bias_query.order_by(master_bias_func.desc())
-        master_bias_image = master_bias_query.one()
-        master_bias_file = '{filepath}/{filename}'
-        master_bias_file = master_bias_file.format(filepath=master_bias_image.filepath,
-                                                   filename=master_bias_image.filename)
-
-        subtract_bias(input_image_list, output_image_list, master_bias_file)
-
-    db_session.close()
-
 
 class MakeBias(MakeCalibrationImage):
     def __init__(self, initial_query, processed_path):
@@ -161,3 +81,48 @@ class MakeBias(MakeCalibrationImage):
             fits.writeto(output_file, master_bias, header=header, clobber=clobber)
 
             self.save_calibration_info('bias', output_file, image_list[0])
+
+
+class SubtractBias(ApplyCalibration):
+    def __init__(self, initial_query, processed_path):
+
+        bias_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
+
+        super(MakeBias, self).__init__(self.subtract_bias, processed_path=processed_path,
+                                       initial_query=bias_query, logger_name='Bias',
+                                       cal_type='bias')
+        self.log_message = 'Subtracting {binning} bias frame for {instrument} on {epoch}.'
+        self.groupby = [dbs.Image.ccdsum]
+
+    def subtract_bias(image_files, output_files, master_bias_file, clobber=True):
+
+        master_bias_data = fits.getdata(master_bias_file)
+        master_bias_level = float(fits.getval(master_bias_file, 'BIASLVL'))
+
+        logger = logs.get_logger('Bias')
+
+        # TODO Add error checking for incorrect image sizes
+        for i, image in enumerate(image_files):
+            logger.debug('Subtracting bias for {image}'.format(image=image.filename))
+            image_file = os.path.join(image.filepath, image.filename)
+            data = fits.getdata(image_file)
+            header = fits_utils.sanitizeheader(fits.getheader(image_file))
+
+            # Subtract the overscan first if it exists
+            overscan_region = fits_utils.parse_region_keyword(header['BIASSEC'])
+            if overscan_region is not None:
+                bias_level = stats.sigma_clipped_mean(data[overscan_region], 3)
+            else:
+                # If not, subtract the master bias level
+                bias_level = master_bias_level
+
+            logger.debug('Bias level: {bias}'.format(bias=bias_level))
+            data -= bias_level
+            data -= master_bias_data
+
+            header['BIASLVL'] = bias_level
+
+            master_bias_filename = os.path.basename(master_bias_file)
+            header.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
+            output_filename = os.path.join(output_files[i].filepath, output_files[i].filename)
+            fits.writeto(output_filename, data, header=header, clobber=clobber)
