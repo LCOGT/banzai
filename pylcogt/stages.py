@@ -103,6 +103,7 @@ class Stage(object):
 
 
 class MakeCalibrationImage(Stage):
+
     def __init__(self, stage_function, processed_path='', initial_query=None, groupby=[],
                  logger_name='', log_message='', cal_type=''):
 
@@ -110,6 +111,7 @@ class MakeCalibrationImage(Stage):
         super(MakeCalibrationImage, self).__init__(stage_function, processed_path=processed_path,
                                                    initial_query=query, groupby=groupby,
                                                    logger_name=logger_name, log_message=log_message, cal_type=cal_type)
+
 
     def get_calibration_image(self, epoch, telescope, image_config):
         output_directory = os.path.join(self.processed_path, telescope.site, telescope.instrument, epoch)
@@ -123,8 +125,10 @@ class MakeCalibrationImage(Stage):
                                    bin=image_config.ccdsum.replace(' ','x'), cal_type=self.cal_type, filter=filter_str)
         return cal_file
 
+
     def get_output_images(self, telescope, epoch):
         return None
+
 
     def save_calibration_info(self, cal_type, output_file, image_config):
             # Store the information into the calibration table
@@ -161,10 +165,13 @@ class ApplyCalibration(Stage):
         super(ApplyCalibration, self).__init__(stage_function, processed_path=processed_path,
                                                    initial_query=initial_query, groupby=groupby,
                                                    logger_name=logger_name, log_message=log_message, cal_type=cal_type)
+
+
     def get_output_images(self, telescope, epoch):
         return self.select_input_images(telescope, epoch)
 
-    def get_calibration_image(self, epoch, ccdsum, cal_type, filter_name):
+
+    def get_calibration_image(self, epoch, telescope, image_config):
         calibration_query = self.db_session.query(dbs.Calibration_Image)
         calibration_query = calibration_query.filter(dbs.Calibration_Image.type == cal_type)
         calibration_query = calibration_query.filter(dbs.Calibration_Image.ccdsum == ccdsum)
