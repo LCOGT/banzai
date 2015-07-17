@@ -26,7 +26,7 @@ class Stage(object):
     def select_input_images(self, telescope, epoch):
         # Select only the images we want to work on
         query = self.initial_query & (dbs.Image.telescope_id == telescope.id)
-        query = query & (dbs.Image.dayobs == epoch)
+        query &= (dbs.Image.dayobs == epoch)
 
         if len(self.groupby) != 0:
             # Get the distinct values of ccdsum and filters
@@ -39,7 +39,7 @@ class Stage(object):
                 config_query = query
                 for i in range(len(self.groupby)):
                     # Select images with the correct binning/filter
-                    config_query = config_query & (self.groupby[i] == config[i])
+                    config_query &= (self.groupby[i] == config[i])
                 config_queries.append(config_query)
 
         else:
@@ -172,11 +172,14 @@ class ApplyCalibration(Stage):
 
 
     def get_calibration_image(self, epoch, telescope, image_config):
-        calibration_query = self.db_session.query(dbs.Calibration_Image)
-        calibration_query = calibration_query.filter(dbs.Calibration_Image.type == cal_type)
-        calibration_query = calibration_query.filter(dbs.Calibration_Image.ccdsum == ccdsum)
-        calibration_query = calibration_query.filter(dbs.Calibration_Image.filter_name == filter_name)
 
+        calibration_critera = dbs.Calibration_Image.type == self.cal_type.upper()
+        for criteria in self.groupby:
+            groupby_field = vars(criteria)['key']
+            calibration_critera &= getattr(dbs.Calibration_Image, groupby_field) == getattr(image_config, groupby_field)
+
+
+        calibration_query = self.db_session.query(dbs.Calibration_Image).filter(calibration_critera)
         epoch_datetime = date_utils.epoch_string_to_date(epoch)
 
         find_closest = func.DATEDIFF(epoch_datetime, dbs.Calibration_Image.dayobs)

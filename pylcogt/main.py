@@ -93,27 +93,27 @@ def main():
     telescope_query = sqlalchemy.sql.expression.true()
 
     if args.site != '':
-        telescope_query = (dbs.Telescope.site == args.site) & telescope_query
+        telescope_query &= dbs.Telescope.site == args.site
 
     if args.instrument != '':
-        telescope_query = (dbs.Telescope.instrument == args.instrument) & telescope_query
+        telescope_query &= dbs.Telescope.instrument == args.instrument
 
     if args.telescope != '':
-        telescope_query = (dbs.Telescope.telescope_id == args.telescope) & telescope_query
+        telescope_query &= dbs.Telescope.telescope_id == args.telescope
 
     if args.camera_type != '':
-        telescope_query = (dbs.Telescope.camera_type == args.camera_type) & telescope_query
+        telescope_query &= dbs.Telescope.camera_type == args.camera_type
 
     telescope_list = db_session.query(dbs.Telescope).filter(telescope_query).all()
 
     image_query = sqlalchemy.sql.expression.true()
 
     if args.filter != '':
-        image_query = (dbs.Image.filter_name == args.filter) & image_query
+        image_query &= dbs.Image.filter_name == args.filter
 
     if args.binning != '':
         ccdsum = args.binning.replace('x', ' ')
-        image_query = (dbs.Image.ccdsum == ccdsum) & image_query
+        image_query &= dbs.Image.ccdsum == ccdsum
 
     logger = logs.get_logger('Main')
     logger.info('Starting pylcogt:')
