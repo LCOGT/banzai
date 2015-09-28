@@ -5,6 +5,7 @@ import logging
 import multiprocessing
 import sys
 
+
 def get_logger(name):
     logger = logging.getLogger(name)
     # This allows us to control the logging level with the root logger.

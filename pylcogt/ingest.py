@@ -7,7 +7,6 @@ Authors
 July 2015
 """
 from __future__ import absolute_import, print_function
-__author__ = 'cmccully'
 
 import glob
 
@@ -22,6 +21,8 @@ from . import dbs
 from . import logs
 from . stages import Stage
 
+__author__ = 'cmccully'
+
 
 class Ingest(Stage):
 
@@ -33,7 +34,7 @@ class Ingest(Stage):
                                      log_message=log_message)
         self.raw_path = raw_path
 
-    def ingest_raw_data(self, raw_image_list, clobber=True):
+    def ingest_raw_data(self, raw_image_list):
         logger = logs.get_logger('Ingest')
 
         for raw_image_file in raw_image_list:
@@ -59,7 +60,7 @@ class Ingest(Stage):
 
             # Get the telescope
             telescope_query = dbs.Telescope.instrument == image_header["INSTRUME"]
-            telescope_query = telescope_query & (dbs.Telescope.site == image_header['SITEID'])
+            telescope_query &= (dbs.Telescope.site == image_header['SITEID'])
             telescope_query = self.db_session.query(dbs.Telescope).filter(telescope_query)
             telescope = telescope_query.one()
             image.telescope_id = telescope.id
@@ -103,7 +104,6 @@ class Ingest(Stage):
 
         # Write out to the database
         self.db_session.commit()
-
 
     def select_input_images(self, telescope, epoch):
         search_path = os.path.join(self.raw_path, telescope.site,

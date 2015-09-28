@@ -20,7 +20,7 @@ class MakeBias(MakeCalibrationImage):
                                        initial_query=initial_query, logger_name='Bias',
                                        cal_type='bias')
         self.log_message = 'Creating {binning} bias frame for {instrument} on {epoch}.'
-        self.groupby = [dbs.Image.ccdsum]
+        self.group_by = [dbs.Image.ccdsum]
 
 
     def make_master_bias(self, image_list, output_file, min_images=5, clobber=True):
@@ -92,7 +92,7 @@ class SubtractBias(ApplyCalibration):
                                        initial_query=bias_query, logger_name='Bias',
                                        cal_type='bias')
         self.log_message = 'Subtracting {binning} bias frame for {instrument} on {epoch}.'
-        self.groupby = [dbs.Image.ccdsum]
+        self.group_by = [dbs.Image.ccdsum]
 
     def subtract_bias(image_files, output_files, master_bias_file, clobber=True):
 

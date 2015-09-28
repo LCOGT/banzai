@@ -12,12 +12,13 @@ from . import dbs
 from . import logs
 from . import bias
 
+reduction_stages = {'ingest': ingest.Ingest, 'make_bias': bias.MakeBias, 'subtract_bias': bias.SubtractBias,
+                    'make_flat':'', 'make_dark':'', 'trim':'',
+                    'apply_dark':'', 'apply_flat':'', 'cr_reject':'', 'wcs':'', 'check_image':'', 'hdu_update':''}
 
-reduction_stages = ['ingest', 'make_bias', 'make_flat', 'make_dark', 'subtract_bias', 'trim',
-                    'apply_dark', 'apply_flat', 'cr_reject', 'wcs', 'check_image', 'hdu_update']
 
 def get_telescope_info():
-   # Get All of the telescope information
+    # Get All of the telescope information
     db_session = dbs.get_session()
     all_sites = []
     for site in db_session.query(dbs.Telescope.site).distinct():
@@ -63,8 +64,8 @@ def main():
                         help='Top level directory where the processed data will be stored')
 
     parser.add_argument("--filter", default='', help="Image filter",
-                        choices=['sloan','landolt', 'apass','up','gp','rp','ip','zs',
-                                 'U','B','V','R','I'])
+                        choices=['sloan', 'landolt', 'apass', 'up', 'gp', 'rp', 'ip', 'zs',
+                                 'U', 'B', 'V', 'R', 'I'])
     parser.add_argument("--binning", default='', choices=['1x1', '2x2'],
                         help="Image binning (CCDSUM)")
     parser.add_argument("--image-type", default='', choices=['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE'],
@@ -118,17 +119,9 @@ def main():
     logger = logs.get_logger('Main')
     logger.info('Starting pylcogt:')
 
-    if 'ingest' in stages_to_do:
-        ingest_stage = ingest.Ingest(args.raw_path, args.processed_path, image_query)
-        ingest_stage.run(epoch_list, telescope_list)
-
-    if 'make_bias' in stages_to_do:
-        make_bias = bias.MakeBias(image_query, args.processed_path)
-        make_bias.run(epoch_list, telescope_list)
-
-    if 'subtract_bias' in stages_to_do:
-        subtract_bias = bias.SubtractBias(image_query, args.processed_path)
-        subtract_bias.run(epoch_list, telescope_list)
+    for stage in stages_to_do:
+        stage_to_run = reduction_stages[stage](args.raw_path, args.processed_path, image_query)
+        stage_to_run.run(epoch_list, telescope_list)
 
     db_session.close()
     logs.stop_logging()
