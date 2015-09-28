@@ -60,7 +60,9 @@ class Ingest(Stage):
 
             # Get the telescope
             telescope_query = dbs.Telescope.instrument == image_header["INSTRUME"]
+
             telescope_query &= (dbs.Telescope.site == image_header['SITEID'])
+
             telescope_query = self.db_session.query(dbs.Telescope).filter(telescope_query)
             telescope = telescope_query.one()
             image.telescope_id = telescope.id

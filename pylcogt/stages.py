@@ -38,6 +38,7 @@ class Stage(object):
 
             for config in config_list:
                 config_query = query
+
                 for i in range(len(self.group_by)):
                     # Select images with the correct binning/filter
                     config_query &= (self.group_by[i] == config[i])
@@ -64,11 +65,11 @@ class Stage(object):
         return None
 
     def make_output_directory(self, epoch, telescope):
-        # Create output directory if necessary
-        output_directory = os.path.join(self.processed_path, telescope.site,
-                                        telescope.instrument, epoch)
-        if not os.path.exists(output_directory):
-            os.makedirs(output_directory)
+            # Create output directory if necessary
+            output_directory = os.path.join(self.processed_path, telescope.site,
+                                            telescope.instrument, epoch)
+            if not os.path.exists(output_directory):
+                os.makedirs(output_directory)
 
     # By default we don't need to get a calibration image
     def get_calibration_image(self, epoch, telescope, image_config):

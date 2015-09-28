@@ -1,16 +1,15 @@
 from __future__ import absolute_import, print_function
-__author__ = 'cmccully'
 
 from astropy.io import fits
 import numpy as np
 import os.path
 
-from sqlalchemy.sql import func
-
-from .utils import stats, fits_utils, date_utils
+from .utils import stats, fits_utils
 from . import dbs
 from . import logs
 from .stages import MakeCalibrationImage, ApplyCalibration
+
+__author__ = 'cmccully'
 
 
 class MakeBias(MakeCalibrationImage):
@@ -21,7 +20,6 @@ class MakeBias(MakeCalibrationImage):
                                        cal_type='bias')
         self.log_message = 'Creating {binning} bias frame for {instrument} on {epoch}.'
         self.group_by = [dbs.Image.ccdsum]
-
 
     def make_master_bias(self, image_list, output_file, min_images=5, clobber=True):
 
@@ -47,7 +45,7 @@ class MakeBias(MakeCalibrationImage):
                 logger.debug('Bias level for {file} is {bias}'.format(file=image.filename,
                                                                       bias=bias_level_array[i]))
                 # Subtract the bias level for each image
-                bias_data[:, :, i]  = image_data - bias_level_array[i]
+                bias_data[:, :, i] = image_data - bias_level_array[i]
 
             mean_bias_level = bias_level_array.mean()
             logger.info('Average bias level: {bias} ADU'.format(bias=mean_bias_level))
@@ -56,7 +54,7 @@ class MakeBias(MakeCalibrationImage):
 
             for i, image in enumerate(image_list):
                 # Estimate the read noise for each image
-                read_noise = stats.robust_standard_deviation(bias_data[:,:, i] - master_bias)
+                read_noise = stats.robust_standard_deviation(bias_data[:, :, i] - master_bias)
 
                 # Make sure to convert to electrons and save
                 read_noise_array[i] = read_noise * image.gain
@@ -88,13 +86,12 @@ class SubtractBias(ApplyCalibration):
 
         bias_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
-        super(MakeBias, self).__init__(self.subtract_bias, processed_path=processed_path,
-                                       initial_query=bias_query, logger_name='Bias',
-                                       cal_type='bias')
+        super(SubtractBias, self).__init__(self.subtract_bias, processed_path=processed_path,
+                                           initial_query=bias_query, logger_name='Bias', cal_type='bias')
         self.log_message = 'Subtracting {binning} bias frame for {instrument} on {epoch}.'
         self.group_by = [dbs.Image.ccdsum]
 
-    def subtract_bias(image_files, output_files, master_bias_file, clobber=True):
+    def subtract_bias(self, image_files, output_files, master_bias_file, clobber=True):
 
         master_bias_data = fits.getdata(master_bias_file)
         master_bias_level = float(fits.getval(master_bias_file, 'BIASLVL'))

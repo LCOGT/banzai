@@ -15,10 +15,10 @@ else:
     import __builtin__ as builtins
 builtins._ASTROPY_SETUP_ = True
 
-from astropy_helpers.setup_helpers import (
+from .astropy_helpers.setup_helpers import (
     register_commands, adjust_compiler, get_debug_option, get_package_info)
-from astropy_helpers.git_helpers import get_git_devstr
-from astropy_helpers.version_helpers import generate_version_py
+from .astropy_helpers.git_helpers import get_git_devstr
+from .astropy_helpers.version_helpers import generate_version_py
 
 # Get some values from the setup.cfg
 from distutils import config
@@ -94,8 +94,8 @@ setup(name=PACKAGENAME,
       version=VERSION,
       description=DESCRIPTION,
       scripts=scripts,
-      requires=['astropy', 'sqlalchemy', 'logutils'],
-      install_requires=['astropy', 'sqlalchemy', 'logutils'],
+      requires=['astropy', 'sqlalchemy', 'logutils', 'numpy'],
+      install_requires=['astropy', 'sqlalchemy', 'logutils', 'numpy'],
       provides=[PACKAGENAME],
       author=AUTHOR,
       author_email=AUTHOR_EMAIL,

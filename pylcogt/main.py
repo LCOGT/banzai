@@ -1,10 +1,6 @@
 from __future__ import absolute_import, print_function
 
 import argparse
-
-import os
-import itertools
-
 import sqlalchemy
 from .utils import date_utils
 from . import ingest
@@ -13,12 +9,14 @@ from . import logs
 from . import bias
 
 reduction_stages = {'ingest': ingest.Ingest, 'make_bias': bias.MakeBias, 'subtract_bias': bias.SubtractBias,
-                    'make_flat':'', 'make_dark':'', 'trim':'',
-                    'apply_dark':'', 'apply_flat':'', 'cr_reject':'', 'wcs':'', 'check_image':'', 'hdu_update':''}
+                    'make_flat': '', 'make_dark': '', 'trim': '',
+                    'apply_dark': '', 'apply_flat': '', 'cr_reject': '', 'wcs': '', 'check_image': '',
+                    'hdu_update': ''}
 
 
 def get_telescope_info():
     # Get All of the telescope information
+
     db_session = dbs.get_session()
     all_sites = []
     for site in db_session.query(dbs.Telescope.site).distinct():
@@ -66,6 +64,7 @@ def main():
     parser.add_argument("--filter", default='', help="Image filter",
                         choices=['sloan', 'landolt', 'apass', 'up', 'gp', 'rp', 'ip', 'zs',
                                  'U', 'B', 'V', 'R', 'I'])
+
     parser.add_argument("--binning", default='', choices=['1x1', '2x2'],
                         help="Image binning (CCDSUM)")
     parser.add_argument("--image-type", default='', choices=['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE'],
