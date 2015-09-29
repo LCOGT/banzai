@@ -4,12 +4,11 @@ import argparse
 import sqlalchemy
 from .utils import date_utils
 from . import ingest
-from . import dbs
-from . import logs
-from . import bias
+from . import dbs, logs
+from . import bias, trim
 
 reduction_stages = {'ingest': ingest.Ingest, 'make_bias': bias.MakeBias, 'subtract_bias': bias.SubtractBias,
-                    'make_flat': '', 'make_dark': '', 'trim': '',
+                    'trim': trim.Trim, 'make_flat': '', 'make_dark': '',
                     'apply_dark': '', 'apply_flat': '', 'cr_reject': '', 'wcs': '', 'check_image': '',
                     'hdu_update': ''}
 
