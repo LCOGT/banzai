@@ -3,6 +3,8 @@ from .stages import Stage
 from . import dbs
 from .utils import fits_utils
 from astropy.io import fits
+import os
+
 __author__ = 'cmccully'
 
 class Trim(Stage):
@@ -17,7 +19,8 @@ class Trim(Stage):
 
     def trim(self, image_files, output_files, clobber=True):
         for i, image in enumerate(image_files):
-            hdu = fits.open(image)
+            image_file = os.path.join(image.filepath, image.filename)
+            hdu = fits.open(image_file)
             trimsec = fits_utils.parse_region_keyword(hdu[0].header['TRIMSEC'])
             hdu[0].data = hdu[0].data[trimsec]
             # Update the NAXIS and CRPIX keywords
