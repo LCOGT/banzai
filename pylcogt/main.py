@@ -5,12 +5,17 @@ import sqlalchemy
 from .utils import date_utils
 from . import ingest
 from . import dbs, logs
-from . import bias, trim
+from . import bias, trim, dark
 
-reduction_stages = {'ingest': ingest.Ingest, 'make_bias': bias.MakeBias, 'subtract_bias': bias.SubtractBias,
-                    'trim': trim.Trim, 'make_flat': '', 'make_dark': '',
-                    'apply_dark': '', 'apply_flat': '', 'cr_reject': '', 'wcs': '', 'check_image': '',
-                    'hdu_update': ''}
+reduction_stages = {'ingest': ingest.Ingest,
+                    'make_bias': bias.MakeBias,
+                    'subtract_bias': bias.SubtractBias,
+                    'trim': trim.Trim,
+                    'make_dark': dark.MakeDark,
+                    'subtract_dark': dark.subtractDark,
+                    #'make_flat': '', 'apply_flat': '', 'cr_reject': '', 'wcs': '', 'check_image': '',
+                    #'hdu_update': ''
+                    }
 
 
 def get_telescope_info():
