@@ -1,4 +1,5 @@
 from __future__ import absolute_import, print_function
+import numpy as np
 
 #####################################################################################################################
 def imagecov(imagearr):
@@ -131,44 +132,6 @@ def sanitizeheader(hdr):
             hdr.pop('NAXIS%i' % (i + 1))
 
     return hdr
-
-def run_makedark(imagenames, outfilename, minimages=3, clobber=True):
-    # Darks should already be bias subtracted
-
-    # Load all of the images in normalizing by the mode of the pixel distribution
-    # Assume all of the images have the same size,
-    # FIXME Add error checking
-    nx = pyfits.getval(imagenames[0], ('NAXIS1'))
-    ny = pyfits.getval(imagenames[0], ('NAXIS2'))
-
-    darkdata = np.zeros((len(imagenames), ny, nx))
-    for i, im in enumerate(imagenames):
-        darkdata[i, :, :] = pyfits.getdata(im)[:, :]
-        darkdata[i, :, :] /= float(pyfits.getval(im, 'EXPTIME'))
-
-    if len(imagenames) >= minimages:
-        meddark = np.median(darkdata, axis=0)
-        hdr = pyfits.getheader(imagenames[0])
-        hdr = sanitizeheader(hdr)
-        tofits(outfilename, meddark, hdr=hdr, clobber=clobber)
-        return outfilename
-    else:
-        return None
-
-def run_applydark(imagenames, outfilenames, masterdarkname, clobber=True):
-    darkhdu = pyfits.open(masterdarkname)
-    darkdata = darkhdu[0].data.copy()
-    darkhdu.close()
-
-    for i, im in enumerate(imagenames):
-        hdu = pyfits.open(im)
-        imdata = hdu[0].data.copy()
-        imhdr = hdu[0].header.copy()
-        imhdr = sanitizeheader(imhdr)
-        exptime = float(imhdr['EXPTIME'])
-        hdu.close()
-        imdata -= darkdata * exptime
-        tofits(outfilenames[i], imdata, hdr=imhdr, clobber=clobber)
 
 
 def run_makeflat(imagenames, outfilename, minimages=3, clobber=True):
