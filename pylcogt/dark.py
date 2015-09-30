@@ -68,9 +68,9 @@ class SubtractDark(ApplyCalibration):
         self.log_message = 'Subtracting {binning} dark frame for {instrument} on {epoch}.'
         self.group_by = [dbs.Image.ccdsum]
 
-    def subtract_dark(self, image_files, output_files, master_bias_file, clobber=True):
+    def subtract_dark(self, image_files, output_files, master_dark_file, clobber=True):
 
-        master_dark_data = fits.getdata(master_bias_file)
+        master_dark_data = fits.getdata(master_dark_file)
 
         logger = logs.get_logger('Dark')
 
@@ -83,7 +83,7 @@ class SubtractDark(ApplyCalibration):
 
             data -= master_dark_data * image.exptime
 
-            master_dark_filename = os.path.basename(master_bias_file)
+            master_dark_filename = os.path.basename(master_dark_file)
             header.add_history('Master Dark: {dark_file}'.format(dark_file=master_dark_filename))
             output_filename = os.path.join(output_files[i].filepath, output_files[i].filename)
             fits.writeto(output_filename, data, header=header, clobber=clobber)
