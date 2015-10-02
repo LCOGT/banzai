@@ -1,7 +1,7 @@
 __author__ = 'cmccully'
 
 from astropy import modeling
-from astropy.stats import median_absolute_deviation
+from ..utils.stats import median_absolute_deviation
 from statsmodels import robust
 import numpy as np
 
