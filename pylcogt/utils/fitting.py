@@ -8,7 +8,8 @@ import numpy as np
 # Iterative reweighting, least squares
 def irls(x, data, errors, model, tol=1e-6, robust_norm=robust.norms.AndrewWave(),
          maxiter=10):
-    # Fit using the LE
+    # Fit using the Levenberg-Marquardt algorithm
+    # This method can fit non-linear functions and does not require derivatives.
     fitter = modeling.fitting.LevMarLSQFitter()
 
     scatter = errors
