@@ -50,6 +50,7 @@ class MakeBias(MakeCalibrationImage):
             mean_bias_level = bias_level_array.mean()
             logger.info('Average bias level: {bias} ADU'.format(bias=mean_bias_level))
 
+            print(bias_data)
             master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2)
 
             for i, image in enumerate(image_list):

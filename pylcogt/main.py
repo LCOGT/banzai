@@ -12,7 +12,7 @@ reduction_stages = {'ingest': ingest.Ingest,
                     'subtract_bias': bias.SubtractBias,
                     'trim': trim.Trim,
                     'make_dark': dark.MakeDark,
-                    'subtract_dark': dark.subtractDark,
+                    'subtract_dark': dark.SubtractDark,
                     #'make_flat': '', 'apply_flat': '', 'cr_reject': '', 'wcs': '', 'check_image': '',
                     #'hdu_update': ''
                     }
