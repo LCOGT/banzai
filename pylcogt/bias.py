@@ -13,7 +13,7 @@ __author__ = 'cmccully'
 
 
 class MakeBias(MakeCalibrationImage):
-    def __init__(self, initial_query, processed_path):
+    def __init__(self, raw_path, processed_path, initial_query):
 
         super(MakeBias, self).__init__(self.make_master_bias, processed_path=processed_path,
                                        initial_query=initial_query, logger_name='Bias',
@@ -24,7 +24,7 @@ class MakeBias(MakeCalibrationImage):
     def make_master_bias(self, image_list, output_file, min_images=5, clobber=True):
 
         logger = logs.get_logger('Bias')
-        if len(image_list) <= min_images:
+        if len(image_list) < min_images:
             logger.warning('Not enough images to combine.')
         else:
             # Assume the files are all the same number of pixels
@@ -47,10 +47,9 @@ class MakeBias(MakeCalibrationImage):
                 # Subtract the bias level for each image
                 bias_data[:, :, i] = image_data - bias_level_array[i]
 
-            mean_bias_level = bias_level_array.mean()
+            mean_bias_level = stats.sigma_clipped_mean(bias_level_array, 3.0)
             logger.info('Average bias level: {bias} ADU'.format(bias=mean_bias_level))
 
-            print(bias_data)
             master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2)
 
             for i, image in enumerate(image_list):
@@ -60,9 +59,9 @@ class MakeBias(MakeCalibrationImage):
                 # Make sure to convert to electrons and save
                 read_noise_array[i] = read_noise * image.gain
                 log_message = 'Read noise estimate for {file} is {rdnoise}'
-                logger.debug(log_message.format(file=image.filename, rdnoise=read_noise))
+                logger.debug(log_message.format(file=image.filename, rdnoise=read_noise_array[i]))
 
-            mean_read_noise = read_noise_array.mean()
+            mean_read_noise = stats.sigma_clipped_mean(read_noise_array, 3.0)
             logger.info('Estimated Readnoise: {rdnoise} e-'.format(rdnoise=mean_read_noise))
             # Save the master bias image with all of the combined images in the header
 
@@ -70,7 +69,7 @@ class MakeBias(MakeCalibrationImage):
             header['CCDSUM'] = image_list[0].ccdsum
             header['DAY-OBS'] = str(image_list[0].dayobs)
             header['CALTYPE'] = 'BIAS'
-            header['BIASLVL'] = bias_level_array.mean()
+            header['BIASLVL'] = mean_bias_level
             header['RDNOISE'] = mean_read_noise
 
             header.add_history("Images combined to create master bias image:")
@@ -83,7 +82,7 @@ class MakeBias(MakeCalibrationImage):
 
 
 class SubtractBias(ApplyCalibration):
-    def __init__(self, initial_query, processed_path):
+    def __init__(self, raw_path, processed_path, initial_query):
 
         bias_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 

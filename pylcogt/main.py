@@ -57,7 +57,7 @@ def main():
     parser.add_argument("--camera-type", default='', type=str, choices=all_camera_types,
                         help='Camera type (e.g. sbig)')
 
-    parser.add_argument("--stage", default='', choices=reduction_stages,
+    parser.add_argument("--stage", default='', choices=reduction_stages.keys(),
                         help='Reduction stages to run')
 
     parser.add_argument("--raw-path", default='/archive/engineering',

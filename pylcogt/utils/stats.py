@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import gamma
 from astropy.modeling import custom_model
-from ..utils import fitting
+
 __author__ = 'cmccully'
 
 
@@ -44,6 +44,7 @@ def sigma_clipped_mean(a, sigma, axis=None):
 
 
 def mode(image_data):
+    from . import fitting
     # Only used the data within +-4 sigma of the median
     data_median = np.median(image_data)
     data_std = robust_standard_deviation(image_data)

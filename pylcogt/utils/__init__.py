@@ -3,5 +3,5 @@
 # This sub-module is destined for common non-package specific utility
 # functions that will ultimately be merged into `astropy.utils`
 
-from . import stats, fitting
-__all__ = ['stats', 'fitting']
+#from . import stats, fitting
+#__all__ = ['stats', 'fitting']

@@ -13,7 +13,7 @@ __author__ = 'cmccully'
 
 
 class MakeDark(MakeCalibrationImage):
-    def __init__(self, initial_query, processed_path):
+    def __init__(self, raw_path, processed_path, initial_query):
 
         super(MakeDark, self).__init__(self.make_master_dark, processed_path=processed_path,
                                        initial_query=initial_query, logger_name='Dark',
@@ -24,7 +24,7 @@ class MakeDark(MakeCalibrationImage):
     def make_master_dark(self, image_list, output_file, min_images=5, clobber=True):
 
         logger = logs.get_logger('Dark')
-        if len(image_list) <= min_images:
+        if len(image_list) < min_images:
             logger.warning('Not enough images to combine.')
         else:
             # Assume the files are all the same number of pixels
@@ -59,7 +59,7 @@ class MakeDark(MakeCalibrationImage):
 
 
 class SubtractDark(ApplyCalibration):
-    def __init__(self, initial_query, processed_path):
+    def __init__(self, raw_path, processed_path, initial_query):
 
         dark_query = initial_query & (dbs.Image.obstype.in_(('SKYFLAT', 'EXPOSE')))
 

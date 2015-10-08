@@ -1,9 +1,10 @@
 __author__ = 'cmccully'
 
 from astropy import modeling
-from ..utils.stats import median_absolute_deviation
 from statsmodels import robust
 import numpy as np
+
+from . import stats
 
 # Iterative reweighting, least squares
 def irls(x, data, errors, model, tol=1e-6, robust_norm=robust.norms.AndrewWave(),
@@ -31,7 +32,7 @@ def irls(x, data, errors, model, tol=1e-6, robust_norm=robust.norms.AndrewWave()
         chi = ((residuals / scatter) ** 2.0).sum()
 
         # update the scaling (the MAD of the residuals)
-        scatter = median_absolute_deviation(residuals)
+        scatter = stats.median_absolute_deviation(residuals)
         # Convert to standard deviation
         scatter *= 1.4826
         weights = robust_norm.weights(residuals / scatter).flatten()

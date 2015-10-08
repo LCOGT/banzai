@@ -144,6 +144,7 @@ class MakeCalibrationImage(Stage):
         calibration_image.dayobs = image_config.dayobs
         calibration_image.ccdsum = image_config.ccdsum
         calibration_image.filter_name = image_config.filter_name
+        calibration_image.telescope_id = image_config.telescope_id
         calibration_image.type = cal_type.upper()
         calibration_image.filename = output_filename
         calibration_image.filepath = os.path.dirname(output_file)
@@ -161,10 +162,13 @@ class ApplyCalibration(Stage):
                                                cal_type=cal_type)
 
     def get_output_images(self, telescope, epoch):
-        return self.select_input_images(telescope, epoch)
+        image_sets, image_configs = self.select_input_images(telescope, epoch)
+        return [image for image_set in image_sets for image in image_set]
+
 
     def get_calibration_image(self, epoch, telescope, image_config):
         calibration_criteria = dbs.Calibration_Image.type == self.cal_type.upper()
+        calibration_criteria &= dbs.Calibration_Image.telescope_id == telescope.id
         for criteria in self.group_by:
             group_by_field = vars(criteria)['key']
             calibration_criteria &= getattr(dbs.Calibration_Image, group_by_field) == getattr(image_config, group_by_field)
@@ -176,7 +180,6 @@ class ApplyCalibration(Stage):
         find_closest = func.ABS(find_closest)
 
         calibration_query = calibration_query.order_by(find_closest.desc())
-
         calibration_image = calibration_query.one()
         calibration_file = os.path.join(calibration_image.filepath, calibration_image.filename)
 

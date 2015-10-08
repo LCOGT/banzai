@@ -68,18 +68,18 @@ class Ingest(Stage):
             image.telescope_id = telescope.id
 
             # Save the image_header keywords into a record
-            image.dayobs = image_header['DAY-OBS']
+            image.dayobs = image_header['DAY-OBS'].strip()
             image.exptime = float(image_header['EXPTIME'])
-            image.filter_name = image_header['FILTER']
+            image.filter_name = image_header['FILTER'].strip()
             image.mjd = float(image_header['MJD-OBS'])
             image.airmass = float(image_header['AIRMASS'])
-            image.object_name = image_header['OBJECT']
-            image.tracknum = image_header['TRACKNUM']
-            image.obstype = image_header['OBSTYPE']
-            image.reqnum = image_header['REQNUM']
-            image.propid = image_header['PROPID']
-            image.userid = image_header['USERID']
-            image.ccdsum = image_header['CCDSUM']
+            image.object_name = image_header['OBJECT'].strip()
+            image.tracknum = image_header['TRACKNUM'].strip()
+            image.obstype = image_header['OBSTYPE'].strip()
+            image.reqnum = image_header['REQNUM'].strip()
+            image.propid = image_header['PROPID'].strip()
+            image.userid = image_header['USERID'].strip()
+            image.ccdsum = image_header['CCDSUM'].strip()
             image.gain = float(image_header['GAIN'])
             image.readnoise = float(image_header['RDNOISE'])
             image.naxis1 = image_header['NAXIS1']

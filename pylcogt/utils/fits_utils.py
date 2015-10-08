@@ -32,6 +32,8 @@ def parse_region_keyword(keyword_value):
 
     if keyword_value.lower() == 'unknown':
         pixel_slices = None
+    elif keyword_value.lower() == 'n/a':
+        pixel_slices = None
     else:
         # Strip off the brackets and split the coordinates
         pixel_sections = keyword_value[1:-1].split(',')

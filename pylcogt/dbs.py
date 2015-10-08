@@ -64,6 +64,7 @@ class Calibration_Image(Base):
     dayobs = Column(Date, index=True)
     ccdsum = Column(String(20))
     filter_name = Column(String(2))
+    telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
 
 
 class Reduction_Status(Base):
