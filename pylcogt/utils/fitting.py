@@ -1,4 +1,7 @@
+from __future__ import absolute_import, print_function, division
+
 __author__ = 'cmccully'
+
 
 from astropy import modeling
 from statsmodels import robust
