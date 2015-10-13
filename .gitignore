@@ -46,6 +46,7 @@ distribute-*.tar.gz
 
 # Mac OSX
 .DS_Store
+.AppleDouble
 
 *.xml
 
