@@ -30,13 +30,15 @@ class Stage(object):
         query &= (dbs.Image.dayobs == epoch)
 
         if self.group_by is not None:
+            config_list = []
             # Get the distinct values of ccdsum and filters
-            config_query = self.db_session.query(*self.group_by)
-            config_list = config_query.filter(query).distinct().all()
-
+            for group_by in self.group_by:
+                config_query = self.db_session.query(group_by)
+                distinct_configs = config_query.filter(query).distinct().all()
+                config_list.append([x[0] for x in distinct_configs])
             config_queries = []
 
-            for config in config_list:
+            for config in itertools.product(*config_list):
                 config_query = query
 
                 for i in range(len(self.group_by)):
@@ -76,6 +78,7 @@ class Stage(object):
         return None
 
     def run(self, epoch_list, telescope_list):
+
         for epoch, telescope in itertools.product(epoch_list, telescope_list):
             self.make_output_directory(epoch, telescope)
 

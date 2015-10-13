@@ -64,7 +64,7 @@ def mode(image_data):
 
     gamma_model = custom_model(gamma_pdf)
     gamma_scale = data_std / np.sqrt(3.0)
-    initial_model = gamma_model(nomalization=hist_data.max(), a=3,
+    initial_model = gamma_model(normalization=hist_data.max(), a=3,
                                 loc=data_median, scale=gamma_scale)
     best_fit_model = fitting.irls(x_hist, hist_data, hist_data ** 0.5, initial_model)
 

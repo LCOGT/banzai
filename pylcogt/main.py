@@ -5,7 +5,7 @@ import sqlalchemy
 from .utils import date_utils
 from . import ingest
 from . import dbs, logs
-from . import bias, trim, dark
+from . import bias, trim, dark, flats
 
 reduction_stages = {'ingest': ingest.Ingest,
                     'make_bias': bias.MakeBias,
@@ -13,7 +13,9 @@ reduction_stages = {'ingest': ingest.Ingest,
                     'trim': trim.Trim,
                     'make_dark': dark.MakeDark,
                     'subtract_dark': dark.SubtractDark,
-                    #'make_flat': '', 'apply_flat': '', 'cr_reject': '', 'wcs': '', 'check_image': '',
+                    'make_flat': flats.MakeFlat,
+                    'apply_flat': flats.DivideFlat
+                    #, 'cr_reject': '', 'wcs': '', 'check_image': '',
                     #'hdu_update': ''
                     }
 
