@@ -48,7 +48,7 @@ class MakeFlat(MakeCalibrationImage):
             header = fits.Header()
             header['CCDSUM'] = image_list[0].ccdsum
             header['DAY-OBS'] = str(image_list[0].dayobs)
-            header['CALTYPE'] = 'FLAT'
+            header['CALTYPE'] = 'SKYFLAT'
 
             header.add_history("Images combined to create master flat field image:")
             for image in image_list:
@@ -56,13 +56,13 @@ class MakeFlat(MakeCalibrationImage):
 
             fits.writeto(output_file, master_flat, header=header, clobber=clobber)
 
-            self.save_calibration_info('flat', output_file, image_list[0])
+            self.save_calibration_info('skyflat', output_file, image_list[0])
 
 
 class DivideFlat(ApplyCalibration):
     def __init__(self, raw_path, processed_path, initial_query):
 
-        flat_query = initial_query & (dbs.Image.obstype.in_(('EXPOSE')))
+        flat_query = initial_query & (dbs.Image.obstype == 'EXPOSE')
 
         super(DivideFlat, self).__init__(self.divide_flat, processed_path=processed_path,
                                            initial_query=flat_query, logger_name='Flat', cal_type='skyflat')

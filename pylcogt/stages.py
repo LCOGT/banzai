@@ -36,6 +36,7 @@ class Stage(object):
             # Get the distinct values of ccdsum and filters
             for group_by in self.group_by:
                 config_query = self.db_session.query(group_by)
+
                 distinct_configs = config_query.filter(query).distinct().all()
                 config_list.append([x[0] for x in distinct_configs])
             config_queries = []
@@ -54,9 +55,8 @@ class Stage(object):
         input_image_list = []
         config_list = []
         for image_config in config_queries:
-            image_query = image_config & query
 
-            image_list = self.db_session.query(dbs.Image).filter(image_query).all()
+            image_list = self.db_session.query(dbs.Image).filter(image_config).all()
 
             # Convert from image objects to file names
             input_image_list.append(image_list)
@@ -174,6 +174,7 @@ class ApplyCalibration(Stage):
     def get_calibration_image(self, epoch, telescope, image_config):
         calibration_criteria = dbs.Calibration_Image.type == self.cal_type.upper()
         calibration_criteria &= dbs.Calibration_Image.telescope_id == telescope.id
+
         for criteria in self.group_by:
             group_by_field = vars(criteria)['key']
             calibration_criteria &= getattr(dbs.Calibration_Image, group_by_field) == getattr(image_config, group_by_field)

@@ -96,7 +96,7 @@ class Ingest(Stage):
             except ValueError:
                 image.ra = None
                 image.dec = None
-                
+
             # Save the dateobs as a datetime object
             image.dateobs = time.Time(image_header['DATE-OBS']).datetime
 
