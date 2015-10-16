@@ -40,6 +40,7 @@ class Trim(Stage):
             # Update the database
             image.naxis1 = hdu[0].header['NAXIS1']
             image.naxis2 = hdu[0].header['NAXIS2']
+            self.db_session.add(image)
             output_filename = os.path.join(output_files[i].filepath, output_files[i].filename)
             hdu.writeto(output_filename, clobber=clobber)
-        self.db_session.flush()
+        self.db_session.commit()

@@ -65,31 +65,38 @@ class Ingest(Stage):
 
             telescope_query = self.db_session.query(dbs.Telescope).filter(telescope_query)
             telescope = telescope_query.one()
+
             image.telescope_id = telescope.id
 
-            # Save the image_header keywords into a record
-            image.dayobs = image_header['DAY-OBS'].strip()
-            image.exptime = float(image_header['EXPTIME'])
-            image.filter_name = image_header['FILTER'].strip()
-            image.mjd = float(image_header['MJD-OBS'])
-            image.airmass = float(image_header['AIRMASS'])
-            image.object_name = image_header['OBJECT'].strip()
-            image.tracknum = image_header['TRACKNUM'].strip()
-            image.obstype = image_header['OBSTYPE'].strip()
-            image.reqnum = image_header['REQNUM'].strip()
-            image.propid = image_header['PROPID'].strip()
-            image.userid = image_header['USERID'].strip()
-            image.ccdsum = image_header['CCDSUM'].strip()
-            image.gain = float(image_header['GAIN'])
-            image.readnoise = float(image_header['RDNOISE'])
             image.naxis1 = image_header['NAXIS1']
             image.naxis2 = image_header['NAXIS2']
 
-            coordinate = SkyCoord(image_header['RA'], image_header['DEC'],
-                                  unit=(units.hourangle, units.deg))
-            image.ra = coordinate.ra.deg
-            image.dec = coordinate.dec.deg
+            # Save the image_header keywords into a record
+            self.header_to_database(image, 'dayobs', image_header, 'DAY-OBS')
+            self.header_to_database(image, 'filter_name', image_header, 'FILTER')
+            self.header_to_database(image, 'object', image_header, 'OBJECT')
+            self.header_to_database(image, 'obstype', image_header, 'OBSTYPE')
+            self.header_to_database(image, 'tracknum', image_header, 'TRACKNUM')
+            self.header_to_database(image, 'reqnum', image_header, 'REQNUM')
+            self.header_to_database(image, 'propid', image_header, 'PROPID')
+            self.header_to_database(image, 'userid', image_header, 'USERID')
+            self.header_to_database(image, 'ccdsum', image_header, 'CCDSUM')
 
+            self.header_to_database(image, 'exptime', image_header, 'EXPTIME', float_type=True)
+            self.header_to_database(image, 'mjd', image_header, 'MJD-OBS', float_type=True)
+            self.header_to_database(image, 'airmass', image_header, 'AIRMASS', float_type=True)
+            self.header_to_database(image, 'gain', image_header, 'GAIN', float_type=True)
+            self.header_to_database(image, 'readnoise', image_header, 'RDNOISE', float_type=True)
+
+            try:
+                coordinate = SkyCoord(image_header['RA'], image_header['DEC'],
+                                      unit=(units.hourangle, units.deg))
+                image.ra = coordinate.ra.deg
+                image.dec = coordinate.dec.deg
+            except ValueError:
+                image.ra = None
+                image.dec = None
+                
             # Save the dateobs as a datetime object
             image.dateobs = time.Time(image_header['DATE-OBS']).datetime
 
@@ -106,6 +113,14 @@ class Ingest(Stage):
 
         # Write out to the database
         self.db_session.commit()
+    def header_to_database(self, image, image_field, header, header_keyword, float_type=False):
+        if float_type:
+            try:
+                setattr(image, image_field, float(header[header_keyword]))
+            except ValueError:
+                setattr(image, image_field,  None)
+        else:
+            setattr(image, image_field, header[header_keyword].strip())
 
     def select_input_images(self, telescope, epoch):
         search_path = os.path.join(self.raw_path, telescope.site,

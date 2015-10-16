@@ -184,8 +184,8 @@ class ApplyCalibration(Stage):
         find_closest = func.DATEDIFF(epoch_datetime, dbs.Calibration_Image.dayobs)
         find_closest = func.ABS(find_closest)
 
-        calibration_query = calibration_query.order_by(find_closest.desc())
-        calibration_image = calibration_query.one()
+        calibration_query = calibration_query.order_by(find_closest.asc())
+        calibration_image = calibration_query.first()
         calibration_file = os.path.join(calibration_image.filepath, calibration_image.filename)
 
         return calibration_file

@@ -14,9 +14,8 @@ reduction_stages = {'ingest': ingest.Ingest,
                     'make_dark': dark.MakeDark,
                     'subtract_dark': dark.SubtractDark,
                     'make_flat': flats.MakeFlat,
-                    'apply_flat': flats.DivideFlat
-                    #, 'cr_reject': '', 'wcs': '', 'check_image': '',
-                    #'hdu_update': ''
+                    'divide_flat': flats.DivideFlat
+                    #, 'cr_reject': '', 'wcs': ''
                     }
 
 
