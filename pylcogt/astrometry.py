@@ -16,7 +16,7 @@ class Astrometry(Stage):
                 '--solved none --match none --rdls none --wcs none --corr none {image_name}'
     def __init__(self, raw_path, processed_path, initial_query):
 
-        astrometry_query = initial_query & (dbs.Image.obstype.in_(('EXPOSE')))
+        astrometry_query = initial_query & (dbs.Image.obstype=='EXPOSE')
 
         super(Astrometry, self).__init__(self.solve_wcs, processed_path=processed_path,
                                    initial_query=astrometry_query, logger_name='Astrometry', cal_type='wcs')
