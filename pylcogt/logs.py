@@ -50,3 +50,15 @@ def stop_logging():
     if listener is not None:
         queue.put_nowait(None)
         listener.stop()
+
+
+def image_config_to_tags(image, telescope, epoch, group_by=None, image_type=None, filename=None):
+    tags = {'tags': {'instrument': telescope.instrument,
+                     'epoch': epoch,
+                     'site': telescope.site}}
+
+    if group_by is not None:
+        for column in group_by:
+            tags['tags'][column.name] = getattr(image, column.name)
+
+    return tags

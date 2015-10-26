@@ -12,12 +12,26 @@ from .stages import MakeCalibrationImage, ApplyCalibration
 __author__ = 'cmccully'
 
 
+def process_single_bias_frame(bias_level_array, bias_data, i, logger_name):
+    logger = logs.get_logger(logger_name)
+    image_file = os.path.join(image.filepath, image.filename)
+    image_file += previous_image_suffix + '.fits'
+    image_data = fits.getdata(image_file)
+    bias_level_array[i] = stats.sigma_clipped_mean(image_data, 3.5)
+
+    logger.debug('Bias level for {file} is {bias}'.format(file=image.filename,
+                                                      bias=bias_level_array[i]))
+    # Subtract the bias level for each image
+    bias_data[:, :, i] = image_data - bias_level_array[i]
+
+
 class MakeBias(MakeCalibrationImage):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
 
         super(MakeBias, self).__init__(self.make_master_bias, processed_path=processed_path,
                                        initial_query=initial_query, logger_name='Bias',
-                                       cal_type='bias')
+                                       cal_type='bias', cpu_pool=cpu_pool, previous_suffix_number='03',
+                                       previous_stage_done=dbs.Image.ingest_done)
         self.log_message = 'Creating {binning} bias frame for {instrument} on {epoch}.'
         self.group_by = [dbs.Image.ccdsum]
 
@@ -39,6 +53,7 @@ class MakeBias(MakeCalibrationImage):
 
             for i, image in enumerate(image_list):
                 image_file = os.path.join(image.filepath, image.filename)
+                image_file += self.previous_image_suffix + '.fits'
                 image_data = fits.getdata(image_file)
                 bias_level_array[i] = stats.sigma_clipped_mean(image_data, 3.5)
 
@@ -82,13 +97,15 @@ class MakeBias(MakeCalibrationImage):
 
 
 class SubtractBias(ApplyCalibration):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
 
         bias_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
         super(SubtractBias, self).__init__(self.subtract_bias, processed_path=processed_path,
-                                           initial_query=bias_query, logger_name='Bias', cal_type='bias')
-        self.log_message = 'Subtracting {binning} bias frame for {instrument} on {epoch}.'
+                                           initial_query=bias_query, logger_name='Bias', cal_type='bias',
+                                           image_suffix_number='10', previous_suffix_number='03',
+                                           previous_stage_done=dbs.Image.ingest_done, cpu_pool=cpu_pool)
+        self.log_message = 'Subtracting bias frame'
         self.group_by = [dbs.Image.ccdsum]
 
     def subtract_bias(self, image_files, output_files, master_bias_file, clobber=True):
@@ -97,11 +114,17 @@ class SubtractBias(ApplyCalibration):
         master_bias_level = float(fits.getval(master_bias_file, 'BIASLVL'))
 
         logger = logs.get_logger('Bias')
-
+        db_session = dbs.get_session()
         # TODO Add error checking for incorrect image sizes
         for i, image in enumerate(image_files):
-            logger.debug('Subtracting bias for {image}'.format(image=image.filename))
+            telescope = db_session.query(dbs.Telescope).filter(dbs.Telescope.id == image.telescope_id).one()
+            tags = logs.image_config_to_tags(image, telescope, image.dayobs, self.group_by)
+            tags['tags']['filename'] = image.filename
+            tags['tags']['obstype'] = image.obstype
+            logger.debug('Subtracting bias for {image}'.format(image=image.filename), extra=tags)
+
             image_file = os.path.join(image.filepath, image.filename)
+            image_file += self.previous_image_suffix + '.fits'
             data = fits.getdata(image_file)
             header = fits_utils.sanitizeheader(fits.getheader(image_file))
 
@@ -113,7 +136,7 @@ class SubtractBias(ApplyCalibration):
                 # If not, subtract the master bias level
                 bias_level = master_bias_level
 
-            logger.debug('Bias level: {bias}'.format(bias=bias_level))
+            logger.debug('Bias level: {bias}'.format(bias=bias_level), extra=tags)
             data -= bias_level
             data -= master_bias_data
 
@@ -122,4 +145,10 @@ class SubtractBias(ApplyCalibration):
             master_bias_filename = os.path.basename(master_bias_file)
             header.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
             output_filename = os.path.join(output_files[i].filepath, output_files[i].filename)
+            output_filename += self.image_suffix_number + '.fits'
             fits.writeto(output_filename, data, header=header, clobber=clobber)
+            image.bias_done = True
+            db_session.add(image)
+            db_session.commit()
+
+        db_session.close()

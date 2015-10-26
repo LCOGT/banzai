@@ -13,11 +13,12 @@ __author__ = 'cmccully'
 
 
 class MakeDark(MakeCalibrationImage):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
 
         super(MakeDark, self).__init__(self.make_master_dark, processed_path=processed_path,
                                        initial_query=initial_query, logger_name='Dark',
-                                       cal_type='dark')
+                                       cal_type='dark', previous_stage_done=dbs.Image.trim_done,
+                                       previous_suffix_number='15', cpu_pool=cpu_pool)
         self.log_message = 'Creating {binning} dark frame for {instrument} on {epoch}.'
         self.group_by = [dbs.Image.ccdsum]
 
@@ -36,7 +37,9 @@ class MakeDark(MakeCalibrationImage):
 
             for i, image in enumerate(image_list):
                 image_file = os.path.join(image.filepath, image.filename)
+                image_file += self.previous_image_suffix + '.fits'
                 image_data = fits.getdata(image_file)
+                logger.debug('Combining dark {filename}'.format(filename=image_file.filename), extra=tags)
 
                 dark_data[:, :, i] = image_data / image.exptime
 
@@ -59,12 +62,14 @@ class MakeDark(MakeCalibrationImage):
 
 
 class SubtractDark(ApplyCalibration):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
 
         dark_query = initial_query & (dbs.Image.obstype.in_(('SKYFLAT', 'EXPOSE')))
 
         super(SubtractDark, self).__init__(self.subtract_dark, processed_path=processed_path,
-                                           initial_query=dark_query, logger_name='Dark', cal_type='dark')
+                                           initial_query=dark_query, logger_name='Dark', cal_type='dark',
+                                           previous_stage_done=dbs.Image.trim_done, previous_suffix_number='15',
+                                           image_suffix_number='20', cpu_pool=cpu_pool)
         self.log_message = 'Subtracting {binning} dark frame for {instrument} on {epoch}.'
         self.group_by = [dbs.Image.ccdsum]
 
@@ -74,10 +79,12 @@ class SubtractDark(ApplyCalibration):
 
         logger = logs.get_logger('Dark')
 
+        db_session = dbs.get_session()
         # TODO Add error checking for incorrect image sizes
         for i, image in enumerate(image_files):
             logger.debug('Subtracting dark for {image}'.format(image=image.filename))
             image_file = os.path.join(image.filepath, image.filename)
+            image_file += self.previous_image_suffix + '.fits'
             data = fits.getdata(image_file)
             header = fits_utils.sanitizeheader(fits.getheader(image_file))
 
@@ -86,4 +93,10 @@ class SubtractDark(ApplyCalibration):
             master_dark_filename = os.path.basename(master_dark_file)
             header.add_history('Master Dark: {dark_file}'.format(dark_file=master_dark_filename))
             output_filename = os.path.join(output_files[i].filepath, output_files[i].filename)
+            output_filename += self.image_suffix_number + '.fits'
             fits.writeto(output_filename, data, header=header, clobber=clobber)
+
+            image.dark_done = True
+            db_session.add(image)
+            db_session.commit()
+        db_session.close()

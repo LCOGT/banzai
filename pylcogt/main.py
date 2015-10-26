@@ -3,9 +3,10 @@ from __future__ import absolute_import, print_function, division
 import argparse
 import sqlalchemy
 from .utils import date_utils
+from multiprocessing import Pool
 from . import ingest
 from . import dbs, logs
-from . import bias, trim, dark, flats
+from . import bias, trim, dark, flats, astrometry
 
 reduction_stages = {'ingest': ingest.Ingest,
                     'make_bias': bias.MakeBias,
@@ -14,7 +15,8 @@ reduction_stages = {'ingest': ingest.Ingest,
                     'make_dark': dark.MakeDark,
                     'subtract_dark': dark.SubtractDark,
                     'make_flat': flats.MakeFlat,
-                    'divide_flat': flats.DivideFlat
+                    'divide_flat': flats.DivideFlat,
+                    'wcs': astrometry.Astrometry
                     #, 'cr_reject': '', 'wcs': ''
                     }
 
@@ -77,6 +79,7 @@ def main():
 
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
+    parser.add_argument("--ncpus", default=1, type=int, help='Number of multiprocessing cpus to use.')
     # parser.add_argument("-n", "--name", dest="name", default='', type="str",
     #                   help='-n image name   \t [%default]')
     # parser.add_argument("-d", "--id", dest="id", default='', type="str",
@@ -120,12 +123,18 @@ def main():
         ccdsum = args.binning.replace('x', ' ')
         image_query &= dbs.Image.ccdsum == ccdsum
 
+
+    db_session.close()
     logger = logs.get_logger('Main')
     logger.info('Starting pylcogt:')
 
+    cpu_pool = Pool(args.ncpus)
     for stage in stages_to_do:
-        stage_to_run = reduction_stages[stage](args.raw_path, args.processed_path, image_query)
+        stage_to_run = reduction_stages[stage](args.raw_path, args.processed_path, image_query, cpu_pool)
         stage_to_run.run(epoch_list, telescope_list)
 
-    db_session.close()
+
+
     logs.stop_logging()
+    cpu_pool.close()
+    cpu_pool.join()

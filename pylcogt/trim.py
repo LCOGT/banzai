@@ -8,12 +8,14 @@ import os
 __author__ = 'cmccully'
 
 class Trim(Stage):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
 
         trim_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
         super(Trim, self).__init__(self.trim, processed_path=processed_path,
-                                   initial_query=trim_query, logger_name='Trim', cal_type='trim')
+                                   initial_query=trim_query, logger_name='Trim', cal_type='trim',
+                                   previous_stage_done=dbs.Image.bias_done, previous_suffix_number='10',
+                                   image_suffix_number='15', cpu_pool=cpu_pool)
         self.log_message = 'Trimming images from {instrument} at {site} on {epoch}.'
         self.group_by = None
 
@@ -22,9 +24,12 @@ class Trim(Stage):
         return [image for image_set in image_sets for image in image_set]
 
     def trim(self, image_files, output_files, clobber=True):
+
         logger = logs.get_logger('Trim')
+        db_session = dbs.get_session()
         for i, image in enumerate(image_files):
             image_file = os.path.join(image.filepath, image.filename)
+            image_file += self.previous_image_suffix +'.fits'
             hdu = fits.open(image_file)
 
             trimsec = fits_utils.parse_region_keyword(hdu[0].header['TRIMSEC'])
@@ -40,7 +45,13 @@ class Trim(Stage):
             # Update the database
             image.naxis1 = hdu[0].header['NAXIS1']
             image.naxis2 = hdu[0].header['NAXIS2']
-            self.db_session.add(image)
+
             output_filename = os.path.join(output_files[i].filepath, output_files[i].filename)
+            output_filename += self.image_suffix_number + '.fits'
             hdu.writeto(output_filename, clobber=clobber)
-        self.db_session.commit()
+
+            image.trim_done = True
+            db_session.add(image)
+            db_session.commit()
+
+        db_session.close()

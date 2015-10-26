@@ -13,12 +13,12 @@ __author__ = 'cmccully'
 
 
 class MakeFlat(MakeCalibrationImage):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
 
         super(MakeFlat, self).__init__(self.make_master_flat, processed_path=processed_path,
-                                       initial_query=initial_query, logger_name='Flat',
-                                       cal_type='skyflat')
-        self.log_message = 'Creating {binning} flat-field frame for {instrument} on {epoch}.'
+                                       initial_query=initial_query, logger_name='Flat', previous_stage_done=dbs.Image.dark_done,
+                                       cal_type='skyflat', previous_suffix_number='20', cpu_pool=cpu_pool)
+        self.log_message = 'Creating master flat-field frame'
         self.group_by = [dbs.Image.ccdsum, dbs.Image.filter_name]
 
     def make_master_flat(self, image_list, output_file, min_images=5, clobber=True):
@@ -36,6 +36,7 @@ class MakeFlat(MakeCalibrationImage):
 
             for i, image in enumerate(image_list):
                 image_file = os.path.join(image.filepath, image.filename)
+                image_file += self.previous_image_suffix + '.fits'
                 image_data = fits.getdata(image_file)
 
                 flat_normalization = stats.mode(image_data)
@@ -60,13 +61,15 @@ class MakeFlat(MakeCalibrationImage):
 
 
 class DivideFlat(ApplyCalibration):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
 
         flat_query = initial_query & (dbs.Image.obstype == 'EXPOSE')
 
         super(DivideFlat, self).__init__(self.divide_flat, processed_path=processed_path,
-                                           initial_query=flat_query, logger_name='Flat', cal_type='skyflat')
-        self.log_message = 'Dividing {binning} flat-field frame for {instrument} on {epoch}.'
+                                         initial_query=flat_query, logger_name='Flat', cal_type='skyflat',
+                                         cpu_pool=cpu_pool, previous_stage_done=dbs.Image.dark_done,
+                                         image_suffix_number='25', previous_suffix_number='20')
+        self.log_message = 'Dividing master flat-field frame.'
         self.group_by = [dbs.Image.ccdsum, dbs.Image.filter_name]
 
     def divide_flat(self, image_files, output_files, master_flat_file, clobber=True):
@@ -75,10 +78,12 @@ class DivideFlat(ApplyCalibration):
 
         logger = logs.get_logger('Flat')
 
+        db_session = dbs.get_session()
         # TODO Add error checking for incorrect image sizes
         for i, image in enumerate(image_files):
             logger.debug('Flattening {image}'.format(image=image.filename))
             image_file = os.path.join(image.filepath, image.filename)
+            image_file += self.previous_image_suffix + '.fits'
             data = fits.getdata(image_file)
             header = fits_utils.sanitizeheader(fits.getheader(image_file))
 
@@ -87,5 +92,10 @@ class DivideFlat(ApplyCalibration):
             master_flat_filename = os.path.basename(master_flat_file)
             header.add_history('Master Flat: {flat_file}'.format(flat_file=master_flat_filename))
             output_filename = os.path.join(output_files[i].filepath, output_files[i].filename)
+            output_filename += self.image_suffix_number + '.fits'
             fits.writeto(output_filename, data, header=header, clobber=clobber)
 
+            image.flat_done = True
+            db_session.add(image)
+            db_session.commit()
+        db_session.close()

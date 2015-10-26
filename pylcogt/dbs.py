@@ -1,10 +1,10 @@
 from __future__ import absolute_import, print_function, division
 __author__ = 'cmccully'
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import sessionmaker
 
-from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 
 # Define how to get to the database
@@ -12,8 +12,11 @@ db_address = 'mysql+mysqlconnector://cmccully:password@cmccully-linux/test'
 
 Base = declarative_base()
 
+
 def get_session():
-    engine = create_engine(db_address)
+    # Currently we build a new engine each time we want to write a record to the database
+    # This is to make sure things are process safe, but there has to be a more efficient way to do this
+    engine = create_engine(db_address, poolclass=pool.NullPool)
     # Bind the engine to the metadata of the Base class so that the
     # declaratives can be accessed through a DBSession instance
     Base.metadata.bind = engine
@@ -55,6 +58,14 @@ class Image(Base):
     naxis2 = Column(Integer)
     pixel_scale = Column(Float)
     focus = Column(Integer)
+    # Reduction Status
+    ingest_done = Column(Boolean, default=False)
+    bias_done = Column(Boolean, default=False)
+    trim_done = Column(Boolean, default=False)
+    dark_done = Column(Boolean, default=False)
+    flat_done = Column(Boolean, default=False)
+    wcs_done = Column(Boolean, default=False)
+    cat_done = Column(Boolean, default=False)
 
 
 class Calibration_Image(Base):
@@ -67,11 +78,6 @@ class Calibration_Image(Base):
     ccdsum = Column(String(20))
     filter_name = Column(String(2))
     telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
-
-
-class Reduction_Status(Base):
-    __tablename__ = 'reductionstatus'
-    id = Column(Integer, primary_key=True, autoincrement=True)
 
 
 class Telescope(Base):
