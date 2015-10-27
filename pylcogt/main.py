@@ -6,7 +6,7 @@ from .utils import date_utils
 from multiprocessing import Pool
 from . import ingest
 from . import dbs, logs
-from . import bias, trim, dark, flats, astrometry
+from . import bias, trim, dark, flats, astrometry, catalog
 
 reduction_stages = {'ingest': ingest.Ingest,
                     'make_bias': bias.MakeBias,
@@ -16,8 +16,9 @@ reduction_stages = {'ingest': ingest.Ingest,
                     'subtract_dark': dark.SubtractDark,
                     'make_flat': flats.MakeFlat,
                     'divide_flat': flats.DivideFlat,
-                    'wcs': astrometry.Astrometry
-                    #, 'cr_reject': '', 'wcs': ''
+                    'wcs': astrometry.Astrometry,
+                    'make_catalog': catalog.Catalog
+                    #, 'cr_reject': ''
                     }
 
 
