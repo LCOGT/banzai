@@ -1,5 +1,15 @@
+""" main.py: Main driver script for PyLCOGT.
+
+    The main() function is a console entry point.
+
+Author
+    Curtis McCully (cmccully@lcogt.net)
+
+October 2015
+"""
 from __future__ import absolute_import, print_function, division
 
+import collections
 import argparse
 import sqlalchemy
 from .utils import date_utils
@@ -8,24 +18,42 @@ from . import ingest
 from . import dbs, logs
 from . import bias, trim, dark, flats, astrometry, catalog
 
-reduction_stages = {'ingest': ingest.Ingest,
-                    'make_bias': bias.MakeBias,
-                    'subtract_bias': bias.SubtractBias,
-                    'trim': trim.Trim,
-                    'make_dark': dark.MakeDark,
-                    'subtract_dark': dark.SubtractDark,
-                    'make_flat': flats.MakeFlat,
-                    'divide_flat': flats.DivideFlat,
-                    'wcs': astrometry.Astrometry,
-                    'make_catalog': catalog.Catalog
-                    #, 'cr_reject': ''
-                    }
+
+# A dictionary converting the string input by the user into the corresponding Python object
+reduction_stages = collections.OrderedDict()
+reduction_stages['ingest'] = ingest.Ingest
+reduction_stages['make_bias'] = bias.MakeBias
+reduction_stages['subtract_bias'] = bias.SubtractBias
+reduction_stages['trim'] = trim.Trim
+reduction_stages['make_dark'] = dark.MakeDark
+reduction_stages['subtract_dark'] = dark.SubtractDark
+reduction_stages['make_flat'] = flats.MakeFlat
+reduction_stages['divide_flat'] = flats.DivideFlat
+reduction_stages['solve_wcs'] = astrometry.Astrometry
+reduction_stages['make_catalog'] = catalog.Catalog
 
 
 def get_telescope_info():
-    # Get All of the telescope information
+    """
+    Get information about the available telescopes/instruments from the database.
 
+    Returns
+    -------
+    all_sites:  list
+        List of all site codes, e.g. "lsc".
+    all_instruments: list
+        List of all instrument code, e.g. "kb78"
+    all_telescope_ids: list
+        List of all telescope IDs, e.g. "1m0-009"
+    all_camera_types: list
+        List of available camera types. e.g. "Sinistro" or "SBig"
+
+    Notes
+    -----
+    The output of this function is used to limit what data is reduced and to validate use input.
+"""
     db_session = dbs.get_session()
+
     all_sites = []
     for site in db_session.query(dbs.Telescope.site).distinct():
         all_sites.append(site[0])
@@ -43,11 +71,15 @@ def get_telescope_info():
         all_camera_types.append(camera_type[0])
 
     db_session.close()
+
     return all_sites, all_instruments, all_telescope_ids, all_camera_types
 
 
 def main():
-    # Get the telescope info
+    """
+    Main driver script for PyLCOGT. This is a console entry point.
+    """
+    # Get the available instruments/telescopes
     all_sites, all_instruments, all_telescope_ids, all_camera_types = get_telescope_info()
 
     parser = argparse.ArgumentParser(description='Reduce LCOGT imaging data.')
@@ -80,21 +112,26 @@ def main():
 
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
-    parser.add_argument("--ncpus", default=1, type=int, help='Number of multiprocessing cpus to use.')
-    # parser.add_argument("-n", "--name", dest="name", default='', type="str",
-    #                   help='-n image name   \t [%default]')
-    # parser.add_argument("-d", "--id", dest="id", default='', type="str",
-    #                   help='-d identification id   \t [%default]')
+    parser.add_argument("--ncpus", default=1, type=int,
+                        help='Number of multiprocessing cpus to use.')
 
     args = parser.parse_args()
 
     logs.start_logging(log_level=args.log_level)
+
+    # Get a list of dayobs to reduce
     epoch_list = date_utils.parse_epoch_string(args.epoch)
 
+    reduction_stage_list = [i for i in reduction_stages.iterkeys()]
     if args.stage != '':
-        stages_to_do = [args.stage]
+        if '-' in args.stage:
+
+            starting_stage, ending_stage = args.stage.split('-')
+            stages_to_do = reduction_stage_list[starting_stage: ending_stage + 1]
+        else:
+            stages_to_do = [args.stage]
     else:
-        stages_to_do = reduction_stages
+        stages_to_do = reduction_stage_list
 
     # Get the telescopes for which we want to reduce data.
     db_session = dbs.get_session()
@@ -124,18 +161,19 @@ def main():
         ccdsum = args.binning.replace('x', ' ')
         image_query &= dbs.Image.ccdsum == ccdsum
 
-
     db_session.close()
     logger = logs.get_logger('Main')
     logger.info('Starting pylcogt:')
 
+    # Create a single CPU pool that will be used throughout the reduction
     cpu_pool = Pool(args.ncpus)
+
     for stage in stages_to_do:
-        stage_to_run = reduction_stages[stage](args.raw_path, args.processed_path, image_query, cpu_pool)
+        stage_to_run = reduction_stages[stage](args.raw_path, args.processed_path,
+                                               image_query, cpu_pool)
         stage_to_run.run(epoch_list, telescope_list)
 
-
-
+    # Clean up
     logs.stop_logging()
     cpu_pool.close()
     cpu_pool.join()

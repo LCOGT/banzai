@@ -146,14 +146,14 @@ class MakeCalibrationImage(Stage):
         # Store the information into the calibration table
         # Check and see if the bias file is already in the database
         db_session = dbs.get_session()
-        image_query = db_session.query(dbs.Calibration_Image)
+        image_query = db_session.query(dbs.CalibrationImage)
         output_filename = os.path.basename(output_file)
-        image_query = image_query.filter(dbs.Calibration_Image.filename == output_filename)
+        image_query = image_query.filter(dbs.CalibrationImage.filename == output_filename)
         image_query = image_query.all()
 
         if len(image_query) == 0:
             # Create a new row
-            calibration_image = dbs.Calibration_Image()
+            calibration_image = dbs.CalibrationImage()
         else:
             # Otherwise update the existing data
             # In principle we could just skip this, but this should be fast
@@ -188,19 +188,19 @@ class ApplyCalibration(Stage):
 
 
     def get_calibration_image(self, epoch, telescope, image_config):
-        calibration_criteria = dbs.Calibration_Image.type == self.cal_type.upper()
-        calibration_criteria &= dbs.Calibration_Image.telescope_id == telescope.id
+        calibration_criteria = dbs.CalibrationImage.type == self.cal_type.upper()
+        calibration_criteria &= dbs.CalibrationImage.telescope_id == telescope.id
 
         for criteria in self.group_by:
             group_by_field = vars(criteria)['key']
-            calibration_criteria &= getattr(dbs.Calibration_Image, group_by_field) == getattr(image_config, group_by_field)
+            calibration_criteria &= getattr(dbs.CalibrationImage, group_by_field) == getattr(image_config, group_by_field)
 
         db_session = dbs.get_session()
 
-        calibration_query = db_session.query(dbs.Calibration_Image).filter(calibration_criteria)
+        calibration_query = db_session.query(dbs.CalibrationImage).filter(calibration_criteria)
         epoch_datetime = date_utils.epoch_string_to_date(epoch)
 
-        find_closest = func.DATEDIFF(epoch_datetime, dbs.Calibration_Image.dayobs)
+        find_closest = func.DATEDIFF(epoch_datetime, dbs.CalibrationImage.dayobs)
         find_closest = func.ABS(find_closest)
 
         calibration_query = calibration_query.order_by(find_closest.asc())

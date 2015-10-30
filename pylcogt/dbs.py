@@ -1,5 +1,13 @@
+""" dbs.py: Database utility functions for PyLCOGT
+
+    This is built around the SQLAlchemy ORM
+
+Author
+    Curtis McCully (cmccully@lcogt.net)
+
+October 2015
+"""
 from __future__ import absolute_import, print_function, division
-__author__ = 'cmccully'
 
 from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import sessionmaker
@@ -8,26 +16,39 @@ from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTim
 from sqlalchemy.ext.declarative import declarative_base
 
 # Define how to get to the database
+# Note that we need to encode the database password outside of the code base
 db_address = 'mysql+mysqlconnector://cmccully:password@cmccully-linux/test'
 
 Base = declarative_base()
 
 
 def get_session():
-    # Currently we build a new engine each time we want to write a record to the database
-    # This is to make sure things are process safe, but there has to be a more efficient way to do this
+    """
+    Get a connection to the database.
+
+    Returns
+    -------
+    session: SQLAlchemy Database Session
+    """
+    # Build a new engine for each session. This makes things thread safe.
     engine = create_engine(db_address, poolclass=pool.NullPool)
-    # Bind the engine to the metadata of the Base class so that the
-    # declaratives can be accessed through a DBSession instance
     Base.metadata.bind = engine
 
-    DBSession = sessionmaker(bind=engine, autoflush=False)
-    session = DBSession()
+    # We don't use autoflush typically. I have run into issues where SQLAlchemy would try to flush
+    # incomplete records causing a crash. None of the queries here are large, so it should be ok.
+    db_session = sessionmaker(bind=engine, autoflush=False)
+    session = db_session()
 
     return session
 
 
 class Image(Base):
+    """
+    Image Database Record
+
+    This defines the images table. Most of these keywords are parsed from the headers.
+    telescope_id is a foreign key to the telescopes table.
+    """
     __tablename__ = 'images'
 
     # Define the table structure
@@ -40,7 +61,7 @@ class Image(Base):
     object_name = Column(String(50))
     mjd = Column(Float, index=True)
     dateobs = Column(DateTime)
-    dayobs  = Column(Date, index=True)
+    dayobs = Column(Date, index=True)
     exptime = Column(Float)
     filter_name = Column(String(2))
     obstype = Column(String(20))
@@ -68,7 +89,14 @@ class Image(Base):
     cat_done = Column(Boolean, default=False)
 
 
-class Calibration_Image(Base):
+class CalibrationImage(Base):
+    """
+    Master Calibration Image Database Record
+
+    This defines the calimages table. We use this to keep track of the master calibration frames.
+    Typically these are bias, darks, and flat field frames. These are indexed by dayobs to make it
+    easy to find the closest calibration frame.
+    """
     __tablename__ = 'calimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
     type = Column(String(30), index=True)
@@ -81,6 +109,11 @@ class Calibration_Image(Base):
 
 
 class Telescope(Base):
+    """
+    Telescope Database Record
+
+    This defines the telescopes table.
+    """
     __tablename__ = 'telescopes'
     id = Column(Integer, primary_key=True, autoincrement=True)
     site = Column(String(10), index=True)
@@ -90,6 +123,11 @@ class Telescope(Base):
 
 
 def create_db():
+    """
+    Create the database structure.
+
+    This only needs to be run once on initialization of the database.
+    """
     # Create an engine for the database
     engine = create_engine(db_address)
 
@@ -99,9 +137,15 @@ def create_db():
 
 
 def populate_telescope_table():
-    # Populate the telescope table
-    # This only needs to be done once on initialization.
-    # Any new instruments will need to be added to this table manually (or via chronjob)
+    """
+    Populate the telescope table
+
+    This only needs to be done once on initialization.
+    Any new instruments will need to be added to this table manually.
+
+    We really should replace this with a call to the configdb.
+    """
+
     db_session = get_session()
     db_session.add(Telescope(site='coj', telescope_id='2m0-02', instrument='fs03',
                              camera_type='spectral'))
