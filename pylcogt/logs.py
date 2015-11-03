@@ -5,7 +5,7 @@ import logging
 import multiprocessing
 import sys
 from lcogt_logging import LCOGTFormatter
-
+from .utils import date_utils
 
 def get_logger(name):
     logger = logging.getLogger(name)
@@ -54,7 +54,7 @@ def stop_logging():
 
 def image_config_to_tags(image, telescope, epoch, group_by=None, image_type=None, filename=None):
     tags = {'tags': {'instrument': telescope.instrument,
-                     'epoch': epoch,
+                     'epoch': date_utils.epoch_date_to_string(epoch),
                      'site': telescope.site}}
 
     if group_by is not None:
