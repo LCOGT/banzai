@@ -1,5 +1,3 @@
-__author__ = 'cmccully'
-
 from __future__ import absolute_import, print_function, division
 from .stages import Stage
 from . import dbs, logs

@@ -1,4 +1,3 @@
-__author__ = 'cmccully'
 from __future__ import absolute_import, print_function, division
 from .stages import Stage
 from . import dbs, logs
@@ -29,7 +28,7 @@ class Catalog(Stage):
     def make_catalog(self, image_files, output_files, clobber=True):
         logger = logs.get_logger('Catalog')
         for i, image in enumerate(image_files):
-            logger.debug('Extracting sources from {filename}'.format(image.filename))
+            logger.debug('Extracting sources from {filename}'.format(filename=image.filename))
             image_file = os.path.join(image.filepath, image.filename)
             image_file += self.previous_image_suffix + '.fits'
             hdu = fits.open(image_file)

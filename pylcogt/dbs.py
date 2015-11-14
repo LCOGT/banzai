@@ -17,12 +17,12 @@ from sqlalchemy.ext.declarative import declarative_base
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
-db_address = 'mysql+mysqlconnector://cmccully:password@cmccully-linux/test'
+_DEFAULT_DB = 'mysql+mysqldb://hibernate:hibernate@localhost/test'
 
 Base = declarative_base()
 
 
-def get_session():
+def get_session(db_address=_DEFAULT_DB):
     """
     Get a connection to the database.
 
@@ -122,7 +122,7 @@ class Telescope(Base):
     camera_type = Column(String(20))
 
 
-def create_db():
+def create_db(db_address=_DEFAULT_DB):
     """
     Create the database structure.
 
@@ -135,8 +135,10 @@ def create_db():
     # This only needs to be run once on initialization.
     Base.metadata.create_all(engine)
 
+    populate_telescope_table(db_address)
 
-def populate_telescope_table():
+
+def populate_telescope_table(db_address=_DEFAULT_DB):
     """
     Populate the telescope table
 
@@ -146,7 +148,7 @@ def populate_telescope_table():
     We really should replace this with a call to the configdb.
     """
 
-    db_session = get_session()
+    db_session = get_session(db_address)
     db_session.add(Telescope(site='coj', telescope_id='2m0-02', instrument='fs03',
                              camera_type='spectral'))
     db_session.add(Telescope(site='coj', telescope_id='1m0-11', instrument='kb79',

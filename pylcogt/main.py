@@ -75,10 +75,12 @@ def get_telescope_info():
     return all_sites, all_instruments, all_telescope_ids, all_camera_types
 
 
-def main():
+def main(cmd_args=None):
     """
     Main driver script for PyLCOGT. This is a console entry point.
     """
+    import sys
+    print(sys.argv)
     # Get the available instruments/telescopes
     all_sites, all_instruments, all_telescope_ids, all_camera_types = get_telescope_info()
 
@@ -115,7 +117,7 @@ def main():
     parser.add_argument("--ncpus", default=1, type=int,
                         help='Number of multiprocessing cpus to use.')
 
-    args = parser.parse_args()
+    args = parser.parse_args(cmd_args)
 
     logs.start_logging(log_level=args.log_level)
 

@@ -39,7 +39,7 @@ class MakeDark(MakeCalibrationImage):
                 image_file = os.path.join(image.filepath, image.filename)
                 image_file += self.previous_image_suffix + '.fits'
                 image_data = fits.getdata(image_file)
-                logger.debug('Combining dark {filename}'.format(filename=image_file.filename), extra=tags)
+                logger.debug('Combining dark {filename}'.format(filename=image.filename))
 
                 dark_data[:, :, i] = image_data / image.exptime
 

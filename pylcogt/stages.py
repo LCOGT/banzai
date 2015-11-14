@@ -68,7 +68,7 @@ class Stage(object):
             # Convert from image objects to file names
             input_image_list.append(image_list)
 
-            if len(config_list) == 0:
+            if len(image_list) == 0:
                 config_list.append([])
             else:
                 config_list.append(image_list[0])
