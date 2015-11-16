@@ -130,23 +130,22 @@ def ingest_single_image(logger_name, processed_path, image_suffix_number, raw_im
     db_session.commit()
     db_session.close()
 
+
 class Ingest(Stage):
 
-    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
+    def __init__(self, raw_path, processed_path, initial_query):
         log_message = 'Ingesting data'
         super(Ingest, self).__init__(self.ingest_raw_data, processed_path=processed_path,
                                      initial_query=initial_query, logger_name='Ingest', log_message=log_message,
-                                     image_suffix_number='03', previous_stage_done=None, cpu_pool=cpu_pool)
+                                     image_suffix_number='03', previous_stage_done=None)
         self.raw_path = raw_path
 
 #    @metric_timer('ingest')
     def ingest_raw_data(self, raw_image_list):
+        for image in raw_image_list:
+            ingest_single_image('Ingest', self.processed_path, self.image_suffix_number, image)
 
-        # Define a partial function make the multiprocessing easier.
-        ingest_function = partial(ingest_single_image, 'Ingest', self.processed_path, self.image_suffix_number)
-
-        self.cpu_pool.map(ingest_function, raw_image_list)
-
+        return
 
     def select_input_images(self, telescope, epoch):
         search_path = os.path.join(self.raw_path, telescope.site,

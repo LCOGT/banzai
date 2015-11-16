@@ -1,8 +1,9 @@
 from __future__ import absolute_import, print_function, division
 
 import os
-from sqlalchemy.sql import func, expression
 import itertools
+
+from sqlalchemy.sql import func
 
 from . import dbs
 from .utils import date_utils
@@ -11,10 +12,20 @@ from . import logs
 __author__ = 'cmccully'
 
 
+def make_output_directory(processed_path, epoch, telescope):
+    # Create output directory if necessary
+    output_directory = os.path.join(processed_path, telescope.site,
+                                    telescope.instrument, epoch)
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+
+    return
+
+
 class Stage(object):
     def __init__(self, stage_function, processed_path='', initial_query=None, group_by=None, logger_name='',
                  log_message='', cal_type='', image_suffix_number='00', previous_suffix_number='00',
-                 previous_stage_done=None, cpu_pool=None):
+                 previous_stage_done=None):
         self.stage_function = stage_function
         self.processed_path = processed_path
         self.initial_query = initial_query
@@ -24,7 +35,6 @@ class Stage(object):
         self.cal_type = cal_type
         self.image_suffix_number = image_suffix_number
         self.previous_stage_done = previous_stage_done
-        self.cpu_pool = cpu_pool
         self.previous_image_suffix = previous_suffix_number
 
     def select_input_images(self, telescope, epoch):
@@ -74,18 +84,9 @@ class Stage(object):
         db_session.close()
         return input_image_list, config_list
 
-
     # By default don't return any output images
     def get_output_images(self, telescope, epoch):
         return None
-
-
-    def make_output_directory(self, epoch, telescope):
-            # Create output directory if necessary
-            output_directory = os.path.join(self.processed_path, telescope.site,
-                                            telescope.instrument, epoch)
-            if not os.path.exists(output_directory):
-                os.makedirs(output_directory)
 
     # By default we don't need to get a calibration image
     def get_calibration_image(self, epoch, telescope, image_config):
@@ -94,7 +95,7 @@ class Stage(object):
     def run(self, epoch_list, telescope_list):
 
         for epoch, telescope in itertools.product(epoch_list, telescope_list):
-            self.make_output_directory(epoch, telescope)
+            make_output_directory(self.processed_path, epoch, telescope)
             image_sets, image_configs = self.select_input_images(telescope, epoch)
 
             for image_set, image_config in zip(image_sets, image_configs):
@@ -117,13 +118,13 @@ class Stage(object):
 
 class MakeCalibrationImage(Stage):
     def __init__(self, stage_function, processed_path='', initial_query=None, group_by=None, logger_name='',
-                 log_message='', cal_type='', cpu_pool=None, previous_suffix_number='00', previous_stage_done=None):
+                 log_message='', cal_type='', previous_suffix_number='00', previous_stage_done=None):
 
         query = initial_query & (dbs.Image.obstype == cal_type)
         super(MakeCalibrationImage, self).__init__(stage_function, processed_path=processed_path,
                                                    initial_query=query, group_by=group_by,
                                                    logger_name=logger_name, log_message=log_message, cal_type=cal_type,
-                                                   cpu_pool=cpu_pool, previous_suffix_number=previous_suffix_number,
+                                                   previous_suffix_number=previous_suffix_number,
                                                    previous_stage_done=previous_stage_done)
 
     def get_calibration_image(self, epoch, telescope, image_config):
@@ -170,13 +171,14 @@ class MakeCalibrationImage(Stage):
         db_session.commit()
         db_session.close()
 
+
 class ApplyCalibration(Stage):
     def __init__(self, stage_function, processed_path='', initial_query=None, group_by=None,
-                 logger_name='', log_message='', cal_type='', cpu_pool=None, db_session=None, image_suffix_number='00',
+                 logger_name='', log_message='', cal_type='', db_session=None, image_suffix_number='00',
                  previous_suffix_number='00', previous_stage_done=None):
         super(ApplyCalibration, self).__init__(stage_function, processed_path=processed_path,
                                                initial_query=initial_query, group_by=group_by, logger_name=logger_name,
-                                               log_message=log_message, cal_type=cal_type, cpu_pool=cpu_pool,
+                                               log_message=log_message, cal_type=cal_type,
                                                image_suffix_number=image_suffix_number,
                                                previous_suffix_number=previous_suffix_number,
                                                previous_stage_done=previous_stage_done)
@@ -185,14 +187,14 @@ class ApplyCalibration(Stage):
         image_sets, image_configs = self.select_input_images(telescope, epoch)
         return [image for image_set in image_sets for image in image_set]
 
-
     def get_calibration_image(self, epoch, telescope, image_config):
         calibration_criteria = dbs.CalibrationImage.type == self.cal_type.upper()
         calibration_criteria &= dbs.CalibrationImage.telescope_id == telescope.id
 
         for criteria in self.group_by:
             group_by_field = vars(criteria)['key']
-            calibration_criteria &= getattr(dbs.CalibrationImage, group_by_field) == getattr(image_config, group_by_field)
+            calibration_criteria &= getattr(dbs.CalibrationImage, group_by_field) == getattr(image_config,
+                                                                                             group_by_field)
 
         db_session = dbs.get_session()
 

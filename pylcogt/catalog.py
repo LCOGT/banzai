@@ -1,22 +1,24 @@
 from __future__ import absolute_import, print_function, division
+import os
+
+from astropy.io import fits
+from astropy.table import Table
+
 from .stages import Stage
 from . import dbs, logs
-from .utils import fits_utils
-from astropy.io import fits, ascii
-from astropy.table import Table
-import os
 import sep
 
 __author__ = 'cmccully'
 
+
 class Catalog(Stage):
-    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
+    def __init__(self, raw_path, processed_path, initial_query):
 
         catalog_query = initial_query & (dbs.Image.obstype == 'EXPOSE')
 
         super(Catalog, self).__init__(self.make_catalog, processed_path=processed_path, initial_query=catalog_query,
                                       logger_name='Catalog', cal_type='catalog', previous_stage_done=dbs.Image.wcs_done,
-                                      previous_suffix_number='90', cpu_pool=cpu_pool)
+                                      previous_suffix_number='90')
         self.log_message = 'Generating source catalog for {instrument} at {site} on {epoch}.'
         self.group_by = None
 

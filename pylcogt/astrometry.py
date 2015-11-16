@@ -12,14 +12,15 @@ class Astrometry(Stage):
                 '--scale-units arcsecperpix --scale-low {scale_low} --scale-high {scale_high} ' \
                 '--no-plots -N {output_name}  --downsample 4 --use-sextractor ' \
                 '--solved none --match none --rdls none --wcs none --corr none --overwrite {image_name}'
-    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
+
+    def __init__(self, raw_path, processed_path, initial_query):
 
         astrometry_query = initial_query & (dbs.Image.obstype=='EXPOSE')
 
         super(Astrometry, self).__init__(self.solve_wcs, processed_path=processed_path,
                                    initial_query=astrometry_query, logger_name='Astrometry', cal_type='wcs',
                                          previous_stage_done=dbs.Image.flat_done, previous_suffix_number='25',
-                                         image_suffix_number='90', cpu_pool=cpu_pool)
+                                         image_suffix_number='90')
         self.log_message = 'Solving for the WCS of images from {instrument} at {site} on {epoch}.'
         self.group_by = None
 

@@ -167,15 +167,10 @@ def main(cmd_args=None):
     logger = logs.get_logger('Main')
     logger.info('Starting pylcogt:')
 
-    # Create a single CPU pool that will be used throughout the reduction
-    cpu_pool = Pool(args.ncpus)
-
     for stage in stages_to_do:
         stage_to_run = reduction_stages[stage](args.raw_path, args.processed_path,
-                                               image_query, cpu_pool)
+                                               image_query)
         stage_to_run.run(epoch_list, telescope_list)
 
     # Clean up
     logs.stop_logging()
-    cpu_pool.close()
-    cpu_pool.join()

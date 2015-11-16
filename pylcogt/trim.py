@@ -1,9 +1,10 @@
 from __future__ import absolute_import, print_function, division
+
+from astropy.io import fits
+
 from .stages import Stage
 from . import dbs, logs
 from .utils import fits_utils
-from astropy.io import fits
-from itertools import izip
 
 __author__ = 'cmccully'
 
@@ -24,24 +25,19 @@ def _trim_image(hdu):
 
 
 class Trim(Stage):
-    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
-
+    def __init__(self, raw_path, processed_path, initial_query):
         trim_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
         super(Trim, self).__init__(self.trim, processed_path=processed_path,
                                    initial_query=trim_query, logger_name='Trim', cal_type='trim',
                                    previous_stage_done=dbs.Image.bias_done, previous_suffix_number='10',
-                                   image_suffix_number='15', cpu_pool=cpu_pool)
+                                   image_suffix_number='15')
         self.log_message = 'Trimming images from {instrument} at {site} on {epoch}.'
         self.group_by = None
 
-    def get_output_images(self, telescope, epoch):
-        return self.select_input_images(telescope, epoch)[0][0]
-
-    def trim(self, input_images, output_images):
-
+    def trim(self, input_images):
         images_to_save = []
-        for input_image, output_image in izip(input_images, output_images):
+        for input_image in input_images:
             image_file = input_image.get_full_filename(self.previous_image_suffix)
 
             hdu = fits.open(image_file)
@@ -51,7 +47,7 @@ class Trim(Stage):
             logger.debug('Trimming {image_name} to {trim_sec}'.format(image_name=input_image.filename,
                                                                       trim_sec=hdu[0].header['TRIMSEC']))
 
-            output_filename = output_image.get_full_filename(self.image_suffix_number)
+            output_filename = input_image.get_full_filename(self.image_suffix_number)
             hdu.writeto(output_filename, clobber=True)
 
             # Update the database

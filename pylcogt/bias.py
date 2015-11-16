@@ -12,25 +12,12 @@ from .stages import MakeCalibrationImage, ApplyCalibration
 __author__ = 'cmccully'
 
 
-def process_single_bias_frame(bias_level_array, bias_data, i, logger_name):
-    logger = logs.get_logger(logger_name)
-    image_file = os.path.join(image.filepath, image.filename)
-    image_file += previous_image_suffix + '.fits'
-    image_data = fits.getdata(image_file)
-    bias_level_array[i] = stats.sigma_clipped_mean(image_data, 3.5)
-
-    logger.debug('Bias level for {file} is {bias}'.format(file=image.filename,
-                                                      bias=bias_level_array[i]))
-    # Subtract the bias level for each image
-    bias_data[:, :, i] = image_data - bias_level_array[i]
-
-
 class MakeBias(MakeCalibrationImage):
-    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
+    def __init__(self, raw_path, processed_path, initial_query):
 
         super(MakeBias, self).__init__(self.make_master_bias, processed_path=processed_path,
                                        initial_query=initial_query, logger_name='Bias',
-                                       cal_type='bias', cpu_pool=cpu_pool, previous_suffix_number='03',
+                                       cal_type='bias', previous_suffix_number='03',
                                        previous_stage_done=dbs.Image.ingest_done)
         self.log_message = 'Creating {binning} bias frame for {instrument} on {epoch}.'
         self.group_by = [dbs.Image.ccdsum]
@@ -97,14 +84,14 @@ class MakeBias(MakeCalibrationImage):
 
 
 class SubtractBias(ApplyCalibration):
-    def __init__(self, raw_path, processed_path, initial_query, cpu_pool):
+    def __init__(self, raw_path, processed_path, initial_query):
 
         bias_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
         super(SubtractBias, self).__init__(self.subtract_bias, processed_path=processed_path,
                                            initial_query=bias_query, logger_name='Bias', cal_type='bias',
                                            image_suffix_number='10', previous_suffix_number='03',
-                                           previous_stage_done=dbs.Image.ingest_done, cpu_pool=cpu_pool)
+                                           previous_stage_done=dbs.Image.ingest_done)
         self.log_message = 'Subtracting bias frame'
         self.group_by = [dbs.Image.ccdsum]
 
