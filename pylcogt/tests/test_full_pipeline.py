@@ -25,4 +25,4 @@ def test_something():
 
 
 if __name__ == '__main__':
-    pytest.main([__file__, ])
+    pytest.main([__file__, '--cov=pylcogt', '--cov-report=html'])
