@@ -9,6 +9,9 @@ October 2015
 """
 from __future__ import absolute_import, print_function, division
 
+import os.path
+import contextlib
+
 from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import sessionmaker
 
@@ -87,6 +90,12 @@ class Image(Base):
     flat_done = Column(Boolean, default=False)
     wcs_done = Column(Boolean, default=False)
     cat_done = Column(Boolean, default=False)
+
+    def get_full_filename(self, suffix, extension='.fits'):
+        image_file = os.path.join(self.filepath, self.filename)
+        image_file += suffix + extension
+
+        return image_file
 
 
 class CalibrationImage(Base):
@@ -175,3 +184,19 @@ def populate_telescope_table(db_address=_DEFAULT_DB):
                              camera_type='merope'))
     db_session.commit()
     db_session.close()
+
+
+def save_images(images):
+    """
+    Save images to the database.
+
+    :param images: List of images to save.
+    :return: Not needed.
+    """
+
+    with contextlib.closing(get_session()) as session:
+        for image in images:
+            session.add(image)
+        session.commit()
+
+    return

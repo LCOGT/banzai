@@ -2,7 +2,13 @@
 
 @author: mnorbury
 """
+import os.path
+
+import numpy as np
+
 import pytest
+
+from astropy.io import fits
 
 from pylcogt.main import main
 from pylcogt.dbs import create_db
@@ -17,11 +23,27 @@ def teardown_function(function):
 
 
 def test_something():
-    import os
-    print os.system('ls')
-    main('--raw-path /home/mnorbury/Pipeline/ --processed-path /home/mnorbury/tmp/ --log-level debug --site elp --epoch 20150325'.split())
+    root_output = '/home/mnorbury/tmp/'
+    site = 'elp'
+    instrument = 'kb74'
+    epoch = '20150325'
+    final_image_name = 'elp1m008-kb74-20150325-0123-e90.fits'
 
-    assert 1 == 2
+    main(
+        '--raw-path /home/mnorbury/Pipeline/ --instrument {0:s} --processed-path {1:s} --log-level debug --site {2:s} --epoch {3:s}'.format(
+            instrument, root_output,
+            site,
+            epoch).split())
+
+    path, _ = os.path.split(__file__)
+    expected_file_path = os.path.join(path, final_image_name)
+    expected_hdu = fits.open(expected_file_path)
+
+    actual_file_path = os.path.join(root_output, site, instrument, epoch, final_image_name)
+    actual_hdu = fits.open(actual_file_path)
+
+    assert expected_hdu[0].header == actual_hdu[0].header
+    assert np.allclose(expected_hdu[0].data, actual_hdu[0].data, 1e-6)
 
 
 if __name__ == '__main__':

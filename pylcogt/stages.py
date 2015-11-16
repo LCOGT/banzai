@@ -27,18 +27,17 @@ class Stage(object):
         self.cpu_pool = cpu_pool
         self.previous_image_suffix = previous_suffix_number
 
-
     def select_input_images(self, telescope, epoch):
         # Select only the images we want to work on
         query = self.initial_query & (dbs.Image.telescope_id == telescope.id)
         query &= (dbs.Image.dayobs == epoch)
 
         # Only select images that have had the previous stage completed
-        query &= (self.previous_stage_done == True)
+        query &= self.previous_stage_done
 
         db_session = dbs.get_session()
 
-        if self.group_by is not None:
+        if self.group_by:
             config_list = []
             # Get the distinct values of ccdsum and filters
             for group_by in self.group_by:
