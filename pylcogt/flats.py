@@ -15,13 +15,13 @@ __author__ = 'cmccully'
 class MakeFlat(MakeCalibrationImage):
     def __init__(self, raw_path, processed_path, initial_query):
 
-        super(MakeFlat, self).__init__(self.make_master_flat, processed_path=processed_path,
+        super(MakeFlat, self).__init__(processed_path=processed_path,
                                        initial_query=initial_query, logger_name='Flat', previous_stage_done=dbs.Image.dark_done,
                                        cal_type='skyflat', previous_suffix_number='20')
         self.log_message = 'Creating master flat-field frame'
         self.group_by = [dbs.Image.ccdsum, dbs.Image.filter_name]
 
-    def make_master_flat(self, image_list, output_file, min_images=5, clobber=True):
+    def do_stage(self, image_list, output_file, min_images=5, clobber=True):
 
         logger = logs.get_logger('Flat')
         if len(image_list) < min_images:
@@ -65,14 +65,14 @@ class DivideFlat(ApplyCalibration):
 
         flat_query = initial_query & (dbs.Image.obstype == 'EXPOSE')
 
-        super(DivideFlat, self).__init__(self.divide_flat, processed_path=processed_path,
+        super(DivideFlat, self).__init__(processed_path=processed_path,
                                          initial_query=flat_query, logger_name='Flat', cal_type='skyflat',
                                          previous_stage_done=dbs.Image.dark_done,
                                          image_suffix_number='25', previous_suffix_number='20')
         self.log_message = 'Dividing master flat-field frame.'
         self.group_by = [dbs.Image.ccdsum, dbs.Image.filter_name]
 
-    def divide_flat(self, image_files, output_files, master_flat_file, clobber=True):
+    def do_stage(self, image_files, output_files, master_flat_file, clobber=True):
 
         master_flat_data = fits.getdata(master_flat_file)
 

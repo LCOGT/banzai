@@ -28,14 +28,14 @@ class Trim(Stage):
     def __init__(self, raw_path, processed_path, initial_query):
         trim_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
-        super(Trim, self).__init__(self.trim, processed_path=processed_path,
+        super(Trim, self).__init__(processed_path=processed_path,
                                    initial_query=trim_query, logger_name='Trim', cal_type='trim',
                                    previous_stage_done=dbs.Image.bias_done, previous_suffix_number='10',
                                    image_suffix_number='15')
         self.log_message = 'Trimming images from {instrument} at {site} on {epoch}.'
         self.group_by = None
 
-    def trim(self, input_images):
+    def do_stage(self, input_images):
         images_to_save = []
         for input_image in input_images:
             image_file = input_image.get_full_filename(self.previous_image_suffix)

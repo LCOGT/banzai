@@ -9,6 +9,8 @@ from . import dbs
 from .utils import date_utils
 from . import logs
 
+import abc
+
 __author__ = 'cmccully'
 
 
@@ -23,10 +25,11 @@ def make_output_directory(processed_path, epoch, telescope):
 
 
 class Stage(object):
-    def __init__(self, stage_function, processed_path='', initial_query=None, group_by=None, logger_name='',
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, processed_path='', initial_query=None, group_by=None, logger_name='',
                  log_message='', cal_type='', image_suffix_number='00', previous_suffix_number='00',
                  previous_stage_done=None):
-        self.stage_function = stage_function
         self.processed_path = processed_path
         self.initial_query = initial_query
         self.group_by = group_by
@@ -113,15 +116,19 @@ class Stage(object):
                 if master_cal_file is not None:
                     stage_args.append(master_cal_file)
 
-                self.stage_function(*stage_args)
+                self.do_stage(*stage_args)
+
+    @abc.abstractmethod
+    def do_stage(self, input_images):
+        pass
 
 
 class MakeCalibrationImage(Stage):
-    def __init__(self, stage_function, processed_path='', initial_query=None, group_by=None, logger_name='',
+    def __init__(self, processed_path='', initial_query=None, group_by=None, logger_name='',
                  log_message='', cal_type='', previous_suffix_number='00', previous_stage_done=None):
 
         query = initial_query & (dbs.Image.obstype == cal_type)
-        super(MakeCalibrationImage, self).__init__(stage_function, processed_path=processed_path,
+        super(MakeCalibrationImage, self).__init__(processed_path=processed_path,
                                                    initial_query=query, group_by=group_by,
                                                    logger_name=logger_name, log_message=log_message, cal_type=cal_type,
                                                    previous_suffix_number=previous_suffix_number,
@@ -173,10 +180,10 @@ class MakeCalibrationImage(Stage):
 
 
 class ApplyCalibration(Stage):
-    def __init__(self, stage_function, processed_path='', initial_query=None, group_by=None,
+    def __init__(self, processed_path='', initial_query=None, group_by=None,
                  logger_name='', log_message='', cal_type='', db_session=None, image_suffix_number='00',
                  previous_suffix_number='00', previous_stage_done=None):
-        super(ApplyCalibration, self).__init__(stage_function, processed_path=processed_path,
+        super(ApplyCalibration, self).__init__(processed_path=processed_path,
                                                initial_query=initial_query, group_by=group_by, logger_name=logger_name,
                                                log_message=log_message, cal_type=cal_type,
                                                image_suffix_number=image_suffix_number,

@@ -17,7 +17,7 @@ class Astrometry(Stage):
 
         astrometry_query = initial_query & (dbs.Image.obstype=='EXPOSE')
 
-        super(Astrometry, self).__init__(self.solve_wcs, processed_path=processed_path,
+        super(Astrometry, self).__init__(processed_path=processed_path,
                                    initial_query=astrometry_query, logger_name='Astrometry', cal_type='wcs',
                                          previous_stage_done=dbs.Image.flat_done, previous_suffix_number='25',
                                          image_suffix_number='90')
@@ -28,7 +28,7 @@ class Astrometry(Stage):
         image_sets, image_configs = self.select_input_images(telescope, epoch)
         return [image for image_set in image_sets for image in image_set]
 
-    def solve_wcs(self, image_files, output_files, clobber=True):
+    def do_stage(self, image_files, output_files, clobber=True):
         logger = logs.get_logger('Astrometry')
         db_session = dbs.get_session()
         for i, image in enumerate(image_files):

@@ -135,13 +135,13 @@ class Ingest(Stage):
 
     def __init__(self, raw_path, processed_path, initial_query):
         log_message = 'Ingesting data'
-        super(Ingest, self).__init__(self.ingest_raw_data, processed_path=processed_path,
+        super(Ingest, self).__init__(processed_path=processed_path,
                                      initial_query=initial_query, logger_name='Ingest', log_message=log_message,
                                      image_suffix_number='03', previous_stage_done=None)
         self.raw_path = raw_path
 
 #    @metric_timer('ingest')
-    def ingest_raw_data(self, raw_image_list):
+    def do_stage(self, raw_image_list):
         for image in raw_image_list:
             ingest_single_image('Ingest', self.processed_path, self.image_suffix_number, image)
 

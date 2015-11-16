@@ -16,7 +16,7 @@ class Catalog(Stage):
 
         catalog_query = initial_query & (dbs.Image.obstype == 'EXPOSE')
 
-        super(Catalog, self).__init__(self.make_catalog, processed_path=processed_path, initial_query=catalog_query,
+        super(Catalog, self).__init__(processed_path=processed_path, initial_query=catalog_query,
                                       logger_name='Catalog', cal_type='catalog', previous_stage_done=dbs.Image.wcs_done,
                                       previous_suffix_number='90')
         self.log_message = 'Generating source catalog for {instrument} at {site} on {epoch}.'
@@ -27,7 +27,7 @@ class Catalog(Stage):
         image_list = [image for image_set in image_sets for image in image_set]
         return image_list
 
-    def make_catalog(self, image_files, output_files, clobber=True):
+    def do_stage(self, image_files, output_files, clobber=True):
         logger = logs.get_logger('Catalog')
         for i, image in enumerate(image_files):
             logger.debug('Extracting sources from {filename}'.format(filename=image.filename))

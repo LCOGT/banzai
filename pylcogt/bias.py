@@ -15,15 +15,17 @@ __author__ = 'cmccully'
 class MakeBias(MakeCalibrationImage):
     def __init__(self, raw_path, processed_path, initial_query):
 
-        super(MakeBias, self).__init__(self.make_master_bias, processed_path=processed_path,
+        super(MakeBias, self).__init__(processed_path=processed_path,
                                        initial_query=initial_query, logger_name='Bias',
                                        cal_type='bias', previous_suffix_number='03',
                                        previous_stage_done=dbs.Image.ingest_done)
         self.log_message = 'Creating {binning} bias frame for {instrument} on {epoch}.'
         self.group_by = [dbs.Image.ccdsum]
 
-    def make_master_bias(self, image_list, output_file, min_images=5, clobber=True):
-
+    def do_stage(self, image_list, output_file, min_images=5, clobber=True):
+        # epoch = image_list[0].dayobs
+        # telescope = image_list[0].telescope
+        # output_file = self.get_calibration_image(epoch, telescope, image_list[0])
         logger = logs.get_logger('Bias')
         if len(image_list) < min_images:
             logger.warning('Not enough images to combine.')
@@ -88,14 +90,14 @@ class SubtractBias(ApplyCalibration):
 
         bias_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
-        super(SubtractBias, self).__init__(self.subtract_bias, processed_path=processed_path,
+        super(SubtractBias, self).__init__(processed_path=processed_path,
                                            initial_query=bias_query, logger_name='Bias', cal_type='bias',
                                            image_suffix_number='10', previous_suffix_number='03',
                                            previous_stage_done=dbs.Image.ingest_done)
         self.log_message = 'Subtracting bias frame'
         self.group_by = [dbs.Image.ccdsum]
 
-    def subtract_bias(self, image_files, output_files, master_bias_file, clobber=True):
+    def do_stage(self, image_files, output_files, master_bias_file, clobber=True):
 
         master_bias_data = fits.getdata(master_bias_file)
         master_bias_level = float(fits.getval(master_bias_file, 'BIASLVL'))
