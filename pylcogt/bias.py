@@ -20,7 +20,7 @@ class MakeBias(MakeCalibrationImage):
                                        cal_type='bias', previous_suffix_number='03',
                                        previous_stage_done=dbs.Image.ingest_done)
         self.log_message = 'Creating {binning} bias frame for {instrument} on {epoch}.'
-        self.group_by = [dbs.Image.ccdsum]
+        self.group_by = [dbs.Image.ccdsum, ]
 
     def do_stage(self, image_list, output_file, min_images=5, clobber=True):
         # epoch = image_list[0].dayobs

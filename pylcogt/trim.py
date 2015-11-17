@@ -1,10 +1,12 @@
 from __future__ import absolute_import, print_function, division
 
+import itertools
+
 from astropy.io import fits
 
-from .stages import Stage
 from . import dbs, logs
 from .utils import fits_utils
+from pylcogt.stages import make_output_directory
 
 __author__ = 'cmccully'
 
@@ -24,16 +26,32 @@ def _trim_image(hdu):
     return hdu[0].header['NAXIS1'], hdu[0].header['NAXIS2']
 
 
-class Trim(Stage):
+class Trim(object):
     def __init__(self, raw_path, processed_path, initial_query):
         trim_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
-        super(Trim, self).__init__(processed_path=processed_path,
-                                   initial_query=trim_query, logger_name='Trim', cal_type='trim',
-                                   previous_stage_done=dbs.Image.bias_done, previous_suffix_number='10',
-                                   image_suffix_number='15')
+        self.processed_path = processed_path
+        self.initial_query = trim_query
+        self.logger = logs.get_logger("Trim")
+        self.cal_type = "trim"
+        self.image_suffix_number = '15'
+        self.previous_stage_done = dbs.Image.bias_done
+        self.previous_image_suffix = '10'
         self.log_message = 'Trimming images from {instrument} at {site} on {epoch}.'
-        self.group_by = None
+
+    def run(self, epoch_list, telescope_list):
+
+        for epoch, telescope in itertools.product(epoch_list, telescope_list):
+            make_output_directory(self.processed_path, epoch, telescope)
+            image_sets, _ = dbs.select_input_images(telescope, epoch, self.initial_query,
+                                                    self.previous_stage_done, None)
+
+            for image_set in image_sets:
+                tags = logs.image_config_to_tags(image_set[0], telescope, epoch)
+                self.logger.info(self.log_message, extra=tags)
+                self.do_stage(image_set)
+
+        return
 
     def do_stage(self, input_images):
         images_to_save = []

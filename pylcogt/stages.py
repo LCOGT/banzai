@@ -41,51 +41,7 @@ class Stage(object):
         self.previous_image_suffix = previous_suffix_number
 
     def select_input_images(self, telescope, epoch):
-        # Select only the images we want to work on
-        query = self.initial_query & (dbs.Image.telescope_id == telescope.id)
-        query &= (dbs.Image.dayobs == epoch)
-
-        # Only select images that have had the previous stage completed
-        query &= self.previous_stage_done
-
-        db_session = dbs.get_session()
-
-        if self.group_by:
-            config_list = []
-            # Get the distinct values of ccdsum and filters
-            for group_by in self.group_by:
-                config_query = db_session.query(group_by)
-
-                distinct_configs = config_query.filter(query).distinct().all()
-                config_list.append([x[0] for x in distinct_configs])
-            config_queries = []
-
-            for config in itertools.product(*config_list):
-                config_query = query
-
-                for i in range(len(self.group_by)):
-                    # Select images with the correct binning/filter
-                    config_query &= (self.group_by[i] == config[i])
-                config_queries.append(config_query)
-
-        else:
-            config_queries = [query]
-
-        input_image_list = []
-        config_list = []
-        for image_config in config_queries:
-
-            image_list = db_session.query(dbs.Image).filter(image_config).all()
-
-            # Convert from image objects to file names
-            input_image_list.append(image_list)
-
-            if len(image_list) == 0:
-                config_list.append([])
-            else:
-                config_list.append(image_list[0])
-        db_session.close()
-        return input_image_list, config_list
+        return dbs.select_input_images(telescope, epoch, self.initial_query, self.previous_stage_done, self.group_by)
 
     # By default don't return any output images
     def get_output_images(self, telescope, epoch):
@@ -96,7 +52,6 @@ class Stage(object):
         return None
 
     def run(self, epoch_list, telescope_list):
-
         for epoch, telescope in itertools.product(epoch_list, telescope_list):
             make_output_directory(self.processed_path, epoch, telescope)
             image_sets, image_configs = self.select_input_images(telescope, epoch)

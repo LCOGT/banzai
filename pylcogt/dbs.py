@@ -11,10 +11,10 @@ from __future__ import absolute_import, print_function, division
 
 import os.path
 import contextlib
+import itertools
 
 from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import sessionmaker
-
 from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -200,3 +200,51 @@ def save_images(images):
         session.commit()
 
     return
+
+
+def select_input_images(telescope, epoch, initial_query, previous_stage_done, group_by_list):
+    # Select only the images we want to work on
+    query = initial_query & (Image.telescope_id == telescope.id)
+    query &= (Image.dayobs == epoch)
+
+    # Only select images that have had the previous stage completed
+    query &= previous_stage_done
+
+    db_session = get_session()
+
+    if group_by_list:
+        config_list = []
+        # Get the distinct values of ccdsum and filters
+        for group_by in group_by_list:
+            config_query = db_session.query(group_by)
+
+            distinct_configs = config_query.filter(query).distinct().all()
+            config_list.append([x[0] for x in distinct_configs])
+        config_queries = []
+
+        for config in itertools.product(*config_list):
+            config_query = query
+
+            for i in range(len(group_by_list)):
+                # Select images with the correct binning/filter
+                config_query &= (group_by_list[i] == config[i])
+            config_queries.append(config_query)
+
+    else:
+        config_queries = [query]
+
+    input_image_list = []
+    config_list = []
+    for image_config in config_queries:
+
+        image_list = db_session.query(Image).filter(image_config).all()
+
+        # Convert from image objects to file names
+        input_image_list.append(image_list)
+
+        if len(image_list) == 0:
+            config_list.append([])
+        else:
+            config_list.append(image_list[0])
+    db_session.close()
+    return input_image_list, config_list
