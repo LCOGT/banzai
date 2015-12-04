@@ -45,11 +45,7 @@ def epoch_date_to_string(epoch):
     -----
     If the input epoch is already string, then it is just returned.
     """
-    if isinstance(epoch, basestring):
-        epoch_string = epoch
-    else:
-        epoch_string = str(epoch).replace('-', '')
-    return epoch_string
+    return str(epoch).replace('-', '')
 
 
 def parse_epoch_string(epoch_string):

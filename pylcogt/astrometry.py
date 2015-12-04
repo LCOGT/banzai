@@ -8,10 +8,11 @@ __author__ = 'cmccully'
 
 class Astrometry(Stage):
     cmd = 'solve-field --crpix-center --no-verify --no-fits2fits --no-tweak ' \
-               ' --radius 2.0 --ra {ra} --dec {dec} --guess-scale ' \
-                '--scale-units arcsecperpix --scale-low {scale_low} --scale-high {scale_high} ' \
-                '--no-plots -N {output_name}  --downsample 4 --use-sextractor ' \
-                '--solved none --match none --rdls none --wcs none --corr none --overwrite {image_name}'
+          ' --radius 2.0 --ra {ra} --dec {dec} --guess-scale ' \
+          '--scale-units arcsecperpix --scale-low {scale_low} --scale-high {scale_high} ' \
+          '--no-plots -N {output_name}   --use-sextractor ' \
+          '--code-tolerance 0.003 --pixel-error 20 -d 1-200 ' \
+          '--solved none --match none --rdls none --wcs none --corr none --overwrite {image_name}'
 
     def __init__(self, raw_path, processed_path, initial_query):
 

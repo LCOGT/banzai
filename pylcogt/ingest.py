@@ -18,7 +18,7 @@ import shutil
 
 import itertools
 
-from opentsdb_python_metrics.metric_wrappers import metric_timer
+#from opentsdb_python_metrics.metric_wrappers import metric_timer
 
 from . import dbs
 from . import logs

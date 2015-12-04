@@ -117,6 +117,7 @@ def main(cmd_args=None):
     parser.add_argument("--ncpus", default=1, type=int,
                         help='Number of multiprocessing cpus to use.')
 
+    parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
     args = parser.parse_args(cmd_args)
 
     logs.start_logging(log_level=args.log_level)
@@ -124,7 +125,8 @@ def main(cmd_args=None):
     # Get a list of dayobs to reduce
     epoch_list = date_utils.parse_epoch_string(args.epoch)
 
-    reduction_stage_list = [i for i in reduction_stages.iterkeys()]
+    reduction_stage_list = [i for i in reduction_stages.keys()]
+
     if args.stage != '':
         if '-' in args.stage:
 

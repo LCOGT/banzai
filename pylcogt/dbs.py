@@ -20,7 +20,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
-_DEFAULT_DB = 'mysql+mysqldb://hibernate:hibernate@localhost/test'
+_DEFAULT_DB = 'mysql+mysqlconnector://cmccully:password@localhost/test'
 
 Base = declarative_base()
 
@@ -248,3 +248,6 @@ def select_input_images(telescope, epoch, initial_query, previous_stage_done, gr
             config_list.append(image_list[0])
     db_session.close()
     return input_image_list, config_list
+
+def group_input_images():
+    return
