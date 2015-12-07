@@ -16,7 +16,7 @@ class MakeDark(MakeCalibrationImage):
     def __init__(self, pipeline_context, initial_query):
 
         super(MakeDark, self).__init__(pipeline_context,
-                                       initial_query=initial_query, logger_name='Dark',
+                                       initial_query=initial_query,
                                        cal_type='dark', previous_stage_done=dbs.Image.trim_done,
                                        previous_suffix_number='15')
         self.log_message = 'Creating {binning} dark frame for {instrument} on {epoch}.'
@@ -67,7 +67,7 @@ class SubtractDark(ApplyCalibration):
         dark_query = initial_query & (dbs.Image.obstype.in_(('SKYFLAT', 'EXPOSE')))
 
         super(SubtractDark, self).__init__(pipeline_context,
-                                           initial_query=dark_query, logger_name='Dark', cal_type='dark',
+                                           initial_query=dark_query, cal_type='dark',
                                            previous_stage_done=dbs.Image.trim_done, previous_suffix_number='15',
                                            image_suffix_number='20')
         self.log_message = 'Subtracting {binning} dark frame for {instrument} on {epoch}.'

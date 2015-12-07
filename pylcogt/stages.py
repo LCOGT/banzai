@@ -11,6 +11,8 @@ from . import logs
 
 import abc
 
+logger = logs.get_logger(__name__)
+
 __author__ = 'cmccully'
 
 
@@ -27,13 +29,17 @@ def make_output_directory(processed_path, epoch, telescope):
 class Stage(object):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, pipeline_context, initial_query=None, group_by=None, logger_name='',
+    @property
+    def stage_name(self):
+        return '.'.join([__name__, self.__class__.__name__])
+
+    def __init__(self, pipeline_context, initial_query=None, group_by=None,
                  log_message='', cal_type='', image_suffix_number='00', previous_suffix_number='00',
                  previous_stage_done=None):
+        self.logger = logs.get_logger(self.stage_name)
         self.pipeline_context = pipeline_context
         self.initial_query = initial_query
         self.group_by = group_by
-        self.logger = logs.get_logger(logger_name)
         self.log_message = log_message
         self.cal_type = cal_type
         self.image_suffix_number = image_suffix_number
@@ -41,7 +47,8 @@ class Stage(object):
         self.previous_image_suffix = previous_suffix_number
 
     def select_input_images(self, telescope, epoch):
-        return dbs.select_input_images(telescope, epoch, self.initial_query, self.previous_stage_done, self.group_by)
+        return dbs.select_input_images(telescope, epoch, self.initial_query,
+                                       self.previous_stage_done, self.group_by)
 
     # By default don't return any output images
     def get_output_images(self, telescope, epoch):
@@ -79,13 +86,13 @@ class Stage(object):
 
 
 class MakeCalibrationImage(Stage):
-    def __init__(self, pipeline_context, initial_query=None, group_by=None, logger_name='',
+    def __init__(self, pipeline_context, initial_query=None, group_by=None,
                  log_message='', cal_type='', previous_suffix_number='00', previous_stage_done=None):
 
         query = initial_query & (dbs.Image.obstype == cal_type)
         super(MakeCalibrationImage, self).__init__(pipeline_context,
                                                    initial_query=query, group_by=group_by,
-                                                   logger_name=logger_name, log_message=log_message, cal_type=cal_type,
+                                                   log_message=log_message, cal_type=cal_type,
                                                    previous_suffix_number=previous_suffix_number,
                                                    previous_stage_done=previous_stage_done)
 
@@ -136,10 +143,10 @@ class MakeCalibrationImage(Stage):
 
 class ApplyCalibration(Stage):
     def __init__(self, pipeline_context, initial_query=None, group_by=None,
-                 logger_name='', log_message='', cal_type='', db_session=None, image_suffix_number='00',
+                 log_message='', cal_type='', image_suffix_number='00',
                  previous_suffix_number='00', previous_stage_done=None):
         super(ApplyCalibration, self).__init__(pipeline_context,
-                                               initial_query=initial_query, group_by=group_by, logger_name=logger_name,
+                                               initial_query=initial_query, group_by=group_by,
                                                log_message=log_message, cal_type=cal_type,
                                                image_suffix_number=image_suffix_number,
                                                previous_suffix_number=previous_suffix_number,

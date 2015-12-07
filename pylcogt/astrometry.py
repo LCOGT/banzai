@@ -19,7 +19,7 @@ class Astrometry(Stage):
         astrometry_query = initial_query & (dbs.Image.obstype=='EXPOSE')
 
         super(Astrometry, self).__init__(pipeline_context,
-                                   initial_query=astrometry_query, logger_name='Astrometry', cal_type='wcs',
+                                   initial_query=astrometry_query, cal_type='wcs',
                                          previous_stage_done=dbs.Image.flat_done, previous_suffix_number='25',
                                          image_suffix_number='90')
         self.log_message = 'Solving for the WCS of images from {instrument} at {site} on {epoch}.'

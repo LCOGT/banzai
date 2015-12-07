@@ -17,7 +17,7 @@ class Catalog(Stage):
         catalog_query = initial_query & (dbs.Image.obstype == 'EXPOSE')
 
         super(Catalog, self).__init__(pipeline_context, initial_query=catalog_query,
-                                      logger_name='Catalog', cal_type='catalog', previous_stage_done=dbs.Image.wcs_done,
+                                      cal_type='catalog', previous_stage_done=dbs.Image.wcs_done,
                                       previous_suffix_number='90')
         self.log_message = 'Generating source catalog for {instrument} at {site} on {epoch}.'
         self.group_by = None

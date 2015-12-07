@@ -10,8 +10,7 @@ from pylcogt.stages import make_output_directory
 
 __author__ = 'cmccully'
 
-logger = logs.get_logger('Trim')
-
+logger = logs.get_logger(__name__)
 
 def _trim_image(hdu):
     trimsec = fits_utils.parse_region_keyword(hdu[0].header['TRIMSEC'])
@@ -32,7 +31,6 @@ class Trim(object):
 
         self.pipeline_context = pipeline_context
         self.initial_query = trim_query
-        self.logger = logs.get_logger("Trim")
         self.cal_type = "trim"
         self.image_suffix_number = '15'
         self.previous_stage_done = dbs.Image.bias_done
@@ -48,7 +46,7 @@ class Trim(object):
 
             for image_set in image_sets:
                 tags = logs.image_config_to_tags(image_set[0], telescope, epoch)
-                self.logger.info(self.log_message, extra=tags)
+                logger.info(self.log_message, extra=tags)
                 self.do_stage(image_set)
 
         return

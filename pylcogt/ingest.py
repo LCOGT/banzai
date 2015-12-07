@@ -136,7 +136,7 @@ class Ingest(Stage):
     def __init__(self, pipeline_context, initial_query):
         log_message = 'Ingesting data'
         super(Ingest, self).__init__(pipeline_context,
-                                     initial_query=initial_query, logger_name='Ingest', log_message=log_message,
+                                     initial_query=initial_query, log_message=log_message,
                                      image_suffix_number='03', previous_stage_done=None)
 
 #    @metric_timer('ingest')

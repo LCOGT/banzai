@@ -16,7 +16,7 @@ class MakeBias(MakeCalibrationImage):
     def __init__(self, pipeline_context, initial_query):
 
         super(MakeBias, self).__init__(pipeline_context,
-                                       initial_query=initial_query, logger_name='Bias',
+                                       initial_query=initial_query,
                                        cal_type='bias', previous_suffix_number='03',
                                        previous_stage_done=dbs.Image.ingest_done)
         self.log_message = 'Creating {binning} bias frame for {instrument} on {epoch}.'
@@ -91,7 +91,7 @@ class SubtractBias(ApplyCalibration):
         bias_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
         super(SubtractBias, self).__init__(pipeline_context,
-                                           initial_query=bias_query, logger_name='Bias', cal_type='bias',
+                                           initial_query=bias_query, cal_type='bias',
                                            image_suffix_number='10', previous_suffix_number='03',
                                            previous_stage_done=dbs.Image.ingest_done)
         self.log_message = 'Subtracting bias frame'
