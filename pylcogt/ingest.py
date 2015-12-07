@@ -133,22 +133,21 @@ def ingest_single_image(logger_name, processed_path, image_suffix_number, raw_im
 
 class Ingest(Stage):
 
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, pipeline_context, initial_query):
         log_message = 'Ingesting data'
-        super(Ingest, self).__init__(processed_path=processed_path,
+        super(Ingest, self).__init__(pipeline_context,
                                      initial_query=initial_query, logger_name='Ingest', log_message=log_message,
                                      image_suffix_number='03', previous_stage_done=None)
-        self.raw_path = raw_path
 
 #    @metric_timer('ingest')
     def do_stage(self, raw_image_list):
         for image in raw_image_list:
-            ingest_single_image('Ingest', self.processed_path, self.image_suffix_number, image)
+            ingest_single_image('Ingest', self.pipeline_context.processed_path, self.image_suffix_number, image)
 
         return
 
     def select_input_images(self, telescope, epoch):
-        search_path = os.path.join(self.raw_path, telescope.site,
+        search_path = os.path.join(self.pipeline_context.raw_path, telescope.site,
                                    telescope.instrument, epoch)
 
         if os.path.exists(os.path.join(search_path, 'preproc')):

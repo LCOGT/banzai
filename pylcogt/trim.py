@@ -27,10 +27,10 @@ def _trim_image(hdu):
 
 
 class Trim(object):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, pipeline_context, initial_query):
         trim_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
-        self.processed_path = processed_path
+        self.pipeline_context = pipeline_context
         self.initial_query = trim_query
         self.logger = logs.get_logger("Trim")
         self.cal_type = "trim"
@@ -42,7 +42,7 @@ class Trim(object):
     def run(self, epoch_list, telescope_list):
 
         for epoch, telescope in itertools.product(epoch_list, telescope_list):
-            make_output_directory(self.processed_path, epoch, telescope)
+            make_output_directory(self.pipeline_context.processed_path, epoch, telescope)
             image_sets, _ = dbs.select_input_images(telescope, epoch, self.initial_query,
                                                     self.previous_stage_done, None)
 

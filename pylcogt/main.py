@@ -32,6 +32,11 @@ reduction_stages['divide_flat'] = flats.DivideFlat
 reduction_stages['solve_wcs'] = astrometry.Astrometry
 reduction_stages['make_catalog'] = catalog.Catalog
 
+class PipelineContext(object):
+    def __init__(self, args):
+        self.processed_path = args.processed_path
+        self.raw_path = args.raw_path
+
 
 def get_telescope_info():
     """
@@ -169,9 +174,9 @@ def main(cmd_args=None):
     logger = logs.get_logger('Main')
     logger.info('Starting pylcogt:')
 
+    pipeline_context = PipelineContext(args)
     for stage in stages_to_do:
-        stage_to_run = reduction_stages[stage](args.raw_path, args.processed_path,
-                                               image_query)
+        stage_to_run = reduction_stages[stage](pipeline_context, image_query)
         stage_to_run.run(epoch_list, telescope_list)
 
     # Clean up

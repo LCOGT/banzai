@@ -13,9 +13,9 @@ __author__ = 'cmccully'
 
 
 class MakeBias(MakeCalibrationImage):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, pipeline_context, initial_query):
 
-        super(MakeBias, self).__init__(processed_path=processed_path,
+        super(MakeBias, self).__init__(pipeline_context,
                                        initial_query=initial_query, logger_name='Bias',
                                        cal_type='bias', previous_suffix_number='03',
                                        previous_stage_done=dbs.Image.ingest_done)
@@ -86,11 +86,11 @@ class MakeBias(MakeCalibrationImage):
 
 
 class SubtractBias(ApplyCalibration):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, pipeline_context, initial_query):
 
         bias_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
-        super(SubtractBias, self).__init__(processed_path=processed_path,
+        super(SubtractBias, self).__init__(pipeline_context,
                                            initial_query=bias_query, logger_name='Bias', cal_type='bias',
                                            image_suffix_number='10', previous_suffix_number='03',
                                            previous_stage_done=dbs.Image.ingest_done)

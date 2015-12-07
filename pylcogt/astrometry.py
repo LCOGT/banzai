@@ -14,11 +14,11 @@ class Astrometry(Stage):
           '--code-tolerance 0.003 --pixel-error 20 -d 1-200 ' \
           '--solved none --match none --rdls none --wcs none --corr none --overwrite {image_name}'
 
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, pipeline_context, initial_query):
 
         astrometry_query = initial_query & (dbs.Image.obstype=='EXPOSE')
 
-        super(Astrometry, self).__init__(processed_path=processed_path,
+        super(Astrometry, self).__init__(pipeline_context,
                                    initial_query=astrometry_query, logger_name='Astrometry', cal_type='wcs',
                                          previous_stage_done=dbs.Image.flat_done, previous_suffix_number='25',
                                          image_suffix_number='90')

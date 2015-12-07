@@ -13,9 +13,9 @@ __author__ = 'cmccully'
 
 
 class MakeDark(MakeCalibrationImage):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, pipeline_context, initial_query):
 
-        super(MakeDark, self).__init__(processed_path=processed_path,
+        super(MakeDark, self).__init__(pipeline_context,
                                        initial_query=initial_query, logger_name='Dark',
                                        cal_type='dark', previous_stage_done=dbs.Image.trim_done,
                                        previous_suffix_number='15')
@@ -62,11 +62,11 @@ class MakeDark(MakeCalibrationImage):
 
 
 class SubtractDark(ApplyCalibration):
-    def __init__(self, raw_path, processed_path, initial_query):
+    def __init__(self, pipeline_context, initial_query):
 
         dark_query = initial_query & (dbs.Image.obstype.in_(('SKYFLAT', 'EXPOSE')))
 
-        super(SubtractDark, self).__init__(processed_path=processed_path,
+        super(SubtractDark, self).__init__(pipeline_context,
                                            initial_query=dark_query, logger_name='Dark', cal_type='dark',
                                            previous_stage_done=dbs.Image.trim_done, previous_suffix_number='15',
                                            image_suffix_number='20')
