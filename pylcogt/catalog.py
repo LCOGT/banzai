@@ -19,7 +19,6 @@ class Catalog(Stage):
         super(Catalog, self).__init__(pipeline_context, initial_query=catalog_query,
                                       cal_type='catalog', previous_stage_done=dbs.Image.wcs_done,
                                       previous_suffix_number='90')
-        self.log_message = 'Generating source catalog for {instrument} at {site} on {epoch}.'
         self.group_by = None
 
     def get_output_images(self, telescope, epoch):

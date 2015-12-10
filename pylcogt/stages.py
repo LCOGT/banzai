@@ -34,13 +34,12 @@ class Stage(object):
         return '.'.join([__name__, self.__class__.__name__])
 
     def __init__(self, pipeline_context, initial_query=None, group_by=None,
-                 log_message='', cal_type='', image_suffix_number='00', previous_suffix_number='00',
+                 cal_type='', image_suffix_number='00', previous_suffix_number='00',
                  previous_stage_done=None):
         self.logger = logs.get_logger(self.stage_name)
         self.pipeline_context = pipeline_context
         self.initial_query = initial_query
         self.group_by = group_by
-        self.log_message = log_message
         self.cal_type = cal_type
         self.image_suffix_number = image_suffix_number
         self.previous_stage_done = previous_stage_done
@@ -66,7 +65,7 @@ class Stage(object):
             for image_set, image_config in zip(image_sets, image_configs):
 
                 tags = logs.image_config_to_tags(image_config, telescope, epoch, self.group_by)
-                self.logger.info(self.log_message, extra=tags)
+                self.logger.info('Running {0}'.format(self.stage_name), tags)
 
                 stage_args = [image_set]
 
@@ -87,12 +86,12 @@ class Stage(object):
 
 class MakeCalibrationImage(Stage):
     def __init__(self, pipeline_context, initial_query=None, group_by=None,
-                 log_message='', cal_type='', previous_suffix_number='00', previous_stage_done=None):
+                cal_type='', previous_suffix_number='00', previous_stage_done=None):
 
         query = initial_query & (dbs.Image.obstype == cal_type)
         super(MakeCalibrationImage, self).__init__(pipeline_context,
                                                    initial_query=query, group_by=group_by,
-                                                   log_message=log_message, cal_type=cal_type,
+                                                   cal_type=cal_type,
                                                    previous_suffix_number=previous_suffix_number,
                                                    previous_stage_done=previous_stage_done)
 
@@ -143,11 +142,11 @@ class MakeCalibrationImage(Stage):
 
 class ApplyCalibration(Stage):
     def __init__(self, pipeline_context, initial_query=None, group_by=None,
-                 log_message='', cal_type='', image_suffix_number='00',
+                 cal_type='', image_suffix_number='00',
                  previous_suffix_number='00', previous_stage_done=None):
         super(ApplyCalibration, self).__init__(pipeline_context,
                                                initial_query=initial_query, group_by=group_by,
-                                               log_message=log_message, cal_type=cal_type,
+                                               cal_type=cal_type,
                                                image_suffix_number=image_suffix_number,
                                                previous_suffix_number=previous_suffix_number,
                                                previous_stage_done=previous_stage_done)

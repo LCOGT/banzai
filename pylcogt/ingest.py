@@ -134,9 +134,8 @@ def ingest_single_image(logger_name, processed_path, image_suffix_number, raw_im
 class Ingest(Stage):
 
     def __init__(self, pipeline_context):
-        log_message = 'Ingesting data'
         super(Ingest, self).__init__(pipeline_context,
-                                     initial_query=pipeline_context.main_query, log_message=log_message,
+                                     initial_query=pipeline_context.main_query,
                                      image_suffix_number='03', previous_stage_done=None)
 
 #    @metric_timer('ingest')

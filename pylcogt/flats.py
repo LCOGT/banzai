@@ -18,7 +18,6 @@ class MakeFlat(MakeCalibrationImage):
         super(MakeFlat, self).__init__(pipeline_context,
                                        initial_query=pipeline_context.main_query, previous_stage_done=dbs.Image.dark_done,
                                        cal_type='skyflat', previous_suffix_number='20')
-        self.log_message = 'Creating master flat-field frame'
         self.group_by = [dbs.Image.ccdsum, dbs.Image.filter_name]
 
     def do_stage(self, image_list, output_file, min_images=5, clobber=True):
@@ -69,7 +68,7 @@ class DivideFlat(ApplyCalibration):
                                          initial_query=flat_query, cal_type='skyflat',
                                          previous_stage_done=dbs.Image.dark_done,
                                          image_suffix_number='25', previous_suffix_number='20')
-        self.log_message = 'Dividing master flat-field frame.'
+
         self.group_by = [dbs.Image.ccdsum, dbs.Image.filter_name]
 
     def do_stage(self, image_files, output_files, master_flat_file, clobber=True):

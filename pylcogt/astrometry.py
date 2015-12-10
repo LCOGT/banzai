@@ -22,7 +22,6 @@ class Astrometry(Stage):
                                    initial_query=astrometry_query, cal_type='wcs',
                                          previous_stage_done=dbs.Image.flat_done, previous_suffix_number='25',
                                          image_suffix_number='90')
-        self.log_message = 'Solving for the WCS of images from {instrument} at {site} on {epoch}.'
         self.group_by = None
 
     def get_output_images(self, telescope, epoch):

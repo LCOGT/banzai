@@ -19,7 +19,6 @@ class MakeDark(MakeCalibrationImage):
                                        initial_query=pipeline_context.main_query,
                                        cal_type='dark', previous_stage_done=dbs.Image.trim_done,
                                        previous_suffix_number='15')
-        self.log_message = 'Creating {binning} dark frame for {instrument} on {epoch}.'
         self.group_by = [dbs.Image.ccdsum]
 
     def do_stage(self, image_list, output_file, min_images=5, clobber=True):
@@ -70,7 +69,6 @@ class SubtractDark(ApplyCalibration):
                                            initial_query=dark_query, cal_type='dark',
                                            previous_stage_done=dbs.Image.trim_done, previous_suffix_number='15',
                                            image_suffix_number='20')
-        self.log_message = 'Subtracting {binning} dark frame for {instrument} on {epoch}.'
         self.group_by = [dbs.Image.ccdsum]
 
     def do_stage(self, image_files, output_files, master_dark_file, clobber=True):
