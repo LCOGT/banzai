@@ -13,10 +13,10 @@ __author__ = 'cmccully'
 
 
 class MakeFlat(MakeCalibrationImage):
-    def __init__(self, pipeline_context, initial_query):
+    def __init__(self, pipeline_context):
 
         super(MakeFlat, self).__init__(pipeline_context,
-                                       initial_query=initial_query, previous_stage_done=dbs.Image.dark_done,
+                                       initial_query=pipeline_context.main_query, previous_stage_done=dbs.Image.dark_done,
                                        cal_type='skyflat', previous_suffix_number='20')
         self.log_message = 'Creating master flat-field frame'
         self.group_by = [dbs.Image.ccdsum, dbs.Image.filter_name]
@@ -61,9 +61,9 @@ class MakeFlat(MakeCalibrationImage):
 
 
 class DivideFlat(ApplyCalibration):
-    def __init__(self, pipeline_context, initial_query):
+    def __init__(self, pipeline_context):
 
-        flat_query = initial_query & (dbs.Image.obstype == 'EXPOSE')
+        flat_query = pipeline_context.main_query & (dbs.Image.obstype == 'EXPOSE')
 
         super(DivideFlat, self).__init__(pipeline_context,
                                          initial_query=flat_query, cal_type='skyflat',

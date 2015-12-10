@@ -26,8 +26,8 @@ def _trim_image(hdu):
 
 
 class Trim(object):
-    def __init__(self, pipeline_context, initial_query):
-        trim_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
+    def __init__(self, pipeline_context):
+        trim_query = pipeline_context.main_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
         self.pipeline_context = pipeline_context
         self.initial_query = trim_query

@@ -13,10 +13,10 @@ __author__ = 'cmccully'
 
 
 class MakeBias(MakeCalibrationImage):
-    def __init__(self, pipeline_context, initial_query):
+    def __init__(self, pipeline_context):
 
         super(MakeBias, self).__init__(pipeline_context,
-                                       initial_query=initial_query,
+                                       initial_query=pipeline_context.main_query,
                                        cal_type='bias', previous_suffix_number='03',
                                        previous_stage_done=dbs.Image.ingest_done)
         self.log_message = 'Creating {binning} bias frame for {instrument} on {epoch}.'
@@ -86,9 +86,9 @@ class MakeBias(MakeCalibrationImage):
 
 
 class SubtractBias(ApplyCalibration):
-    def __init__(self, pipeline_context, initial_query):
+    def __init__(self, pipeline_context):
 
-        bias_query = initial_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
+        bias_query = pipeline_context.main_query & (dbs.Image.obstype.in_(('DARK', 'SKYFLAT', 'EXPOSE')))
 
         super(SubtractBias, self).__init__(pipeline_context,
                                            initial_query=bias_query, cal_type='bias',

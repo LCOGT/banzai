@@ -12,9 +12,9 @@ __author__ = 'cmccully'
 
 
 class Catalog(Stage):
-    def __init__(self, pipeline_context, initial_query):
+    def __init__(self, pipeline_context):
 
-        catalog_query = initial_query & (dbs.Image.obstype == 'EXPOSE')
+        catalog_query = pipeline_context.main_query & (dbs.Image.obstype == 'EXPOSE')
 
         super(Catalog, self).__init__(pipeline_context, initial_query=catalog_query,
                                       cal_type='catalog', previous_stage_done=dbs.Image.wcs_done,

@@ -13,6 +13,7 @@ import os.path
 import contextlib
 import itertools
 
+import sqlalchemy
 from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTime, Boolean
@@ -201,6 +202,44 @@ def save_images(images):
 
     return
 
+
+def get_telescope_list(args):
+    db_session = get_session()
+    telescope_query = sqlalchemy.sql.expression.true()
+
+    if args.site != '':
+        telescope_query &= Telescope.site == args.site
+
+    if args.instrument != '':
+        telescope_query &= Telescope.instrument == args.instrument
+
+    if args.telescope != '':
+        telescope_query &= Telescope.telescope_id == args.telescope
+
+    if args.camera_type != '':
+        telescope_query &= Telescope.camera_type == args.camera_type
+
+    telescope_list = db_session.query(Telescope).filter(telescope_query).all()
+
+    db_session.close()
+    return telescope_list
+
+
+def generate_initial_query(args):
+      # Get the telescopes for which we want to reduce data.
+    db_session = get_session()
+
+    image_query = sqlalchemy.sql.expression.true()
+
+    if args.filter != '':
+        image_query &= Image.filter_name == args.filter
+
+    if args.binning != '':
+        ccdsum = args.binning.replace('x', ' ')
+        image_query &= Image.ccdsum == ccdsum
+
+    db_session.close()
+    return image_query
 
 def select_input_images(telescope, epoch, initial_query, previous_stage_done, group_by_list):
     # Select only the images we want to work on

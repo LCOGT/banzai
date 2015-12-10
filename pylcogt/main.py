@@ -36,6 +36,7 @@ class PipelineContext(object):
     def __init__(self, args):
         self.processed_path = args.processed_path
         self.raw_path = args.raw_path
+        self.main_query = dbs.generate_initial_query(args)
 
 
 def get_telescope_info():
@@ -142,41 +143,15 @@ def main(cmd_args=None):
     else:
         stages_to_do = reduction_stage_list
 
-    # Get the telescopes for which we want to reduce data.
-    db_session = dbs.get_session()
 
-    telescope_query = sqlalchemy.sql.expression.true()
-
-    if args.site != '':
-        telescope_query &= dbs.Telescope.site == args.site
-
-    if args.instrument != '':
-        telescope_query &= dbs.Telescope.instrument == args.instrument
-
-    if args.telescope != '':
-        telescope_query &= dbs.Telescope.telescope_id == args.telescope
-
-    if args.camera_type != '':
-        telescope_query &= dbs.Telescope.camera_type == args.camera_type
-
-    telescope_list = db_session.query(dbs.Telescope).filter(telescope_query).all()
-
-    image_query = sqlalchemy.sql.expression.true()
-
-    if args.filter != '':
-        image_query &= dbs.Image.filter_name == args.filter
-
-    if args.binning != '':
-        ccdsum = args.binning.replace('x', ' ')
-        image_query &= dbs.Image.ccdsum == ccdsum
-
-    db_session.close()
     logger = logs.get_logger('Main')
     logger.info('Starting pylcogt:')
 
     pipeline_context = PipelineContext(args)
+    telescope_list = dbs.get_telescope_list(args)
+
     for stage in stages_to_do:
-        stage_to_run = reduction_stages[stage](pipeline_context, image_query)
+        stage_to_run = reduction_stages[stage](pipeline_context)
         stage_to_run.run(epoch_list, telescope_list)
 
     # Clean up
