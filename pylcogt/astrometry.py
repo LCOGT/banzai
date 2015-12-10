@@ -24,11 +24,7 @@ class Astrometry(Stage):
                                          image_suffix_number='90')
         self.group_by = None
 
-    def get_output_images(self, telescope, epoch):
-        image_sets, image_configs = self.select_input_images(telescope, epoch)
-        return [image for image_set in image_sets for image in image_set]
-
-    def do_stage(self, image_files, output_files, clobber=True):
+    def do_stage(self, image_files, clobber=True):
         logger = logs.get_logger('Astrometry')
         db_session = dbs.get_session()
         for i, image in enumerate(image_files):
@@ -68,7 +64,7 @@ class Astrometry(Stage):
             else:
                 image_hdu[0].header['WCSERR'] = 4
 
-            output_filename = os.path.join(output_files[i].filepath, output_files[i].filename)
+            output_filename = os.path.join(image.filepath, image.filename)
             output_filename += self.image_suffix_number + '.fits'
             image_hdu.writeto(output_filename, clobber=clobber)
 

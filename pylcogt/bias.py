@@ -21,25 +21,25 @@ class MakeBias(MakeCalibrationImage):
                                        previous_stage_done=dbs.Image.ingest_done)
         self.group_by = [dbs.Image.ccdsum, ]
 
-    def do_stage(self, image_list, output_file, min_images=5, clobber=True):
+    def do_stage(self, images, master_bias_filename, min_images=5, clobber=True):
         # epoch = image_list[0].dayobs
         # telescope = image_list[0].telescope
         # output_file = self.get_calibration_image(epoch, telescope, image_list[0])
         logger = logs.get_logger('Bias')
-        if len(image_list) < min_images:
+        if len(images) < min_images:
             logger.warning('Not enough images to combine.')
         else:
             # Assume the files are all the same number of pixels
             # TODO: add error checking for incorrectly sized images
 
-            nx = image_list[0].naxis1
-            ny = image_list[0].naxis2
-            bias_data = np.zeros((ny, nx, len(image_list)))
+            nx = images[0].naxis1
+            ny = images[0].naxis2
+            bias_data = np.zeros((ny, nx, len(images)))
 
-            bias_level_array = np.zeros(len(image_list))
-            read_noise_array = np.zeros(len(image_list))
+            bias_level_array = np.zeros(len(images))
+            read_noise_array = np.zeros(len(images))
 
-            for i, image in enumerate(image_list):
+            for i, image in enumerate(images):
                 image_file = os.path.join(image.filepath, image.filename)
                 image_file += self.previous_image_suffix + '.fits'
                 image_data = fits.getdata(image_file)
@@ -55,7 +55,7 @@ class MakeBias(MakeCalibrationImage):
 
             master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2)
 
-            for i, image in enumerate(image_list):
+            for i, image in enumerate(images):
                 # Estimate the read noise for each image
                 read_noise = stats.robust_standard_deviation(bias_data[:, :, i] - master_bias)
 
@@ -69,19 +69,20 @@ class MakeBias(MakeCalibrationImage):
             # Save the master bias image with all of the combined images in the header
 
             header = fits.Header()
-            header['CCDSUM'] = image_list[0].ccdsum
-            header['DAY-OBS'] = str(image_list[0].dayobs)
+            header['CCDSUM'] = images[0].ccdsum
+            header['DAY-OBS'] = str(images[0].dayobs)
             header['CALTYPE'] = 'BIAS'
             header['BIASLVL'] = mean_bias_level
             header['RDNOISE'] = mean_read_noise
 
             header.add_history("Images combined to create master bias image:")
-            for image in image_list:
+            for image in images:
                 header.add_history(image.filename)
 
-            fits.writeto(output_file, master_bias, header=header, clobber=clobber)
 
-            self.save_calibration_info('bias', output_file, image_list[0])
+            fits.writeto(master_bias_filename, master_bias, header=header, clobber=clobber)
+
+            self.save_calibration_info('bias', master_bias_filename, images[0])
 
 
 class SubtractBias(ApplyCalibration):
@@ -95,7 +96,7 @@ class SubtractBias(ApplyCalibration):
                                            previous_stage_done=dbs.Image.ingest_done)
         self.group_by = [dbs.Image.ccdsum]
 
-    def do_stage(self, image_files, output_files, master_bias_file, clobber=True):
+    def do_stage(self, images, master_bias_file, clobber=True):
 
         master_bias_data = fits.getdata(master_bias_file)
         master_bias_level = float(fits.getval(master_bias_file, 'BIASLVL'))
@@ -103,7 +104,7 @@ class SubtractBias(ApplyCalibration):
         logger = logs.get_logger('Bias')
         db_session = dbs.get_session()
         # TODO Add error checking for incorrect image sizes
-        for i, image in enumerate(image_files):
+        for image in images:
             telescope = db_session.query(dbs.Telescope).filter(dbs.Telescope.id == image.telescope_id).one()
             tags = logs.image_config_to_tags(image, telescope, image.dayobs, self.group_by)
             tags['tags']['filename'] = image.filename
@@ -131,7 +132,7 @@ class SubtractBias(ApplyCalibration):
 
             master_bias_filename = os.path.basename(master_bias_file)
             header.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
-            output_filename = os.path.join(output_files[i].filepath, output_files[i].filename)
+            output_filename = os.path.join(image.filepath, image.filename)
             output_filename += self.image_suffix_number + '.fits'
             fits.writeto(output_filename, data, header=header, clobber=clobber)
             image.bias_done = True

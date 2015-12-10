@@ -21,20 +21,20 @@ class MakeDark(MakeCalibrationImage):
                                        previous_suffix_number='15')
         self.group_by = [dbs.Image.ccdsum]
 
-    def do_stage(self, image_list, output_file, min_images=5, clobber=True):
+    def do_stage(self, images, master_dark_filename, min_images=5, clobber=True):
 
         logger = logs.get_logger('Dark')
-        if len(image_list) < min_images:
+        if len(images) < min_images:
             logger.warning('Not enough images to combine.')
         else:
             # Assume the files are all the same number of pixels
             # TODO: add error checking for incorrectly sized images
 
-            nx = image_list[0].naxis1
-            ny = image_list[0].naxis2
-            dark_data = np.zeros((ny, nx, len(image_list)))
+            nx = images[0].naxis1
+            ny = images[0].naxis2
+            dark_data = np.zeros((ny, nx, len(images)))
 
-            for i, image in enumerate(image_list):
+            for i, image in enumerate(images):
                 image_file = os.path.join(image.filepath, image.filename)
                 image_file += self.previous_image_suffix + '.fits'
                 image_data = fits.getdata(image_file)
@@ -47,17 +47,17 @@ class MakeDark(MakeCalibrationImage):
             # Save the master dark image with all of the combined images in the header
 
             header = fits.Header()
-            header['CCDSUM'] = image_list[0].ccdsum
-            header['DAY-OBS'] = str(image_list[0].dayobs)
+            header['CCDSUM'] = images[0].ccdsum
+            header['DAY-OBS'] = str(images[0].dayobs)
             header['CALTYPE'] = 'DARK'
 
             header.add_history("Images combined to create master dark image:")
-            for image in image_list:
+            for image in images:
                 header.add_history(image.filename)
 
-            fits.writeto(output_file, master_dark, header=header, clobber=clobber)
+            fits.writeto(master_dark_filename, master_dark, header=header, clobber=clobber)
 
-            self.save_calibration_info('dark', output_file, image_list[0])
+            self.save_calibration_info('dark', master_dark_filename, images[0])
 
 
 class SubtractDark(ApplyCalibration):
@@ -71,7 +71,7 @@ class SubtractDark(ApplyCalibration):
                                            image_suffix_number='20')
         self.group_by = [dbs.Image.ccdsum]
 
-    def do_stage(self, image_files, output_files, master_dark_file, clobber=True):
+    def do_stage(self, images, master_dark_file, clobber=True):
 
         master_dark_data = fits.getdata(master_dark_file)
 
@@ -79,7 +79,7 @@ class SubtractDark(ApplyCalibration):
 
         db_session = dbs.get_session()
         # TODO Add error checking for incorrect image sizes
-        for i, image in enumerate(image_files):
+        for image in images:
             logger.debug('Subtracting dark for {image}'.format(image=image.filename))
             image_file = os.path.join(image.filepath, image.filename)
             image_file += self.previous_image_suffix + '.fits'
@@ -90,7 +90,7 @@ class SubtractDark(ApplyCalibration):
 
             master_dark_filename = os.path.basename(master_dark_file)
             header.add_history('Master Dark: {dark_file}'.format(dark_file=master_dark_filename))
-            output_filename = os.path.join(output_files[i].filepath, output_files[i].filename)
+            output_filename = os.path.join(image.filepath, image.filename)
             output_filename += self.image_suffix_number + '.fits'
             fits.writeto(output_filename, data, header=header, clobber=clobber)
 

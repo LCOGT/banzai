@@ -21,12 +21,8 @@ class Catalog(Stage):
                                       previous_suffix_number='90')
         self.group_by = None
 
-    def get_output_images(self, telescope, epoch):
-        image_sets, image_configs = self.select_input_images(telescope, epoch)
-        image_list = [image for image_set in image_sets for image in image_set]
-        return image_list
 
-    def do_stage(self, image_files, output_files, clobber=True):
+    def do_stage(self, image_files, clobber=True):
         logger = logs.get_logger('Catalog')
         for i, image in enumerate(image_files):
             logger.debug('Extracting sources from {filename}'.format(filename=image.filename))
@@ -46,6 +42,6 @@ class Catalog(Stage):
 
             source_table = Table(sources[['x', 'y', 'flux', 'a', 'b', 'theta']],
                                  names=('X', 'Y', 'FLUX', 'a', 'b', 'THETA'))
-            output_file = os.path.join(output_files[i].filepath, output_files[i].filename)
+            output_file = os.path.join(image.filepath, image.filename)
             output_file += self.image_suffix_number + '.cat'
             source_table.write(output_file, format='ascii')

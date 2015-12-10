@@ -49,10 +49,6 @@ class Stage(object):
         return dbs.select_input_images(telescope, epoch, self.initial_query,
                                        self.previous_stage_done, self.group_by)
 
-    # By default don't return any output images
-    def get_output_images(self, telescope, epoch):
-        return None
-
     # By default we don't need to get a calibration image
     def get_calibration_image(self, epoch, telescope, image_config):
         return None
@@ -68,10 +64,6 @@ class Stage(object):
                 self.logger.info('Running {0}'.format(self.stage_name), tags)
 
                 stage_args = [image_set]
-
-                output_images = self.get_output_images(telescope, epoch)
-                if output_images is not None:
-                    stage_args.append(output_images)
 
                 master_cal_file = self.get_calibration_image(epoch, telescope, image_config)
                 if master_cal_file is not None:
@@ -106,10 +98,6 @@ class MakeCalibrationImage(Stage):
         cal_file = cal_file.format(filepath=output_directory, instrument=telescope.instrument, epoch=epoch,
                                    bin=image_config.ccdsum.replace(' ', 'x'), cal_type=self.cal_type, filter=filter_str)
         return cal_file
-
-    def get_output_images(self, telescope, epoch):
-        return None
-
     def save_calibration_info(self, cal_type, output_file, image_config):
         # Store the information into the calibration table
         # Check and see if the bias file is already in the database
@@ -151,9 +139,6 @@ class ApplyCalibration(Stage):
                                                previous_suffix_number=previous_suffix_number,
                                                previous_stage_done=previous_stage_done)
 
-    def get_output_images(self, telescope, epoch):
-        image_sets, image_configs = self.select_input_images(telescope, epoch)
-        return [image for image_set in image_sets for image in image_set]
 
     def get_calibration_image(self, epoch, telescope, image_config):
         calibration_criteria = dbs.CalibrationImage.type == self.cal_type.upper()
