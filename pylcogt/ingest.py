@@ -26,6 +26,8 @@ from . stages import Stage
 
 from functools import partial
 
+logger = logs.get_logger('Ingest')
+
 __author__ = 'cmccully'
 
 
@@ -40,11 +42,11 @@ def header_to_database(image, image_field, header, header_keyword, float_type=Fa
 
 
 # This can't be a class method if we want to use multiprocessing... Stupid python multiprocessing...
-def ingest_single_image(logger_name, processed_path, image_suffix_number, raw_image_file):
+def ingest_single_image(raw_path, raw_image):
 
     db_session = dbs.get_session()
-    logger = logs.get_logger(logger_name)
-    image_filename = os.path.basename(raw_image_file)
+
+    image_filename = os.path.basename(raw_image.filename())
 
     # Check and see if the filename is already in the database
     image_query = db_session.query(dbs.Image)
@@ -58,10 +60,10 @@ def ingest_single_image(logger_name, processed_path, image_suffix_number, raw_im
         # In principle we could just skip this, but this should be fast
         image = image_query[0]
 
-    image.rawpath = os.path.dirname(raw_image_file)
+    image.rawpath = raw_path
 
     # Get the fits header of the raw frame
-    image_header = fits.getheader(raw_image_file)
+    image_header = raw_image[0].header
 
     # Get the telescope
     telescope_query = dbs.Telescope.instrument == image_header["INSTRUME"]
@@ -109,9 +111,6 @@ def ingest_single_image(logger_name, processed_path, image_suffix_number, raw_im
     # Strip off the 00.fits
     image.filename = image_filename[:-7]
 
-    image.filepath = os.path.join(processed_path, telescope.site,
-                                  telescope.instrument, image.dayobs.replace('-', ''))
-
     image.ingest_done = True
 
     # Because we are ingesting, group_by can just be none.
@@ -122,37 +121,19 @@ def ingest_single_image(logger_name, processed_path, image_suffix_number, raw_im
 
     db_session.add(image)
 
-    # Copy the file into place
-    shutil.copy(os.path.join(image.rawpath, image.rawfilename),
-                os.path.join(image.filepath, image.filename + image_suffix_number + '.fits'))
-
     # Write out to the database
     db_session.commit()
     db_session.close()
+    return raw_image
 
 
 class Ingest(Stage):
 
     def __init__(self, pipeline_context):
-        super(Ingest, self).__init__(pipeline_context,
-                                     initial_query=pipeline_context.main_query,
-                                     image_suffix_number='03', previous_stage_done=None)
+        super(Ingest, self).__init__(pipeline_context)
 
 #    @metric_timer('ingest')
-    def do_stage(self, raw_image_list):
-        for image in raw_image_list:
-            ingest_single_image('Ingest', self.pipeline_context.processed_path, self.image_suffix_number, image)
+    def do_stage(self, images):
+        return [ingest_single_image(self.pipeline_context.rawpath, image) for image in images]
 
-        return
 
-    def select_input_images(self, telescope, epoch):
-        search_path = os.path.join(self.pipeline_context.raw_path, telescope.site,
-                                   telescope.instrument, epoch)
-
-        if os.path.exists(os.path.join(search_path, 'preproc')):
-            search_path = os.path.join(search_path, 'preproc')
-        else:
-            search_path = os.path.join(search_path, 'raw')
-
-        # return the list of file and a dummy image configuration
-        return [glob.glob(search_path + '/*.fits')], [dbs.Image()]

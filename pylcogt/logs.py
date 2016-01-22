@@ -52,13 +52,9 @@ def stop_logging():
         listener.stop()
 
 
-def image_config_to_tags(image, telescope, epoch, group_by=None, image_type=None, filename=None):
-    tags = {'tags': {'instrument': telescope.instrument,
-                     'epoch': date_utils.epoch_date_to_string(epoch),
-                     'site': telescope.site}}
-
-    if group_by is not None:
-        for column in group_by:
-            tags['tags'][column.name] = getattr(image, column.name)
+def image_config_to_tags(image_config):
+    tags = {'tags': {'instrument': image_config[1],
+                     'epoch': date_utils.epoch_date_to_string(image_config[2]),
+                     'site': image_config[0]}}
 
     return tags

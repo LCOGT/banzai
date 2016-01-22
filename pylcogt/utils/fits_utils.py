@@ -42,3 +42,4 @@ def parse_region_keyword(keyword_value):
         y_slice = split_slice(pixel_sections[1])
         pixel_slices = (y_slice, x_slice)
     return pixel_slices
+

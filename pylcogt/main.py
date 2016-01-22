@@ -12,31 +12,25 @@ from __future__ import absolute_import, print_function, division
 import collections
 import argparse
 import sqlalchemy
+import os
+from glob import glob
+from astropy.io import fits
 from .utils import date_utils
 from multiprocessing import Pool
 from . import ingest
 from . import dbs, logs
-from . import bias, trim, dark, flats, astrometry, catalog
+from . import bias #, trim, dark, flats, astrometry, catalog
 
 
 # A dictionary converting the string input by the user into the corresponding Python object
-reduction_stages = collections.OrderedDict()
-reduction_stages['ingest'] = ingest.Ingest
-reduction_stages['make_bias'] = bias.MakeBias
-reduction_stages['subtract_bias'] = bias.SubtractBias
-reduction_stages['trim'] = trim.Trim
-reduction_stages['make_dark'] = dark.MakeDark
-reduction_stages['subtract_dark'] = dark.SubtractDark
-reduction_stages['make_flat'] = flats.MakeFlat
-reduction_stages['divide_flat'] = flats.DivideFlat
-reduction_stages['solve_wcs'] = astrometry.Astrometry
-reduction_stages['make_catalog'] = catalog.Catalog
+reduction_stages = [bias.BiasMaker]
 
+logger = logs.get_logger(__name__)
 class PipelineContext(object):
     def __init__(self, args):
         self.processed_path = args.processed_path
         self.raw_path = args.raw_path
-        self.main_query = dbs.generate_initial_query(args)
+        #self.main_query = dbs.generate_initial_query(args)
 
 
 def get_telescope_info():
@@ -85,8 +79,6 @@ def main(cmd_args=None):
     """
     Main driver script for PyLCOGT. This is a console entry point.
     """
-    import sys
-    print(sys.argv)
     # Get the available instruments/telescopes
     all_sites, all_instruments, all_telescope_ids, all_camera_types = get_telescope_info()
 
@@ -100,9 +92,6 @@ def main(cmd_args=None):
                         help='Site code (e.g. elp)')
     parser.add_argument("--camera-type", default='', type=str, choices=all_camera_types,
                         help='Camera type (e.g. sbig)')
-
-    parser.add_argument("--stage", default='', choices=reduction_stages.keys(),
-                        help='Reduction stages to run')
 
     parser.add_argument("--raw-path", default='/archive/engineering',
                         help='Top level directory where the raw data is stored')
@@ -131,28 +120,93 @@ def main(cmd_args=None):
     # Get a list of dayobs to reduce
     epoch_list = date_utils.parse_epoch_string(args.epoch)
 
-    reduction_stage_list = [i for i in reduction_stages.keys()]
-
-    if args.stage != '':
-        if '-' in args.stage:
-
-            starting_stage, ending_stage = args.stage.split('-')
-            stages_to_do = reduction_stage_list[starting_stage: ending_stage + 1]
-        else:
-            stages_to_do = [args.stage]
-    else:
-        stages_to_do = reduction_stage_list
+    stages_to_do = [i for i in reduction_stages.keys()]
 
 
     logger = logs.get_logger('Main')
     logger.info('Starting pylcogt:')
 
     pipeline_context = PipelineContext(args)
-    telescope_list = dbs.get_telescope_list(args)
+
+    image_list = make_image_list(pipeline_context)
+
+    images = read_images(image_list)
 
     for stage in stages_to_do:
         stage_to_run = reduction_stages[stage](pipeline_context)
-        stage_to_run.run(epoch_list, telescope_list)
+        images = stage_to_run.run(images)
+
+    # Save the output images
+    save_images(images)
 
     # Clean up
     logs.stop_logging()
+
+def make_master_bias(cmd_args=None):
+    """
+    Main driver script for PyLCOGT. This is a console entry point.
+    """
+    # Get the available instruments/telescopes
+
+    parser = argparse.ArgumentParser(description='Make master calibration frames from LCOGT imaging data.')
+    parser.add_argument("--raw-path", default='/archive/engineering',
+                        help='Top level directory where the raw data is stored')
+    parser.add_argument("--processed-path", default='/nethome/supernova/pylcogt',
+                        help='Top level directory where the processed data will be stored')
+    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
+                                                                'critical', 'fatal', 'error'])
+
+    parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
+    args = parser.parse_args(cmd_args)
+
+    logs.start_logging(log_level=args.log_level)
+
+    stages_to_do = [bias.BiasMaker]
+
+
+    logger.info('Making master calibration frames:')
+
+    pipeline_context = PipelineContext(args)
+
+    image_list = make_image_list(pipeline_context)
+
+    images = read_images(image_list)
+
+    for stage in stages_to_do:
+        stage_to_run = stage(pipeline_context)
+        images = stage_to_run.run(images)
+
+    # Clean up
+    logs.stop_logging()
+
+def read_images(image_list):
+
+    return [Image(filename) for filename in image_list]
+
+def save_images(pipeline_context, images):
+    for image in images:
+        image_filename = image[0].header['ORIGNAME'].replace('00.fits', '90.fits')
+        filepath = os.path.join(pipeline_context.processed_path, image_filename)
+        image.writeto(filepath)
+
+def make_image_list(pipeline_context):
+
+    search_path = os.path.join(pipeline_context.raw_path)
+
+    # return the list of file and a dummy image configuration
+    return glob(search_path + '/*.fits')
+
+class Image(object):
+    def __init__(self, filename):
+        hdu = fits.open(filename, 'readonly')
+        self.data = hdu[0].data
+        self.header = hdu[0].header
+        self.site = hdu[0].header['SITEID']
+        self.instrument = hdu[0].header['INSTRUME']
+        self.epoch = hdu[0].header['DAY-OBS']
+        self.nx = hdu[0].header['NAXIS1']
+        self.ny = hdu[0].header['NAXIS2']
+        self.filename = filename
+        self.ccdsum = hdu[0].header['CCDSUM']
+        self.filter = hdu[0].header['FILTER']
+        self.telescope_id = dbs.get_telescope_id(self.site, self.instrument)

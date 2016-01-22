@@ -16,10 +16,9 @@ logger = logs.get_logger(__name__)
 __author__ = 'cmccully'
 
 
-def make_output_directory(processed_path, epoch, telescope):
+def make_output_directory(pipeline_context, image_config):
     # Create output directory if necessary
-    output_directory = os.path.join(processed_path, telescope.site,
-                                    telescope.instrument, epoch)
+    output_directory = os.path.join(pipeline_context.processed_path)
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
@@ -33,71 +32,49 @@ class Stage(object):
     def stage_name(self):
         return '.'.join([__name__, self.__class__.__name__])
 
-    def __init__(self, pipeline_context, initial_query=None, group_by=None,
-                 cal_type='', image_suffix_number='00', previous_suffix_number='00',
-                 previous_stage_done=None):
+    @abc.abstractproperty
+    def group_by_keywords(self):
+        pass
+
+    def __init__(self, pipeline_context):
         self.logger = logs.get_logger(self.stage_name)
         self.pipeline_context = pipeline_context
-        self.initial_query = initial_query
-        self.group_by = group_by
-        self.cal_type = cal_type
-        self.image_suffix_number = image_suffix_number
-        self.previous_stage_done = previous_stage_done
-        self.previous_image_suffix = previous_suffix_number
 
-    def select_input_images(self, telescope, epoch):
-        return dbs.select_input_images(telescope, epoch, self.initial_query,
-                                       self.previous_stage_done, self.group_by)
+    def get_grouping(self, image):
+        grouping_criteria = [image.site, image.instrument, image.epoch]
+        if self.group_by_keywords:
+            grouping_criteria += [image.header[keyword] for keyword in self.group_by_keywords]
+        return grouping_criteria
 
-    # By default we don't need to get a calibration image
-    def get_calibration_image(self, epoch, telescope, image_config):
-        return None
-
-    def run(self, epoch_list, telescope_list):
-        for epoch, telescope in itertools.product(epoch_list, telescope_list):
-            make_output_directory(self.pipeline_context.processed_path, epoch, telescope)
-            image_sets, image_configs = self.select_input_images(telescope, epoch)
-
-            for image_set, image_config in zip(image_sets, image_configs):
-
-                tags = logs.image_config_to_tags(image_config, telescope, epoch, self.group_by)
-                self.logger.info('Running {0}'.format(self.stage_name), tags)
-
-                stage_args = [image_set]
-
-                master_cal_file = self.get_calibration_image(epoch, telescope, image_config)
-                if master_cal_file is not None:
-                    stage_args.append(master_cal_file)
-
-                self.do_stage(*stage_args)
+    def run(self, images):
+        for image_config, image_set in itertools.groupby(images, self.get_grouping):
+            make_output_directory(self.pipeline_context, image_config)
+            tags = logs.image_config_to_tags(image_config)
+            self.logger.info('Running {0}'.format(self.stage_name), extra=tags)
+            self.do_stage(list(image_set))
 
     @abc.abstractmethod
-    def do_stage(self, input_images):
+    def do_stage(self, images):
         pass
 
 
-class MakeCalibrationImage(Stage):
-    def __init__(self, pipeline_context, initial_query=None, group_by=None,
-                cal_type='', previous_suffix_number='00', previous_stage_done=None):
+class CalibrationMaker(Stage):
+    def __init__(self, pipeline_context):
+        super(CalibrationMaker, self).__init__(pipeline_context)
 
-        query = initial_query & (dbs.Image.obstype == cal_type)
-        super(MakeCalibrationImage, self).__init__(pipeline_context,
-                                                   initial_query=query, group_by=group_by,
-                                                   cal_type=cal_type,
-                                                   previous_suffix_number=previous_suffix_number,
-                                                   previous_stage_done=previous_stage_done)
-
-    def get_calibration_image(self, epoch, telescope, image_config):
-        output_directory = os.path.join(self.pipeline_context.processed_path, telescope.site, telescope.instrument, epoch)
+    def get_calibration_filename(self, image):
+        output_directory = os.path.join(self.pipeline_context.processed_path)
         cal_file = '{filepath}/{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
-        if dbs.Image.filter_name in self.group_by:
-            filter_str = '_{filter}'.format(filter=image_config.filter_name)
+        if 'filter' in self.group_by_keywords:
+            filter_str = '_{filter}'.format(filter=image.filter)
         else:
             filter_str = ''
 
-        cal_file = cal_file.format(filepath=output_directory, instrument=telescope.instrument, epoch=epoch,
-                                   bin=image_config.ccdsum.replace(' ', 'x'), cal_type=self.cal_type, filter=filter_str)
+        cal_file = cal_file.format(filepath=output_directory, instrument=image.instrument,
+                                   epoch=image.epoch, bin=image.ccdsum.replace(' ', 'x'),
+                                   cal_type=image.header['OBSTYPE'].lower(), filter=filter_str)
         return cal_file
+
     def save_calibration_info(self, cal_type, output_file, image_config):
         # Store the information into the calibration table
         # Check and see if the bias file is already in the database
@@ -115,9 +92,9 @@ class MakeCalibrationImage(Stage):
             # In principle we could just skip this, but this should be fast
             calibration_image = image_query[0]
 
-        calibration_image.dayobs = image_config.dayobs
+        calibration_image.dayobs = image_config.epoch
         calibration_image.ccdsum = image_config.ccdsum
-        calibration_image.filter_name = image_config.filter_name
+        calibration_image.filter_name = image_config.filter
         calibration_image.telescope_id = image_config.telescope_id
         calibration_image.type = cal_type.upper()
         calibration_image.filename = output_filename
@@ -129,18 +106,11 @@ class MakeCalibrationImage(Stage):
 
 
 class ApplyCalibration(Stage):
-    def __init__(self, pipeline_context, initial_query=None, group_by=None,
-                 cal_type='', image_suffix_number='00',
-                 previous_suffix_number='00', previous_stage_done=None):
-        super(ApplyCalibration, self).__init__(pipeline_context,
-                                               initial_query=initial_query, group_by=group_by,
-                                               cal_type=cal_type,
-                                               image_suffix_number=image_suffix_number,
-                                               previous_suffix_number=previous_suffix_number,
-                                               previous_stage_done=previous_stage_done)
+    def __init__(self, pipeline_context):
+        super(ApplyCalibration, self).__init__(pipeline_context)
 
 
-    def get_calibration_image(self, epoch, telescope, image_config):
+    def get_calibration_filename(self, epoch, telescope, image_config):
         calibration_criteria = dbs.CalibrationImage.type == self.cal_type.upper()
         calibration_criteria &= dbs.CalibrationImage.telescope_id == telescope.id
 

@@ -183,6 +183,8 @@ def populate_telescope_table(db_address=_DEFAULT_DB):
                              camera_type='spectral'))
     db_session.add(Telescope(site='ogg', telescope_id='2m0-01', instrument='em01',
                              camera_type='merope'))
+    db_session.add(Telescope(site='elp', telescope_id='1m0-08', instrument='fl05',
+                             camera_type='sinistro'))
     db_session.commit()
     db_session.close()
 
@@ -288,5 +290,9 @@ def select_input_images(telescope, epoch, initial_query, previous_stage_done, gr
     db_session.close()
     return input_image_list, config_list
 
-def group_input_images():
-    return
+def get_telescope_id(site, instrument):
+    # TODO:  This dies if the telescope is not in the telescopes table. Maybe ping the configdb?
+    db_session = get_session()
+    criteria = (Telescope.site == site) & (Telescope.instrument == instrument)
+    telescope = db_session.query(Telescope).filter(criteria).first()
+    return telescope.id
