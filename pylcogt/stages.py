@@ -75,35 +75,6 @@ class CalibrationMaker(Stage):
                                    cal_type=image.header['OBSTYPE'].lower(), filter=filter_str)
         return cal_file
 
-    def save_calibration_info(self, cal_type, output_file, image_config):
-        # Store the information into the calibration table
-        # Check and see if the bias file is already in the database
-        db_session = dbs.get_session()
-        image_query = db_session.query(dbs.CalibrationImage)
-        output_filename = os.path.basename(output_file)
-        image_query = image_query.filter(dbs.CalibrationImage.filename == output_filename)
-        image_query = image_query.all()
-
-        if len(image_query) == 0:
-            # Create a new row
-            calibration_image = dbs.CalibrationImage()
-        else:
-            # Otherwise update the existing data
-            # In principle we could just skip this, but this should be fast
-            calibration_image = image_query[0]
-
-        calibration_image.dayobs = image_config.epoch
-        calibration_image.ccdsum = image_config.ccdsum
-        calibration_image.filter_name = image_config.filter
-        calibration_image.telescope_id = image_config.telescope_id
-        calibration_image.type = cal_type.upper()
-        calibration_image.filename = output_filename
-        calibration_image.filepath = os.path.dirname(output_file)
-
-        db_session.add(calibration_image)
-        db_session.commit()
-        db_session.close()
-
 
 class ApplyCalibration(Stage):
     def __init__(self, pipeline_context):

@@ -5,11 +5,32 @@ import numpy as np
 import os.path
 
 from .utils import stats, fits_utils
-from . import dbs
+from pylcogt import dbs
 from . import logs
 from .stages import CalibrationMaker, ApplyCalibration
 
 __author__ = 'cmccully'
+
+
+def check_image_homogeneity(images):
+    for attribute in ('nx', 'ny', 'ccdsum', 'epoch'):
+        if len({getattr(image, attribute) for image in images}) > 1:
+            raise InhomogenousSetException('Images have different {}s'.format(attribute))
+    return images[0]
+
+
+def create_master_bias_header(images, mean_bias_level):
+    header = fits.Header()
+    header['CCDSUM'] = images[0].ccdsum
+    header['DAY-OBS'] = str(images[0].epoch)
+    header['CALTYPE'] = 'BIAS'
+    header['BIASLVL'] = mean_bias_level
+
+    header.add_history("Images combined to create master bias image:")
+    for image in images:
+        header.add_history(image.filename)
+    return header
+
 
 class BiasMaker(CalibrationMaker):
     min_images = 5
@@ -27,7 +48,9 @@ class BiasMaker(CalibrationMaker):
             self.logger.warning('Not enough images to combine.')
         else:
 
-            bias_data = np.zeros((images[0].ny, images[0].nx, len(images)))
+            image_config = check_image_homogeneity(images)
+
+            bias_data = np.zeros((image_config.ny, image_config.nx, len(images)))
 
             bias_level_array = np.zeros(len(images))
 
@@ -37,37 +60,24 @@ class BiasMaker(CalibrationMaker):
                 self.logger.debug('Bias level for {file} is {bias}'.format(file=image.filename,
                                                                       bias=bias_level_array[i]))
                 # Subtract the bias level for each image
-                bias_data[:, :, i] = image.data - bias_level_array[i]
-
-                bias_data[:, :, i] = image.remove_bias()
-                def create_bias_array(self, sigma=3.5):
-                    self.bias = stats.sigma_clipped_mean(self.data, sigma)
-                def remove_bias(self):
-                    return self.data - self.bias
-
+                bias_data[:, :, i] = image.subtract(bias_level_array[i])
 
             mean_bias_level = stats.sigma_clipped_mean(bias_level_array, 3.0)
             self.logger.debug('Average bias level: {bias} ADU'.format(bias=mean_bias_level))
 
             master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2)
 
-            header = fits.Header()
-            header['CCDSUM'] = images[0].ccdsum
-            header['DAY-OBS'] = str(images[0].epoch)
-            header['CALTYPE'] = 'BIAS'
-            header['BIASLVL'] = mean_bias_level
+            header = create_master_bias_header(images, mean_bias_level)
 
-
-            header.add_history("Images combined to create master bias image:")
-            for image in images:
-                header.add_history(image.filename)
-
-            master_bias_filename = self.get_calibration_filename(images[0])
+            master_bias_filename = self.get_calibration_filename(image_config)
             fits.writeto(master_bias_filename, master_bias, header=header, clobber=True)
 
-            self.save_calibration_info('bias', master_bias_filename, images[0])
+            dbs.save_calibration_info('bias', master_bias_filename, image_config)
         return images
 
+
+class InhomogenousSetException(Exception):
+    pass
 
 def estimate_readnoise(images):
     read_noise_array = np.zeros(len(images))
@@ -85,9 +95,9 @@ def estimate_readnoise(images):
     # Save the master bias image with all of the combined images in the header
     header['RDNOISE'] = mean_read_noise
 
-class SubtractBias(ApplyCalibration):
+class BiasSubtractor(ApplyCalibration):
     def __init__(self, pipeline_context):
-        super(SubtractBias, self).__init__(pipeline_context)
+        super(BiasSubtractor, self).__init__(pipeline_context)
         self.group_by = [dbs.Image.ccdsum]
 
     def do_stage(self, images):
@@ -99,10 +109,7 @@ class SubtractBias(ApplyCalibration):
         db_session = dbs.get_session()
         # TODO Add error checking for incorrect image sizes
         for image in images:
-            telescope = db_session.query(dbs.Telescope).filter(dbs.Telescope.id == image.telescope_id).one()
-            tags = logs.image_config_to_tags(image, telescope, image.dayobs, self.group_by)
-            self.logger.debug('Subtracting bias for {image}'.format(image=image.filename), extra=tags)
-
+            self.logger.debug('Subtracting bias for {image}'.format(image=image.filename))
 
             # Subtract the overscan first if it exists
             overscan_region = fits_utils.parse_region_keyword(image[0].header.get('BIASSEC'))
@@ -112,11 +119,13 @@ class SubtractBias(ApplyCalibration):
                 # If not, subtract the master bias level
                 bias_level = master_bias_level
 
-            self.logger.debug('Bias level: {bias}'.format(bias=bias_level), extra=tags)
-            image[0].data -= bias_level
-            image[0].data -= master_bias_data
+            self.logger.debug('Bias level: {bias}'.format(bias=bias_level))
+            image.data -= bias_level
+            image.data -= master_bias_data
 
-            image[0].header['BIASLVL'] = bias_level
+            image.header['BIASLVL'] = bias_level
 
             master_bias_filename = os.path.basename(master_bias_file)
-            image[0].header.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
+            image.header.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
+
+        return images

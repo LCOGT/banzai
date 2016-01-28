@@ -35,7 +35,7 @@ def start_logging(log_level='INFO', filename=None):
     def get_process_name():
         return multiprocessing.current_process().name
 
-    formatter= LCOGTFormatter(extra_tags={'processName': get_process_name})
+    formatter = LCOGTFormatter(extra_tags={'processName': get_process_name})
     root_handler.setFormatter(formatter)
     root_handler.setLevel(getattr(logging, log_level.upper(), None))
     root_logger.addHandler(root_handler)

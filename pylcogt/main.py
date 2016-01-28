@@ -19,7 +19,7 @@ from .utils import date_utils
 from multiprocessing import Pool
 from . import ingest
 from . import dbs, logs
-from . import bias #, trim, dark, flats, astrometry, catalog
+from . import bias, dark#, trim, dark, flats, astrometry, catalog
 
 
 # A dictionary converting the string input by the user into the corresponding Python object
@@ -117,10 +117,8 @@ def main(cmd_args=None):
 
     logs.start_logging(log_level=args.log_level)
 
-    # Get a list of dayobs to reduce
-    epoch_list = date_utils.parse_epoch_string(args.epoch)
 
-    stages_to_do = [i for i in reduction_stages.keys()]
+    stages_to_do = [bias.BiasSubtractor]
 
 
     logger = logs.get_logger('Main')
@@ -129,7 +127,7 @@ def main(cmd_args=None):
     pipeline_context = PipelineContext(args)
 
     image_list = make_image_list(pipeline_context)
-
+    image_list = select_images(image_list, 'EXPOSE')
     images = read_images(image_list)
 
     for stage in stages_to_do:
@@ -169,7 +167,44 @@ def make_master_bias(cmd_args=None):
     pipeline_context = PipelineContext(args)
 
     image_list = make_image_list(pipeline_context)
+    image_list = select_images(image_list, 'BIAS')
+    images = read_images(image_list)
 
+    for stage in stages_to_do:
+        stage_to_run = stage(pipeline_context)
+        images = stage_to_run.run(images)
+
+    # Clean up
+    logs.stop_logging()
+
+def make_master_dark(cmd_args=None):
+    """
+    Main driver script for PyLCOGT. This is a console entry point.
+    """
+    # Get the available instruments/telescopes
+
+    parser = argparse.ArgumentParser(description='Make master calibration frames from LCOGT imaging data.')
+    parser.add_argument("--raw-path", default='/archive/engineering',
+                        help='Top level directory where the raw data is stored')
+    parser.add_argument("--processed-path", default='/nethome/supernova/pylcogt',
+                        help='Top level directory where the processed data will be stored')
+    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
+                                                                'critical', 'fatal', 'error'])
+
+    parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
+    args = parser.parse_args(cmd_args)
+
+    logs.start_logging(log_level=args.log_level)
+
+    stages_to_do = [bias.BiasSubtractor, dark.DarkMaker]
+
+
+    logger.info('Making master calibration frames:')
+
+    pipeline_context = PipelineContext(args)
+
+    image_list = make_image_list(pipeline_context)
+    image_list = select_images(image_list, 'DARK')
     images = read_images(image_list)
 
     for stage in stages_to_do:
@@ -196,6 +231,7 @@ def make_image_list(pipeline_context):
     # return the list of file and a dummy image configuration
     return glob(search_path + '/*.fits')
 
+
 class Image(object):
     def __init__(self, filename):
         hdu = fits.open(filename, 'readonly')
@@ -210,3 +246,13 @@ class Image(object):
         self.ccdsum = hdu[0].header['CCDSUM']
         self.filter = hdu[0].header['FILTER']
         self.telescope_id = dbs.get_telescope_id(self.site, self.instrument)
+
+    def subtract(self, value):
+        return self.data - value
+
+
+def select_images(image_list, image_type):
+    for i, image in enumerate(image_list):
+        if fits.getval(image, 'OBSTYPE') != image_type:
+            image_list.pop(i)
+    return image_list
