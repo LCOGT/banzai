@@ -214,15 +214,18 @@ def make_master_dark(cmd_args=None):
     # Clean up
     logs.stop_logging()
 
+
 def read_images(image_list):
 
     return [Image(filename) for filename in image_list]
+
 
 def save_images(pipeline_context, images):
     for image in images:
         image_filename = image[0].header['ORIGNAME'].replace('00.fits', '90.fits')
         filepath = os.path.join(pipeline_context.processed_path, image_filename)
         image.writeto(filepath)
+
 
 def make_image_list(pipeline_context):
 
@@ -255,4 +258,5 @@ def select_images(image_list, image_type):
     for i, image in enumerate(image_list):
         if fits.getval(image, 'OBSTYPE') != image_type:
             image_list.pop(i)
+    print(image_list)
     return image_list
