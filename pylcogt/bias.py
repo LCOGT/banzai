@@ -42,6 +42,10 @@ class BiasMaker(CalibrationMaker):
     def group_by_keywords(self):
         return ['ccdsum']
 
+    @property
+    def calibration_type(self):
+        return 'BIAS'
+
     def do_stage(self, images):
         if len(images) < self.min_images:
             # Do nothing
@@ -95,24 +99,31 @@ def estimate_readnoise(images):
     # Save the master bias image with all of the combined images in the header
     header['RDNOISE'] = mean_read_noise
 
+
 class BiasSubtractor(ApplyCalibration):
     def __init__(self, pipeline_context):
         super(BiasSubtractor, self).__init__(pipeline_context)
-        self.group_by = [dbs.Image.ccdsum]
+
+    @property
+    def group_by_keywords(self):
+        return ['ccdsum']
+
+    @property
+    def calibration_type(self):
+        return 'BIAS'
 
     def do_stage(self, images):
 
-        master_bias_file = self.get_calibration_image()
+        master_bias_file = self.get_calibration_filename(images[0])
         master_bias_data = fits.getdata(master_bias_file)
         master_bias_level = float(fits.getval(master_bias_file, 'BIASLVL'))
 
-        db_session = dbs.get_session()
         # TODO Add error checking for incorrect image sizes
         for image in images:
             self.logger.debug('Subtracting bias for {image}'.format(image=image.filename))
 
             # Subtract the overscan first if it exists
-            overscan_region = fits_utils.parse_region_keyword(image[0].header.get('BIASSEC'))
+            overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC'))
             if overscan_region is not None:
                 bias_level = stats.sigma_clipped_mean(image[0].data[overscan_region], 3)
             else:

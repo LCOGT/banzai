@@ -19,7 +19,14 @@ class DarkMaker(CalibrationMaker):
     def __init__(self, pipeline_context):
 
         super(DarkMaker, self).__init__(pipeline_context)
-        self.group_by = ['ccdsum']
+
+    @property
+    def group_by_keywords(self):
+        return ['ccdsum']
+
+    @property
+    def calibration_type(self):
+        return 'DARK'
 
     def do_stage(self, images):
 
@@ -42,7 +49,7 @@ class DarkMaker(CalibrationMaker):
 
             header = fits.Header()
             header['CCDSUM'] = images[0].ccdsum
-            header['DAY-OBS'] = str(images[0].dayobs)
+            header['DAY-OBS'] = str(images[0].epoch)
             header['CALTYPE'] = 'DARK'
 
             header.add_history("Images combined to create master dark image:")
@@ -52,14 +59,21 @@ class DarkMaker(CalibrationMaker):
             master_dark_filename = self.get_calibration_filename(images[0])
             fits.writeto(master_dark_filename, master_dark, header=header, clobber=True)
 
-            self.save_calibration_info('dark', master_dark_filename, images[0])
+            dbs.save_calibration_info('dark', master_dark_filename, images[0])
         return images
 
 
 class DarkSubtractor(ApplyCalibration):
     def __init__(self, pipeline_context):
         super(DarkSubtractor, self).__init__(pipeline_context)
-        self.group_by = ['ccdsum']
+
+    @property
+    def calibration_type(self):
+        return 'dark'
+
+    @property
+    def group_by_keywords(self):
+        return ['ccdsum']
 
     def do_stage(self, images,):
         master_dark_file = self.get_calibration_filename(images[0])

@@ -54,6 +54,7 @@ class Stage(object):
             tags = logs.image_config_to_tags(image_config, self.group_by_keywords)
             self.logger.info('Running {0}'.format(self.stage_name), extra=tags)
             self.do_stage(list(image_set))
+        return images
 
     @abc.abstractmethod
     def do_stage(self, images):
@@ -61,8 +62,14 @@ class Stage(object):
 
 
 class CalibrationMaker(Stage):
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self, pipeline_context):
         super(CalibrationMaker, self).__init__(pipeline_context)
+
+    @abc.abstractproperty
+    def calibration_type(self):
+        pass
 
     def get_calibration_filename(self, image):
         output_directory = os.path.join(self.pipeline_context.processed_path)
@@ -74,34 +81,43 @@ class CalibrationMaker(Stage):
 
         cal_file = cal_file.format(filepath=output_directory, instrument=image.instrument,
                                    epoch=image.epoch, bin=image.ccdsum.replace(' ', 'x'),
-                                   cal_type=image.header['OBSTYPE'].lower(), filter=filter_str)
+                                   cal_type=self.calibration_type, filter=filter_str)
         return cal_file
 
 
 class ApplyCalibration(Stage):
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
 
+    @abc.abstractproperty
+    def calibration_type(self):
+        pass
 
-    def get_calibration_filename(self, epoch, telescope, image_config):
-        calibration_criteria = dbs.CalibrationImage.type == self.cal_type.upper()
-        calibration_criteria &= dbs.CalibrationImage.telescope_id == telescope.id
+    def get_calibration_filename(self, image):
+        calibration_criteria = dbs.CalibrationImage.type == self.calibration_type.upper()
+        calibration_criteria &= dbs.CalibrationImage.telescope_id == image.telescope_id
 
-        for criteria in self.group_by:
-            group_by_field = vars(criteria)['key']
-            calibration_criteria &= getattr(dbs.CalibrationImage, group_by_field) == getattr(image_config,
-                                                                                             group_by_field)
+        for criterion in self.group_by_keywords:
+            if criterion == 'filter':
+                 calibration_criteria &= dbs.CalibrationImage.filter_name == getattr(image, criterion)
+            else:
+                calibration_criteria &= getattr(dbs.CalibrationImage, criterion) == getattr(image, criterion)
 
         db_session = dbs.get_session()
 
         calibration_query = db_session.query(dbs.CalibrationImage).filter(calibration_criteria)
-        epoch_datetime = date_utils.epoch_string_to_date(epoch)
+        epoch_datetime = date_utils.epoch_string_to_date(image.epoch)
 
         find_closest = func.DATEDIFF(epoch_datetime, dbs.CalibrationImage.dayobs)
         find_closest = func.ABS(find_closest)
 
         calibration_query = calibration_query.order_by(find_closest.asc())
         calibration_image = calibration_query.first()
-        calibration_file = os.path.join(calibration_image.filepath, calibration_image.filename)
+        if calibration_image is None:
+            calibration_file = None
+        else:
+            calibration_file = os.path.join(calibration_image.filepath, calibration_image.filename)
 
         return calibration_file

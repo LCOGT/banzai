@@ -7,94 +7,90 @@ import os.path
 from .utils import stats, fits_utils
 from . import dbs
 from . import logs
-from .stages import MakeCalibrationImage, ApplyCalibration
+from .stages import CalibrationMaker, ApplyCalibration
 
 __author__ = 'cmccully'
 
 
-class MakeFlat(MakeCalibrationImage):
+class FlatMaker(CalibrationMaker):
+
+    min_images = 5
+
     def __init__(self, pipeline_context):
 
-        super(MakeFlat, self).__init__(pipeline_context,
-                                       initial_query=pipeline_context.main_query, previous_stage_done=dbs.Image.dark_done,
-                                       cal_type='skyflat', previous_suffix_number='20')
-        self.group_by = [dbs.Image.ccdsum, dbs.Image.filter_name]
+        super(FlatMaker, self).__init__(pipeline_context)
 
-    def do_stage(self, images, master_flat_filename, min_images=5, clobber=True):
+    @property
+    def calibration_type(self):
+        return 'flat'
+    @property
+    def group_by_keywords(self):
+        return ['ccdsum', 'filter']
 
-        logger = logs.get_logger('Flat')
-        if len(images) < min_images:
-            logger.warning('Not enough images to combine.')
+    def do_stage(self, images):
+
+        if len(images) < self.min_images:
+            self.logger.warning('Not enough images to combine.')
         else:
+            master_flat_filename = self.get_calibration_filename(images[0])
             # Assume the files are all the same number of pixels
             # TODO: add error checking for incorrectly sized images
 
-            nx = images[0].naxis1
-            ny = images[0].naxis2
-            flat_data = np.zeros((ny, nx, len(images)))
+            flat_data = np.zeros((images[0].ny, images[0].nx, len(images)))
 
             for i, image in enumerate(images):
-                image_file = os.path.join(image.filepath, image.filename)
-                image_file += self.previous_image_suffix + '.fits'
-                image_data = fits.getdata(image_file)
 
-                flat_normalization = stats.mode(image_data)
-                flat_data[:, :, i] = image_data / flat_normalization
-                logger.debug('Calculating mode of {image}: mode = {mode}'.format(image=image.filename, mode=flat_normalization))
+                flat_normalization = stats.mode(image.data)
+                flat_data[:, :, i] = image.data / flat_normalization
+                self.logger.debug('Calculating mode of {image}: mode = {mode}'.format(image=image.filename, mode=flat_normalization))
             master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2)
 
             # Save the master flat field image with all of the combined images in the header
 
             header = fits.Header()
             header['CCDSUM'] = images[0].ccdsum
-            header['DAY-OBS'] = str(images[0].dayobs)
+            header['DAY-OBS'] = str(images[0].epoch)
             header['CALTYPE'] = 'SKYFLAT'
 
             header.add_history("Images combined to create master flat field image:")
             for image in images:
                 header.add_history(image.filename)
 
-            fits.writeto(master_flat_filename, master_flat, header=header, clobber=clobber)
+            fits.writeto(master_flat_filename, master_flat, header=header, clobber=True)
 
-            self.save_calibration_info('skyflat', master_flat_filename, images[0])
+            dbs.save_calibration_info('skyflat', master_flat_filename, images[0])
+
+        return images
 
 
-class DivideFlat(ApplyCalibration):
+class FlatDivider(ApplyCalibration):
     def __init__(self, pipeline_context):
 
-        flat_query = pipeline_context.main_query & (dbs.Image.obstype == 'EXPOSE')
+        super(FlatDivider, self).__init__(pipeline_context)
 
-        super(DivideFlat, self).__init__(pipeline_context,
-                                         initial_query=flat_query, cal_type='skyflat',
-                                         previous_stage_done=dbs.Image.dark_done,
-                                         image_suffix_number='25', previous_suffix_number='20')
+    @property
+    def group_by_keywords(self):
+        return ['ccdsum', 'filter']
 
-        self.group_by = [dbs.Image.ccdsum, dbs.Image.filter_name]
+    @property
+    def calibration_type(self):
+        return 'flat'
 
-    def do_stage(self, images, master_flat_file, clobber=True):
+    def do_stage(self, images):
+        master_flat_filename = self.get_calibration_filename(images[0])
+        if master_flat_filename is None:
+            self.logger.warning('No flatfield for this image configuration')
+            return images
 
-        master_flat_data = fits.getdata(master_flat_file)
+        master_flat_data = fits.getdata(master_flat_filename)
 
-        logger = logs.get_logger('Flat')
-
-        db_session = dbs.get_session()
         # TODO Add error checking for incorrect image sizes
         for image in images:
-            logger.debug('Flattening {image}'.format(image=image.filename))
-            image_file = os.path.join(image.filepath, image.filename)
-            image_file += self.previous_image_suffix + '.fits'
-            data = fits.getdata(image_file)
-            header = fits_utils.sanitizeheader(fits.getheader(image_file))
+            self.logger.debug('Flattening {image}'.format(image=image.filename))
 
-            data /= master_flat_data
+            image.data /= master_flat_data
 
             master_flat_filename = os.path.basename(master_flat_file)
             header.add_history('Master Flat: {flat_file}'.format(flat_file=master_flat_filename))
-            output_filename = os.path.join(image.filepath, image.filename)
-            output_filename += self.image_suffix_number + '.fits'
-            fits.writeto(output_filename, data, header=header, clobber=clobber)
 
-            image.flat_done = True
-            db_session.add(image)
-            db_session.commit()
-        db_session.close()
+        return images
