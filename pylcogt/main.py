@@ -32,6 +32,7 @@ class PipelineContext(object):
     def __init__(self, args):
         self.processed_path = args.processed_path
         self.raw_path = args.raw_path
+        self.post_to_archive = args.post_to_archive
         #self.main_query = dbs.generate_initial_query(args)
 
 
@@ -115,6 +116,7 @@ def main(cmd_args=None):
                         help='Number of multiprocessing cpus to use.')
 
     parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
+    parser.add_argument('--post-to-archive', default=False)
     args = parser.parse_args(cmd_args)
 
     logs.start_logging(log_level=args.log_level)
@@ -155,7 +157,7 @@ def make_master_bias(cmd_args=None):
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
-
+    parser.add_argument('--post-to-archive', default=False)
     parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
     args = parser.parse_args(cmd_args)
 
@@ -192,7 +194,7 @@ def make_master_dark(cmd_args=None):
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
-
+    parser.add_argument('--post-to-archive', default=False)
     parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
     args = parser.parse_args(cmd_args)
 
@@ -230,7 +232,7 @@ def make_master_flat(cmd_args=None):
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
-
+    parser.add_argument('--post-to-archive', default=False)
     parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
     args = parser.parse_args(cmd_args)
 
@@ -266,8 +268,8 @@ def reduce_science_frames(cmd_args=None):
     parser.add_argument("--processed-path", default='/nethome/supernova/pylcogt',
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
-                                                                'critical', 'fatal', 'error'])
-
+                                                               'critical', 'fatal', 'error'])
+    parser.add_argument('--post-to-archive', default=False)
     parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
     args = parser.parse_args(cmd_args)
 
@@ -294,8 +296,14 @@ def reduce_science_frames(cmd_args=None):
 
 
 def read_images(image_list):
-
-    return [Image(filename) for filename in image_list]
+    images = []
+    for filename in image_list:
+        try:
+            image = Image(filename)
+            images.append(image)
+        except:
+            continue
+    return images
 
 
 def save_images(pipeline_context, images):
@@ -303,7 +311,8 @@ def save_images(pipeline_context, images):
         image_filename = image.header['ORIGNAME'].replace('00.fits', '90.fits')
         filepath = os.path.join(pipeline_context.processed_path, image_filename)
         image.writeto(filepath)
-        post_to_archive_queue(filepath)
+        if pipeline_context.post_to_archive:
+            post_to_archive_queue(filepath)
 
 
 def make_image_list(pipeline_context):

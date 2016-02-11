@@ -1,9 +1,11 @@
 from astropy.io import fits
 from pylcogt.utils import date_utils
 from pylcogt import dbs
+import numpy as np
 
 class Image(object):
     def __init__(self, filename):
+
         hdu = fits.open(filename, 'readonly')
         self.data = hdu[0].data.astype(np.float)
         self.header = hdu[0].header
