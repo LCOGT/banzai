@@ -6,7 +6,7 @@ from astropy.io import fits
 
 __author__ = 'cmccully'
 
-class Astrometry(Stage):
+class WCSSolver(Stage):
     cmd = 'solve-field --crpix-center --no-verify --no-fits2fits --no-tweak ' \
           ' --radius 2.0 --ra {ra} --dec {dec} --guess-scale ' \
           '--scale-units arcsecperpix --scale-low {scale_low} --scale-high {scale_high} ' \
@@ -16,7 +16,7 @@ class Astrometry(Stage):
           '-X X -Y Y -s FLUX --width {nx} --height {ny} {catalog_name}'
 
     def __init__(self, pipeline_context):
-        super(Astrometry, self).__init__(pipeline_context)
+        super(WCSSolver, self).__init__(pipeline_context)
 
     @property
     def group_by_keywords(self):

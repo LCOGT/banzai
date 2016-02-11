@@ -19,8 +19,8 @@ from astropy.io import fits
 from .utils import date_utils
 from multiprocessing import Pool
 from . import ingest
-from . import dbs, logs
-from . import bias, dark, flats, trim # astrometry, catalog
+from pylcogt import dbs, logs
+from pylcogt import bias, dark, flats, trim, photometry, astrometry
 from pylcogt.utils.file_utils import post_to_archive_queue
 from pylcogt.utils.images import Image
 
@@ -238,7 +238,6 @@ def make_master_flat(cmd_args=None):
 
     stages_to_do = [bias.BiasSubtractor, trim.Trimmer, dark.DarkSubtractor, flats.FlatMaker]
 
-
     logger.info('Making master flat frames:')
 
     pipeline_context = PipelineContext(args)
@@ -253,6 +252,7 @@ def make_master_flat(cmd_args=None):
 
     # Clean up
     logs.stop_logging()
+
 
 def reduce_science_frames(cmd_args=None):
     """
@@ -273,8 +273,8 @@ def reduce_science_frames(cmd_args=None):
 
     logs.start_logging(log_level=args.log_level)
 
-    stages_to_do = [bias.BiasSubtractor, trim.Trimmer, dark.DarkSubtractor, flats.FlatDivider]
-
+    stages_to_do = [bias.BiasSubtractor, trim.Trimmer, dark.DarkSubtractor, flats.FlatDivider,
+                    photometry.SourceDetector, astrometry.WCSSolver]
 
     logger.info('Reducing Science Frames:')
 
