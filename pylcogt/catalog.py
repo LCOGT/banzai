@@ -13,23 +13,16 @@ __author__ = 'cmccully'
 
 class Catalog(Stage):
     def __init__(self, pipeline_context):
+        super(Catalog, self).__init__(pipeline_context)
 
-        catalog_query = pipeline_context.main_query & (dbs.Image.obstype == 'EXPOSE')
+    @property
+    def group_by_keywords(self):
+        return None
 
-        super(Catalog, self).__init__(pipeline_context, initial_query=catalog_query,
-                                      cal_type='catalog', previous_stage_done=dbs.Image.wcs_done,
-                                      previous_suffix_number='90')
-        self.group_by = None
-
-
-    def do_stage(self, image_files, clobber=True):
-        logger = logs.get_logger('Catalog')
-        for i, image in enumerate(image_files):
-            logger.debug('Extracting sources from {filename}'.format(filename=image.filename))
-            image_file = os.path.join(image.filepath, image.filename)
-            image_file += self.previous_image_suffix + '.fits'
-            hdu = fits.open(image_file)
-            data = hdu[0].data
+    def do_stage(self, images):
+        for i, image in enumerate(images):
+            self.logger.info('Extracting sources from {filename}'.format(filename=image.filename))
+            data = image.data.copy()
             try:
                 bkg = sep.Background(data)
             except ValueError:

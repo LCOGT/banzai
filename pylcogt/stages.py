@@ -81,7 +81,7 @@ class CalibrationMaker(Stage):
 
         cal_file = cal_file.format(filepath=output_directory, instrument=image.instrument,
                                    epoch=image.epoch, bin=image.ccdsum.replace(' ', 'x'),
-                                   cal_type=self.calibration_type, filter=filter_str)
+                                   cal_type=self.calibration_type.lower(), filter=filter_str)
         return cal_file
 
 

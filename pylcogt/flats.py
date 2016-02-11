@@ -8,6 +8,7 @@ from .utils import stats, fits_utils
 from . import dbs
 from . import logs
 from .stages import CalibrationMaker, ApplyCalibration
+from pylcogt.utils.file_utils import post_to_archive_queue
 
 __author__ = 'cmccully'
 
@@ -57,7 +58,7 @@ class FlatMaker(CalibrationMaker):
                 header.add_history(image.filename)
 
             fits.writeto(master_flat_filename, master_flat, header=header, clobber=True)
-
+            post_to_archive_queue(master_flat_filename)
             dbs.save_calibration_info('skyflat', master_flat_filename, images[0])
 
         return images

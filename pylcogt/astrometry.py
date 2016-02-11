@@ -15,40 +15,32 @@ class Astrometry(Stage):
           '--solved none --match none --rdls none --wcs none --corr none --overwrite {image_name}'
 
     def __init__(self, pipeline_context):
+        super(Astrometry, self).__init__(pipeline_context)
 
-        astrometry_query = pipeline_context.main_query & (dbs.Image.obstype=='EXPOSE')
+    @property
+    def group_by_keywords(self):
+        return None
 
-        super(Astrometry, self).__init__(pipeline_context,
-                                   initial_query=astrometry_query, cal_type='wcs',
-                                         previous_stage_done=dbs.Image.flat_done, previous_suffix_number='25',
-                                         image_suffix_number='90')
-        self.group_by = None
+    def do_stage(self, images):
 
-    def do_stage(self, image_files, clobber=True):
-        logger = logs.get_logger('Astrometry')
-        db_session = dbs.get_session()
-        for i, image in enumerate(image_files):
-            logger.info('Solving WCS for {filename}'.format(filename=image.filename))
+        for i, image in enumerate(images):
+            self.logger.info('Solving WCS for {filename}'.format(filename=image.filename))
+
             # Run astrometry.net
-
-            image_file = os.path.join(image.filepath, image.filename)
-            image_file += self.previous_image_suffix + '.fits'
-            output_name = image_file.replace('.fits','.wcs.fits')
+            output_name = image_file.replace('.fits', '.wcs.fits')
             command = self.cmd.format(ra=image.ra, dec=image.dec, scale_low=0.9*image.pixel_scale,
                                       scale_high=1.1*image.pixel_scale, output_name=output_name,
                                       image_name=image_file)
 
             subprocess.check_output(shlex.split(command))
 
+            # Cleanup temp files created by astrometry.net
             basename = image_file[:-5] # Split off the .fits from the image filename
             # Remove the extra temporary files
             if os.path.exists(basename + '.axy'):
                 os.remove(basename + '.axy')
             if os.path.exists(basename + '-indx.xyls'):
                 os.remove(basename + '-indx.xyls')
-
-
-            image_hdu = fits.open(image_file)
 
             if os.path.exists(output_name):
                 # Copy the WCS keywords into original image
@@ -59,16 +51,9 @@ class Astrometry(Stage):
                 for keyword in header_keywords_to_update:
                     image_hdu[0].header[keyword] = new_header[keyword]
 
-                image_hdu[0].header['WCSERR'] = 0
+                image.header['WCSERR'] = 0
 
             else:
-                image_hdu[0].header['WCSERR'] = 4
+                image.header['WCSERR'] = 4
 
-            output_filename = os.path.join(image.filepath, image.filename)
-            output_filename += self.image_suffix_number + '.fits'
-            image_hdu.writeto(output_filename, clobber=clobber)
-
-            image.wcs_done = True
-            db_session.add(image)
-            db_session.commit()
-        db_session.close()
+        return images

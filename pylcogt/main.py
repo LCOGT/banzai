@@ -21,6 +21,7 @@ from multiprocessing import Pool
 from . import ingest
 from . import dbs, logs
 from . import bias, dark, flats, trim # astrometry, catalog
+from pylcogt.utils.file_utils import post_to_archive_queue
 
 
 # A dictionary converting the string input by the user into the corresponding Python object
@@ -302,6 +303,7 @@ def save_images(pipeline_context, images):
         image_filename = image.header['ORIGNAME'].replace('00.fits', '90.fits')
         filepath = os.path.join(pipeline_context.processed_path, image_filename)
         image.writeto(filepath)
+        post_to_archive_queue(filepath)
 
 
 def make_image_list(pipeline_context):
@@ -328,6 +330,7 @@ class Image(object):
         self.telescope_id = dbs.get_telescope_id(self.site, self.instrument)
         self.obstype = hdu[0].header['OBSTYPE']
         self.exptime = float(hdu[0].header['EXPTIME'])
+        self.dateobs = date_utils.parse_date_obs(hdu[0].header['DATE-OBS'])
 
     def subtract(self, value):
         return self.data - value

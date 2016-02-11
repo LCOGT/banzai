@@ -8,6 +8,8 @@ October 2015
 from __future__ import absolute_import, print_function, division
 
 import datetime
+import numpy as np
+
 
 
 def epoch_string_to_date(epoch):
@@ -75,3 +77,25 @@ def parse_epoch_string(epoch_string):
         epoch_list = [epoch_string]
 
     return epoch_list
+
+
+def parse_date_obs(date_obs_string):
+    # Check if there is fractional seconds in the time
+    date_fractional_seconds_list = date_obs_string.split('.')
+    if len(date_fractional_seconds_list) > 1:
+        # Pad the string with zeros to include microseconds
+        date_obs_string += (6 - len(date_fractional_seconds_list[-1])) * '0'
+    else:
+        # Pad the string with zeros to include microseconds
+        date_obs_string += '.000000'
+    return datetime.datetime.strptime(date_obs_string, '%Y-%m-%dT%H:%M:%S.%f')
+
+
+def date_obs_to_string(date_obs):
+    return date_obs.strftime('%Y-%m-%dT%H:%M:%S.%f')
+
+
+def mean_date(dates):
+    time_offsets = np.array([d - min(dates) for d in dates])
+    average_offset = time_offsets.sum() / time_offsets.size
+    return min(dates) + average_offset

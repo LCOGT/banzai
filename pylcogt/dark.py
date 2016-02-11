@@ -8,6 +8,7 @@ from .utils import stats, fits_utils
 from . import dbs
 from . import logs
 from .stages import CalibrationMaker, ApplyCalibration
+from pylcogt.utils.file_utils import post_to_archive_queue
 
 __author__ = 'cmccully'
 
@@ -58,7 +59,7 @@ class DarkMaker(CalibrationMaker):
 
             master_dark_filename = self.get_calibration_filename(images[0])
             fits.writeto(master_dark_filename, master_dark, header=header, clobber=True)
-
+            post_to_archive_queue(master_dark_filename)
             dbs.save_calibration_info('dark', master_dark_filename, images[0])
         return images
 

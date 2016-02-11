@@ -1,4 +1,5 @@
 import os
+from kombu import Connection
 
 from .. import dbs
 
@@ -14,3 +15,10 @@ def make_output_directory(pipeline_context, image):
         os.makedirs(output_directory)
 
     return
+
+
+def post_to_archive_queue(image_path):
+    with Connection('amqp://guest:guest@cerberus.lco.gtn') as conn:
+        queue = conn.SimpleQueue('ingest_queue')
+        queue.put(image_path)
+        queue.close()

@@ -7,7 +7,9 @@ import os.path
 from .utils import stats, fits_utils
 from pylcogt import dbs
 from . import logs
+from pylcogt.utils import date_utils
 from .stages import CalibrationMaker, ApplyCalibration
+from pylcogt.utils.file_utils import post_to_archive_queue
 
 __author__ = 'cmccully'
 
@@ -19,12 +21,13 @@ def check_image_homogeneity(images):
     return images[0]
 
 
-def create_master_bias_header(images, mean_bias_level):
+def create_master_bias_header(images, mean_bias_level, mean_date_obs):
     header = fits.Header()
-    header['CCDSUM'] = images[0].ccdsum
-    header['DAY-OBS'] = str(images[0].epoch)
-    header['CALTYPE'] = 'BIAS'
+    for h in images[0].header.keys():
+        header[h] = images[0].header[h]
+
     header['BIASLVL'] = mean_bias_level
+    header['DATE-OBS'] = date_utils.date_obs_to_string(mean_date_obs)
 
     header.add_history("Images combined to create master bias image:")
     for image in images:
@@ -71,11 +74,14 @@ class BiasMaker(CalibrationMaker):
 
             master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2)
 
-            header = create_master_bias_header(images, mean_bias_level)
+            observation_dates = [image.dateobs for image in images]
+            mean_dateobs = date_utils.mean_date(observation_dates)
+
+            header = create_master_bias_header(images, mean_bias_level, mean_dateobs)
 
             master_bias_filename = self.get_calibration_filename(image_config)
             fits.writeto(master_bias_filename, master_bias, header=header, clobber=True)
-
+            post_to_archive_queue(master_bias_filename)
             dbs.save_calibration_info('bias', master_bias_filename, image_config)
         return images
 
@@ -110,7 +116,7 @@ class BiasSubtractor(ApplyCalibration):
 
     @property
     def calibration_type(self):
-        return 'BIAS'
+        return 'bias'
 
     def do_stage(self, images):
 
