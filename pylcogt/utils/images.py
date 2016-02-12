@@ -1,4 +1,6 @@
 from astropy.io import fits
+from astropy.coordinates import SkyCoord
+from astropy import units
 from pylcogt.utils import date_utils
 from pylcogt import dbs
 import numpy as np
@@ -23,8 +25,9 @@ class Image(object):
         self.dateobs = date_utils.parse_date_obs(hdu[0].header['DATE-OBS'])
         self.readnoise = float(hdu[0].header['RDNOISE'])
         self.catalog = None
-        self.ra = float(hdu[0].header['RA'])
-        self.dec = float(hdu[0].header['DEC'])
+        coord = SkyCoord(hdu[0].header['RA'], hdu[0].header['DEC'], unit=(units.hourangle, units.degree))
+        self.ra = coord.ra.deg
+        self.dec = coord.dec.deg
         self.pixel_scale = float(hdu[0].header['PIXSCALE'])
 
     def subtract(self, value):

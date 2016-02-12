@@ -10,7 +10,7 @@ class WCSSolver(Stage):
     cmd = 'solve-field --crpix-center --no-verify --no-fits2fits --no-tweak ' \
           ' --radius 2.0 --ra {ra} --dec {dec} --guess-scale ' \
           '--scale-units arcsecperpix --scale-low {scale_low} --scale-high {scale_high} ' \
-          '--no-plots -N none --use-sextractor ' \
+          '--no-plots -N none --use-sextractor --no-remove-lines ' \
           '--code-tolerance 0.003 --pixel-error 20 -d 1-200 ' \
           '--solved none --match none --rdls none --wcs {wcs_name} --corr none --overwrite ' \
           '-X X -Y Y -s FLUX --width {nx} --height {ny} {catalog_name}'

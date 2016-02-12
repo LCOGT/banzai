@@ -285,7 +285,7 @@ def reduce_science_frames(cmd_args=None):
     image_list = make_image_list(pipeline_context)
     image_list = select_images(image_list, 'EXPOSE')
     images = read_images(image_list)
-
+    print(len(images))
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
@@ -301,7 +301,8 @@ def read_images(image_list):
         try:
             image = Image(filename)
             images.append(image)
-        except:
+        except Exception as e:
+            logger.error(e)
             continue
     return images
 
@@ -330,7 +331,8 @@ def select_images(image_list, image_type):
         try:
             if fits.getval(filename, 'OBSTYPE') == image_type:
                 images.append(filename)
-        except:
+        except Exception as e:
+            logger.error(e)
             continue
 
     return images
