@@ -54,23 +54,23 @@ def fits_formats(format):
     :return: string: Fits type code
     """
     format_code = ''
-    if np.issubtype(format, np.bool):
+    if np.issubdtype(format, np.bool):
         format_code = 'L'
-    elif np.issubtype(format, np.int16):
+    elif np.issubdtype(format, np.int16):
         format_code = 'I'
-    elif np.issubtype(format, np.int32):
+    elif np.issubdtype(format, np.int32):
         format_code = 'J'
-    elif np.issubtype(format, np.int64):
+    elif np.issubdtype(format, np.int64):
         format_code = 'K'
-    elif np.issubtype(format, np.float32):
+    elif np.issubdtype(format, np.float32):
         format_code = 'E'
-    elif np.issubtype(format, np.float64):
+    elif np.issubdtype(format, np.float64):
         format_code = 'D'
-    elif np.issubtype(format, np.complex32):
+    elif np.issubdtype(format, np.complex32):
         format_code = 'C'
-    elif np.issubtype(format, np.complex64):
+    elif np.issubdtype(format, np.complex64):
         format_code = 'M'
-    elif np.issubtype(format, np.character):
+    elif np.issubdtype(format, np.character):
         format_code = 'A'
     return format_code
 
