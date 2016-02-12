@@ -29,6 +29,6 @@ class Image(object):
     def writeto(self, filename):
         fits.writeto(filename, self.data, self.header)
 
-    def update_image_shape(self, nx, ny):
+    def update_shape(self, nx, ny):
         self.nx = nx
         self.ny = ny
