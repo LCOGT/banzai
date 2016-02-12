@@ -21,6 +21,7 @@ class Image(object):
         self.obstype = hdu[0].header['OBSTYPE']
         self.exptime = float(hdu[0].header['EXPTIME'])
         self.dateobs = date_utils.parse_date_obs(hdu[0].header['DATE-OBS'])
+        self.readnoise = hdu[0].header['RDNOISE']
         self.catalog = None
 
     def subtract(self, value):
