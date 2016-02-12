@@ -36,7 +36,8 @@ class Image(object):
 
     def writeto(self, filename):
         table_hdu = table_to_fits(self.catalog)
-        image_hdu = fits.ImageHDU(self.data, header=self.header)
+        image_hdu = fits.PrimaryHDU(self.data, header=self.header)
+        image_hdu.header['EXTEND'] = True
         hdu_list = fits.HDUList([image_hdu, table_hdu])
         hdu_list.writeto(filename, clobber=True)
 
