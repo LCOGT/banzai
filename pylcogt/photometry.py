@@ -36,7 +36,7 @@ class SourceDetector(Stage):
 
             sources = sep.extract(data, threshold, err=error, mask=mask)
 
-            x, y, a, b, theta = sources[['x', 'y', 'a', 'b', 'theta]']]
+            x, y, a, b, theta = sources[['x', 'y', 'a', 'b', 'theta']]
 
             theta[theta > (np.pi / 2.0)] -= np.pi
             theta[theta < (-np.pi / 2.0)] += np.pi
