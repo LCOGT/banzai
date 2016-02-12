@@ -91,7 +91,7 @@ class FlatDivider(ApplyCalibration):
 
             image.data /= master_flat_data
 
-            master_flat_filename = os.path.basename(master_flat_file)
-            header.add_history('Master Flat: {flat_file}'.format(flat_file=master_flat_filename))
+            master_flat_filename = os.path.basename(master_flat_filename)
+            image.header.add_history('Master Flat: {flat_file}'.format(flat_file=master_flat_filename))
 
         return images

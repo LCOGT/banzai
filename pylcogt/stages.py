@@ -101,7 +101,7 @@ class ApplyCalibration(Stage):
 
         for criterion in self.group_by_keywords:
             if criterion == 'filter':
-                 calibration_criteria &= dbs.CalibrationImage.filter_name == getattr(image, criterion)
+                calibration_criteria &= dbs.CalibrationImage.filter_name == getattr(image, criterion)
             else:
                 calibration_criteria &= getattr(dbs.CalibrationImage, criterion) == getattr(image, criterion)
 

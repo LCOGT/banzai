@@ -24,7 +24,7 @@ class SourceDetector(Stage):
         for i, image in enumerate(images):
             self.logger.info('Extracting sources from {filename}'.format(filename=image.filename))
             data = image.data.copy()
-            error = (data + image.readnoise ** 2.0) ** 0.5
+            error = (np.abs(data) + image.readnoise ** 2.0) ** 0.5
             mask = np.zeros(data.shape)
 
             try:
