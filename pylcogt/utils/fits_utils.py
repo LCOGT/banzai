@@ -1,4 +1,7 @@
 from __future__ import absolute_import, print_function, division
+from astropy.io import fits
+import numpy as np
+
 __author__ = 'cmccully'
 
 def sanitizeheader(header):
@@ -43,3 +46,41 @@ def parse_region_keyword(keyword_value):
         pixel_slices = (y_slice, x_slice)
     return pixel_slices
 
+
+def fits_formats(format):
+    """
+    Convert a numpy data type to a fits format code
+    :param format: dtype parameter from numpy array
+    :return: string: Fits type code
+    """
+    format_code = ''
+    if np.issubtype(format, np.bool):
+        format_code = 'L'
+    elif np.issubtype(format, np.int16):
+        format_code = 'I'
+    elif np.issubtype(format, np.int32):
+        format_code = 'J'
+    elif np.issubtype(format, np.int64):
+        format_code = 'K'
+    elif np.issubtype(format, np.float32):
+        format_code = 'E'
+    elif np.issubtype(format, np.float64):
+        format_code = 'D'
+    elif np.issubtype(format, np.complex32):
+        format_code = 'C'
+    elif np.issubtype(format, np.complex64):
+        format_code = 'M'
+    elif np.issubtype(format, np.character):
+        format_code = 'A'
+    return format_code
+
+
+def table_to_fits(table):
+    """
+    Convert an astropy table to a fits binary table HDU
+    :param table: astropy table
+    :return: fits BinTableHDU
+    """
+    columns = [fits.Column(name=col.upper(), format=fits_formats(table[col].dtype),
+                           array=table[col]) for col in table.colnames]
+    return fits.BinTableHDU.from_columns(columns)

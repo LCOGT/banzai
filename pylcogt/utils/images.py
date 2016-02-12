@@ -2,6 +2,7 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
 from pylcogt.utils import date_utils
+from pylcogt.utils.file_utils import table_to_fits
 from pylcogt import dbs
 import numpy as np
 
@@ -34,8 +35,9 @@ class Image(object):
         return self.data - value
 
     def writeto(self, filename):
-        image_hdu =fits.ImageHDU(self.data, header=self.header)
-        hdu_list = fits.HDUList([image_hdu, self.catalog])
+        table_hdu = table_to_fits(self.catalog)
+        image_hdu = fits.ImageHDU(self.data, header=self.header)
+        hdu_list = fits.HDUList([image_hdu, table_hdu])
         hdu_list.writeto(filename, clobber=True)
 
     def update_shape(self, nx, ny):
