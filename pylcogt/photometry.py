@@ -32,7 +32,7 @@ class SourceDetector(Stage):
                 data = data.byteswap(True).newbyteorder()
                 bkg = sep.Background(data, bw=32, bh=32, fw=3, fh=3)
             bkg.subfrom(data)
-            threshold = 3.0 * bkg.globalrms()
+            threshold = 3.0 * bkg.globalrms
 
             sources = sep.extract(data, threshold, err=error, mask=mask)
 
