@@ -157,7 +157,7 @@ def make_master_bias(cmd_args=None):
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
-    parser.add_argument('--post-to-archive', default=False)
+    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
     parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
     args = parser.parse_args(cmd_args)
 
@@ -194,7 +194,7 @@ def make_master_dark(cmd_args=None):
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
-    parser.add_argument('--post-to-archive', default=False)
+    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
     parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
     args = parser.parse_args(cmd_args)
 
@@ -232,7 +232,7 @@ def make_master_flat(cmd_args=None):
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
-    parser.add_argument('--post-to-archive', default=False)
+    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
     parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
     args = parser.parse_args(cmd_args)
 
@@ -269,7 +269,7 @@ def reduce_science_frames(cmd_args=None):
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                'critical', 'fatal', 'error'])
-    parser.add_argument('--post-to-archive', default=False)
+    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
     parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
     args = parser.parse_args(cmd_args)
 
@@ -312,6 +312,7 @@ def save_images(pipeline_context, images):
         filepath = os.path.join(pipeline_context.processed_path, image_filename)
         image.writeto(filepath)
         if pipeline_context.post_to_archive:
+            logger.info('Posting {filename} to the archive'.format(filename=image_filename))
             post_to_archive_queue(filepath)
 
 

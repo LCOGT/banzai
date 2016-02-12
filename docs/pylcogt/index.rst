@@ -38,6 +38,9 @@ Currently only 1x1 binning is supported for Sinsitros.
 
 Bad Pixel Masks
 ---------------
+Currently bad pixel masks are not included. Using robust statistics should guard from the effects of
+bad pixels (mostly) so we still produce clean data products. This feature is one of the highest on the
+list of priorities and will be added soon.
 
 Overscan
 ========
@@ -84,13 +87,23 @@ Bias Subtraction
 ================
 Full frame bias images are subtracted from each of the darks, flat field images, and science frames.
 The master bias frame that was taken closest in time to the current data will be used.
-This will add a few counts of noise to each image, but it solves two problems. First, if there is systematic
+This will add a few counts of noise to each pixel, but it solves two problems. First, if there is systematic
 structure in the read out, this will be removed. Second, this will remove the bias values for images
 that do not have an overscan region.
 
 
 Master Dark Creation
 ====================
+For all instruments, we take full-frame dark exposures every afternoon and morning. Like the bias frames,
+the afternoon and morning dark frames are combined together to increase statistics. Typically, a
+total of 20x300s images are taken.
+
+When creating a master dark frame, each individual frame is scaled by the exposure time (read from the
+header). The scaled frames are then stacked on pixel by pixel basis. We reject any 3 rstd outliers, similar
+to the master bias creation.
+
+Our cameras have dark currents of 0.1-0.2 electrons / s per pixel. For 20x300s this corresponds to
+1 - 2 electrons of additional noise per pixel (given the same length science frame).
 
 
 Dark Subtraction
