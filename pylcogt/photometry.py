@@ -53,5 +53,4 @@ class SourceDetector(Stage):
             sources['flux'] = flux
             sources['fluxerr'] = fluxerr
 
-            image.catalog = fits.BinTableHDU.from_columns([fits.Column(name=i.upper(), format='E', array=sources[i])
-                                               for i in ['x', 'y', 'flux', 'fluxerr', 'a', 'b', 'theta']])
+            image.catalog = sources['x', 'y', 'a', 'b', 'theta', 'flux', 'fluxerr']

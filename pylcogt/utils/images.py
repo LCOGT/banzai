@@ -35,3 +35,6 @@ class Image(object):
     def update_shape(self, nx, ny):
         self.nx = nx
         self.ny = ny
+
+    def write_catalog(self, filename):
+        self.catalog.write(filename, format='fits', overwrite=True)
