@@ -3,6 +3,7 @@ import os
 import numpy as np
 
 from astropy.io import fits
+from astropy.table import Table
 
 from .stages import Stage
 
@@ -36,7 +37,12 @@ class SourceDetector(Stage):
 
             sources = sep.extract(data, threshold, err=error, mask=mask)
 
-            x, y, a, b, theta = sources[['x', 'y', 'a', 'b', 'theta']]
+            sources = Table(sources)
+            x = sources['x']
+            y = sources['y']
+            a = sources['a']
+            b = sources['b']
+            theta = sources['theta']
 
             theta[theta > (np.pi / 2.0)] -= np.pi
             theta[theta < (-np.pi / 2.0)] += np.pi
