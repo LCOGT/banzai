@@ -2,7 +2,7 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
 from pylcogt.utils import date_utils
-from pylcogt.utils.file_utils import table_to_fits
+from pylcogt.utils.fits_utils import table_to_fits
 from pylcogt import dbs
 import numpy as np
 

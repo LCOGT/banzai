@@ -63,4 +63,6 @@ class WCSSolver(Stage):
             else:
                 image.header['WCSERR'] = 4
 
+            # Clean up the catalog file
+            os.remove(catalog_name)
         return images
