@@ -23,6 +23,9 @@ class Image(object):
         self.dateobs = date_utils.parse_date_obs(hdu[0].header['DATE-OBS'])
         self.readnoise = float(hdu[0].header['RDNOISE'])
         self.catalog = None
+        self.ra = float(hdu[0].header['RA'])
+        self.dec = float(hdu[0].header['DEC'])
+        self.pixel_scale = float(hdu[0].header[''])
 
     def subtract(self, value):
         return self.data - value

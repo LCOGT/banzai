@@ -23,7 +23,8 @@ class FlatMaker(CalibrationMaker):
 
     @property
     def calibration_type(self):
-        return 'flat'
+        return 'skyflat'
+
     @property
     def group_by_keywords(self):
         return ['ccdsum', 'filter']
@@ -75,7 +76,7 @@ class FlatDivider(ApplyCalibration):
 
     @property
     def calibration_type(self):
-        return 'flat'
+        return 'skyflat'
 
     def do_stage(self, images):
         master_flat_filename = self.get_calibration_filename(images[0])
