@@ -28,7 +28,9 @@ class Image(object):
         return self.data - value
 
     def writeto(self, filename):
-        fits.writeto(filename, self.data, self.header)
+        image_hdu =fits.ImageHDU(self.data, header=self.header)
+        hdu_list = fits.HDUList([image_hdu, self.catalog])
+        hdu_list.writeto(filename, clobber=True)
 
     def update_shape(self, nx, ny):
         self.nx = nx
