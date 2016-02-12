@@ -325,4 +325,12 @@ def make_image_list(pipeline_context):
 
 
 def select_images(image_list, image_type):
-    return [image for image in image_list if fits.getval(image, 'OBSTYPE') == image_type]
+    images = []
+    for filename in image_list:
+        try:
+            if fits.getval(filename, 'OBSTYPE') == image_type:
+                images.append(filename)
+        except:
+            continue
+
+    return images
