@@ -25,7 +25,7 @@ class Image(object):
         self.catalog = None
         self.ra = float(hdu[0].header['RA'])
         self.dec = float(hdu[0].header['DEC'])
-        self.pixel_scale = float(hdu[0].header[''])
+        self.pixel_scale = float(hdu[0].header['PIXSCALE'])
 
     def subtract(self, value):
         return self.data - value
