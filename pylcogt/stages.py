@@ -49,7 +49,6 @@ class Stage(object):
     def run(self, images):
         images.sort(key=self.get_grouping)
         for image_config, image_set in itertools.groupby(images, self.get_grouping):
-            self.logger.debug(image_config)
             make_output_directory(self.pipeline_context, image_config)
             tags = logs.image_config_to_tags(image_config, self.group_by_keywords)
             self.logger.info('Running {0}'.format(self.stage_name), extra=tags)
