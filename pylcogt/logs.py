@@ -56,8 +56,9 @@ def image_config_to_tags(image_config, group_by_keywords):
     tags = {'tags': {'site': image_config[0],
                      'instrument': image_config[1],
                      'epoch': date_utils.epoch_date_to_string(image_config[2])}}
-    for i, keyword in enumerate(group_by_keywords):
-        tags['tags'][keyword] = image_config[i + 3]
+    if group_by_keywords is not None:
+        for i, keyword in enumerate(group_by_keywords):
+            tags['tags'][keyword] = image_config[i + 3]
 
 
     return tags
