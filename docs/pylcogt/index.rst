@@ -28,21 +28,20 @@ Individual Camera Considerations
 The Spectral and SBIG cameras produce single extension fits files. The Sinistro frames, however, produce
 four amplifier outputs. Currently this data is saved as a data cube (but alternatively could be stored as
 a multi-extension fits file). Currently the fits-preprocessor subtracts the overscan, removes amplifier cross-talk,
-and mosaics the 4 amplifiers into a single image before the pipeline processes the data. These will eventually be
-merged into a single process, here in this pipeline. The other difficulty with the Sinistro camera is that
-the top amplifiers (3 and 4) have more light sensitive pixels than the bottom amplifiers (1 and 2). In
-January 2016, this was taken in account. The cameras were set to read out more rows. This in turn produced
-parallel overscan rows in amplifiers 1 and 2, but now all of the light sensitive pixels are read out properly for
-amplifiers 3 and 4. The fits-preprocessor has been updated accordingly. Amplifiers 3 and 4 also have
-an odd number of light sensitive pixels, meaning that on camera binning must be done with care.
+and mosaics the 4 amplifiers into a single image before the pipeline processes the data.The preprocessor will eventually be
+merged into this this pipeline.
+
+The other difficulty with the Sinistro camera is that
+the top amplifiers (3 and 4) have more light sensitive pixels than the bottom amplifiers (1 and 2). All of the parallel
+overscan rows are discarded. One edge row is discarded for the amplifiers that have an extra light sensitive row.
+The final frame size is 4096x4096.
 Currently only 1x1 binning is supported for Sinsitros.
 
 
 Bad Pixel Masks
 ---------------
-Currently bad pixel masks are not included. Using robust statistics should guard from the effects of
-bad pixels (mostly) so we still produce clean data products. This feature is one of the highest on the
-list of priorities and will be added soon.
+Currently bad pixel masks are not included, but will be soon. Using robust statistics should guard from the effects of
+bad pixels (mostly) so we still produce clean data products.
 
 
 Overscan
@@ -52,7 +51,10 @@ the Sinistro cameras and the Spectral cameras have overscan regions. The SBIG ca
 overscan region but are currently configured to not produce either parallel or serial overscan.
 
 We currently use the header the keyword BIASSEC to identify the overscan region. If this keyword is set to
-"Unknown", then we simply skip subtracting the overscan.
+"Unknown", then we simply skip subtracting the overscan. We estimate a single overscan value for the whole image
+(rather than row by row).
+This is saved in the header under the keyword 'BIASLVL'. If there is no overscan section, this value is derived
+from the average value from the bias frames.
 
 The Sinistro frames do have overscan regions, but the overscan is currently removed by the preprocessor.
 
@@ -60,7 +62,8 @@ The Sinistro frames do have overscan regions, but the overscan is currently remo
 Crosstalk
 =========
 Currently, only Sinstro images are read out using multiple amplifiers. The Sinsitro frames do have significant
-crosstalk between amplifiers, but this is currently removed by the preprocessor.
+crosstalk between amplifiers, but this is currently removed by the preprocessor. The crosstalk is removed using
+linear coefficients that relate each quadrant to every other quadrant.
 
 
 Mosaic
@@ -80,10 +83,11 @@ the read noise is approximately Gaussian (to surprisingly high precision), the m
 of the center of the pixel brightness distribution.
 
 We then stack the individual bias frames. On a pixel by pixel basis, we reject 3 rstd outliers, and then
-take the sigma clipped mean. This should remove and structure produced by the readout process. The noise
+take the mean. This should remove and structure produced by the readout process. The noise
 in each pixel should scale as sqrt(number of bias images). We take ~64 frames per night reducing the
-noise per pixel to read noise (RN) / 8. Thus, only a few counts of noise are being added to the frames,
-not significantly impacting the final science frames.
+noise per pixel to read noise (RN) / 8. Thus, only a few counts of noise are being added to the frames in quadrature.
+This is much less than the ~10 electron read noise, meaning that this does not increase the noise in the science
+frames in any significant way.
 
 
 Bias Subtraction
@@ -112,13 +116,15 @@ header). The sigma clipped mean of the scaled frames is then calculated on a pix
 We reject any 3 rstd outliers, similar to the master bias creation.
 
 Our cameras have dark currents of 0.1-0.2 electrons / s per pixel. For 20x300s this corresponds to
-1 - 2 electrons of additional noise per pixel (given the same length science frame, and not including
-the Poisson noise from the dark current itself).
+1 - 2 electrons of additional noise per pixel added in quadrature (given the same length science frame,
+and not including the Poisson noise from the dark current itself). Again, this is much smaller than the
+read noise so it will not affect the noise properties of the final science frames.
 
 
 Dark Subtraction
 ================
-Full-frame master dark frames are subtracted from all flat-field and science images. The most recent
+Full-frame master dark frames, scaled to the exposure time of the frame,
+are subtracted from all flat-field and science images. The most recent
 master dark frame is used. Often this is taken on the same day.
 
 
@@ -130,15 +136,13 @@ based on the necessary exposure time to get a high signal to noise image and the
 filter for science programs. Typically, a master flat field is produced about once a week for any
 given filter. When a flat-field image is taken for a given filter is taken in the evening twilight,
 it is also taken in morning twilight for quality control. Typically, 5 flat field frames are taken
-in the evening and 5 taken in the morning.
+in the evening and 5 taken in the morning per filter. The frames are dithered so that we can remove
+stars in the combined master flat field.
 
-Each individual flat-field image is normalized to unity. The normalization is calculated by fitting a
-Gamma distribution to the pixel distribution. The fit is done as an iteratively reweighted,
-Levenberg-Marquardt least squares fit. The weights are given by Andrew's Wave weighting function,
-a common weighting scale for robust M-estimation. The Gamma distribution was chosen because it includes
-a tail of values greater than the mode. This is particularly important for CCDs with a large variation
-in pixel sensitivities, e.g. the Spectral Camera at blue wavelengths. Before fitting the Gamma distribution,
-outliers that are 4 rstd away from the median are removed.
+Each individual flat-field image is normalized to unity before combing them.
+The normalization is calculated finding the robust sigma clipped mean (3.5 rstd outliers are rejected) of
+the central region of the image. For the central region, we choose the central 25% of the field (the region
+has dimensions that are half of the full image).
 
 The flat-field frames are then stacked using a sigma clipped mean, similar to the master bias and
 dark frames. We again choose to reject 3 rstd outliers.
@@ -152,7 +156,8 @@ Any pixels affected by these failure modes will be rejected automatically.
 Flat Field Correction
 =====================
 Master flat field images (normalized to unity) are divided out of every science frame. The most recent
-master flat-field image for the given telescope, filter, and binning is used.
+master flat-field image for the given telescope, filter, and binning is used. If no flat field exists,
+the data will not be reduced.
 
 
 Source Detection
@@ -172,19 +177,26 @@ produces approximately the same results as FLUX_AUTO from SExtractor.
 We set the source detection limit at 3 times the global rms of the image. This should minimize false
 detections, but may miss the faintest sources.
 
+The catalog is returned as the 'CAT' as fits binary table extension of the final science image. The catalog
+has the following columns: the position in pixel coordinates, (X, Y), the flux (Flux), the error in the flux
+(Fluxerr), the semi-major and semi-minor axes (a, b), and the position angle (theta).
+
 
 Astrometry
 ==========
 The WCS is found by using Astrometry.net (Lang et al. 2009, arXiv:0910.2233). We use the catalog from
 the source detection (the previous step) as input.
 
-Currently no image distortion is included in the WCS.
 We adopt a code tolerance of 0.003 (a factor of 3 smaller than the default), but increase the centroid
 uncertainty to be 20 pixels. The large centroid uncertainty allows the algorithm to find quads even
 if the initial guess is quite poor and even if there is significant distortion. However, decreasing
 the code tolerance forces the algorithm to only use high quality quads, making the solution more
 robust. We also go deeper into the catalogs (200 quads deep) to increase the chances of a successful
 astrometry solution.
+
+Currently no non-linear distortion is included in the WCS (the current WCS solution only has a center,
+a pixel scale, and a rotation). At worst (in the image corners), the offset between
+coordinates with non-linear distortion terms included and those without are ~5 arcseconds.
 
 Eventually, astrometry.net may be replaced with a purely Python alternative
 (e.g. AliPy; http://obswww.unige.ch/~tewes/alipy/).
