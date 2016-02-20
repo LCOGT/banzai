@@ -17,7 +17,7 @@ __author__ = 'cmccully'
 def check_image_homogeneity(images):
     for attribute in ('nx', 'ny', 'ccdsum', 'epoch'):
         if len({getattr(image, attribute) for image in images}) > 1:
-            raise InhomogenousSetException('Images have different {}s'.format(attribute))
+            raise InhomogeneousSetException('Images have different {}s'.format(attribute))
     return images[0]
 
 
@@ -86,7 +86,7 @@ class BiasMaker(CalibrationMaker):
         return images
 
 
-class InhomogenousSetException(Exception):
+class InhomogeneousSetException(Exception):
     pass
 
 def estimate_readnoise(images):
