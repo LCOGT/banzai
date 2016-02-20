@@ -1,4 +1,4 @@
-from ..bias import BiasMaker, InhomogenousSetException
+from ..bias import BiasMaker, InhomogeneousSetException
 import numpy as np
 from ..main import Image
 
@@ -105,7 +105,7 @@ def test_raises_an_exection_if_ccdsums_are_different(mock_dbs, mock_fits):
     header = mock_fits.Header()
     maker = BiasMaker(FakeContext())
 
-    with pytest.raises(InhomogenousSetException) as exception_info:
+    with pytest.raises(InhomogeneousSetException) as exception_info:
         maker.do_stage([FakeImage(ccdsum='1 1')] + [FakeImage() for x in range(6)])
     assert 'Images have different ccdsums' == str(exception_info.value)
 
@@ -116,7 +116,7 @@ def test_raises_an_exection_if_epochs_are_different(mock_dbs, mock_fits):
     header = mock_fits.Header()
     maker = BiasMaker(FakeContext())
 
-    with pytest.raises(InhomogenousSetException) as exception_info:
+    with pytest.raises(InhomogeneousSetException) as exception_info:
         maker.do_stage([FakeImage(epoch='2016-01-02')] + [FakeImage() for x in range(6)])
     assert 'Images have different epochs' == str(exception_info.value)
 
@@ -127,7 +127,7 @@ def test_raises_an_exection_if_nx_are_different(mock_dbs, mock_fits):
     header = mock_fits.Header()
     maker = BiasMaker(FakeContext())
 
-    with pytest.raises(InhomogenousSetException) as exception_info:
+    with pytest.raises(InhomogeneousSetException) as exception_info:
         maker.do_stage([FakeImage(nx=105)] + [FakeImage() for x in range(6)])
     assert 'Images have different nxs' == str(exception_info.value)
 
@@ -138,7 +138,7 @@ def test_raises_an_exection_if_ny_are_different(mock_dbs, mock_fits):
     header = mock_fits.Header()
     maker = BiasMaker(FakeContext())
 
-    with pytest.raises(InhomogenousSetException) as exception_info:
+    with pytest.raises(InhomogeneousSetException) as exception_info:
         maker.do_stage([FakeImage(ny=107)] + [FakeImage() for x in range(6)])
     assert 'Images have different nys' == str(exception_info.value)
 
