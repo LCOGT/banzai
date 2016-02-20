@@ -54,7 +54,7 @@ def fits_formats(format):
     :return: string: Fits type code
     """
     format_code = ''
-    if np.issubdtype(format, np.bool):
+    if 'bool' in format.name:
         format_code = 'L'
     elif np.issubdtype(format, np.int16):
         format_code = 'I'
