@@ -174,8 +174,8 @@ We use the default match filter for source detection that is provided by SEP.
 We do aperture photometry using an elliptical aperture that is set by 2.5 times the Kron radius. This
 produces approximately the same results as FLUX_AUTO from SExtractor.
 
-We set the source detection limit at 3 times the global rms of the image. This should minimize false
-detections, but may miss the faintest sources.
+We set the source detection limit at 3 times the global rms of the image. MINAREA is set to 5,
+ the default. This should minimize false detections, but may miss the faintest sources.
 
 The catalog is returned as the 'CAT' as fits binary table extension of the final science image. The catalog
 has the following columns: the position in pixel coordinates, (X, Y), the flux (Flux), the error in the flux
