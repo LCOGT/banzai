@@ -4,6 +4,7 @@ import numpy as np
 
 from astropy.io import fits
 from astropy.table import Table
+from .utils import stats
 
 from .stages import Stage
 
@@ -55,10 +56,25 @@ class SourceDetector(Stage):
 
             sources['flux'] = flux
             sources['fluxerr'] = fluxerr
+            sources['flag'] |= flag
             sources = sources[sources['flag'] == 0]
 
-            sources.sort('flux')
-            sources.reverse()
+            # Get the FWHM
+            hwhm, flag = sep.flux_radius(data, sources['x'], sources['y'], 6.*sources['a'], 0.5,
+                                         normflux=flux, subpix=5)
+
+            hwhm_mean = stats.sigma_clipped_mean(hwhm)
+            self.logger.debug('FWHM for {image} is {fwhm}'.format(image=image.filename, fwhm = hwhm_mean * 2))
+            hwhm_deviation = stats.absolute_deviation(hwhm)
+            hwhm_std = stats.robust_standard_deviation(hwhm)
+
+            good_stars = hwhm_deviation < (3.0 * hwhm_std)
+            sources = sources[good_stars]
+
+            # Update the catalog to match fits convention instead of python array convention
+            sources['x'] += 1.0
+            sources['y'] += 1.0
 
             image.catalog = sources['x', 'y', 'a', 'b', 'theta', 'flux', 'fluxerr']
             image.catalog.sort('flux')
+            image.catalog.reverse()
