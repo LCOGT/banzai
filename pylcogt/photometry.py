@@ -61,7 +61,7 @@ class SourceDetector(Stage):
 
             # Get the FWHM
             hwhm, flag = sep.flux_radius(data, sources['x'], sources['y'], 6.*sources['a'], 0.5,
-                                         normflux=flux, subpix=5)
+                                         normflux=sources['flux'], subpix=5)
 
             hwhm_mean = stats.sigma_clipped_mean(hwhm)
             self.logger.debug('FWHM for {image} is {fwhm}'.format(image=image.filename, fwhm = hwhm_mean * 2))
