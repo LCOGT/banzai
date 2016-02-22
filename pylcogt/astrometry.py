@@ -37,8 +37,8 @@ class WCSSolver(Stage):
                                       scale_high=1.1*image.pixel_scale, wcs_name=wcs_name,
                                       catalog_name=catalog_name, nx=image.nx, ny=image.ny)
 
-            subprocess.check_output(shlex.split(command))
-
+            console_output = subprocess.check_output(shlex.split(command))
+            self.logger.debug(console_output)
             # Cleanup temp files created by astrometry.net
             basename = catalog_name[:-5] # Split off the .fits from the image filename
             # Remove the extra temporary files
