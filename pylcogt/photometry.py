@@ -57,3 +57,4 @@ class SourceDetector(Stage):
             sources['fluxerr'] = fluxerr
 
             image.catalog = sources['x', 'y', 'a', 'b', 'theta', 'flux', 'fluxerr']
+            image.catalog.sort('flux')
