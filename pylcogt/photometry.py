@@ -71,7 +71,7 @@ class SourceDetector(Stage):
             hwhm_deviation = stats.absolute_deviation(hwhm)
             hwhm_std = stats.robust_standard_deviation(hwhm)
 
-            good_stars = hwhm_deviation < (3.0 * hwhm_std)
+            good_stars = hwhm > (hwhm_mean - 3.0 * hwhm_std)
             sources = sources[good_stars]
 
             # Update the catalog to match fits convention instead of python array convention
