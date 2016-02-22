@@ -30,7 +30,7 @@ class WCSSolver(Stage):
             # Save the catalog to a temporary file
             filename = os.path.basename(image.filename)
             catalog_name = filename.replace('.fits', '.cat.fits')
-            image.write_catalog(catalog_name)
+            image.write_catalog(catalog_name, nsources=40)
             # Run astrometry.net
             wcs_name = filename.replace('.fits', '.wcs.fits')
             command = self.cmd.format(ra=image.ra, dec=image.dec, scale_low=0.9*image.pixel_scale,

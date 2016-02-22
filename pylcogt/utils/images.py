@@ -45,5 +45,5 @@ class Image(object):
         self.nx = nx
         self.ny = ny
 
-    def write_catalog(self, filename):
-        self.catalog.write(filename, format='fits', overwrite=True)
+    def write_catalog(self, filename, nsources=None):
+        self.catalog[:nsources].write(filename, format='fits', overwrite=True)
