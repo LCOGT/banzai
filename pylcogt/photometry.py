@@ -79,3 +79,5 @@ class SourceDetector(Stage):
             image.catalog = sources['x', 'y', 'a', 'b', 'theta', 'flux', 'fluxerr']
             image.catalog.sort('flux')
             image.catalog.reverse()
+
+            image.header['FWHM'] = 2.0 * hwhm_mean
