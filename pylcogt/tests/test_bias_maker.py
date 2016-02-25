@@ -43,62 +43,9 @@ def test_group_by_keywords():
     assert maker.group_by_keywords == ['ccdsum']
 
 
-# @mock.patch('pylcogt.bias.fits')
-# @mock.patch('pylcogt.bias.dbs')
-# def test_header_master_bias_level_returns_1(mock_dbs, mock_fits):
-#
-#     header = mock_fits.Header()
-#     maker = BiasMaker(FakeContext())
-#
-#     maker.do_stage([FakeImage() for x in range(6)])
-#
-#     assert mock.call('BIASLVL', 1.0) in header.__setitem__.call_args_list
-#
-#
-# # Triangulation
-# @mock.patch('pylcogt.bias.fits')
-# @mock.patch('pylcogt.bias.dbs')
-# def test_header_master_bias_level_returns_2(mock_dbs, mock_fits):
-#
-#     header = mock_fits.Header()
-#     maker = BiasMaker(FakeContext())
-#
-#     maker.do_stage([FakeImage(image_multiplier=2.0) for x in range(6)])
-#
-#     assert mock.call('BIASLVL', 2.0) in header.__setitem__.call_args_list
-#
-#
-# @mock.patch('pylcogt.bias.fits')
-# @mock.patch('pylcogt.bias.dbs')
-# def test_header_cal_type_bias(mock_dbs, mock_fits):
-#
-#     header = mock_fits.Header()
-#     maker = BiasMaker(FakeContext())
-#
-#     maker.do_stage([FakeImage() for x in range(6)])
-#
-#     assert mock.call('CALTYPE', 'BIAS') in header.__setitem__.call_args_list
-#
-# # def test_nan_in_frame
-#
-# # def test_negative_in frame
-
-
-# @mock.patch('pylcogt.bias.fits')
-# @mock.patch('pylcogt.bias.dbs')
-# def test_ccdsum_header(mock_dbs, mock_fits):
-#     header = mock_fits.Header()
-#     maker = BiasMaker(FakeContext())
-#
-#     maker.do_stage([FakeImage() for x in range(6)])
-#
-#     assert mock.call('CCDSUM', '2 2') in header.__setitem__.call_args_list
-
-
 @mock.patch('pylcogt.bias.fits')
 @mock.patch('pylcogt.bias.dbs')
 def test_raises_an_exection_if_ccdsums_are_different(mock_dbs, mock_fits):
-    header = mock_fits.Header()
     maker = BiasMaker(FakeContext())
 
     with pytest.raises(InhomogeneousSetException) as exception_info:
@@ -109,7 +56,6 @@ def test_raises_an_exection_if_ccdsums_are_different(mock_dbs, mock_fits):
 @mock.patch('pylcogt.bias.fits')
 @mock.patch('pylcogt.bias.dbs')
 def test_raises_an_exection_if_epochs_are_different(mock_dbs, mock_fits):
-    header = mock_fits.Header()
     maker = BiasMaker(FakeContext())
 
     with pytest.raises(InhomogeneousSetException) as exception_info:
@@ -120,7 +66,6 @@ def test_raises_an_exection_if_epochs_are_different(mock_dbs, mock_fits):
 @mock.patch('pylcogt.bias.fits')
 @mock.patch('pylcogt.bias.dbs')
 def test_raises_an_exection_if_nx_are_different(mock_dbs, mock_fits):
-    header = mock_fits.Header()
     maker = BiasMaker(FakeContext())
 
     with pytest.raises(InhomogeneousSetException) as exception_info:
@@ -131,27 +76,11 @@ def test_raises_an_exection_if_nx_are_different(mock_dbs, mock_fits):
 @mock.patch('pylcogt.bias.fits')
 @mock.patch('pylcogt.bias.dbs')
 def test_raises_an_exection_if_ny_are_different(mock_dbs, mock_fits):
-    header = mock_fits.Header()
     maker = BiasMaker(FakeContext())
 
     with pytest.raises(InhomogeneousSetException) as exception_info:
         maker.do_stage([FakeImage(ny=107)] + [FakeImage() for x in range(6)])
     assert 'Images have different nys' == str(exception_info.value)
-
-
-# @mock.patch('pylcogt.bias.fits')
-# @mock.patch('pylcogt.bias.dbs')
-# def test_write_fits_file(mock_dbs, mock_fits):
-#     header = mock_fits.Header()
-#     maker = BiasMaker(FakeContext())
-#
-#     maker.do_stage([FakeImage() for x in range(6)])
-#     image = FakeImage()
-#     args, kwargs = mock_fits.writeto.call_args
-#     assert args[0] == image.get_calibration_filename()
-#     assert (args[1] == np.zeros((image.ny, image.nx))).sum() == (image.nx * image.ny)
-#     assert kwargs['header'] == header
-#     assert kwargs['clobber'] == True
 
 
 @mock.patch('pylcogt.bias.dbs')
