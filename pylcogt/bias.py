@@ -58,7 +58,8 @@ class BiasMaker(CalibrationMaker):
         else:
 
             image_config = check_image_homogeneity(images)
-
+            logging_tags = logs.image_config_to_tags(image_config, self.group_by_keywords)
+            self.logger.info('Running {0}'.format(self.stage_name), extra=tags)
             bias_data = np.zeros((image_config.ny, image_config.nx, len(images)))
 
             bias_level_array = np.zeros(len(images))
@@ -66,13 +67,16 @@ class BiasMaker(CalibrationMaker):
             for i, image in enumerate(images):
                 bias_level_array[i] = stats.sigma_clipped_mean(image.data, 3.5)
 
-                self.logger.debug('Bias level for {file} is {bias}'.format(file=image.filename,
-                                                                      bias=bias_level_array[i]))
+                logging_tags['filename'] = image.filename
+                self.logger.debug('Bias level is {bias}'.format(bias=bias_level_array[i]),
+                                  extra=logging_tags)
                 # Subtract the bias level for each image
                 bias_data[:, :, i] = image.subtract(bias_level_array[i])
 
+            logging_tags.pop('filename')
             mean_bias_level = stats.sigma_clipped_mean(bias_level_array, 3.0)
-            self.logger.debug('Average bias level: {bias} ADU'.format(bias=mean_bias_level))
+            self.logger.debug('Average bias level: {bias} ADU'.format(bias=mean_bias_level),
+                              extra=logging_tags)
 
             master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2)
 
@@ -89,6 +93,7 @@ class BiasMaker(CalibrationMaker):
 
 class InhomogeneousSetException(Exception):
     pass
+
 
 def estimate_readnoise(images):
     read_noise_array = np.zeros(len(images))
@@ -121,29 +126,35 @@ class BiasSubtractor(ApplyCalibration):
 
     def do_stage(self, images):
 
-        master_bias_file = self.get_calibration_filename(images[0])
-        master_bias_data = fits.getdata(master_bias_file)
-        master_bias_level = float(fits.getval(master_bias_file, 'BIASLVL'))
+        if len(images) == 0:
+            # Abort!
+            return []
+        else:
+            master_bias_filename = self.get_calibration_filename(images[0])
+            master_bias_image = Image(master_bias_filename)
+            master_bias_data = master_bias_image.data
+            master_bias_level = float(master_bias_image.header['BIASLVL'])
 
-        # TODO Add error checking for incorrect image sizes
-        for image in images:
-            self.logger.debug('Subtracting bias for {image}'.format(image=image.filename))
+            # TODO Add error checking for incorrect image sizes
+            for image in images:
+                self.logger.debug('Subtracting bias for {image}'.format(image=image.filename))
 
-            # Subtract the overscan first if it exists
-            overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC'))
-            if overscan_region is not None:
-                bias_level = stats.sigma_clipped_mean(image[0].data[overscan_region], 3)
-            else:
-                # If not, subtract the master bias level
-                bias_level = master_bias_level
+                # Subtract the overscan first if it exists
+                overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC'))
+                if overscan_region is not None:
+                    bias_level = stats.sigma_clipped_mean(image[0].data[overscan_region], 3)
+                else:
+                    # If not, subtract the master bias level
+                    bias_level = master_bias_level
 
-            self.logger.debug('Bias level: {bias}'.format(bias=bias_level))
-            image.data -= bias_level
-            image.data -= master_bias_data
+                self.logger.debug('Bias level: {bias}'.format(bias=bias_level))
 
-            image.header['BIASLVL'] = bias_level
+                image.subtract(bias_level)
+                image.subtract(master_bias_data)
 
-            master_bias_filename = os.path.basename(master_bias_file)
-            image.header.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
+                image.header['BIASLVL'] = bias_level
+
+                master_bias_filename = os.path.basename(master_bias_filename)
+                image.header.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
 
         return images
