@@ -5,18 +5,16 @@ import numpy as np
 import os.path
 
 from .utils import stats, fits_utils
-from pylcogt import dbs
 from . import logs
 from pylcogt.utils import date_utils
 from .stages import CalibrationMaker, ApplyCalibration
 from pylcogt.utils.images import Image
-from pylcogt.utils import file_utils
 
 __author__ = 'cmccully'
 
 
 def check_image_homogeneity(images):
-    for attribute in ('nx', 'ny', 'ccdsum', 'epoch'):
+    for attribute in ('nx', 'ny', 'ccdsum', 'epoch', 'site', 'instrument'):
         if len({getattr(image, attribute) for image in images}) > 1:
             raise InhomogeneousSetException('Images have different {}s'.format(attribute))
     return images[0]
@@ -59,7 +57,7 @@ class BiasMaker(CalibrationMaker):
 
             image_config = check_image_homogeneity(images)
             logging_tags = logs.image_config_to_tags(image_config, self.group_by_keywords)
-            self.logger.info('Running {0}'.format(self.stage_name), extra=tags)
+
             bias_data = np.zeros((image_config.ny, image_config.nx, len(images)))
 
             bias_level_array = np.zeros(len(images))
@@ -67,13 +65,13 @@ class BiasMaker(CalibrationMaker):
             for i, image in enumerate(images):
                 bias_level_array[i] = stats.sigma_clipped_mean(image.data, 3.5)
 
-                logging_tags['filename'] = image.filename
+                logs.add_tag(logging_tags, 'filename', image.filename)
                 self.logger.debug('Bias level is {bias}'.format(bias=bias_level_array[i]),
                                   extra=logging_tags)
                 # Subtract the bias level for each image
                 bias_data[:, :, i] = image.subtract(bias_level_array[i])
 
-            logging_tags.pop('filename')
+            logs.pop_tag(logging_tags, 'filename')
             mean_bias_level = stats.sigma_clipped_mean(bias_level_array, 3.0)
             self.logger.debug('Average bias level: {bias} ADU'.format(bias=mean_bias_level),
                               extra=logging_tags)
@@ -157,4 +155,4 @@ class BiasSubtractor(ApplyCalibration):
                 master_bias_filename = os.path.basename(master_bias_filename)
                 image.header.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
 
-        return images
+            return images
