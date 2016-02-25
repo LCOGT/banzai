@@ -9,7 +9,8 @@ from pylcogt import dbs
 from . import logs
 from pylcogt.utils import date_utils
 from .stages import CalibrationMaker, ApplyCalibration
-from pylcogt.utils.file_utils import post_to_archive_queue
+from pylcogt.utils.images import Image
+from pylcogt.utils import file_utils
 
 __author__ = 'cmccully'
 
@@ -53,6 +54,7 @@ class BiasMaker(CalibrationMaker):
         if len(images) < self.min_images:
             # Do nothing
             self.logger.warning('Not enough images to combine.')
+            return []
         else:
 
             image_config = check_image_homogeneity(images)
@@ -79,11 +81,10 @@ class BiasMaker(CalibrationMaker):
 
             header = create_master_bias_header(images, mean_bias_level, mean_dateobs)
 
-            master_bias_filename = self.get_calibration_filename(image_config)
-            fits.writeto(master_bias_filename, master_bias, header=header, clobber=True)
-            post_to_archive_queue(master_bias_filename)
-            dbs.save_calibration_info('bias', master_bias_filename, image_config)
-        return images
+            master_bias_image = Image(data=master_bias, header=header)
+            master_bias_image.filename = self.get_calibration_filename(image_config)
+
+            return [master_bias_image]
 
 
 class InhomogeneousSetException(Exception):

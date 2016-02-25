@@ -21,7 +21,7 @@ from multiprocessing import Pool
 from . import ingest
 from pylcogt import dbs, logs
 from pylcogt import bias, dark, flats, trim, photometry, astrometry
-from pylcogt.utils.file_utils import post_to_archive_queue
+from pylcogt.utils import file_utils
 from pylcogt.utils.images import Image
 
 # A dictionary converting the string input by the user into the corresponding Python object
@@ -178,8 +178,13 @@ def make_master_bias(cmd_args=None):
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
 
+    master_bias_image = images[0]
+    fits.writeto(master_bias_image.filename, master_bias_image.data, header=master_bias_image.header, clobber=True)
+    file_utils.post_to_archive_queue(master_bias_image.filename)
+    dbs.save_calibration_info('bias', master_bias_image.filename, master_bias_image)
     # Clean up
     logs.stop_logging()
+
 
 def make_master_dark(cmd_args=None):
     """
@@ -314,7 +319,7 @@ def save_images(pipeline_context, images):
         image.writeto(filepath)
         if pipeline_context.post_to_archive:
             logger.info('Posting {filename} to the archive'.format(filename=image_filename))
-            post_to_archive_queue(filepath)
+            file_utils.post_to_archive_queue(filepath)
 
 
 def make_image_list(pipeline_context):
