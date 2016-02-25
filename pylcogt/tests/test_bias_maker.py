@@ -9,7 +9,7 @@ import pytest
 
 class FakeImage(Image):
     def __init__(self, nx=101, ny=103, image_multiplier=1.0, ccdsum='2 2',
-                 epoch='2016-01-01'):
+                 epoch='20160101'):
         self.nx = nx
         self.ny = ny
         self.data = image_multiplier * np.ones((self.ny, self.nx))
@@ -101,7 +101,7 @@ def test_raises_an_exection_if_epochs_are_different():
     maker = BiasMaker(FakeContext())
 
     with pytest.raises(InhomogeneousSetException) as exception_info:
-        maker.do_stage([FakeImage(epoch='2016-01-02')] + [FakeImage() for x in range(6)])
+        maker.do_stage([FakeImage(epoch='20160102')] + [FakeImage() for x in range(6)])
     assert 'Images have different epochs' == str(exception_info.value)
 
 
