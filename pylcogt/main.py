@@ -9,20 +9,16 @@ October 2015
 """
 from __future__ import absolute_import, print_function, division
 
-import collections
 import argparse
-import sqlalchemy
 import os
-import numpy as np
 from glob import glob
+
 from astropy.io import fits
-from .utils import date_utils
-from multiprocessing import Pool
-from . import ingest
-from pylcogt import dbs, logs
+
 from pylcogt import bias, dark, flats, trim, photometry, astrometry
+from pylcogt import dbs, logs
+from pylcogt.images import Image
 from pylcogt.utils import file_utils
-from pylcogt.utils.images import Image
 
 # A dictionary converting the string input by the user into the corresponding Python object
 reduction_stages = [bias.BiasMaker]

@@ -2,5 +2,5 @@
 """
 This packages contains affiliated package tests.
 """
-from . test_logging import *
-__all__ = ['test_logging']
+from . import test_bias_maker, test_bias_subtractor
+__all__ = ['test_bias_maker', 'test_bias_subtractor']

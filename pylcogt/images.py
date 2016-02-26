@@ -78,3 +78,10 @@ class Image(object):
 
     def write_catalog(self, filename, nsources=None):
         self.catalog[:nsources].write(filename, format='fits', overwrite=True)
+
+    def add_history(self, msg):
+        self.header.add_history(msg)
+
+
+class InhomogeneousSetException(Exception):
+    pass

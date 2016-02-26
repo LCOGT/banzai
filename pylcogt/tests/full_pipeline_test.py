@@ -22,7 +22,7 @@ def teardown_function(function):
     os.remove('test.db')
 
 
-def test_full_pipeline():
+def full_pipeline():
     data_path = '/nethome/cmccully/workspace/pylcogt/pylcogt/tests/data/'
     site = 'elp'
     instrument = 'kb74'

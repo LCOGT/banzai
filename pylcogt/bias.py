@@ -1,14 +1,15 @@
 from __future__ import absolute_import, print_function, division
 
-from astropy.io import fits
-import numpy as np
 import os.path
 
-from .utils import stats, fits_utils
-from . import logs
+import numpy as np
+from astropy.io import fits
+
+from pylcogt.images import Image, InhomogeneousSetException
 from pylcogt.utils import date_utils
+from . import logs
 from .stages import CalibrationMaker, ApplyCalibration
-from pylcogt.utils.images import Image
+from .utils import stats, fits_utils
 
 __author__ = 'cmccully'
 
@@ -89,10 +90,6 @@ class BiasMaker(CalibrationMaker):
             return [master_bias_image]
 
 
-class InhomogeneousSetException(Exception):
-    pass
-
-
 def estimate_readnoise(images):
     read_noise_array = np.zeros(len(images))
     for i, image in enumerate(images):
@@ -128,14 +125,18 @@ class BiasSubtractor(ApplyCalibration):
             # Abort!
             return []
         else:
+
+            image_config = check_image_homogeneity(images)
+            logging_tags = logs.image_config_to_tags(image_config, self.group_by_keywords)
+
             master_bias_filename = self.get_calibration_filename(images[0])
             master_bias_image = Image(master_bias_filename)
             master_bias_data = master_bias_image.data
             master_bias_level = float(master_bias_image.header['BIASLVL'])
 
-            # TODO Add error checking for incorrect image sizes
             for image in images:
-                self.logger.debug('Subtracting bias for {image}'.format(image=image.filename))
+                logs.add_tag(logging_tags, 'filename', image.filename)
+                self.logger.info('Subtracting bias', extra=logging_tags)
 
                 # Subtract the overscan first if it exists
                 overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC'))
@@ -153,6 +154,6 @@ class BiasSubtractor(ApplyCalibration):
                 image.header['BIASLVL'] = bias_level
 
                 master_bias_filename = os.path.basename(master_bias_filename)
-                image.header.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
+                image.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
 
             return images
