@@ -50,9 +50,10 @@ class Stage(object):
         images.sort(key=self.get_grouping)
         for image_config, image_set in itertools.groupby(images, self.get_grouping):
             make_output_directory(self.pipeline_context, image_config)
+            image_set = list(image_set)
             tags = logs.image_config_to_tags(image_set[0], self.group_by_keywords)
             self.logger.info('Running {0}'.format(self.stage_name), extra=tags)
-            self.do_stage(list(image_set))
+            self.do_stage(image_set)
         return images
 
     @abc.abstractmethod
