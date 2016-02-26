@@ -4,7 +4,6 @@ import numpy as np
 from .utils import FakeImage, FakeContext, throws_inhomogeneous_set_exception
 
 import mock
-import pytest
 
 
 class FakeBiasImage(FakeImage):

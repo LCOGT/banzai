@@ -1,7 +1,6 @@
 from ..bias import BiasSubtractor
 from .utils import FakeImage, throws_inhomogeneous_set_exception
 import mock
-import pytest
 
 import numpy as np
 
@@ -28,7 +27,7 @@ def test_group_by_keywords():
 def test_header_has_biaslevel(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage()
     subtractor = BiasSubtractor(None)
-    images = subtractor.do_stage([FakeBiasImage() for x in range(6)])
+    images = subtractor.do_stage([FakeImage() for x in range(6)])
     for image in images:
         assert image.header['BIASLVL'] == 0
 
@@ -38,7 +37,7 @@ def test_header_has_biaslevel(mock_cal, mock_image):
 def test_header_biaslevel_is_1(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage(bias_level=1)
     subtractor = BiasSubtractor(None)
-    images = subtractor.do_stage([FakeBiasImage() for x in range(6)])
+    images = subtractor.do_stage([FakeImage() for x in range(6)])
     for image in images:
         assert image.header['BIASLVL'] == 1
 
@@ -48,7 +47,7 @@ def test_header_biaslevel_is_1(mock_cal, mock_image):
 def test_header_biaslevel_is_2(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage(bias_level=2.0)
     subtractor = BiasSubtractor(None)
-    images = subtractor.do_stage([FakeBiasImage() for x in range(6)])
+    images = subtractor.do_stage([FakeImage() for x in range(6)])
     for image in images:
         assert image.header['BIASLVL'] == 2
 
@@ -71,3 +70,26 @@ def test_raises_an_exection_if_nx_are_different(mock_images):
 @mock.patch('pylcogt.bias.Image')
 def test_raises_an_exection_if_ny_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'ny', 107)
+
+
+@mock.patch('pylcogt.bias.Image')
+@mock.patch('pylcogt.bias.BiasSubtractor.get_calibration_filename')
+def test_bias_subtraction_is_reasonable(mock_cal, mock_image):
+    input_bias = 1000.0
+    input_readnoise = 9.0
+    input_level = 2000.0
+    nx = 101
+    ny = 103
+
+    fake_master_bias = FakeBiasImage(bias_level=input_bias)
+    fake_master_bias.data = np.random.normal(0.0, input_readnoise, size=(ny, nx))
+    mock_image.return_value = fake_master_bias
+
+    subtractor = BiasSubtractor(None)
+    images = [FakeImage(image_multiplier=input_level) for x in range(6)]
+
+    images = subtractor.do_stage(images)
+
+    for image in images:
+        assert np.abs(image.header['BIASLVL'] - input_bias) < 1.0
+        assert np.abs(np.mean(image.data) - input_level + input_bias) < 1.0
