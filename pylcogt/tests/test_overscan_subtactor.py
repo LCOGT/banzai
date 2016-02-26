@@ -1,7 +1,5 @@
 from ..bias import OverscanSubtractor
 from .utils import FakeImage
-import mock
-import pytest
 
 import numpy as np
 
@@ -35,7 +33,7 @@ def test_header_overscan_is_1():
     nx = 101
     ny = 103
     noverscan = 10
-    images =[FakeOverscanImage(nx=nx, ny=ny) for x in range(6)]
+    images = [FakeOverscanImage(nx=nx, ny=ny) for x in range(6)]
     for image in images:
         image.header['BIASSEC'] = '[{nover}:{nx},1:{ny}]'.format(nover=noverscan, nx=nx, ny=ny)
     images = subtractor.do_stage(images)
