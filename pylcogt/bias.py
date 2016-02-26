@@ -8,7 +8,7 @@ from astropy.io import fits
 from pylcogt.images import Image, InhomogeneousSetException
 from pylcogt.utils import date_utils
 from . import logs
-from .stages import CalibrationMaker, ApplyCalibration
+from .stages import CalibrationMaker, ApplyCalibration, Stage
 from .utils import stats, fits_utils
 
 __author__ = 'cmccully'
@@ -70,7 +70,7 @@ class BiasMaker(CalibrationMaker):
                 self.logger.debug('Bias level is {bias}'.format(bias=bias_level_array[i]),
                                   extra=logging_tags)
                 # Subtract the bias level for each image
-                bias_data[:, :, i] = image.subtract(bias_level_array[i])
+                bias_data[:, :, i] = image.data - bias_level_array[i]
 
             logs.pop_tag(logging_tags, 'filename')
             mean_bias_level = stats.sigma_clipped_mean(bias_level_array, 3.0)
@@ -88,23 +88,6 @@ class BiasMaker(CalibrationMaker):
             master_bias_image.filename = self.get_calibration_filename(image_config)
 
             return [master_bias_image]
-
-
-def estimate_readnoise(images):
-    read_noise_array = np.zeros(len(images))
-    for i, image in enumerate(images):
-        # Estimate the read noise for each image
-        read_noise = stats.robust_standard_deviation(bias_data[:, :, i] - master_bias)
-
-        # Make sure to convert to electrons and save
-        read_noise_array[i] = read_noise * image.gain
-        log_message = 'Read noise estimate for {file} is {rdnoise}'
-        logger.debug(log_message.format(file=image.filename, rdnoise=read_noise_array[i]))
-
-    mean_read_noise = stats.sigma_clipped_mean(read_noise_array, 3.0)
-    logger.info('Estimated Readnoise: {rdnoise} e-'.format(rdnoise=mean_read_noise))
-    # Save the master bias image with all of the combined images in the header
-    header['RDNOISE'] = mean_read_noise
 
 
 class BiasSubtractor(ApplyCalibration):
@@ -138,22 +121,40 @@ class BiasSubtractor(ApplyCalibration):
                 logs.add_tag(logging_tags, 'filename', image.filename)
                 self.logger.info('Subtracting bias', extra=logging_tags)
 
-                # Subtract the overscan first if it exists
-                overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC'))
-                if overscan_region is not None:
-                    bias_level = stats.sigma_clipped_mean(image[0].data[overscan_region], 3)
-                else:
-                    # If not, subtract the master bias level
-                    bias_level = master_bias_level
-
-                self.logger.debug('Bias level: {bias}'.format(bias=bias_level))
-
-                image.subtract(bias_level)
+                image.subtract(master_bias_level)
                 image.subtract(master_bias_data)
 
-                image.header['BIASLVL'] = bias_level
+                image.header['BIASLVL'] = master_bias_level
 
                 master_bias_filename = os.path.basename(master_bias_filename)
                 image.add_history('Master Bias: {bias_file}'.format(bias_file=master_bias_filename))
 
             return images
+
+
+class OverscanSubtractor(Stage):
+    def __init__(self, pipeline_context):
+        super(OverscanSubtractor, self).__init__(pipeline_context)
+
+    @property
+    def group_by_keywords(self):
+        return None
+
+    def do_stage(self, images):
+
+        for image in images:
+            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
+            logs.add_tag(logging_tags, 'filename', image.filename)
+            self.logger.info('Subtracting overscan', extra=logging_tags)
+
+            # Subtract the overscan if it exists
+            overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC'))
+            if overscan_region is not None:
+                overscan_level = stats.sigma_clipped_mean(image.data[overscan_region], 3)
+            else:
+                overscan_level = 0.0
+
+            image.subtract(overscan_level)
+            image.header['OVERSCAN'] = overscan_level
+
+        return images

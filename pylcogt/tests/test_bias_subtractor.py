@@ -9,7 +9,7 @@ import numpy as np
 class FakeBiasImage(FakeImage):
     def __init__(self, *args, bias_level=0.0, **kwargs):
         super(FakeBiasImage, self).__init__(*args, image_multiplier=bias_level, **kwargs)
-        self.header = {'BIASLVL': bias_level, 'BIASSEC': 'UNKNOWN'}
+        self.header = {'BIASLVL': bias_level}
 
 
 def test_no_input_images():
@@ -29,7 +29,8 @@ def test_header_has_biaslevel(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage()
     subtractor = BiasSubtractor(None)
     images = subtractor.do_stage([FakeBiasImage() for x in range(6)])
-    assert images[0].header['BIASLVL'] == 0
+    for image in images:
+        assert image.header['BIASLVL'] == 0
 
 
 @mock.patch('pylcogt.bias.Image')
@@ -38,7 +39,8 @@ def test_header_biaslevel_is_1(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage(bias_level=1)
     subtractor = BiasSubtractor(None)
     images = subtractor.do_stage([FakeBiasImage() for x in range(6)])
-    assert images[0].header['BIASLVL'] == 1
+    for image in images:
+        assert image.header['BIASLVL'] == 1
 
 
 @mock.patch('pylcogt.bias.Image')
@@ -47,7 +49,8 @@ def test_header_biaslevel_is_2(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage(bias_level=2.0)
     subtractor = BiasSubtractor(None)
     images = subtractor.do_stage([FakeBiasImage() for x in range(6)])
-    assert images[0].header['BIASLVL'] == 2
+    for image in images:
+        assert image.header['BIASLVL'] == 2
 
 
 @mock.patch('pylcogt.bias.Image')

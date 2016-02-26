@@ -63,7 +63,7 @@ class Image(object):
         self.pixel_scale = float(header['PIXSCALE'])
 
     def subtract(self, value):
-        return self.data - value
+        self.data -= value
 
     def writeto(self, filename):
         table_hdu = table_to_fits(self.catalog)

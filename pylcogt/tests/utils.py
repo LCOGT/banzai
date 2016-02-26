@@ -27,7 +27,7 @@ class FakeImage(object):
                                                      self.ccdsum.replace(' ', 'x'))
 
     def subtract(self, x):
-        return self.data - x
+        self.data -= x
 
     def add_history(self, msg):
         pass
