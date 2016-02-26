@@ -24,6 +24,8 @@ from pylcogt.utils import file_utils
 reduction_stages = [bias.BiasMaker]
 
 logger = logs.get_logger(__name__)
+
+
 class PipelineContext(object):
     def __init__(self, args):
         self.processed_path = args.processed_path
@@ -140,6 +142,7 @@ def main(cmd_args=None):
     # Clean up
     logs.stop_logging()
 
+
 def make_master_bias(cmd_args=None):
     """
     Main driver script for PyLCOGT. This is a console entry point.
@@ -159,7 +162,7 @@ def make_master_bias(cmd_args=None):
 
     logs.start_logging(log_level=args.log_level)
 
-    stages_to_do = [bias.BiasMaker]
+    stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasMaker]
 
 
     logger.info('Making master calibration frames:')
@@ -201,8 +204,7 @@ def make_master_dark(cmd_args=None):
 
     logs.start_logging(log_level=args.log_level)
 
-    stages_to_do = [bias.BiasSubtractor, trim.Trimmer, dark.DarkMaker]
-
+    stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasSubtractor, dark.DarkMaker]
 
     logger.info('Making master calibration frames:')
 
@@ -239,7 +241,8 @@ def make_master_flat(cmd_args=None):
 
     logs.start_logging(log_level=args.log_level)
 
-    stages_to_do = [bias.BiasSubtractor, trim.Trimmer, dark.DarkSubtractor, flats.FlatMaker]
+    stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasSubtractor,
+                    dark.DarkSubtractor, flats.FlatMaker]
 
     logger.info('Making master flat frames:')
 
@@ -276,8 +279,8 @@ def reduce_science_frames(cmd_args=None):
 
     logs.start_logging(log_level=args.log_level)
 
-    stages_to_do = [bias.BiasSubtractor, trim.Trimmer, dark.DarkSubtractor, flats.FlatDivider,
-                    photometry.SourceDetector, astrometry.WCSSolver]
+    stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                    flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver]
 
     logger.info('Reducing Science Frames:')
 
