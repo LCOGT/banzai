@@ -5,20 +5,14 @@ import os.path
 import numpy as np
 from astropy.io import fits
 
-from pylcogt.images import Image, InhomogeneousSetException
+from pylcogt.images import Image, check_image_homogeneity
 from pylcogt.utils import date_utils
 from . import logs
 from .stages import CalibrationMaker, ApplyCalibration, Stage
 from .utils import stats, fits_utils
 
+
 __author__ = 'cmccully'
-
-
-def check_image_homogeneity(images):
-    for attribute in ('nx', 'ny', 'ccdsum', 'epoch', 'site', 'instrument'):
-        if len({getattr(image, attribute) for image in images}) > 1:
-            raise InhomogeneousSetException('Images have different {}s'.format(attribute))
-    return images[0]
 
 
 def create_master_bias_header(images, mean_bias_level, mean_date_obs):
