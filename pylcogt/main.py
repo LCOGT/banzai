@@ -177,10 +177,8 @@ def make_master_bias(cmd_args=None):
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
 
-    master_bias_image = images[0]
-    fits.writeto(master_bias_image.filename, master_bias_image.data, header=master_bias_image.header, clobber=True)
-    file_utils.post_to_archive_queue(master_bias_image.filename)
-    dbs.save_calibration_info('bias', master_bias_image.filename, master_bias_image)
+    file_utils.save_images(pipeline_context, images, master_calibration=True)
+
     # Clean up
     logs.stop_logging()
 

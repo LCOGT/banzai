@@ -43,14 +43,16 @@ def read_images(image_list):
     return images
 
 
-def save_images(pipeline_context, images):
+def save_images(pipeline_context, images, master_calibration=False):
     for image in images:
-        image_filename = image.header['ORIGNAME'].replace('00.fits', '90.fits')
+        image_filename = os.path.basename(image.filename)
         filepath = os.path.join(pipeline_context.processed_path, image_filename)
         image.writeto(filepath)
         if pipeline_context.post_to_archive:
             logger.info('Posting {filename} to the archive'.format(filename=image_filename))
             post_to_archive_queue(filepath)
+        if master_calibration:
+            dbs.save_calibration_info(image.caltype, image_filename, image)
 
 
 def make_image_list(pipeline_context):
