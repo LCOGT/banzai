@@ -52,7 +52,7 @@ def save_images(pipeline_context, images, master_calibration=False):
             logger.info('Posting {filename} to the archive'.format(filename=image_filename))
             post_to_archive_queue(filepath)
         if master_calibration:
-            dbs.save_calibration_info(image.caltype, image_filename, image)
+            dbs.save_calibration_info(image.obstype, image_filename, image)
 
 
 def make_image_list(pipeline_context):
