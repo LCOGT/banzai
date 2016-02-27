@@ -144,123 +144,34 @@ def main(cmd_args=None):
 
 
 def make_master_bias(cmd_args=None):
-    """
-    Main driver script for PyLCOGT. This is a console entry point.
-    """
-    # Get the available instruments/telescopes
-
-    parser = argparse.ArgumentParser(description='Make master calibration frames from LCOGT imaging data.')
-    parser.add_argument("--raw-path", default='/archive/engineering',
-                        help='Top level directory where the raw data is stored')
-    parser.add_argument("--processed-path", default='/nethome/supernova/pylcogt',
-                        help='Top level directory where the processed data will be stored')
-    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
-                                                                'critical', 'fatal', 'error'])
-    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
-    parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
-    args = parser.parse_args(cmd_args)
-
-    logs.start_logging(log_level=args.log_level)
-
     stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasMaker]
-
-
-    logger.info('Making master calibration frames:')
-
-    pipeline_context = PipelineContext(args)
-
-    image_list = file_utils.make_image_list(pipeline_context)
-    image_list = file_utils.select_images(image_list, 'BIAS')
-    images = file_utils.read_images(image_list)
-
-    for stage in stages_to_do:
-        stage_to_run = stage(pipeline_context)
-        images = stage_to_run.run(images)
-
-    file_utils.save_images(pipeline_context, images, master_calibration=True)
-
-    # Clean up
-    logs.stop_logging()
+    run(stages_to_do=stages_to_do, image_type='BIAS', calibration_maker=True,
+        log_message='Making Master BIAS', cmd_args=cmd_args)
 
 
 def make_master_dark(cmd_args=None):
-    """
-    Main driver script for PyLCOGT. This is a console entry point.
-    """
-    # Get the available instruments/telescopes
-
-    parser = argparse.ArgumentParser(description='Make master calibration frames from LCOGT imaging data.')
-    parser.add_argument("--raw-path", default='/archive/engineering',
-                        help='Top level directory where the raw data is stored')
-    parser.add_argument("--processed-path", default='/nethome/supernova/pylcogt',
-                        help='Top level directory where the processed data will be stored')
-    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
-                                                                'critical', 'fatal', 'error'])
-    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
-    parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
-    args = parser.parse_args(cmd_args)
-
-    logs.start_logging(log_level=args.log_level)
-
     stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasSubtractor, dark.DarkMaker]
-
-    logger.info('Making master calibration frames:')
-
-    pipeline_context = PipelineContext(args)
-
-    image_list = file_utils.make_image_list(pipeline_context)
-    image_list = file_utils.select_images(image_list, 'DARK')
-    images = file_utils.read_images(image_list)
-
-    for stage in stages_to_do:
-        stage_to_run = stage(pipeline_context)
-        images = stage_to_run.run(images)
-
-    # Clean up
-    logs.stop_logging()
+    run(stages_to_do=stages_to_do, image_type='DARK', calibration_maker=True,
+        log_message='Making Master Dark', cmd_args=cmd_args)
 
 
 def make_master_flat(cmd_args=None):
-    """
-    Main driver script for PyLCOGT. This is a console entry point.
-    """
-    # Get the available instruments/telescopes
-
-    parser = argparse.ArgumentParser(description='Make master calibration frames from LCOGT imaging data.')
-    parser.add_argument("--raw-path", default='/archive/engineering',
-                        help='Top level directory where the raw data is stored')
-    parser.add_argument("--processed-path", default='/nethome/supernova/pylcogt',
-                        help='Top level directory where the processed data will be stored')
-    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
-                                                                'critical', 'fatal', 'error'])
-    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
-    parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
-    args = parser.parse_args(cmd_args)
-
-    logs.start_logging(log_level=args.log_level)
-
     stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatMaker]
-
-    logger.info('Making master flat frames:')
-
-    pipeline_context = PipelineContext(args)
-
-    image_list = file_utils.make_image_list(pipeline_context)
-    image_list = file_utils.select_images(image_list, 'SKYFLAT')
-    images = file_utils.read_images(image_list)
-
-    for stage in stages_to_do:
-        stage_to_run = stage(pipeline_context)
-        images = stage_to_run.run(images)
-
-    # Clean up
-    logs.stop_logging()
+    run(stages_to_do=stages_to_do, image_type='SKYFLAT', calibration_maker=True,
+        log_message='Making Master Flat', cmd_args=cmd_args)
 
 
 def reduce_science_frames(cmd_args=None):
+    stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                    flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver]
+    run(stages_to_do=stages_to_do, image_type='EXPOSE', log_message='Reducing Science Frames',
+        cmd_args=cmd_args)
+
+
+def run(stages_to_do, image_type='', calibration_maker=False, log_message='', cmd_args=None):
     """
-    Main driver script for PyLCOGT. This is a console entry point.
+    Main driver script for PyLCOGT.
     """
     # Get the available instruments/telescopes
 
@@ -277,21 +188,18 @@ def reduce_science_frames(cmd_args=None):
 
     logs.start_logging(log_level=args.log_level)
 
-    stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
-                    flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver]
-
-    logger.info('Reducing Science Frames:')
+    logger.info(log_message)
 
     pipeline_context = PipelineContext(args)
 
     image_list = file_utils.make_image_list(pipeline_context)
-    image_list = file_utils.select_images(image_list, 'EXPOSE')
+    image_list = file_utils.select_images(image_list, image_type)
     images = file_utils.read_images(image_list)
 
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
 
-    file_utils.save_images(pipeline_context, images)
+    file_utils.save_images(pipeline_context, images, master_calibration=calibration_maker)
     # Clean up
     logs.stop_logging()
