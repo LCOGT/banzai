@@ -55,8 +55,10 @@ class Stage(object):
 
     def run(self, images):
         images.sort(key=self.get_grouping)
-        return [self.run_stage(image_set, image_config)
-                for image_config, image_set in itertools.groupby(images, self.get_grouping)]
+        processed_images = []
+        for image_config, image_set in itertools.groupby(images, self.get_grouping):
+            processed_images += self.run_stage(image_set, image_config)
+        return processed_images
 
     @abc.abstractmethod
     def do_stage(self, images):
