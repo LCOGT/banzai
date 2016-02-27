@@ -38,6 +38,7 @@ class Image(object):
         self.ra = coord.ra.deg
         self.dec = coord.dec.deg
         self.pixel_scale = float(header.get('PIXSCALE'))
+        self.catalog = None
 
     def subtract(self, value):
         self.data -= value
