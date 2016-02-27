@@ -128,16 +128,16 @@ def main(cmd_args=None):
 
     pipeline_context = PipelineContext(args)
 
-    image_list = make_image_list(pipeline_context)
-    image_list = select_images(image_list, 'EXPOSE')
-    images = read_images(image_list)
+    image_list = file_utils.make_image_list(pipeline_context)
+    image_list = file_utils.select_images(image_list, 'EXPOSE')
+    images = file_utils.read_images(image_list)
 
     for stage in stages_to_do:
         stage_to_run = reduction_stages[stage](pipeline_context)
         images = stage_to_run.run(images)
 
     # Save the output images
-    save_images(images)
+    file_utils.save_images(images)
 
     # Clean up
     logs.stop_logging()
@@ -169,9 +169,9 @@ def make_master_bias(cmd_args=None):
 
     pipeline_context = PipelineContext(args)
 
-    image_list = make_image_list(pipeline_context)
-    image_list = select_images(image_list, 'BIAS')
-    images = read_images(image_list)
+    image_list = file_utils.make_image_list(pipeline_context)
+    image_list = file_utils.select_images(image_list, 'BIAS')
+    images = file_utils.read_images(image_list)
 
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
@@ -210,9 +210,9 @@ def make_master_dark(cmd_args=None):
 
     pipeline_context = PipelineContext(args)
 
-    image_list = make_image_list(pipeline_context)
-    image_list = select_images(image_list, 'DARK')
-    images = read_images(image_list)
+    image_list = file_utils.make_image_list(pipeline_context)
+    image_list = file_utils.select_images(image_list, 'DARK')
+    images = file_utils.read_images(image_list)
 
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
@@ -248,9 +248,9 @@ def make_master_flat(cmd_args=None):
 
     pipeline_context = PipelineContext(args)
 
-    image_list = make_image_list(pipeline_context)
-    image_list = select_images(image_list, 'SKYFLAT')
-    images = read_images(image_list)
+    image_list = file_utils.make_image_list(pipeline_context)
+    image_list = file_utils.select_images(image_list, 'SKYFLAT')
+    images = file_utils.read_images(image_list)
 
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
@@ -286,57 +286,14 @@ def reduce_science_frames(cmd_args=None):
 
     pipeline_context = PipelineContext(args)
 
-    image_list = make_image_list(pipeline_context)
-    image_list = select_images(image_list, 'EXPOSE')
-    images = read_images(image_list)
-    print(len(images))
+    image_list = file_utils.make_image_list(pipeline_context)
+    image_list = file_utils.select_images(image_list, 'EXPOSE')
+    images = file_utils.read_images(image_list)
+
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
 
-    save_images(pipeline_context, images)
+    file_utils.save_images(pipeline_context, images)
     # Clean up
     logs.stop_logging()
-
-
-def read_images(image_list):
-    images = []
-    for filename in image_list:
-        try:
-            image = Image(filename)
-            images.append(image)
-        except Exception as e:
-            logger.error(e)
-            continue
-    return images
-
-
-def save_images(pipeline_context, images):
-    for image in images:
-        image_filename = image.header['ORIGNAME'].replace('00.fits', '90.fits')
-        filepath = os.path.join(pipeline_context.processed_path, image_filename)
-        image.writeto(filepath)
-        if pipeline_context.post_to_archive:
-            logger.info('Posting {filename} to the archive'.format(filename=image_filename))
-            file_utils.post_to_archive_queue(filepath)
-
-
-def make_image_list(pipeline_context):
-
-    search_path = os.path.join(pipeline_context.raw_path)
-
-    # return the list of file and a dummy image configuration
-    return glob(search_path + '/*.fits')
-
-
-def select_images(image_list, image_type):
-    images = []
-    for filename in image_list:
-        try:
-            if fits.getval(filename, 'OBSTYPE') == image_type:
-                images.append(filename)
-        except Exception as e:
-            logger.error(e)
-            continue
-
-    return images

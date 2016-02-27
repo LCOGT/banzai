@@ -228,7 +228,7 @@ def get_telescope_list(args):
 
 
 def generate_initial_query(args):
-      # Get the telescopes for which we want to reduce data.
+    # Get the telescopes for which we want to reduce data.
     db_session = get_session()
 
     image_query = sqlalchemy.sql.expression.true()
@@ -242,6 +242,7 @@ def generate_initial_query(args):
 
     db_session.close()
     return image_query
+
 
 def select_input_images(telescope, epoch, initial_query, previous_stage_done, group_by_list):
     # Select only the images we want to work on
@@ -289,6 +290,7 @@ def select_input_images(telescope, epoch, initial_query, previous_stage_done, gr
             config_list.append(image_list[0])
     db_session.close()
     return input_image_list, config_list
+
 
 def get_telescope_id(site, instrument):
     # TODO:  This dies if the telescope is not in the telescopes table. Maybe ping the configdb?

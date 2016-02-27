@@ -8,27 +8,8 @@ import numpy as np
 
 
 class Image(object):
-    nx = 0
-    ny = 0
-    site = ''
-    instrument = ''
-    epoch = ''
-    filename = ''
-    ccdsum = ''
-    filter = ''
-    telescope_id = ''
-    obstype = ''
-    nx = 0
-    ny = 0
-    exptime = 0
-    dateobs = None
-    readnoise = 0.0
-    catalog = None
-    ra = 0.0
-    dec = 0.0
-    pixel_scale = 0.0
 
-    def __init__(self, data=None, header=None, filename=None):
+    def __init__(self, filename=None, data=None, header={}):
 
         if filename is not None:
             hdu = fits.open(filename, 'readonly')
@@ -40,27 +21,23 @@ class Image(object):
         self.data = data
         self.header = header
 
-        if header is not None:
-            self.parse_header(self.header)
+        self.site = header.get('SITEID')
+        self.instrument = header.get('INSTRUME')
+        self.epoch = header.get('DAY-OBS')
+        self.nx = header.get('NAXIS1')
+        self.ny = header.get('NAXIS2')
 
-    def parse_header(self, header):
-        self.site = header['SITEID']
-        self.instrument = header['INSTRUME']
-        self.epoch = header['DAY-OBS']
-        self.nx = header['NAXIS1']
-        self.ny = header['NAXIS2']
-
-        self.ccdsum = header['CCDSUM']
-        self.filter = header['FILTER']
+        self.ccdsum = header.get('CCDSUM')
+        self.filter = header.get('FILTER')
         self.telescope_id = dbs.get_telescope_id(self.site, self.instrument)
-        self.obstype = header['OBSTYPE']
-        self.exptime = float(header['EXPTIME'])
-        self.dateobs = date_utils.parse_date_obs(header['DATE-OBS'])
-        self.readnoise = float(header['RDNOISE'])
-        coord = SkyCoord(header['RA'], header['DEC'], unit=(units.hourangle, units.degree))
+        self.obstype = header.get('OBSTYPE')
+        self.exptime = float(header.get('EXPTIME'))
+        self.dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
+        self.readnoise = float(header.get('RDNOISE'))
+        coord = SkyCoord(header.get('RA'), header.get('DEC'), unit=(units.hourangle, units.degree))
         self.ra = coord.ra.deg
         self.dec = coord.dec.deg
-        self.pixel_scale = float(header['PIXSCALE'])
+        self.pixel_scale = float(header.get('PIXSCALE'))
 
     def subtract(self, value):
         self.data -= value
