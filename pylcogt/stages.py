@@ -46,15 +46,17 @@ class Stage(object):
             grouping_criteria += [image.header[keyword] for keyword in self.group_by_keywords]
         return grouping_criteria
 
+    def run_stage(self, image_set, image_config):
+        make_output_directory(self.pipeline_context, image_config)
+        image_set = list(image_set)
+        tags = logs.image_config_to_tags(image_set[0], self.group_by_keywords)
+        self.logger.info('Running {0}'.format(self.stage_name), extra=tags)
+        return self.do_stage(image_set)
+
     def run(self, images):
         images.sort(key=self.get_grouping)
-        for image_config, image_set in itertools.groupby(images, self.get_grouping):
-            make_output_directory(self.pipeline_context, image_config)
-            image_set = list(image_set)
-            tags = logs.image_config_to_tags(image_set[0], self.group_by_keywords)
-            self.logger.info('Running {0}'.format(self.stage_name), extra=tags)
-            self.do_stage(image_set)
-        return images
+        return [self.run_stage(image_set, image_config)
+                for image_config, image_set in itertools.groupby(images, self.get_grouping)]
 
     @abc.abstractmethod
     def do_stage(self, images):
