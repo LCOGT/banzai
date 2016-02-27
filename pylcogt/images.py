@@ -43,10 +43,14 @@ class Image(object):
         self.data -= value
 
     def writeto(self, filename):
-        table_hdu = table_to_fits(self.catalog)
         image_hdu = fits.PrimaryHDU(self.data, header=self.header)
         image_hdu.header['EXTEND'] = True
-        hdu_list = fits.HDUList([image_hdu, table_hdu])
+        hdu_list = [image_hdu]
+        if self.catalog is not None:
+            table_hdu = table_to_fits(self.catalog)
+            hdu_list.append(table_hdu)
+
+        hdu_list = fits.HDUList(hdu_list)
         hdu_list.writeto(filename, clobber=True)
 
     def update_shape(self, nx, ny):
