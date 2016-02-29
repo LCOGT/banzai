@@ -72,6 +72,12 @@ Again, only the Sinstro frames currently read out with multiple amplifiers so mo
 is only required for Sinsitros. This is currently done by the preprocessor.
 
 
+Trim
+====
+After the overscan is subracted, the bias, dark, flat-field, and science images are trimmed
+based on the TRIMSEC header keyword.
+
+
 Master Bias Creation
 ====================
 For all instruments, we take many full-frame bias exposures every afternoon and morning. The afternoon and morning sets
@@ -98,11 +104,8 @@ This will add a few counts of noise to each pixel, but it solves two problems. F
 structure in the read out, this will be removed. Second, this will remove the bias values for images
 that do not have an overscan region.
 
-
-Trim
-====
-After the overscan and bias are subtracted, the darks, flat-field, and science images are trimmed
-based on the TRIMSEC header keyword.
+If no bias frame exists for this instrument, the data will not be reduced and an exception will be
+raised.
 
 
 Master Dark Creation
@@ -125,7 +128,8 @@ Dark Subtraction
 ================
 Full-frame master dark frames, scaled to the exposure time of the frame,
 are subtracted from all flat-field and science images. The most recent
-master dark frame is used. Often this is taken on the same day.
+master dark frame is used. Often this is taken on the same day. If no dark frame exists for this
+instrument, the data will not be reduced and an exception will be raised.
 
 
 Master Flat Field Creation
@@ -157,7 +161,7 @@ Flat Field Correction
 =====================
 Master flat field images (normalized to unity) are divided out of every science frame. The most recent
 master flat-field image for the given telescope, filter, and binning is used. If no flat field exists,
-the data will not be reduced.
+the data will not be reduced and an exception will be raised.
 
 
 Source Detection

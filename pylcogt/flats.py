@@ -31,11 +31,17 @@ class FlatMaker(CalibrationMaker):
 
     def make_master_calibration_frame(self, images, image_config, logging_tags):
         flat_data = np.zeros((images[0].ny, images[0].nx, len(images)))
+        quarter_nx = images[0].nx // 4
+        quarter_ny = images[0].ny // 4
 
         for i, image in enumerate(images):
-            flat_normalization = stats.mode(image.data)
+
+            # Get the sigma clipped mean of the central 25% of the image
+            flat_normalization = stats.sigma_clipped_mean(image.data[quarter_ny: -quarter_ny,
+                                                                     quarter_nx:-quarter_nx], 3.5)
             flat_data[:, :, i] = image.data / flat_normalization
-            self.logger.debug('Calculating mode of {image}: mode = {mode}'.format(image=image.filename, mode=flat_normalization))
+            self.logger.debug('Normalization of {image} = {norm}'.format(image=image.filename,
+                                                                         norm=flat_normalization))
         master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2)
 
         master_flat_header = fits_utils.create_master_calibration_header(images)
