@@ -1,8 +1,10 @@
 from __future__ import absolute_import, print_function, division
 from astropy.io import fits
 import numpy as np
+from . import date_utils
 
 __author__ = 'cmccully'
+
 
 def sanitizeheader(header):
     # Remove the mandatory keywords from a header so it can be copied to a new
@@ -14,11 +16,24 @@ def sanitizeheader(header):
         if i in header.keys():
             header.pop(i)
 
-    if 'NAXIS' in header.keys():
-        naxis = header.pop('NAXIS')
-        for i in range(naxis):
-            header.pop('NAXIS%i' % (i + 1))
+    return header
 
+
+def create_master_calibration_header(images):
+    header = fits.Header()
+    for h in images[0].header.keys():
+        header[h] = images[0].header[h]
+
+    header = sanitizeheader(header)
+
+    observation_dates = [image.dateobs for image in images]
+    mean_dateobs = date_utils.mean_date(observation_dates)
+
+    header['DATE-OBS'] = date_utils.date_obs_to_string(mean_dateobs)
+
+    header.add_history("Images combined to create master calibration image:")
+    for image in images:
+        header.add_history(image.filename)
     return header
 
 

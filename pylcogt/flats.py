@@ -5,17 +5,13 @@ import numpy as np
 import os.path
 
 from .utils import stats, fits_utils
-from . import dbs
-from . import logs
 from .stages import CalibrationMaker, ApplyCalibration
-from pylcogt.utils.file_utils import post_to_archive_queue
+from pylcogt.images import Image
 
 __author__ = 'cmccully'
 
 
 class FlatMaker(CalibrationMaker):
-
-    min_images = 5
 
     def __init__(self, pipeline_context):
 
@@ -29,40 +25,24 @@ class FlatMaker(CalibrationMaker):
     def group_by_keywords(self):
         return ['ccdsum', 'filter']
 
-    def do_stage(self, images):
+    @property
+    def min_images(self):
+        return 5
 
-        if len(images) < self.min_images:
-            self.logger.warning('Not enough images to combine.')
-        else:
-            master_flat_filename = self.get_calibration_filename(images[0])
-            # Assume the files are all the same number of pixels
-            # TODO: add error checking for incorrectly sized images
+    def make_master_calibration_frame(self, images, image_config, logging_tags):
+        flat_data = np.zeros((images[0].ny, images[0].nx, len(images)))
 
-            flat_data = np.zeros((images[0].ny, images[0].nx, len(images)))
+        for i, image in enumerate(images):
+            flat_normalization = stats.mode(image.data)
+            flat_data[:, :, i] = image.data / flat_normalization
+            self.logger.debug('Calculating mode of {image}: mode = {mode}'.format(image=image.filename, mode=flat_normalization))
+        master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2)
 
-            for i, image in enumerate(images):
+        master_flat_header = fits_utils.create_master_calibration_header(images)
 
-                flat_normalization = stats.mode(image.data)
-                flat_data[:, :, i] = image.data / flat_normalization
-                self.logger.debug('Calculating mode of {image}: mode = {mode}'.format(image=image.filename, mode=flat_normalization))
-            master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2)
-
-            # Save the master flat field image with all of the combined images in the header
-
-            header = fits.Header()
-            header['CCDSUM'] = images[0].ccdsum
-            header['DAY-OBS'] = str(images[0].epoch)
-            header['CALTYPE'] = 'SKYFLAT'
-
-            header.add_history("Images combined to create master flat field image:")
-            for image in images:
-                header.add_history(image.filename)
-
-            fits.writeto(master_flat_filename, master_flat, header=header, clobber=True)
-            post_to_archive_queue(master_flat_filename)
-            dbs.save_calibration_info('skyflat', master_flat_filename, images[0])
-
-        return images
+        master_flat_image = Image(data=master_flat, header=master_flat_header)
+        master_flat_image.filename = self.get_calibration_filename(images[0])
+        return [master_flat_image]
 
 
 class FlatDivider(ApplyCalibration):
@@ -78,15 +58,11 @@ class FlatDivider(ApplyCalibration):
     def calibration_type(self):
         return 'skyflat'
 
-    def do_stage(self, images):
-        master_flat_filename = self.get_calibration_filename(images[0])
-        if master_flat_filename is None:
-            self.logger.warning('No flatfield for this image configuration')
-            return images
+    def apply_master_calibration(self, images, master_calibration_image, logging_tags):
 
-        master_flat_data = fits.getdata(master_flat_filename)
+        master_flat_filename = master_calibration_image.filename
+        master_flat_data = master_calibration_image.data
 
-        # TODO Add error checking for incorrect image sizes
         for image in images:
             self.logger.debug('Flattening {image}'.format(image=image.filename))
 
