@@ -10,10 +10,13 @@ from pylcogt.stages import make_output_directory, Stage
 
 __author__ = 'cmccully'
 
+
 def _trim_image(image):
     trimsec = fits_utils.parse_region_keyword(image.header['TRIMSEC'])
 
     image.data = image.data[trimsec]
+    image.bpm = image.bpm[trimsec]
+    
     # Update the NAXIS and CRPIX keywords
     image.header['NAXIS1'] = trimsec[1].stop - trimsec[1].start
     image.header['NAXIS2'] = trimsec[0].stop - trimsec[0].start
