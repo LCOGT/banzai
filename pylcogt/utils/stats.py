@@ -7,42 +7,52 @@ from astropy.modeling import custom_model
 __author__ = 'cmccully'
 
 
-def absolute_deviation(a, axis=None):
-    # Calculate the image deviation
-    a_median = np.median(a, axis=axis)
-
+def absolute_deviation(a, axis=None, mask=None):
     if axis is not None:
-        a_median = np.expand_dims(a_median, axis=axis)
+        keepdims = True
+    else:
+        keepdims = False
+    # Calculate the image deviation
+    if mask is not None:
+        a[mask > 0] = np.nan
+    a_median = np.nanmedian(a, axis=axis, keepdims=keepdims)
 
     return np.abs(a - a_median)
 
 
-def median_absolute_deviation(a, axis=None, abs_deviation=None):
+def median_absolute_deviation(a, axis=None, abs_deviation=None, mask=None):
     if abs_deviation is None:
-        abs_deviation = absolute_deviation(a, axis=axis)
-    return np.median(abs_deviation, axis=axis)
+        abs_deviation = absolute_deviation(a, axis=axis, mask=mask)
 
-
-def robust_standard_deviation(a, axis=None, abs_deviation=None):
-    return 1.4826 * median_absolute_deviation(a, axis=axis, abs_deviation=abs_deviation)
-
-
-def sigma_clipped_mean(a, sigma, axis=None):
-
-    abs_deviation = absolute_deviation(a, axis=axis)
-
-    robust_std = robust_standard_deviation(a, axis=axis, abs_deviation=abs_deviation)
     if axis is not None:
-        robust_std = np.expand_dims(robust_std, axis=axis)
+        keepdims = True
+    else:
+        keepdims = False
+
+    return np.nanmedian(abs_deviation, axis=axis, keepdims=keepdims)
+
+
+def robust_standard_deviation(a, axis=None, abs_deviation=None, mask=None):
+    return 1.4826 * median_absolute_deviation(a, axis=axis, abs_deviation=abs_deviation, mask=mask)
+
+
+def sigma_clipped_mean(a, sigma, axis=None, mask=None):
+
+    abs_deviation = absolute_deviation(a, axis=axis, mask=mask)
+
+    robust_std = robust_standard_deviation(a, axis=axis, abs_deviation=abs_deviation, mask=mask)
 
     # Throw away any values that are N sigma from the median
-    mask = abs_deviation > (sigma * robust_std)
-    a[mask] = 0.0
+    sigma_mask = abs_deviation > (sigma * robust_std)
+    a[sigma_mask] = np.nan
 
+    if axis is not None:
+        keepdims = True
+    else:
+        keepdims = False
     # Take the sigma clipped mean
-    mean_value = a.sum(axis=axis)
-    mean_value /= np.logical_not(mask).sum(axis=axis)
-    return mean_value
+
+    return np.nanmean(a, axis=axis, keepdims=keepdims)
 
 
 def mode(image_data):
@@ -50,7 +60,7 @@ def mode(image_data):
     # Only used the data within +-4 sigma of the median
     data_median = np.median(image_data)
     data_std = robust_standard_deviation(image_data)
-    good_data = image_data > (data_median- 4.0 * data_std)
+    good_data = image_data > (data_median - 4.0 * data_std)
     good_data &= image_data < (data_median + 4.0 * data_std)
     clipped_data = image_data[good_data]
 

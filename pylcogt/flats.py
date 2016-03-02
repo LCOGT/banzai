@@ -1,6 +1,5 @@
 from __future__ import absolute_import, print_function, division
 
-from astropy.io import fits
 import numpy as np
 import os.path
 
@@ -31,6 +30,8 @@ class FlatMaker(CalibrationMaker):
 
     def make_master_calibration_frame(self, images, image_config, logging_tags):
         flat_data = np.zeros((images[0].ny, images[0].nx, len(images)))
+        flat_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
+
         quarter_nx = images[0].nx // 4
         quarter_ny = images[0].ny // 4
 
@@ -40,14 +41,22 @@ class FlatMaker(CalibrationMaker):
             flat_normalization = stats.sigma_clipped_mean(image.data[quarter_ny: -quarter_ny,
                                                                      quarter_nx:-quarter_nx], 3.5)
             flat_data[:, :, i] = image.data / flat_normalization
+            flat_mask[:, :, i] = image.bpm
             self.logger.debug('Normalization of {image} = {norm}'.format(image=image.filename,
                                                                          norm=flat_normalization))
-        master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2)
+        master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2, mask=flat_mask)
+
+        master_bpm = np.array(np.isnan(master_flat), dtype=np.uint8)
+
+        # Default bad pixels to 1
+        master_flat[master_bpm] = 1.0
 
         master_flat_header = fits_utils.create_master_calibration_header(images)
 
         master_flat_image = Image(data=master_flat, header=master_flat_header)
         master_flat_image.filename = self.get_calibration_filename(images[0])
+        master_flat_image.bpm = master_bpm
+
         return [master_flat_image]
 
 
@@ -73,8 +82,8 @@ class FlatDivider(ApplyCalibration):
             self.logger.debug('Flattening {image}'.format(image=image.filename))
 
             image.data /= master_flat_data
-
+            image.bpm |= master_calibration_image.bpm
             master_flat_filename = os.path.basename(master_flat_filename)
-            image.header.add_history('Master Flat: {flat_file}'.format(flat_file=master_flat_filename))
+            image.header['L1IDFLAT'] = master_flat_filename
 
         return images

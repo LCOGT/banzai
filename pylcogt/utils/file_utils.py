@@ -2,10 +2,12 @@ import os
 from kombu import Connection
 from glob import glob
 from astropy.io import fits
+import numpy as np
 
 from pylcogt import dbs
 from pylcogt import logs
 from pylcogt.images import Image
+
 
 __author__ = 'cmccully'
 
@@ -31,11 +33,24 @@ def post_to_archive_queue(image_path):
         queue.close()
 
 
+def get_bpm(image):
+    bpm_filename = dbs.get_bpm(image.telescope_id)
+    if bpm_filename is None:
+        bpm_data = np.zeros((image.ny, image.nx), dtype=np.uint8)
+        image.header['L1IDMASK'] = ''
+    else:
+        bpm_data = fits.getdata(bpm_filename)
+        image.header['L1IDMASK'] = os.path.basename(bpm_filename)
+
+    return np.array(bpm_data, dtype=np.uint8)
+
+
 def read_images(image_list):
     images = []
     for filename in image_list:
         try:
             image = Image(filename=filename)
+            image.bpm = get_bpm(image)
             images.append(image)
         except Exception as e:
             logger.error(e)
@@ -52,7 +67,7 @@ def save_images(pipeline_context, images, master_calibration=False):
             logger.info('Posting {filename} to the archive'.format(filename=image_filename))
             post_to_archive_queue(filepath)
         if master_calibration:
-            dbs.save_calibration_info(image.obstype, image_filename, image)
+            dbs.save_calibration_info(image.obstype, filepath, image)
 
 
 def make_image_list(pipeline_context):

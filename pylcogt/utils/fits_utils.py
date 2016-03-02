@@ -62,30 +62,30 @@ def parse_region_keyword(keyword_value):
     return pixel_slices
 
 
-def fits_formats(format):
+def fits_formats(format_code):
     """
     Convert a numpy data type to a fits format code
-    :param format: dtype parameter from numpy array
+    :param format_code: dtype parameter from numpy array
     :return: string: Fits type code
     """
     format_code = ''
-    if 'bool' in format.name:
+    if 'bool' in format_code.name:
         format_code = 'L'
-    elif np.issubdtype(format, np.int16):
+    elif np.issubdtype(format_code, np.int16):
         format_code = 'I'
-    elif np.issubdtype(format, np.int32):
+    elif np.issubdtype(format_code, np.int32):
         format_code = 'J'
-    elif np.issubdtype(format, np.int64):
+    elif np.issubdtype(format_code, np.int64):
         format_code = 'K'
-    elif np.issubdtype(format, np.float32):
+    elif np.issubdtype(format_code, np.float32):
         format_code = 'E'
-    elif np.issubdtype(format, np.float64):
+    elif np.issubdtype(format_code, np.float64):
         format_code = 'D'
-    elif np.issubdtype(format, np.complex32):
+    elif np.issubdtype(format_code, np.complex32):
         format_code = 'C'
-    elif np.issubdtype(format, np.complex64):
+    elif np.issubdtype(format_code, np.complex64):
         format_code = 'M'
-    elif np.issubdtype(format, np.character):
+    elif np.issubdtype(format_code, np.character):
         format_code = 'A'
     return format_code
 

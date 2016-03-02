@@ -20,6 +20,7 @@ class FakeImage(object):
         self.dateobs = datetime(2016, 1, 1)
         self.header = {}
         self.caltype = ''
+        self.bpm = np.zeros((ny, nx), dtype=np.uint8)
 
     def get_calibration_filename(self):
         return '/tmp/{0}_{1}_{2}_bin{3}.fits'.format(self.caltype, self.instrument,

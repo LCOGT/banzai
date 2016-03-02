@@ -30,7 +30,7 @@ class SourceDetector(Stage):
             self.logger.info('Extracting sources from {filename}'.format(filename=image.filename))
             data = image.data.copy()
             error = (np.abs(data) + image.readnoise ** 2.0) ** 0.5
-            mask = np.zeros(data.shape)
+            mask = image.bpm
 
             try:
                 bkg = sep.Background(data, bw=32, bh=32, fw=3, fh=3)

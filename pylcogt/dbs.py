@@ -19,6 +19,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 
+from glob import glob
+from astropy.io import fits
+
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
 _DEFAULT_DB = 'mysql+mysqlconnector://cmccully:password@localhost/test'
@@ -132,6 +135,18 @@ class Telescope(Base):
     camera_type = Column(String(20))
 
 
+class BadPixelMask(Base):
+    """
+    Bad Pixel Mask Database Record
+    """
+    __tablename__ = 'bpms'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
+    filename = Column(String(40))
+    filepath = Column(String(100))
+    ccdsum = Column(String(20))
+
+
 def create_db(db_address=_DEFAULT_DB):
     """
     Create the database structure.
@@ -185,6 +200,27 @@ def populate_telescope_table(db_address=_DEFAULT_DB):
                              camera_type='merope'))
     db_session.add(Telescope(site='elp', telescope_id='1m0-08', instrument='fl05',
                              camera_type='sinistro'))
+    db_session.commit()
+    db_session.close()
+
+
+def populate_bpm_table(directory, db_address=_DEFAULT_DB):
+    db_session = get_session(db_address)
+    bpm_filenames = glob(os.path.join(directory, 'bpm*.fits'))
+    for bpm_filename in bpm_filenames:
+        site = fits.getval(bpm_filename, 'SITEID').lower()
+        instrument = fits.getval(bpm_filename, 'INSTRUME').lower()
+        ccdsum = fits.getval(bpm_filename, 'CCDSUM')
+
+        telescope_query = Telescope.site == site
+        telescope_query &= Telescope.instrument == instrument
+        telescope = db_session.query(Telescope).filter(telescope_query).first()
+
+        if telescope is not None:
+
+            db_session.add(BadPixelMask(telescope_id=telescope.id, filepath=os.path.abspath(directory),
+                                        filename=os.path.basename(bpm_filename), ccdsum=ccdsum))
+
     db_session.commit()
     db_session.close()
 
@@ -297,7 +333,19 @@ def get_telescope_id(site, instrument):
     db_session = get_session()
     criteria = (Telescope.site == site) & (Telescope.instrument == instrument)
     telescope = db_session.query(Telescope).filter(criteria).first()
+    db_session.close()
     return telescope.id
+
+
+def get_bpm(telescope_id):
+    db_session = get_session()
+    telescope = db_session.query(Telescope).filter(Telescope.id == telescope_id).first()
+    db_session.close()
+    if telescope is not None:
+        bpm_path = os.path.join(telescope.bpm_path, telescope.bpm)
+    else:
+        bpm_path = None
+    return bpm_path
 
 
 def save_calibration_info(cal_type, output_file, image_config):

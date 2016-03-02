@@ -30,6 +30,7 @@ class Image(object):
         self.ccdsum = header.get('CCDSUM')
         self.filter = header.get('FILTER')
         self.telescope_id = dbs.get_telescope_id(self.site, self.instrument)
+
         self.obstype = header.get('OBSTYPE')
         self.exptime = float(header.get('EXPTIME'))
         self.dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
@@ -39,6 +40,7 @@ class Image(object):
         self.dec = coord.dec.deg
         self.pixel_scale = float(header.get('PIXSCALE'))
         self.catalog = None
+        self.bpm = None
 
     def subtract(self, value):
         self.data -= value
@@ -46,10 +48,16 @@ class Image(object):
     def writeto(self, filename):
         image_hdu = fits.PrimaryHDU(self.data, header=self.header)
         image_hdu.header['EXTEND'] = True
+        image_hdu.update_ext_name('SCI')
         hdu_list = [image_hdu]
         if self.catalog is not None:
             table_hdu = table_to_fits(self.catalog)
+            table_hdu.update_ext_name('CAT')
             hdu_list.append(table_hdu)
+        if self.bpm is not None:
+            bpm_hdu = fits.ImageHDU(self.bpm)
+            bpm_hdu.update_ext_name('BPM')
+            hdu_list.append(bpm_hdu)
 
         hdu_list = fits.HDUList(hdu_list)
         hdu_list.writeto(filename, clobber=True)
