@@ -339,10 +339,10 @@ def get_telescope_id(site, instrument):
 
 def get_bpm(telescope_id):
     db_session = get_session()
-    telescope = db_session.query(Telescope).filter(Telescope.id == telescope_id).first()
+    bpm = db_session.query(BadPixelMask).filter(BadPixelMask.telescope_id == telescope_id).first()
     db_session.close()
-    if telescope is not None:
-        bpm_path = os.path.join(telescope.bpm_path, telescope.bpm)
+    if bpm is not None:
+        bpm_path = os.path.join(bpm.filepath, bpm.filename)
     else:
         bpm_path = None
     return bpm_path
