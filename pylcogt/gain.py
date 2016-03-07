@@ -3,6 +3,9 @@ import numpy as np
 
 
 class GainNormalizer(Stage):
+    def __init__(self, pipeline_context):
+        super(GainNormalizer, self).__init__(pipeline_context)
+
     @property
     def group_by_keywords(self):
         return None

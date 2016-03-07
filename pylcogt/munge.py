@@ -4,7 +4,7 @@ import numpy as np
 
 class DataMunger(Stage):
     def __init__(self, pipeline_context):
-        super(DataMunger).__init__(pipeline_context)
+        super(DataMunger, self).__init__(pipeline_context)
 
     def group_by_keywords(self):
         return None

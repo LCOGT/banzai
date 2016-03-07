@@ -3,6 +3,8 @@ import numpy as np
 
 
 class CrosstalkCorrector(Stage):
+    def __init__(self, pipeline_context):
+        super(CrosstalkCorrector, self).__init__(pipeline_context)
 
     @property
     def group_by_keywords(self):
