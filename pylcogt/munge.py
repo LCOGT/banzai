@@ -40,6 +40,7 @@ class DataMunger(Stage):
                     _add_header_keyword(keyword, keywords_to_update[keyword], image)
         return images
 
+
 def _add_header_keyword(keyword, value, image):
     if image.header.get(keyword) is None:
         image.header[keyword] = value
