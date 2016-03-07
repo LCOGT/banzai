@@ -10,7 +10,7 @@ import pytest
 
 from astropy.io import fits
 
-from pylcogt.main import main
+from pylcogt.main import *
 from pylcogt.dbs import create_db
 
 

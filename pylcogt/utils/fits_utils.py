@@ -1,6 +1,7 @@
 from __future__ import absolute_import, print_function, division
 from astropy.io import fits
 import numpy as np
+import os, shutil
 from . import date_utils
 
 __author__ = 'cmccully'
@@ -39,7 +40,14 @@ def create_master_calibration_header(images):
 
 def split_slice(pixel_section):
     pixels = pixel_section.split(':')
-    return slice(int(pixels[0]) - 1, int(pixels[1]))
+    if int(pixels[1]) > int(pixels[0]):
+        pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]), 1)
+    else:
+        if int(pixels[0]) == 1:
+            pixel_slice = slice(int(pixels[1]) - 1, None, -1)
+        else:
+            pixel_slice = slice(int(pixels[1]) - 1, int(pixels[0]) - 2, -1)
+    return pixel_slice
 
 
 def parse_region_keyword(keyword_value):
@@ -99,3 +107,23 @@ def table_to_fits(table):
     columns = [fits.Column(name=col.upper(), format=fits_formats(table[col].dtype),
                            array=table[col]) for col in table.colnames]
     return fits.BinTableHDU.from_columns(columns)
+
+
+def open_image(output_path, filename):
+    base_filename = os.path.basename(filename)
+    if filename[-3:] == '.fz':
+        # Strip off the .fz
+        output_filename = os.path.join(output_path, base_filename)[:-2]
+        os.system('funpack {0} -O {1}'.format(filename, output_filename))
+        fits_filename = output_filename
+        fpacked = True
+    else:
+        fits_filename = filename
+        fpacked = False
+    hdu = fits.open(fits_filename, 'readonly')
+    data = hdu[0].data.astype(np.float32)
+    header = hdu[0].header
+    hdu.close()
+    if fpacked:
+        shutil.remove(fits_filename)
+    return data, header

@@ -10,14 +10,9 @@ October 2015
 from __future__ import absolute_import, print_function, division
 
 import argparse
-import os
-from glob import glob
 
-from astropy.io import fits
-
-from pylcogt import bias, dark, flats, trim, photometry, astrometry
+from pylcogt import munge, crosstalk, gain, mosaic, bias, dark, flats, trim, photometry, astrometry
 from pylcogt import dbs, logs
-from pylcogt.images import Image
 from pylcogt.utils import file_utils
 
 # A dictionary converting the string input by the user into the corresponding Python object
@@ -31,7 +26,7 @@ class PipelineContext(object):
         self.processed_path = args.processed_path
         self.raw_path = args.raw_path
         self.post_to_archive = args.post_to_archive
-        #self.main_query = dbs.generate_initial_query(args)
+        self.fpack = args.fpack
 
 
 def get_telescope_info():
@@ -76,97 +71,42 @@ def get_telescope_info():
     return all_sites, all_instruments, all_telescope_ids, all_camera_types
 
 
-def main(cmd_args=None):
-    """
-    Main driver script for PyLCOGT. This is a console entry point.
-    """
-    # Get the available instruments/telescopes
-    all_sites, all_instruments, all_telescope_ids, all_camera_types = get_telescope_info()
-
-    parser = argparse.ArgumentParser(description='Reduce LCOGT imaging data.')
-    parser.add_argument("--epoch", required=True, type=str, help='Epoch to reduce')
-    parser.add_argument("--telescope", default='', choices=all_telescope_ids,
-                        help='Telescope ID (e.g. 1m0-010).')
-    parser.add_argument("--instrument", default='', type=str, choices=all_instruments,
-                        help='Instrument code (e.g. kb74)')
-    parser.add_argument("--site", default='', type=str, choices=all_sites,
-                        help='Site code (e.g. elp)')
-    parser.add_argument("--camera-type", default='', type=str, choices=all_camera_types,
-                        help='Camera type (e.g. sbig)')
-
-    parser.add_argument("--raw-path", default='/archive/engineering',
-                        help='Top level directory where the raw data is stored')
-    parser.add_argument("--processed-path", default='/nethome/supernova/pylcogt',
-                        help='Top level directory where the processed data will be stored')
-
-    parser.add_argument("--filter", default='', help="Image filter",
-                        choices=['sloan', 'landolt', 'apass', 'up', 'gp', 'rp', 'ip', 'zs',
-                                 'U', 'B', 'V', 'R', 'I'])
-
-    parser.add_argument("--binning", default='', choices=['1x1', '2x2'],
-                        help="Image binning (CCDSUM)")
-    parser.add_argument("--image-type", default='', choices=['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE'],
-                        help="Image type to reduce.")
-
-    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
-                                                                'critical', 'fatal', 'error'])
-    parser.add_argument("--ncpus", default=1, type=int,
-                        help='Number of multiprocessing cpus to use.')
-
-    parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
-    parser.add_argument('--post-to-archive', default=False)
-    args = parser.parse_args(cmd_args)
-
-    logs.start_logging(log_level=args.log_level)
-
-
-    stages_to_do = [bias.BiasSubtractor]
-
-
-    logger = logs.get_logger('Main')
-    logger.info('Starting pylcogt:')
-
-    pipeline_context = PipelineContext(args)
-
-    image_list = file_utils.make_image_list(pipeline_context)
-    image_list = file_utils.select_images(image_list, 'EXPOSE')
-    images = file_utils.read_images(image_list)
-
-    for stage in stages_to_do:
-        stage_to_run = reduction_stages[stage](pipeline_context)
-        images = stage_to_run.run(images)
-
-    # Save the output images
-    file_utils.save_images(images)
-
-    # Clean up
-    logs.stop_logging()
-
-
 def make_master_bias(cmd_args=None):
-    stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasMaker]
+    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
+                    gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasMaker]
     run(stages_to_do=stages_to_do, image_type='BIAS', calibration_maker=True,
         log_message='Making Master BIAS', cmd_args=cmd_args)
 
 
 def make_master_dark(cmd_args=None):
-    stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasSubtractor, dark.DarkMaker]
+    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
+                    gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
+                    bias.BiasSubtractor, dark.DarkMaker]
     run(stages_to_do=stages_to_do, image_type='DARK', calibration_maker=True,
         log_message='Making Master Dark', cmd_args=cmd_args)
 
 
 def make_master_flat(cmd_args=None):
-    stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasSubtractor,
+    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
+                    gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatMaker]
     run(stages_to_do=stages_to_do, image_type='SKYFLAT', calibration_maker=True,
         log_message='Making Master Flat', cmd_args=cmd_args)
 
 
 def reduce_science_frames(cmd_args=None):
-    stages_to_do = [bias.OverscanSubtractor, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
-                    flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver]
+    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
+                    gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
+                    dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
+                    astrometry.WCSSolver]
     run(stages_to_do=stages_to_do, image_type='EXPOSE', log_message='Reducing Science Frames',
         cmd_args=cmd_args)
+
+
+def create_master_calibrations(cmd_args=None):
+    make_master_bias(cmd_args=cmd_args)
+    make_master_dark(cmd_args=cmd_args)
+    make_master_flat(cmd_args=cmd_args)
 
 
 def run(stages_to_do, image_type='', calibration_maker=False, log_message='', cmd_args=None):
@@ -184,6 +124,7 @@ def run(stages_to_do, image_type='', calibration_maker=False, log_message='', cm
                                                                'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
     parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
+    parser.add_argument('--fpack', dest='fpack', action='store_true', default=False)
     args = parser.parse_args(cmd_args)
 
     logs.start_logging(log_level=args.log_level)

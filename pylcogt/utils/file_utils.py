@@ -62,7 +62,9 @@ def save_images(pipeline_context, images, master_calibration=False):
     for image in images:
         image_filename = os.path.basename(image.filename)
         filepath = os.path.join(pipeline_context.processed_path, image_filename)
-        image.writeto(filepath)
+        image.writeto(filepath, pipeline_context.fpack)
+        if pipeline_context.fpack:
+            filepath += '.fz'
         if pipeline_context.post_to_archive:
             logger.info('Posting {filename} to the archive'.format(filename=image_filename))
             post_to_archive_queue(filepath)

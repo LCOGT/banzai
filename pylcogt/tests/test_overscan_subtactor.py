@@ -73,3 +73,9 @@ def test_overscan_estimation_is_reasonable():
     for image in images:
         assert np.abs(image.header['OVERSCAN'] - expected_overscan) < 1.0
         assert np.abs(np.mean(image.data[:, :-noverscan]) - input_level + expected_overscan) < 1.0
+
+# TODO: Add test for 2d overscan subtractor
+
+# TODO: Add test for 3d overscan subtractor
+
+# TODO: Copy 2d tests for 3d data cubes

@@ -114,13 +114,32 @@ class OverscanSubtractor(Stage):
             self.logger.info('Subtracting overscan', extra=logging_tags)
 
             # Subtract the overscan if it exists
-            overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC'))
-            if overscan_region is not None:
-                overscan_level = stats.sigma_clipped_mean(image.data[overscan_region], 3)
+            if len(image.data.shape) > 2:
+                for i in range(image.data.shape[0]):
+                    _subtract_overscan_3d(image, i)
             else:
-                overscan_level = 0.0
-
-            image.subtract(overscan_level)
-            image.header['OVERSCAN'] = overscan_level
+                _subtract_overscan_2d(image)
 
         return images
+
+
+def _subtract_overscan_3d(image, i):
+    overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC{0}'.format(i + 1)))
+    if overscan_region is not None:
+        overscan_level = stats.sigma_clipped_mean(image.data[i][overscan_region], 3)
+    else:
+        overscan_level = 0.0
+
+    image.header['OVERSCN{0}'.format(i + 1)] = overscan_level
+    image.data[i] -= overscan_level
+
+
+def _subtract_overscan_2d(image):
+    overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC'))
+    if overscan_region is not None:
+        overscan_level = stats.sigma_clipped_mean(image.data[overscan_region], 3)
+    else:
+        overscan_level = 0.0
+
+    image.header['OVERSCAN'] = overscan_level
+    image.data -= overscan_level

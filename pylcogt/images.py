@@ -2,9 +2,10 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
 from pylcogt.utils import date_utils
-from pylcogt.utils.fits_utils import table_to_fits
+from pylcogt.utils import fits_utils
 from pylcogt import dbs
 import numpy as np
+import os, shutil
 
 
 class Image(object):
@@ -12,10 +13,7 @@ class Image(object):
     def __init__(self, filename=None, data=None, header={}):
 
         if filename is not None:
-            hdu = fits.open(filename, 'readonly')
-            data = hdu[0].data.astype(np.float)
-            header = hdu[0].header
-            hdu.close()
+            data, header = fits_utils.open_image(filename)
             self.filename = filename
 
         self.data = data
@@ -27,6 +25,7 @@ class Image(object):
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
 
+        self.gain = header.get('GAIN')
         self.ccdsum = header.get('CCDSUM')
         self.filter = header.get('FILTER')
         self.telescope_id = dbs.get_telescope_id(self.site, self.instrument)
@@ -45,22 +44,25 @@ class Image(object):
     def subtract(self, value):
         self.data -= value
 
-    def writeto(self, filename):
-        image_hdu = fits.PrimaryHDU(self.data, header=self.header)
+    def writeto(self, filename, fpack=False):
+        image_hdu = fits.PrimaryHDU(self.data.astype(np.float32), header=self.header)
         image_hdu.header['EXTEND'] = True
         image_hdu.update_ext_name('SCI')
         hdu_list = [image_hdu]
         if self.catalog is not None:
-            table_hdu = table_to_fits(self.catalog)
+            table_hdu = fits_utils.table_to_fits(self.catalog)
             table_hdu.update_ext_name('CAT')
             hdu_list.append(table_hdu)
         if self.bpm is not None:
-            bpm_hdu = fits.ImageHDU(self.bpm)
+            bpm_hdu = fits.ImageHDU(self.bpm.astype(np.uint8))
             bpm_hdu.update_ext_name('BPM')
             hdu_list.append(bpm_hdu)
 
         hdu_list = fits.HDUList(hdu_list)
         hdu_list.writeto(filename, clobber=True)
+        if fpack:
+            os.system('fpack -q 64 {0}'.format(filename))
+            shutil.remove(filename)
 
     def update_shape(self, nx, ny):
         self.nx = nx
