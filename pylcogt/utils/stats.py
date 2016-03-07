@@ -34,6 +34,8 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None):
 
     robust_std = robust_standard_deviation(a, axis=axis, abs_deviation=abs_deviation, mask=mask)
 
+    if axis is not None:
+        robust_std = np.expand_dims(robust_std, axis=axis)
     # Throw away any values that are N sigma from the median
     sigma_mask = abs_deviation > (sigma * robust_std)
     a[sigma_mask] = np.nan
