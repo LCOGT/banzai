@@ -6,6 +6,7 @@ class DataMunger(Stage):
     def __init__(self, pipeline_context):
         super(DataMunger, self).__init__(pipeline_context)
 
+    @property
     def group_by_keywords(self):
         return None
 
