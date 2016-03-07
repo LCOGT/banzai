@@ -38,7 +38,7 @@ class DataMunger(Stage):
 
                 for keyword in keywords_to_update:
                     _add_header_keyword(keyword, keywords_to_update[keyword], image)
-
+        return images
 
 def _add_header_keyword(keyword, value, image):
     if image.header.get(keyword) is None:

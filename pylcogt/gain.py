@@ -24,3 +24,4 @@ class GainNormalizer(Stage):
 
             image.gain = 1.0
             image.header['GAIN'] = 1.0
+        return images

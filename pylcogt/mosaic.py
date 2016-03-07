@@ -24,6 +24,7 @@ class MosaicCreator(Stage):
 
                 image.data = mosaiced_data
                 image.update_shape(nx, ny)
+        return images
 
 
 def get_mosaic_size(image, n_amps):

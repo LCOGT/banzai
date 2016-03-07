@@ -21,3 +21,4 @@ class CrosstalkCorrector(Stage):
                             crosstalk_keyword = 'CRSTLK{0}{1}'.format(i + 1, j + 1)
                             crosstalk_matrix[j, i] = -float(image.header[crosstalk_keyword])
                 image.data = np.dot(crosstalk_matrix, np.swapaxes(image.data, 0, 1))
+        return images
