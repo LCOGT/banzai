@@ -12,7 +12,8 @@ def absolute_deviation(a, axis=None, mask=None):
     if mask is not None:
         a[mask > 0] = np.nan
     a_median = np.nanmedian(a, axis=axis)
-
+    if axis is not None:
+        a_median = np.expand_dims(a_median, axis=axis)
     return np.abs(a - a_median)
 
 
