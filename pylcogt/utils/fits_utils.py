@@ -1,7 +1,9 @@
 from __future__ import absolute_import, print_function, division
 from astropy.io import fits
 import numpy as np
-import os, shutil
+import os
+import shutil
+import tempfile
 from . import date_utils
 
 __author__ = 'cmccully'
@@ -109,11 +111,11 @@ def table_to_fits(table):
     return fits.BinTableHDU.from_columns(columns)
 
 
-def open_image(output_path, filename):
+def open_image(filename):
     base_filename = os.path.basename(filename)
     if filename[-3:] == '.fz':
         # Strip off the .fz
-        output_filename = os.path.join(output_path, base_filename)[:-2]
+        output_filename = os.path.join(tempfile.tempdir, base_filename)[:-2]
         os.system('funpack {0} -O {1}'.format(filename, output_filename))
         fits_filename = output_filename
         fpacked = True
