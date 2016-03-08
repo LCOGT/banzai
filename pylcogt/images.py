@@ -10,14 +10,15 @@ import os, shutil
 
 class Image(object):
 
-    def __init__(self, filename=None, data=None, header={}):
+    def __init__(self, filename=None, data=None, header={}, bpm=None):
 
         if filename is not None:
-            data, header = fits_utils.open_image(filename)
+            data, header, bpm = fits_utils.open_image(filename)
             self.filename = filename
 
         self.data = data
         self.header = header
+        self.bpm = bpm
 
         self.site = header.get('SITEID')
         self.instrument = header.get('INSTRUME')
@@ -39,7 +40,6 @@ class Image(object):
         self.dec = coord.dec.deg
         self.pixel_scale = float(header.get('PIXSCALE'))
         self.catalog = None
-        self.bpm = None
 
     def subtract(self, value):
         self.data -= value

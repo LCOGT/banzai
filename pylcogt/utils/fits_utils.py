@@ -125,7 +125,11 @@ def open_image(filename):
     hdu = fits.open(fits_filename, 'readonly')
     data = hdu[0].data.astype(np.float32)
     header = hdu[0].header
+    try:
+        bpm = hdu['BPM'].data
+    except KeyError:
+        bpm = None
     hdu.close()
     if fpacked:
         shutil.remove(fits_filename)
-    return data, header
+    return data, header, bpm
