@@ -35,11 +35,15 @@ def get_mosaic_size(image, n_amps):
     for i in range(n_amps):
         header_keyword = image.header['DETSEC{0}'.format(i + 1)]
         y_slice, x_slice = fits_utils.parse_region_keyword(header_keyword)
-        x_pixel_limits.append(x_slice.start)
+        x_pixel_limits.append(x_slice.start + 1)
         x_pixel_limits.append(x_slice.stop)
-        y_pixel_limits.append(y_slice.start)
+        y_pixel_limits.append(y_slice.start + 1)
         y_pixel_limits.append(y_slice.stop)
 
-    nx = np.max(x_pixel_limits) - np.min(x_pixel_limits)
-    ny = np.max(y_pixel_limits) - np.min(y_pixel_limits)
+    # Clean out any Nones
+    x_pixel_limits = [x if x is not None else 1 for x in x_pixel_limits]
+    y_pixel_limits = [y if y is not None else 1 for y in y_pixel_limits]
+
+    nx = np.max(x_pixel_limits) - np.min(x_pixel_limits) + 1
+    ny = np.max(y_pixel_limits) - np.min(y_pixel_limits) + 1
     return nx, ny
