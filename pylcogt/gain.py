@@ -15,7 +15,7 @@ class GainNormalizer(Stage):
             if len(image.data.shape) > 2:
                 n_amps = image.data.shape[0]
                 gain = np.array(eval(image.gain))
-                for i in n_amps:
+                for i in range(n_amps):
                     image.data[i] *= gain[i]
                 image.header['SATURATE'] *= min(gain)
             else:
