@@ -48,7 +48,7 @@ def _add_header_keyword(keyword, value, image):
 
 def set_crosstalk_header_keywords(image):
     n_amps = image.data.shape[0]
-    coefficients = crosstalk_coefficients.get(image.instrument, default=np.zeros((n_amps, n_amps)))
+    coefficients = crosstalk_coefficients.get(image.instrument, np.zeros((n_amps, n_amps)))
 
     for j in range(n_amps):
         for i in range(n_amps):
