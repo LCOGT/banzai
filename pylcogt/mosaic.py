@@ -22,7 +22,7 @@ class MosaicCreator(Stage):
                     amp_slice = fits_utils.parse_region_keyword(datasec)
                     detsec = image.header['DETSEC{0}'.format(i + 1)]
                     mosaic_slice = fits_utils.parse_region_keyword(detsec)
-                    mosaiced_data[mosaic_slice] = image.data[amp_slice]
+                    mosaiced_data[mosaic_slice] = image.data[i, *amp_slice]
 
                 image.data = mosaiced_data
                 image.update_shape(nx, ny)
