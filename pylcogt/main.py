@@ -108,6 +108,13 @@ def create_master_calibrations(cmd_args=None):
     make_master_dark(cmd_args=cmd_args)
     make_master_flat(cmd_args=cmd_args)
 
+    
+def reduce_night(cmd_args=None):
+    make_master_bias(cmd_args=cmd_args)
+    make_master_dark(cmd_args=cmd_args)
+    make_master_flat(cmd_args=cmd_args)
+    reduce_science_frames(cmd_args=cmd_args)
+
 
 def run(stages_to_do, image_type='', calibration_maker=False, log_message='', cmd_args=None):
     """
