@@ -18,8 +18,10 @@ class MosaicCreator(Stage):
                 nx, ny = get_mosaic_size(image, n_amps)
                 mosaiced_data = np.zeros((ny, nx))
                 for i in range(n_amps):
-                    amp_slice = fits_utils.parse_region_keyword('DATASEC{0}'.format(i + 1))
-                    mosaic_slice = fits_utils.parse_region_keyword('DETSEC{0}'.format(i + 1))
+                    datasec = image.header['DATASEC{0}'.format(i + 1)]
+                    amp_slice = fits_utils.parse_region_keyword(datasec)
+                    detsec = image.header['DETSEC{0}'.format(i + 1)]
+                    mosaic_slice = fits_utils.parse_region_keyword(detsec)
                     mosaiced_data[mosaic_slice] = image.data[amp_slice]
 
                 image.data = mosaiced_data
