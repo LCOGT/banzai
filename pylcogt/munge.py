@@ -26,13 +26,12 @@ class DataMunger(Stage):
                                       'DETSEC3': '[4096:2049,4096:2049]',
                                       'DETSEC4': '[1:2048,4096:2049]'}
 
-                if image.data[2].shape[0] > 2048:
+                if image.data.shape[1] > 2048:
                     keywords_to_update['DATASEC3'] = '[1:2048,2:2049]'
                     keywords_to_update['DATASEC4'] = '[1:2048,2:2049]'
-
                 else:
-                    keywords_to_update['DETSEC3'] = '[1:2048,2:2049]'
-                    keywords_to_update['DETSEC4'] = '[1:2048,2:2049]'
+                    keywords_to_update['DATASEC3'] = '[1:2048,1:2048]'
+                    keywords_to_update['DATASEC4'] = '[1:2048,1:2048]'
 
                 set_crosstalk_header_keywords(image)
 
