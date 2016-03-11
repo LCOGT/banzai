@@ -187,8 +187,9 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None):
     if axis is not None:
         robust_std = np.expand_dims(robust_std, axis=axis)
     # Throw away any values that are N sigma from the median
-    sigma_mask = (abs_deviation > (sigma * robust_std)) | (mask > 0)
-
+    sigma_mask = (abs_deviation > (sigma * robust_std))
+    if mask is not None:
+        sigma_mask |= (mask > 0)
     n_good_pixels = sigma_mask.sum(axis=axis)
     data_copy = a.copy()
     data_copy[sigma_mask] = 0.0
