@@ -196,6 +196,10 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None):
 
     # Take the sigma clipped mean
     mean_values = data_copy.sum(axis=axis)
-    mean_values[n_good_pixels > 0] /= n_good_pixels[n_good_pixels > 0]
+    if axis is None:
+        if n_good_pixels > 0:
+            mean_values /= n_good_pixels
+    else:
+        mean_values[n_good_pixels > 0] /= n_good_pixels[n_good_pixels > 0]
 
     return mean_values
