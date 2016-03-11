@@ -99,7 +99,7 @@ def _median1d(np.ndarray d, np.ndarray mask=None):
     cdef uint8_t [:] mask_memview = mask_array
 
     if mask is not None:
-        mask_memview[:] = mask.ravel()[:]
+        mask_array[:] = mask.ravel()[:]
 
     cdef np.ndarray median_array = np.zeros(n, dtype=np.float32)
     cdef float [:] median_array_memoryview = median_array
