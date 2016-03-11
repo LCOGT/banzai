@@ -67,8 +67,7 @@ def median(d, axis=None, mask=None):
     return med
 
 
-def _median1d(np.ndarray[np.float32_t, mode='c', cast=True, ndim=1] d,
-              np.ndarray[np.uint8_t, mode='c', cast=True] mask=None):
+def _median1d(np.ndarray d, np.ndarray mask=None):
     """median(d, mask=None)\n
     Find the median of a numpy array. If an axis is provided, then find the median along
     the given axis. If mask is included, elements in d that have a non-zero mask value will
@@ -96,15 +95,14 @@ def _median1d(np.ndarray[np.float32_t, mode='c', cast=True, ndim=1] d,
 
     cdef int n = d.size
 
-    if mask is None:
-        mask_array = np.zeros(n, dtype=np.uint8)
+    cdef np.ndarray mask_array = np.zeros(n, dtype=np.uint8)
+    cdef uint8_t [:] mask_memview = mask_array
 
-    else:
-        mask_array = mask.ravel()
+    if mask is not None:
+        mask_memview[:] = mask.ravel()[:]
 
     cdef np.ndarray median_array = np.zeros(n, dtype=np.float32)
     cdef float [:] median_array_memoryview = median_array
-    cdef uint8_t [:] mask_memview = mask_array
 
     cdef int n_unmasked_pixels = 0
     cdef int i = 0
@@ -123,8 +121,7 @@ def _median1d(np.ndarray[np.float32_t, mode='c', cast=True, ndim=1] d,
     return med
 
 
-def _median2d(np.ndarray[np.float32_t, mode='c', cast=True, ndim=2] d,
-              np.ndarray[np.uint8_t, mode='c', cast=True, ndim=2] mask=None):
+def _median2d(np.ndarray d, np.ndarray mask=None):
 
     cdef int nx = d.shape[1]
     cdef int ny = d.shape[0]
