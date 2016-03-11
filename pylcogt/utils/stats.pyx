@@ -190,7 +190,7 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None):
     sigma_mask = (abs_deviation > (sigma * robust_std))
     if mask is not None:
         sigma_mask |= (mask > 0)
-    n_good_pixels = sigma_mask.sum(axis=axis)
+    n_good_pixels = sigma_mask.size - sigma_mask.sum(axis=axis)
     data_copy = a.copy()
     data_copy[sigma_mask] = 0.0
 
