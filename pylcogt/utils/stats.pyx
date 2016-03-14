@@ -7,6 +7,7 @@ import numpy as np
 from libc.stdint cimport uint8_t
 
 cimport numpy as np
+cimport cython
 
 np.import_array()
 
@@ -14,8 +15,20 @@ np.import_array()
 __author__ = 'cmccully'
 
 cdef extern from "median_utils.h":
+    float quick_select(float * k, int k, int n) nogil
     float median1d(float * a, int n) nogil
     void median2d(float * data, float * output, uint8_t * mask, int nx, int ny) nogil
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def _quick_select(float[::1] a not None, int k):
+    cdef float value
+    cdef int size = a.size
+    with nogil:
+        value = quick_select(&a[0], k, size)
+    return value
+
 
 def median(d, axis=None, mask=None):
     """median(d, axis=None, mask=None)\n
@@ -67,8 +80,10 @@ def median(d, axis=None, mask=None):
     return med
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def _median1d(np.ndarray d, np.ndarray mask=None):
-    """median(d, mask=None)\n
+    """_median1d(d, mask)\n
     Find the median of a numpy array. If an axis is provided, then find the median along
     the given axis. If mask is included, elements in d that have a non-zero mask value will
     be ignored.
@@ -93,30 +108,23 @@ def _median1d(np.ndarray d, np.ndarray mask=None):
     are masked), we return zero.
     """
 
-    cdef int n = d.size
+    cdef int n = d.shape[0]
+    if mask is None:
+        mask = np.zeros(n, dtype=np.uint8)
 
-    cdef np.ndarray mask_array = np.zeros(n, dtype=np.uint8)
-    cdef uint8_t [:] mask_memview = mask_array
-
-    if mask is not None:
-        mask_array[:] = mask.ravel()[:]
-
-    cdef np.ndarray median_array = np.zeros(n, dtype=np.float32)
-    cdef float [:] median_array_memoryview = median_array
+    cdef float[::1] median_array = np.zeros(n, dtype=np.float32)
 
     cdef int n_unmasked_pixels = 0
     cdef int i = 0
     for i in range(n):
-        if mask_memview[i] == 0:
-            median_array_memoryview[n_unmasked_pixels] = d[i]
+        if mask[i] == 0:
+            median_array[n_unmasked_pixels] = d[i]
             n_unmasked_pixels += 1
 
-    cdef float * median_array_pointer = < float * > np.PyArray_DATA(median_array)
     cdef float med = 0.0
 
     if n_unmasked_pixels > 0:
-        with nogil:
-           med = median1d(median_array_pointer, n_unmasked_pixels)
+           med = median1d(&median_array[0], n_unmasked_pixels)
 
     return med
 
