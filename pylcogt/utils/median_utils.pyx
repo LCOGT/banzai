@@ -1,7 +1,7 @@
 # cython: boundscheck=False, nonecheck=False, wraparound=False
 # cython: cdivision=True
 from libc.stdint cimport uint8_t
-from libc.stdlib cimport malloc
+from libc.stdlib cimport malloc, free
 import numpy as np
 cimport numpy as np
 
@@ -22,6 +22,7 @@ def _quick_select(float[::1] a not None, int k):
     with nogil:
         value = quick_select(&a[0], k, size)
     return value
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -94,8 +95,9 @@ def median2d(float[:, ::1] d, uint8_t[:, ::1] mask):
     cdef float[::1] output_array = np.empty(ny, dtype=np.float32)
     cdef float* median_array
     cdef int n_unmasked_pixels = 0
-    median_array =<float *> malloc(nx * sizeof(float))
+
     with nogil, parallel():
+        median_array = <float *> malloc(nx * sizeof(float))
         for j in prange(ny):
             n_unmasked_pixels = 0
             for i in range(nx):
@@ -104,5 +106,5 @@ def median2d(float[:, ::1] d, uint8_t[:, ::1] mask):
                     n_unmasked_pixels = n_unmasked_pixels + 1
 
             output_array[j] = _cmedian1d(median_array, n_unmasked_pixels)
-
+        free(median_array)
     return output_array

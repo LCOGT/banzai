@@ -51,7 +51,8 @@ def median(d, axis=None, mask=None):
 
         med = median_utils.median2d(np.swapaxes(d, axis, -1).reshape(ny, nx).astype('f4'),
                         mask=median_mask)
-        output_median = np.array(med).reshape(output_shape)
+        median_array = np.array(med)
+        output_median = median_array.reshape(output_shape)
 
     return output_median
 
