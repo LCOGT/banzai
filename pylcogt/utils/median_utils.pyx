@@ -13,6 +13,10 @@ np.import_array()
 cdef extern from "quick_select.h":
     float quick_select(float * k, int k, int n) nogil
 
+cdef extern from "median_cutils.h":
+    float _cmedian1d(float* a, int n) nogil
+    void _cmedian2d(float* d, uint8_t* mask, float* output, int nx, int ny) nogil
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -22,19 +26,6 @@ def _quick_select(float[::1] a not None, int k):
     with nogil:
         value = quick_select(&a[0], k, size)
     return value
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef float _cmedian1d(float* ptr, int n) nogil:
-    cdef float med = 0.0
-    cdef int k = (n - 1) // 2
-    if n > 0:
-        med = quick_select(ptr, k, n)
-        if n % 2 == 0:
-            med += quick_select(ptr, k + 1, n)
-            med /= 2.0
-    return med
 
 
 @cython.boundscheck(False)
@@ -74,12 +65,14 @@ def median1d(float[::1] d not None, uint8_t[::1] mask not None):
 
     cdef int n_unmasked_pixels = 0
     cdef int i = 0
+    cdef float med = 0.0
     for i in range(n):
         if mask[i] == 0:
             median_array[n_unmasked_pixels] = d[i]
             n_unmasked_pixels += 1
-
-    return _cmedian1d(&median_array[0], n_unmasked_pixels)
+    if n_unmasked_pixels > 0:
+        med = _cmedian1d(&median_array[0], n_unmasked_pixels)
+    return med
 
 
 @cython.boundscheck(False)
@@ -93,18 +86,8 @@ def median2d(float[:, ::1] d, uint8_t[:, ::1] mask):
     cdef int i
 
     cdef float[::1] output_array = np.empty(ny, dtype=np.float32)
-    cdef float* median_array
-    cdef int n_unmasked_pixels = 0
 
-    with nogil, parallel():
-        median_array = <float *> malloc(nx * sizeof(float))
-        for j in prange(ny):
-            n_unmasked_pixels = 0
-            for i in range(nx):
-                if mask[j, i] == 0:
-                    median_array[n_unmasked_pixels] = d[j, i]
-                    n_unmasked_pixels = n_unmasked_pixels + 1
+    with nogil:
+        _cmedian2d(&d[0, 0], &mask[0, 0], &output_array[0], nx, ny)
 
-            output_array[j] = _cmedian1d(median_array, n_unmasked_pixels)
-        free(median_array)
     return output_array
