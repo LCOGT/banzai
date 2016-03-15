@@ -197,7 +197,7 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None):
     sigma_mask = (abs_deviation > (sigma * robust_std))
 
     if mask is not None:
-        sigma_mask |= (mask > 0)
+        sigma_mask = np.logical_or(sigma_mask, (mask > 0))
 
     data_copy = a.copy()
     data_copy[sigma_mask] = 0.0
