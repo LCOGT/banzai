@@ -1,13 +1,13 @@
 # cython: boundscheck=False, nonecheck=False, wraparound=False
 # cython: cdivision=True
 from __future__ import absolute_import, print_function, division
-
 import numpy as np
-
 from libc.stdint cimport uint8_t
-
+from libc.stdlib cimport malloc
 cimport numpy as np
+
 cimport cython
+from cython.parallel import parallel, prange
 
 np.import_array()
 
@@ -16,7 +16,6 @@ __author__ = 'cmccully'
 
 cdef extern from "median_utils.h":
     float quick_select(float * k, int k, int n) nogil
-    float median1d(float * a, int n) nogil
     void median2d(float * data, float * output, uint8_t * mask, int nx, int ny) nogil
 
 
@@ -61,28 +60,41 @@ def median(d, axis=None, mask=None):
         if mask is not None:
             median_mask = mask.ravel()
         else:
-            median_mask = None
-        med = _median1d(d.ravel(), median_mask)
+            median_mask = np.zeros(d.size, dtype=np.uint8)
+        med = _median1d(d.ravel().astype('f4'), median_mask.astype(np.uint8))
     else:
         output_shape = np.delete(d.shape, axis)
         nx = d.shape[axis]
         ny = d.size // nx
 
         if mask is not None:
-            median_mask = np.swapaxes(mask, axis, -1).reshape(ny, nx)
+            median_mask = np.swapaxes(mask, axis, -1).reshape(ny, nx).astype(np.uint8)
         else:
-            median_mask = None
+            median_mask = np.zeros((ny, nx), dtype=np.uint8)
 
-        med = _median2d(np.swapaxes(d, axis, -1).reshape(ny, nx),
+        med = _median2d(np.swapaxes(d, axis, -1).reshape(ny, nx).astype('f4'),
                         mask=median_mask)
-        med = med.reshape(output_shape)
+        med = np.asarray(med).reshape(output_shape)
 
     return med
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def _median1d(np.ndarray d, np.ndarray mask=None):
+cdef float _cmedian1d(float* ptr, int n) nogil:
+    cdef float med = 0.0
+    cdef int k = (n - 1) // 2
+    if n > 0:
+        med = quick_select(ptr, k, n)
+        if n % 2 == 0:
+            med += quick_select(ptr, k + 1, n)
+            med /= 2.0
+    return med
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def _median1d(float[::1] d not None, uint8_t[::1] mask not None):
     """_median1d(d, mask)\n
     Find the median of a numpy array. If an axis is provided, then find the median along
     the given axis. If mask is included, elements in d that have a non-zero mask value will
@@ -105,14 +117,15 @@ def _median1d(np.ndarray d, np.ndarray mask=None):
     -----
     Makes extensive use of the quick select algorithm written in C, included in median_utils.c.
     If all of the elements in the array are masked (or all of the elements of the axis of interest
-    are masked), we return zero.
+    are masked), we return zero. This has comparable performance to np.median on unmasked data,
+    but does not require the gil. For masked arrays, the performance is significantly better
+    (anecdotally, I have seen improvements of more than order of magnitude, but I have not done
+    a comprehensive benchmark).
     """
 
     cdef int n = d.shape[0]
-    if mask is None:
-        mask = np.zeros(n, dtype=np.uint8)
 
-    cdef float[::1] median_array = np.zeros(n, dtype=np.float32)
+    cdef float[::1] median_array = np.empty(n, dtype=np.float32)
 
     cdef int n_unmasked_pixels = 0
     cdef int i = 0
@@ -121,47 +134,32 @@ def _median1d(np.ndarray d, np.ndarray mask=None):
             median_array[n_unmasked_pixels] = d[i]
             n_unmasked_pixels += 1
 
-    cdef float med = 0.0
-
-    if n_unmasked_pixels > 0:
-           med = median1d(&median_array[0], n_unmasked_pixels)
-
-    return med
+    return _cmedian1d(&median_array[0], n_unmasked_pixels)
 
 
-def _median2d(np.ndarray d, np.ndarray mask=None):
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def _median2d(float[:, ::1] d, uint8_t[:, ::1] mask):
 
     cdef int nx = d.shape[1]
     cdef int ny = d.shape[0]
 
-    # Copy the array into memory. This likely isn't necessary, but it forces the data to be
-    # contiguous in memory
-    cdef np.ndarray median_array = np.zeros((ny, nx), dtype=np.float32)
-    cdef float [:, :] median_memview = median_array
-
-    cdef int i = 0
     cdef int j = 0
-    for j in range(ny):
-        for i in range(nx):
-            median_memview[j, i] = d[j, i]
+    cdef int i
 
-    cdef np.ndarray mask_array = np.zeros((ny, nx), dtype=np.uint8)
-    cdef uint8_t [:, :] mask_memview = mask_array
-
-    if mask is not None:
-        for j in range(ny):
+    cdef float[::1] output_array = np.empty(ny, dtype=np.float32)
+    cdef float* median_array
+    cdef int n_unmasked_pixels = 0
+    median_array =<float *> malloc(nx * sizeof(float))
+    with nogil, parallel():
+        for j in prange(ny):
+            n_unmasked_pixels = 0
             for i in range(nx):
-                mask_memview[j, i] = mask[j, i]
+                if mask[j, i] == 0:
+                    median_array[n_unmasked_pixels] = d[j, i]
+                    n_unmasked_pixels = n_unmasked_pixels + 1
 
-    cdef float * median_array_pointer = < float * > np.PyArray_DATA(median_array)
-
-    cdef np.ndarray output_array = np.zeros(ny, dtype=np.float32)
-    cdef float * output_array_pointer = < float * > np.PyArray_DATA(output_array)
-
-    cdef uint8_t * mask_pointer = < uint8_t * > np.PyArray_DATA(mask_array)
-
-    with nogil:
-        median2d(median_array_pointer, output_array_pointer, mask_pointer, nx, ny)
+            output_array[j] = _cmedian1d(median_array, n_unmasked_pixels)
 
     return output_array
 
@@ -194,16 +192,20 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None):
 
     if axis is not None:
         robust_std = np.expand_dims(robust_std, axis=axis)
+
     # Throw away any values that are N sigma from the median
     sigma_mask = (abs_deviation > (sigma * robust_std))
+
     if mask is not None:
         sigma_mask |= (mask > 0)
-    n_good_pixels = sigma_mask.size - sigma_mask.sum(axis=axis)
+
     data_copy = a.copy()
     data_copy[sigma_mask] = 0.0
 
     # Take the sigma clipped mean
     mean_values = data_copy.sum(axis=axis)
+
+    n_good_pixels = (~sigma_mask).sum(axis=axis)
     if axis is None:
         if n_good_pixels > 0:
             mean_values /= n_good_pixels
