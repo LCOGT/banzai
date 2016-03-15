@@ -71,7 +71,7 @@ def median1d(float[::1] d not None, uint8_t[::1] mask not None):
             median_array[n_unmasked_pixels] = d[i]
             n_unmasked_pixels += 1
     if n_unmasked_pixels > 0:
-        med = _cmedian1d(&median_array[0], n_unmasked_pixels)
+        med = np.median(median_array[:n_unmasked_pixels])
     return med
 
 
@@ -83,11 +83,23 @@ def median2d(float[:, ::1] d, uint8_t[:, ::1] mask):
     cdef int ny = d.shape[0]
 
     cdef int j = 0
-    cdef int i
+    cdef int i = 0
 
     cdef float[::1] output_array = np.empty(ny, dtype=np.float32)
 
-    with nogil:
-        _cmedian2d(&d[0, 0], &mask[0, 0], &output_array[0], nx, ny)
+    cdef float[::1] median_array = np.empty(nx, dtype=np.float32)
+
+    cdef n_unmasked_pixels = 0
+    for j in range(ny):
+        n_unmasked_pixels = 0
+        for i in range(nx):
+            if mask[j, i] == 0:
+                median_array[n_unmasked_pixels] = d[j, i]
+                n_unmasked_pixels = n_unmasked_pixels + 1
+
+        if n_unmasked_pixels == 0:
+            output_array[j] = 0.0
+        else:
+            output_array[j] = np.median(median_array[:n_unmasked_pixels])
 
     return output_array
