@@ -41,14 +41,14 @@ def check_openmp():
 
 def get_extensions():
 
-    med_sources = [str(os.path.join(UTIL_DIR, "stats.pyx")),
-                   str(os.path.join(UTIL_DIR, "median_utils.c"))]
+    med_sources = [str(os.path.join(UTIL_DIR, "median_utils.pyx")),
+                   str(os.path.join(UTIL_DIR, "quick_select.c"))]
 
     include_dirs = ['numpy', UTIL_DIR]
 
     libraries = []
 
-    ext_med = Extension(name=str('pylcogt.utils.stats'),
+    ext_med = Extension(name=str('pylcogt.utils.median_utils'),
                         sources=med_sources,
                         include_dirs=include_dirs,
                         libraries=libraries,
