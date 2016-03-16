@@ -2,3 +2,5 @@
 """
 This packages contains affiliated package tests.
 """
+from . import test_bias_maker, test_bias_subtractor
+__all__ = ['test_bias_maker', 'test_bias_subtractor']

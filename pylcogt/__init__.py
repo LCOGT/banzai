@@ -12,10 +12,6 @@ from ._astropy_init import *
 
 # For egg_info test builds to pass, put package imports here.
 if not _ASTROPY_SETUP_:
-    from example_mod import *
-
-
-from .utils.pymysql import *
-from .utils.lcogtsteps import *
-
-__all__ = ['query']
+    from .dbs import *
+    from . import utils
+__all__ = ['utils']
