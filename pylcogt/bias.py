@@ -44,8 +44,8 @@ class BiasMaker(CalibrationMaker):
             self.logger.debug('Bias level is {bias}'.format(bias=bias_level_array[i]),
                               extra=logging_tags)
             # Subtract the bias level for each image
-            bias_data[:, :, i] = image.data - bias_level_array[i]
-            bias_mask[:, :, i] = image.bpm
+            bias_data[:, :, i] = image.data[:, :] - bias_level_array[i]
+            bias_mask[:, :, i] = image.bpm[:, :]
 
         logs.pop_tag(logging_tags, 'filename')
         mean_bias_level = stats.sigma_clipped_mean(bias_level_array, 3.0)
@@ -53,7 +53,7 @@ class BiasMaker(CalibrationMaker):
                           extra=logging_tags)
 
         master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2, mask=bias_mask)
-        master_bpm = np.array(np.isnan(master_bias), dtype=np.uint8)
+        master_bpm = np.array(master_bias == 0.0, dtype=np.uint8)
         master_bias[master_bpm] = 0.0
 
         header = fits_utils.create_master_calibration_header(images)
