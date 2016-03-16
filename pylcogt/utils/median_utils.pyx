@@ -89,7 +89,7 @@ def median2d(float[:, ::1] d, uint8_t[:, ::1] mask):
 
     cdef float[::1] median_array = np.empty(nx, dtype=np.float32)
 
-    cdef int n_unmasked_pixels = 0
+    cdef n_unmasked_pixels = 0
     for j in range(ny):
         n_unmasked_pixels = 0
         for i in range(nx):
