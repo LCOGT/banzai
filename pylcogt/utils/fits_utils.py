@@ -2,7 +2,6 @@ from __future__ import absolute_import, print_function, division
 from astropy.io import fits
 import numpy as np
 import os
-import shutil
 import tempfile
 from . import date_utils
 
@@ -131,5 +130,5 @@ def open_image(filename):
         bpm = None
     hdu.close()
     if fpacked:
-        shutil.remove(fits_filename)
+        os.remove(fits_filename)
     return data, header, bpm

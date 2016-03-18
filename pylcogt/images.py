@@ -5,7 +5,7 @@ from pylcogt.utils import date_utils
 from pylcogt.utils import fits_utils
 from pylcogt import dbs
 import numpy as np
-import os, shutil
+import os
 
 
 class Image(object):
@@ -62,7 +62,8 @@ class Image(object):
         hdu_list.writeto(filename, clobber=True)
         if fpack:
             os.system('fpack -q 64 {0}'.format(filename))
-            shutil.remove(filename)
+            os.remove(filename)
+            self.filename += '.fz'
 
     def update_shape(self, nx, ny):
         self.nx = nx

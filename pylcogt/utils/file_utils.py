@@ -62,6 +62,10 @@ def read_images(image_list):
 
 def save_images(pipeline_context, images, master_calibration=False):
     for image in images:
+        if not master_calibration:
+            image.filename = image.filename.replace('00.fits',
+                                                    '{:02d}.fits'.format(pipeline_context.rlevel))
+
         image_filename = os.path.basename(image.filename)
         filepath = os.path.join(pipeline_context.processed_path, image_filename)
         image.writeto(filepath, pipeline_context.fpack)
@@ -69,6 +73,7 @@ def save_images(pipeline_context, images, master_calibration=False):
             filepath += '.fz'
         if master_calibration:
             dbs.save_calibration_info(image.obstype, filepath, image)
+
         if pipeline_context.post_to_archive:
             logger.info('Posting {filename} to the archive'.format(filename=image_filename))
             try:
