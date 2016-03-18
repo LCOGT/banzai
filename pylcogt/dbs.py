@@ -21,6 +21,8 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from glob import glob
 from astropy.io import fits
+import requests
+
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
@@ -130,7 +132,6 @@ class Telescope(Base):
     __tablename__ = 'telescopes'
     id = Column(Integer, primary_key=True, autoincrement=True)
     site = Column(String(10), index=True)
-    telescope_id = Column(String(20), index=True)
     instrument = Column(String(20), index=True)
     camera_type = Column(String(20))
 
@@ -163,43 +164,70 @@ def create_db(db_address=_DEFAULT_DB):
     populate_telescope_table(db_address)
 
 
-def populate_telescope_table(db_address=_DEFAULT_DB):
+def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
+    """
+    Parse the contents of the configdb.
+
+    Parameters
+    ----------
+    configdb_address : str
+                      URL of the configdb, must be inside LCOGT VPN
+
+    Returns
+    -------
+    cameras : list of dicts
+              each camera dictionary contains a site, instrument code, and camera type.
+    """
+    sites = requests.get(configdb_address).json()['results']
+    cameras = []
+    for site in sites:
+        for enc in site['enclosure_set']:
+            for tel in enc['telescope_set']:
+                for ins in tel['instrument_set']:
+                    sci_cam = ins.get('science_camera')
+                    if sci_cam is not None:
+                        if 'SciCam' in sci_cam['camera_type']['code']:
+                            cameras.append({'site': site['code'],
+                                            'instrument': sci_cam['code'],
+                                            'camera_type': sci_cam['camera_type']['code']})
+    return cameras
+
+
+def populate_telescope_table(db_address=_DEFAULT_DB,
+                             configdb_address='http://configdb.lco.gtn/sites/'):
     """
     Populate the telescope table
 
-    This only needs to be done once on initialization.
-    Any new instruments will need to be added to this table manually.
+    Parameters
+    ----------
+    db_address : str
+                 sqlalchemy address to the database of the form
+                 mysql+mysqlconnector://cmccully:password@localhost/test
 
-    We really should replace this with a call to the configdb.
+    configdb_address : str
+                       URL of the configdb
+
+    Notes
+    -----
+    This only works inside the LCOGT VPN. This should be run at least when a new camera is
+    added to the network
     """
 
+    cameras = parse_configdb(configdb_address=configdb_address)
+
     db_session = get_session(db_address)
-    db_session.add(Telescope(site='coj', telescope_id='2m0-02', instrument='fs03',
-                             camera_type='spectral'))
-    db_session.add(Telescope(site='coj', telescope_id='1m0-11', instrument='kb79',
-                             camera_type='sbig'))
-    db_session.add(Telescope(site='coj', telescope_id='1m0-03', instrument='kb71',
-                             camera_type='sbig'))
-    db_session.add(Telescope(site='elp', telescope_id='1m0-08', instrument='kb74',
-                             camera_type='sbig'))
-    db_session.add(Telescope(site='lsc', telescope_id='1m0-05', instrument='kb78',
-                             camera_type='sbig'))
-    db_session.add(Telescope(site='lsc', telescope_id='1m0-09', instrument='fl03',
-                             camera_type='sinistro'))
-    db_session.add(Telescope(site='lsc', telescope_id='1m0-04', instrument='fl04',
-                             camera_type='sinistro'))
-    db_session.add(Telescope(site='cpt', telescope_id='1m0-10', instrument='kb70',
-                             camera_type='sbig'))
-    db_session.add(Telescope(site='cpt', telescope_id='1m0-13', instrument='kb76',
-                             camera_type='sbig'))
-    db_session.add(Telescope(site='cpt', telescope_id='1m0-12', instrument='kb75',
-                             camera_type='sbig'))
-    db_session.add(Telescope(site='ogg', telescope_id='2m0-01', instrument='fs02',
-                             camera_type='spectral'))
-    db_session.add(Telescope(site='ogg', telescope_id='2m0-01', instrument='em01',
-                             camera_type='merope'))
-    db_session.add(Telescope(site='elp', telescope_id='1m0-08', instrument='fl05',
-                             camera_type='sinistro'))
+
+    for camera in cameras:
+
+        # Check and see if the site and instrument combinatation already exists in the table
+        camera_query = Telescope.site == camera['site']
+        camera_query &= Telescope.instrument == camera['instrument']
+        matching_cameras = db_session.query(Telescope).filter(camera_query).all()
+
+        if len(matching_cameras) == 0:
+            db_session.add(Telescope(site=camera['site'], instrument=camera['instrument'],
+                                     camera_type=camera['camera_type']))
+
     db_session.commit()
     db_session.close()
 
