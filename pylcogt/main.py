@@ -11,7 +11,8 @@ from __future__ import absolute_import, print_function, division
 
 import argparse
 
-from pylcogt import munge, crosstalk, gain, mosaic, bias, dark, flats, trim, photometry, astrometry
+from pylcogt import munge, crosstalk, gain, mosaic
+from pylcogt import bias, dark, flats, trim, photometry, astrometry, headers
 from pylcogt import dbs, logs
 from pylcogt.utils import file_utils
 
@@ -27,6 +28,7 @@ class PipelineContext(object):
         self.raw_path = args.raw_path
         self.post_to_archive = args.post_to_archive
         self.fpack = args.fpack
+        self.rlevel = args.rlevel
 
 
 def get_telescope_info():
@@ -73,7 +75,8 @@ def get_telescope_info():
 
 def make_master_bias(cmd_args=None):
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
-                    gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasMaker]
+                    gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasMaker,
+                    headers.HeaderUpdater]
     run(stages_to_do=stages_to_do, image_type='BIAS', calibration_maker=True,
         log_message='Making Master BIAS', cmd_args=cmd_args)
 
@@ -81,7 +84,7 @@ def make_master_bias(cmd_args=None):
 def make_master_dark(cmd_args=None):
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
-                    bias.BiasSubtractor, dark.DarkMaker]
+                    bias.BiasSubtractor, dark.DarkMaker, headers.HeaderUpdater]
     run(stages_to_do=stages_to_do, image_type='DARK', calibration_maker=True,
         log_message='Making Master Dark', cmd_args=cmd_args)
 
@@ -89,7 +92,7 @@ def make_master_dark(cmd_args=None):
 def make_master_flat(cmd_args=None):
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
-                    dark.DarkSubtractor, flats.FlatMaker]
+                    dark.DarkSubtractor, flats.FlatMaker, headers.HeaderUpdater]
     run(stages_to_do=stages_to_do, image_type='SKYFLAT', calibration_maker=True,
         log_message='Making Master Flat', cmd_args=cmd_args)
 
@@ -98,7 +101,7 @@ def reduce_science_frames(cmd_args=None):
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
-                    astrometry.WCSSolver]
+                    astrometry.WCSSolver, headers.HeaderUpdater]
     run(stages_to_do=stages_to_do, image_type='EXPOSE', log_message='Reducing Science Frames',
         cmd_args=cmd_args)
 
@@ -131,7 +134,9 @@ def run(stages_to_do, image_type='', calibration_maker=False, log_message='', cm
                                                                'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
     parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
-    parser.add_argument('--fpack', dest='fpack', action='store_true', default=False)
+    parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
+                        help='Fpack the output files?')
+    parser.add_argument('--rlevel', dest='rlevel', default=91, help='Reduction level')
     args = parser.parse_args(cmd_args)
 
     logs.start_logging(log_level=args.log_level)
