@@ -112,23 +112,23 @@ def table_to_fits(table):
 
 def open_image(filename):
     base_filename = os.path.basename(filename)
-    if filename[-3:] == '.fz':
-        # Strip off the .fz
-        output_filename = os.path.join(tempfile.tempdir, base_filename)[:-2]
-        os.system('funpack {0} -O {1}'.format(filename, output_filename))
-        fits_filename = output_filename
-        fpacked = True
-    else:
-        fits_filename = filename
-        fpacked = False
-    hdu = fits.open(fits_filename, 'readonly')
-    data = hdu[0].data.astype(np.float32)
-    header = hdu[0].header
-    try:
-        bpm = hdu['BPM'].data
-    except KeyError:
-        bpm = None
-    hdu.close()
-    if fpacked:
-        os.remove(fits_filename)
+    
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        if filename[-3:] == '.fz':
+            # Strip off the .fz
+            output_filename = os.path.join(tmpdirname, base_filename)[:-3]
+            os.system('funpack {0} -O {1}'.format(filename, output_filename))
+            fits_filename = output_filename
+        else:
+            fits_filename = filename
+
+        hdu = fits.open(fits_filename, 'readonly')
+        data = hdu[0].data.astype(np.float32)
+        header = hdu[0].header
+        try:
+            bpm = hdu['BPM'].data
+        except KeyError:
+            bpm = None
+        hdu.close()
+
     return data, header, bpm
