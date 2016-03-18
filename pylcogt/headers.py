@@ -22,6 +22,7 @@ class HeaderUpdater(Stage):
                 date_observed = date_utils.parse_date_obs(image.header['DATE-OBS'])
                 next_year = date_observed + timedelta(days=365)
                 image.header['L1PUBDAT'] = date_utils.date_obs_to_string(next_year)
+        return images
 
 
 def instantly_public(proposal_id):
