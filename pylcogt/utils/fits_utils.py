@@ -112,12 +112,12 @@ def table_to_fits(table):
 
 def open_image(filename):
     base_filename = os.path.basename(filename)
-    
+
     with tempfile.TemporaryDirectory() as tmpdirname:
         if filename[-3:] == '.fz':
             # Strip off the .fz
             output_filename = os.path.join(tmpdirname, base_filename)[:-3]
-            os.system('funpack {0} -O {1}'.format(filename, output_filename))
+            os.system('funpack -O {0} {1}'.format(output_filename, filename))
             fits_filename = output_filename
         else:
             fits_filename = filename
