@@ -70,6 +70,7 @@ def save_images(pipeline_context, images, master_calibration=False):
         filepath = os.path.join(pipeline_context.processed_path, image_filename)
         image.writeto(filepath, pipeline_context.fpack)
         if pipeline_context.fpack:
+            image_filename += '.fz'
             filepath += '.fz'
         if master_calibration:
             dbs.save_calibration_info(image.obstype, filepath, image)
