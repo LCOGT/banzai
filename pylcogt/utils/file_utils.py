@@ -29,7 +29,8 @@ def make_output_directory(pipeline_context, image):
 def post_to_archive_queue(image_path):
     with Connection('amqp://guest:guest@cerberus.lco.gtn') as conn:
         queue = conn.SimpleQueue('ingest_queue')
-        queue.put(image_path)
+        put = conn.ensure(queue, queue.put, max_retries=30)
+        put(image_path)
         queue.close()
 
 
@@ -53,6 +54,7 @@ def read_images(image_list):
             image.bpm = get_bpm(image)
             images.append(image)
         except Exception as e:
+            logger.error('Error loading {0}'.format(filename))
             logger.error(e)
             continue
     return images
@@ -65,11 +67,16 @@ def save_images(pipeline_context, images, master_calibration=False):
         image.writeto(filepath, pipeline_context.fpack)
         if pipeline_context.fpack:
             filepath += '.fz'
-        if pipeline_context.post_to_archive:
-            logger.info('Posting {filename} to the archive'.format(filename=image_filename))
-            post_to_archive_queue(filepath)
         if master_calibration:
             dbs.save_calibration_info(image.obstype, filepath, image)
+        if pipeline_context.post_to_archive:
+            logger.info('Posting {filename} to the archive'.format(filename=image_filename))
+            try:
+                post_to_archive_queue(filepath)
+            except Exception as e:
+                logger.error("Could not post {0} to ingester.".format(filepath))
+                logger.error(e)
+                continue
 
 
 def make_image_list(pipeline_context):
