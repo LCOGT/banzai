@@ -58,7 +58,10 @@ class Stage(object):
         images.sort(key=self.get_grouping)
         processed_images = []
         for image_config, image_set in itertools.groupby(images, self.get_grouping):
-            processed_images += self.run_stage(image_set, image_config)
+            try:
+                processed_images += self.run_stage(image_set, image_config)
+            except Exception as e:
+                continue
         return processed_images
 
     @abc.abstractmethod
