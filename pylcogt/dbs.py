@@ -148,7 +148,8 @@ class BadPixelMask(Base):
     ccdsum = Column(String(20))
 
 
-def create_db(db_address=_DEFAULT_DB):
+def create_db(bpm_directory, db_address=_DEFAULT_DB,
+              configdb_address='http://configdb.lco.gtn/sites/'):
     """
     Create the database structure.
 
@@ -162,6 +163,7 @@ def create_db(db_address=_DEFAULT_DB):
     Base.metadata.create_all(engine)
 
     populate_telescope_table(db_address)
+    populate_bpm_table(bpm_directory, db_address=db_address)
 
 
 def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
