@@ -61,6 +61,8 @@ class Image(object):
         hdu_list = fits.HDUList(hdu_list)
         hdu_list.writeto(filename, clobber=True)
         if fpack:
+            if os.path.exists(filename + '.fz'):
+                os.remove(filename + '.fz')
             os.system('fpack -q 64 {0}'.format(filename))
             os.remove(filename)
             self.filename += '.fz'
