@@ -33,12 +33,12 @@ class DarkMaker(CalibrationMaker):
         for i, image in enumerate(images):
             self.logger.debug('Combining dark {filename}'.format(filename=image.filename))
 
-            dark_data[:, :, i] = image.data / image.exptime
-            dark_mask[:, :, i] = image.bpm
+            dark_data[:, :, i] = (image.data / image.exptime)[:, :]
+            dark_mask[:, :, i] = image.bpm[:, :]
 
         master_dark = stats.sigma_clipped_mean(dark_data, 3.0, axis=2, mask=dark_mask)
 
-        master_bpm = np.array(np.isnan(master_dark), dtype=np.uint8)
+        master_bpm = np.array(master_dark == 0.0, dtype=np.uint8)
         master_dark[master_bpm] = 0.0
 
         # Save the master dark image with all of the combined images in the header

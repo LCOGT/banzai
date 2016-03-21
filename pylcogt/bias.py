@@ -54,7 +54,6 @@ class BiasMaker(CalibrationMaker):
 
         master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2, mask=bias_mask)
         master_bpm = np.array(master_bias == 0.0, dtype=np.uint8)
-        master_bias[master_bpm] = 0.0
 
         header = fits_utils.create_master_calibration_header(images)
 

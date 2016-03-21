@@ -40,16 +40,14 @@ class FlatMaker(CalibrationMaker):
             # Get the sigma clipped mean of the central 25% of the image
             flat_normalization = stats.sigma_clipped_mean(image.data[quarter_ny: -quarter_ny,
                                                                      quarter_nx:-quarter_nx], 3.5)
-            flat_data[:, :, i] = image.data / flat_normalization
-            flat_mask[:, :, i] = image.bpm
+            flat_data[:, :, i] = (image.data / flat_normalization)[:, :]
+            flat_mask[:, :, i] = image.bpm[:, :]
             self.logger.debug('Normalization of {image} = {norm}'.format(image=image.filename,
                                                                          norm=flat_normalization))
-        master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2, mask=flat_mask)
+        master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2, mask=flat_mask,
+                                               fill_value=1.0)
 
-        master_bpm = np.array(np.isnan(master_flat), dtype=np.uint8)
-
-        # Default bad pixels to 1
-        master_flat[master_bpm] = 1.0
+        master_bpm = np.array(master_flat == 1.0, dtype=np.uint8)
 
         master_flat_header = fits_utils.create_master_calibration_header(images)
 

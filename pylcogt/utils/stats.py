@@ -76,7 +76,7 @@ def robust_standard_deviation(a, axis=None, abs_deviation=None, mask=None):
     return 1.4826 * median_absolute_deviation(a, axis=axis, abs_deviation=abs_deviation, mask=mask)
 
 
-def sigma_clipped_mean(a, sigma, axis=None, mask=None):
+def sigma_clipped_mean(a, sigma, axis=None, mask=None, fill_value=0.0):
     """
     """
     abs_deviation = absolute_deviation(a, axis=axis, mask=mask)
@@ -90,13 +90,12 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None):
     sigma_mask = (abs_deviation > (sigma * robust_std))
 
     if mask is not None:
-        sigma_mask = np.logical_or(sigma_mask, (mask > 0))
+        sigma_mask = np.logical_or(sigma_mask, mask > 0)
 
-    data_copy = a.copy()
-    data_copy[sigma_mask] = 0.0
+    a[sigma_mask] = 0.0
 
     # Take the sigma clipped mean
-    mean_values = data_copy.sum(axis=axis)
+    mean_values = a.sum(axis=axis)
 
     n_good_pixels = (~sigma_mask).sum(axis=axis)
     if axis is None:
@@ -104,5 +103,7 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None):
             mean_values /= n_good_pixels
     else:
         mean_values[n_good_pixels > 0] /= n_good_pixels[n_good_pixels > 0]
+
+    mean_values[n_good_pixels == 0] = fill_value
 
     return mean_values
