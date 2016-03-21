@@ -35,7 +35,7 @@ def post_to_archive_queue(image_path):
 
 
 def get_bpm(image):
-    bpm_filename = dbs.get_bpm(image.telescope_id)
+    bpm_filename = dbs.get_bpm(image.telescope_id, image.ccdsum)
     if bpm_filename is None:
         bpm_data = np.zeros((image.ny, image.nx), dtype=np.uint8)
         image.header['L1IDMASK'] = ''
@@ -51,7 +51,8 @@ def read_images(image_list):
     for filename in image_list:
         try:
             image = Image(filename=filename)
-            image.bpm = get_bpm(image)
+            if image.bpm is None:
+                image.bpm = get_bpm(image)
             images.append(image)
         except Exception as e:
             logger.error('Error loading {0}'.format(filename))
