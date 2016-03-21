@@ -1,5 +1,7 @@
 from __future__ import absolute_import, print_function, division
 from astropy.io import fits
+from astropy.coordinates import SkyCoord
+from astropy import units
 import numpy as np
 import os
 import tempfile
@@ -108,6 +110,16 @@ def table_to_fits(table):
     columns = [fits.Column(name=col.upper(), format=fits_formats(table[col].dtype),
                            array=table[col]) for col in table.colnames]
     return fits.BinTableHDU.from_columns(columns)
+
+
+def parse_ra_dec(header):
+    try:
+        coord = SkyCoord(header.get('RA'), header.get('DEC'), unit=(units.hourangle, units.degree))
+        ra = coord.ra.deg
+        dec = coord.dec.deg
+    except ValueError:
+        ra, dec = np.nan, np.nan
+    return ra, dec
 
 
 def open_image(filename):

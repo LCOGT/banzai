@@ -1,6 +1,4 @@
 from astropy.io import fits
-from astropy.coordinates import SkyCoord
-from astropy import units
 from pylcogt.utils import date_utils
 from pylcogt.utils import fits_utils
 from pylcogt import dbs
@@ -35,9 +33,7 @@ class Image(object):
         self.exptime = float(header.get('EXPTIME'))
         self.dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
         self.readnoise = float(header.get('RDNOISE'))
-        coord = SkyCoord(header.get('RA'), header.get('DEC'), unit=(units.hourangle, units.degree))
-        self.ra = coord.ra.deg
-        self.dec = coord.dec.deg
+        self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE'))
         self.catalog = None
 
