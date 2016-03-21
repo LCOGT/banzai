@@ -101,9 +101,10 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None, fill_value=0.0):
     if axis is None:
         if n_good_pixels > 0:
             mean_values /= n_good_pixels
+        else:
+            mean_values = fill_value
     else:
         mean_values[n_good_pixels > 0] /= n_good_pixels[n_good_pixels > 0]
-
-    mean_values[n_good_pixels == 0] = fill_value
+        mean_values[n_good_pixels == 0] = fill_value
 
     return mean_values
