@@ -104,6 +104,7 @@ def select_images(image_list, image_type):
             if fits.getval(filename, 'OBSTYPE') == image_type:
                 images.append(filename)
         except Exception as e:
+            logger.error('Unable to get OBSTYPE from {0}.'.format(filename))
             logger.error(e)
             continue
 
