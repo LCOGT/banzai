@@ -27,11 +27,14 @@ def make_output_directory(pipeline_context, image):
 
 
 def post_to_archive_queue(image_path):
+    def errback(exc, interval):
+        logger.error('Error: %r', exc, exc_info=1)
+        logger.info('Retry in %s seconds.', interval)
+
     with Connection('amqp://guest:guest@cerberus.lco.gtn') as conn:
         queue = conn.SimpleQueue('ingest_queue')
-        put = conn.ensure(queue, queue.put, max_retries=30)
+        put = conn.ensure(queue, queue.put, max_retries=30, errback=errback)
         put(image_path)
-        queue.close()
 
 
 def get_bpm(image):
