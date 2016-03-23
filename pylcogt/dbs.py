@@ -367,6 +367,13 @@ def get_telescope_id(site, instrument):
     return telescope.id
 
 
+def get_telescope(telescope_id):
+    db_session = get_session()
+    telescope = db_session.query(Telescope).filter(Telescope.id == telescope_id).first()
+    db_session.close()
+    return telescope
+
+
 def get_bpm(telescope_id, ccdsum):
     db_session = get_session()
     bpm = db_session.query(BadPixelMask).filter(BadPixelMask.telescope_id == telescope_id,

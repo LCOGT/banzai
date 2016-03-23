@@ -1,5 +1,6 @@
 from pylcogt.stages import Stage
 import numpy as np
+from pylcogt import dbs
 
 
 class DataMunger(Stage):
@@ -12,9 +13,10 @@ class DataMunger(Stage):
 
     def do_stage(self, images):
         for image in images:
-            # TODO: Currently we only munge Sinistro frames and only support 1x1 frames.
+            telescope = dbs.get_telescope(image.telescope_id)
+            # TODO: Currently we only support 1x1 Sinistro frames and only support 1x1 frames.
             # TODO: 2x2 frames cannot use hard coded values because we read out more pixels.
-            if image.instrument[:2] == 'fl':
+            if 'sinistro' in telescope.camera_type:
                 keywords_to_update = {'BIASSEC1': '[1:2048,2055:2080]',
                                       'BIASSEC2': '[1:2048,2055:2080]',
                                       'BIASSEC3': '[1:2048,2055:2080]',
@@ -37,6 +39,12 @@ class DataMunger(Stage):
 
                 for keyword in keywords_to_update:
                     _add_header_keyword(keyword, keywords_to_update[keyword], image)
+            # 1m SBIGS
+            elif '1m0' in telescope.camera_type:
+                image.header['SATURATE'] = 46000.0
+            elif '0m4' in telescope.camera_type or '0m8' in telescope.camera_type:
+                image.header['SATURATE'] = 56000.0
+
         return images
 
 
