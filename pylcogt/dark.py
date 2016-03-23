@@ -4,6 +4,7 @@ import numpy as np
 import os.path
 
 from .utils import stats, fits_utils
+from pylcogt import logs
 from pylcogt.images import Image
 from .stages import CalibrationMaker, ApplyCalibration
 
@@ -12,7 +13,6 @@ __author__ = 'cmccully'
 
 class DarkMaker(CalibrationMaker):
     def __init__(self, pipeline_context):
-
         super(DarkMaker, self).__init__(pipeline_context)
 
     @property
@@ -31,12 +31,18 @@ class DarkMaker(CalibrationMaker):
         dark_data = np.zeros((images[0].ny, images[0].nx, len(images)))
         dark_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
         for i, image in enumerate(images):
-            self.logger.debug('Combining dark {filename}'.format(filename=image.filename))
+            logs.add_tag(logging_tags, 'filename', image.filename)
+            self.logger.debug('Combining dark', extra=logging_tags)
 
-            dark_data[:, :, i] = (image.data / image.exptime)[:, :]
+            dark_data[:, :, i] = image.data[:, :]
+            dark_data[:, :, i] /= image.exptime
             dark_mask[:, :, i] = image.bpm[:, :]
 
         master_dark = stats.sigma_clipped_mean(dark_data, 3.0, axis=2, mask=dark_mask)
+
+        # Memory cleanup
+        del dark_data
+        del dark_mask
 
         master_bpm = np.array(master_dark == 0.0, dtype=np.uint8)
         master_dark[master_bpm] = 0.0
@@ -47,6 +53,8 @@ class DarkMaker(CalibrationMaker):
         master_dark_image.filename = self.get_calibration_filename(images[0])
         master_dark_image.bpm = master_bpm
 
+        logs.add_tag(logging_tags, 'filename', master_dark_image.filename)
+        self.logger.info('Created master dark', extra=logging_tags)
         return [master_dark_image]
 
 
@@ -65,10 +73,13 @@ class DarkSubtractor(ApplyCalibration):
     def apply_master_calibration(self, images, master_calibration_image, logging_tags):
         master_dark_data = master_calibration_image.data
         master_dark_filename = os.path.basename(master_calibration_image.filename)
+        logs.add_tag(logging_tags, 'master_dark', master_calibration_image.filename)
+
         for image in images:
-            self.logger.debug('Subtracting dark for {image}'.format(image=image.filename))
+            logs.add_tag(logging_tags, 'filename', image.filename)
+            self.logger.info('Subtracting dark', extra=logging_tags)
             image.data -= master_dark_data * image.exptime
             image.bpm |= master_calibration_image.bpm
-            image.header['L1IDDARK'] = master_dark_filename
-
+            image.header['L1IDDARK'] = (master_dark_filename, 'ID of dark frame used')
+            image.header['L1STATDA'] = (1, 'Status flag for dark frame correction')
         return images
