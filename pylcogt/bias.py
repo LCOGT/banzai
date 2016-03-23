@@ -41,26 +41,28 @@ class BiasMaker(CalibrationMaker):
             bias_level_array[i] = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
 
             logs.add_tag(logging_tags, 'filename', image.filename)
-            self.logger.debug('Bias level is {bias}'.format(bias=bias_level_array[i]),
-                              extra=logging_tags)
+            logs.add_tag(logging_tags, 'bias', bias_level_array[i])
+            self.logger.debug('Calculating Bias level', extra=logging_tags)
             # Subtract the bias level for each image
             bias_data[:, :, i] = image.data[:, :] - bias_level_array[i]
             bias_mask[:, :, i] = image.bpm[:, :]
 
-        logs.pop_tag(logging_tags, 'filename')
         mean_bias_level = stats.sigma_clipped_mean(bias_level_array, 3.0)
-        self.logger.debug('Average bias level: {bias} ADU'.format(bias=mean_bias_level),
-                          extra=logging_tags)
 
         master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2, mask=bias_mask)
         master_bpm = np.array(master_bias == 0.0, dtype=np.uint8)
 
         header = fits_utils.create_master_calibration_header(images)
 
-        header['BIASLVL'] = mean_bias_level
+        header['BIASLVL'] = (mean_bias_level, 'Mean bias level of master bias')
         master_bias_image = Image(data=master_bias, header=header)
         master_bias_image.filename = self.get_calibration_filename(image_config)
         master_bias_image.bpm = master_bpm
+
+        logs.add_tag(logging_tags, 'filename', master_bias_image.filename)
+        logs.add_tag(logging_tags, 'bias', mean_bias_level)
+        self.logger.debug('Average bias level in ADU', extra=logging_tags)
+
         return [master_bias_image]
 
 
@@ -81,6 +83,8 @@ class BiasSubtractor(ApplyCalibration):
         master_bias_data = master_calibration_image.data
         master_bias_level = float(master_calibration_image.header['BIASLVL'])
 
+        logs.add_tag(logging_tags, 'bias', master_bias_level)
+
         for image in images:
             logs.add_tag(logging_tags, 'filename', image.filename)
             self.logger.info('Subtracting bias', extra=logging_tags)
@@ -89,11 +93,11 @@ class BiasSubtractor(ApplyCalibration):
             image.subtract(master_bias_data)
 
             image.bpm |= master_calibration_image.bpm
-            image.header['BIASLVL'] = master_bias_level
+            image.header['BIASLVL'] = (master_bias_level, 'Mean bias level of master bias')
 
             master_bias_filename = os.path.basename(master_calibration_image.filename)
-            image.header['L1IDBIAS'] = master_bias_filename
-
+            image.header['L1IDBIAS'] = (master_bias_filename, 'ID of bias frame used')
+            image.header['L1STATBI'] = (1, "Status flag for bias frame correction")
         return images
 
 
@@ -110,14 +114,18 @@ class OverscanSubtractor(Stage):
         for image in images:
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             logs.add_tag(logging_tags, 'filename', image.filename)
-            self.logger.info('Subtracting overscan', extra=logging_tags)
 
             # Subtract the overscan if it exists
             if len(image.data.shape) > 2:
                 for i in range(image.data.shape[0]):
                     _subtract_overscan_3d(image, i)
+                    logs.add_tag(logging_tags, 'overscan', overscan_level)
+                    logs.add_tag(logging_tags, 'quadrant', i + 1)
+                    self.logger.info('Subtracting overscan', extra=logging_tags)
             else:
-                _subtract_overscan_2d(image)
+                overscan_level = _subtract_overscan_2d(image)
+                logs.add_tag(logging_tags, 'overscan', overscan_level)
+                self.logger.info('Subtracting overscan', extra=logging_tags)
 
         return images
 
@@ -131,8 +139,11 @@ def _subtract_overscan_3d(image, i):
         overscan_level = 0.0
         image.header['L1STATOV'] = (0, 'Status flag for overscan correction')
 
-    image.header['OVERSCN{0}'.format(i + 1)] = overscan_level
+    overscan_comment = 'Overscan value that was subtracted from Q{0}'.format(i + 1)
+    image.header['OVERSCN{0}'.format(i + 1)] = (overscan_level, overscan_comment)
+
     image.data[i] -= overscan_level
+    return overscan_level
 
 
 def _subtract_overscan_2d(image):
@@ -144,5 +155,6 @@ def _subtract_overscan_2d(image):
         overscan_level = 0.0
         image.header['L1STATOV'] = (0, 'Status flag for overscan correction')
 
-    image.header['OVERSCAN'] = overscan_level
+    image.header['OVERSCAN'] = (overscan_level, 'Overscan value that was subtracted')
     image.data -= overscan_level
+    return overscan_level
