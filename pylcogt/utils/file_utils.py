@@ -1,5 +1,5 @@
 import os
-from kombu import Connection
+from kombu import Connection, Queue, Exchange
 from glob import glob
 from astropy.io import fits
 import numpy as np
@@ -30,11 +30,12 @@ def post_to_archive_queue(image_path):
     def errback(exc, interval):
         logger.error('Error: %r', exc, exc_info=1)
         logger.info('Retry in %s seconds.', interval)
-
+    fits_exchange = Exchange('fits_files', type='fanout')
+    producer_queue = Queue('pipeline', fits_exchange, exclusive=True)
     with Connection('amqp://guest:guest@cerberus.lco.gtn') as conn:
-        queue = conn.SimpleQueue('ingest_queue')
+        queue = conn.SimpleQueue(producer_queue)
         put = conn.ensure(queue, queue.put, max_retries=30, errback=errback)
-        put(image_path)
+        put({'path': image_path})
 
 
 def get_bpm(image):
