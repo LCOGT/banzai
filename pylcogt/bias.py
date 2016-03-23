@@ -126,8 +126,10 @@ def _subtract_overscan_3d(image, i):
     overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC{0}'.format(i + 1)))
     if overscan_region is not None:
         overscan_level = stats.sigma_clipped_mean(image.data[i][overscan_region], 3)
+        image.header['L1STATOV'] = (1, 'Status flag for overscan correction')
     else:
         overscan_level = 0.0
+        image.header['L1STATOV'] = (0, 'Status flag for overscan correction')
 
     image.header['OVERSCN{0}'.format(i + 1)] = overscan_level
     image.data[i] -= overscan_level
@@ -137,8 +139,10 @@ def _subtract_overscan_2d(image):
     overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC'))
     if overscan_region is not None:
         overscan_level = stats.sigma_clipped_mean(image.data[overscan_region], 3)
+        image.header['L1STATOV'] = (1, 'Status flag for overscan correction')
     else:
         overscan_level = 0.0
+        image.header['L1STATOV'] = (0, 'Status flag for overscan correction')
 
     image.header['OVERSCAN'] = overscan_level
     image.data -= overscan_level
