@@ -95,7 +95,19 @@ def make_image_list(pipeline_context):
     search_path = os.path.join(pipeline_context.raw_path)
 
     # return the list of file and a dummy image configuration
-    return glob(search_path + '/*.fits')
+    fits_files = glob(search_path + '/*.fits')
+    fz_files = glob(search_path + '/*.fits.fz')
+
+    fz_files_to_remove = []
+    for i, f in enumerate(fz_files):
+        if f[:-3] in fits_files:
+            fz_files_to_remove.append(i)
+    fz_files_to_remove.sort(reverse=True)
+
+    for i in fz_files_to_remove:
+        fz_files.pop(i)
+
+    return fits_files + fz_files
 
 
 def select_images(image_list, image_type):
