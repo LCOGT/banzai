@@ -30,6 +30,10 @@ class DarkMaker(CalibrationMaker):
     def make_master_calibration_frame(self, images, image_config, logging_tags):
         dark_data = np.zeros((images[0].ny, images[0].nx, len(images)))
         dark_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
+
+        master_dark_filename = self.get_calibration_filename(images[0])
+
+        logs.add_tag(logging_tags, 'master_dark', os.path.basename(master_dark_filename))
         for i, image in enumerate(images):
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             self.logger.debug('Combining dark', extra=logging_tags)
@@ -50,9 +54,10 @@ class DarkMaker(CalibrationMaker):
         # Save the master dark image with all of the combined images in the header
         master_dark_header = fits_utils.create_master_calibration_header(images)
         master_dark_image = Image(data=master_dark, header=master_dark_header)
-        master_dark_image.filename = self.get_calibration_filename(images[0])
+        master_dark_image.filename = master_dark_filename
         master_dark_image.bpm = master_bpm
 
+        logs.pop_tag(logging_tags, 'master_dark')
         logs.add_tag(logging_tags, 'filename', os.path.basename(master_dark_image.filename))
         self.logger.info('Created master dark', extra=logging_tags)
         return [master_dark_image]

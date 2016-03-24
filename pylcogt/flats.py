@@ -36,6 +36,8 @@ class FlatMaker(CalibrationMaker):
         quarter_nx = images[0].nx // 4
         quarter_ny = images[0].ny // 4
 
+        master_flat_filename = self.get_calibration_filename(images[0])
+        logs.add_tag(logging_tags, 'master_flat', os.path.basename(master_flat_filename))
         for i, image in enumerate(images):
 
             # Get the sigma clipped mean of the central 25% of the image
@@ -45,7 +47,7 @@ class FlatMaker(CalibrationMaker):
             flat_data[:, :, i] /= flat_normalization
             flat_mask[:, :, i] = image.bpm[:, :]
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'flat_normaliztion', flat_normalization)
+            logs.add_tag(logging_tags, 'flat_normalization', flat_normalization)
             self.logger.debug('Calculating flat normalization', extra=logging_tags)
 
         logs.pop_tag(logging_tags, 'flat_normalization')
@@ -57,9 +59,10 @@ class FlatMaker(CalibrationMaker):
         master_flat_header = fits_utils.create_master_calibration_header(images)
 
         master_flat_image = Image(data=master_flat, header=master_flat_header)
-        master_flat_image.filename = self.get_calibration_filename(images[0])
+        master_flat_image.filename = master_flat_filename
         master_flat_image.bpm = master_bpm
 
+        logs.pop_tag(logging_tags, 'master_flat')
         logs.add_tag(logging_tags, 'filename', os.path.basename(master_flat_image.filename))
         self.logger.info('Created master flat', extra=logging_tags)
 

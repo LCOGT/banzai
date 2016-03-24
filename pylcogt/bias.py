@@ -37,6 +37,8 @@ class BiasMaker(CalibrationMaker):
         bias_mask = np.zeros((image_config.ny, image_config.nx, len(images)), dtype=np.uint8)
         bias_level_array = np.zeros(len(images))
 
+        master_bias_filename = self.get_calibration_filename(image_config)
+        logs.add_tag(logging_tags, 'master_bias', os.path.basename(master_bias_filename))
         for i, image in enumerate(images):
             bias_level_array[i] = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
 
@@ -60,9 +62,10 @@ class BiasMaker(CalibrationMaker):
 
         header['BIASLVL'] = (mean_bias_level, 'Mean bias level of master bias')
         master_bias_image = Image(data=master_bias, header=header)
-        master_bias_image.filename = self.get_calibration_filename(image_config)
+        master_bias_image.filename = master_bias_filename
         master_bias_image.bpm = master_bpm
 
+        logs.pop_tag(logging_tags, 'master_bias')
         logs.add_tag(logging_tags, 'filename', os.path.basename(master_bias_image.filename))
         logs.add_tag(logging_tags, 'bias', mean_bias_level)
         self.logger.debug('Average bias level in ADU', extra=logging_tags)

@@ -23,7 +23,7 @@ class GainNormalizer(Stage):
                 image.data *= image.gain
                 image.header['SATURATE'] *= image.gain
                 image.header['MAXLIN'] *= 1.0
-                
+
             image.gain = 1.0
             image.header['GAIN'] = 1.0
         return images
