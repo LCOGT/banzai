@@ -40,9 +40,9 @@ class BiasMaker(CalibrationMaker):
         for i, image in enumerate(images):
             bias_level_array[i] = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
 
-            logs.add_tag(logging_tags, 'filename', image.filename)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             logs.add_tag(logging_tags, 'bias', bias_level_array[i])
-            self.logger.debug('Calculating Bias level', extra=logging_tags)
+            self.logger.debug('Calculating bias level', extra=logging_tags)
             # Subtract the bias level for each image
             bias_data[:, :, i] = image.data[:, :] - bias_level_array[i]
             bias_mask[:, :, i] = image.bpm[:, :]
@@ -63,7 +63,7 @@ class BiasMaker(CalibrationMaker):
         master_bias_image.filename = self.get_calibration_filename(image_config)
         master_bias_image.bpm = master_bpm
 
-        logs.add_tag(logging_tags, 'filename', master_bias_image.filename)
+        logs.add_tag(logging_tags, 'filename', os.path.basename(master_bias_image.filename))
         logs.add_tag(logging_tags, 'bias', mean_bias_level)
         self.logger.debug('Average bias level in ADU', extra=logging_tags)
 
@@ -88,10 +88,11 @@ class BiasSubtractor(ApplyCalibration):
         master_bias_level = float(master_calibration_image.header['BIASLVL'])
 
         logs.add_tag(logging_tags, 'bias', master_bias_level)
-        logs.add_tag(logging_tags, 'master_bias', master_calibration_image.filename)
+        logs.add_tag(logging_tags, 'master_bias',
+                     os.path.basename(master_calibration_image.filename))
 
         for image in images:
-            logs.add_tag(logging_tags, 'filename', image.filename)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             self.logger.info('Subtracting bias', extra=logging_tags)
 
             image.subtract(master_bias_level)
@@ -119,7 +120,7 @@ class OverscanSubtractor(Stage):
 
         for image in images:
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            logs.add_tag(logging_tags, 'filename', image.filename)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
 
             # Subtract the overscan if it exists
             if len(image.data.shape) > 2:

@@ -31,7 +31,7 @@ class DarkMaker(CalibrationMaker):
         dark_data = np.zeros((images[0].ny, images[0].nx, len(images)))
         dark_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
         for i, image in enumerate(images):
-            logs.add_tag(logging_tags, 'filename', image.filename)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             self.logger.debug('Combining dark', extra=logging_tags)
 
             dark_data[:, :, i] = image.data[:, :]
@@ -53,7 +53,7 @@ class DarkMaker(CalibrationMaker):
         master_dark_image.filename = self.get_calibration_filename(images[0])
         master_dark_image.bpm = master_bpm
 
-        logs.add_tag(logging_tags, 'filename', master_dark_image.filename)
+        logs.add_tag(logging_tags, 'filename', os.path.basename(master_dark_image.filename))
         self.logger.info('Created master dark', extra=logging_tags)
         return [master_dark_image]
 
@@ -73,10 +73,11 @@ class DarkSubtractor(ApplyCalibration):
     def apply_master_calibration(self, images, master_calibration_image, logging_tags):
         master_dark_data = master_calibration_image.data
         master_dark_filename = os.path.basename(master_calibration_image.filename)
-        logs.add_tag(logging_tags, 'master_dark', master_calibration_image.filename)
+        logs.add_tag(logging_tags, 'master_dark',
+                     os.path.basename(master_calibration_image.filename))
 
         for image in images:
-            logs.add_tag(logging_tags, 'filename', image.filename)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             self.logger.info('Subtracting dark', extra=logging_tags)
             image.data -= master_dark_data * image.exptime
             image.bpm |= master_calibration_image.bpm

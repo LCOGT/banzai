@@ -44,9 +44,11 @@ class FlatMaker(CalibrationMaker):
             flat_data[:, :, i] = image.data[:, :]
             flat_data[:, :, i] /= flat_normalization
             flat_mask[:, :, i] = image.bpm[:, :]
-            logs.add_tag(logging_tags, 'filename', image.filename)
-            self.logger.debug('Calculating flat normalization'.format(image=image.filename,
-                                                                         norm=flat_normalization))
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
+            logs.add_tag(logging_tags, 'flat_normaliztion', flat_normalization)
+            self.logger.debug('Calculating flat normalization', extra=logging_tags)
+
+        logs.pop_tag(logging_tags, 'flat_normalization')
         master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2, mask=flat_mask,
                                                fill_value=1.0)
 
@@ -57,6 +59,9 @@ class FlatMaker(CalibrationMaker):
         master_flat_image = Image(data=master_flat, header=master_flat_header)
         master_flat_image.filename = self.get_calibration_filename(images[0])
         master_flat_image.bpm = master_bpm
+
+        logs.add_tag(logging_tags, 'filename', os.path.basename(master_flat_image.filename))
+        self.logger.info('Created master flat', extra=logging_tags)
 
         return [master_flat_image]
 
@@ -78,13 +83,15 @@ class FlatDivider(ApplyCalibration):
 
         master_flat_filename = master_calibration_image.filename
         master_flat_data = master_calibration_image.data
-
+        logs.add_tag(logging_tags, 'master_flat',
+                     os.path.basename(master_calibration_image.filename))
         for image in images:
-            self.logger.debug('Flattening {image}'.format(image=image.filename))
-
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
+            self.logger.info('Flattening image', extra=logging_tags)
             image.data /= master_flat_data
             image.bpm |= master_calibration_image.bpm
             master_flat_filename = os.path.basename(master_flat_filename)
-            image.header['L1IDFLAT'] = master_flat_filename
+            image.header['L1IDFLAT'] = (master_flat_filename, 'ID of flat frame used')
+            image.header['L1STATFL'] = (1, 'Status flag for flat field correction')
 
         return images

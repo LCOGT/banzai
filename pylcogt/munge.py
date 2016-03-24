@@ -41,9 +41,9 @@ class DataMunger(Stage):
                     _add_header_keyword(keyword, keywords_to_update[keyword], image)
             # 1m SBIGS
             elif '1m0' in telescope.camera_type:
-                image.header['SATURATE'] = 46000.0
+                image.header['SATURATE'] = (46000.0, '[ADU] Saturation level used')
             elif '0m4' in telescope.camera_type or '0m8' in telescope.camera_type:
-                image.header['SATURATE'] = 56000.0
+                image.header['SATURATE'] = (56000.0, '[ADU] Saturation level used')
 
         return images
 

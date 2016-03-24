@@ -1,12 +1,10 @@
 from __future__ import absolute_import, print_function, division
 
-import itertools
+from pylcogt import logs
+from pylcogt.utils import fits_utils
+from pylcogt.stages import Stage
 
-from astropy.io import fits
-
-from . import dbs, logs
-from .utils import fits_utils
-from pylcogt.stages import make_output_directory, Stage
+import os
 
 __author__ = 'cmccully'
 
@@ -23,6 +21,8 @@ def _trim_image(image):
     image.header['CRPIX1'] -= trimsec[1].start
     image.header['CRPIX2'] -= trimsec[0].start
 
+    image.header['L1STATTR'] = (1, 'Status flag for overscan trimming')
+
     return image.header['NAXIS1'], image.header['NAXIS2']
 
 
@@ -38,8 +38,11 @@ class Trimmer(Stage):
 
         for image in images:
 
-            self.logger.debug('Trimming {image_name} to {trim_sec}'.format(image_name=image.filename,
-                                                                      trim_sec=image.header['TRIMSEC']))
+            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
+            logs.add_tag(logging_tags, 'trimsec', image.header['TRIMSEC'])
+            self.logger.info('Trimming image', extra=logging_tags)
+
             nx, ny = _trim_image(image)
             image.update_shape(nx, ny)
         return images

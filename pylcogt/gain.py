@@ -18,10 +18,12 @@ class GainNormalizer(Stage):
                 for i in range(n_amps):
                     image.data[i] *= gain[i]
                 image.header['SATURATE'] *= min(gain)
+                image.header['MAXLIN'] *= min(gain)
             else:
                 image.data *= image.gain
                 image.header['SATURATE'] *= image.gain
-
+                image.header['MAXLIN'] *= 1.0
+                
             image.gain = 1.0
             image.header['GAIN'] = 1.0
         return images
