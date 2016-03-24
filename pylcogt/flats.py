@@ -6,6 +6,7 @@ import os.path
 from .utils import stats, fits_utils
 from .stages import CalibrationMaker, ApplyCalibration
 from pylcogt.images import Image
+from pylcogt import logs
 
 __author__ = 'cmccully'
 
@@ -40,9 +41,11 @@ class FlatMaker(CalibrationMaker):
             # Get the sigma clipped mean of the central 25% of the image
             flat_normalization = stats.sigma_clipped_mean(image.data[quarter_ny: -quarter_ny,
                                                                      quarter_nx:-quarter_nx], 3.5)
-            flat_data[:, :, i] = (image.data / flat_normalization)[:, :]
+            flat_data[:, :, i] = image.data[:, :]
+            flat_data[:, :, i] /= flat_normalization
             flat_mask[:, :, i] = image.bpm[:, :]
-            self.logger.debug('Normalization of {image} = {norm}'.format(image=image.filename,
+            logs.add_tag(logging_tags, 'filename', image.filename)
+            self.logger.debug('Calculating flat normalization'.format(image=image.filename,
                                                                          norm=flat_normalization))
         master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2, mask=flat_mask,
                                                fill_value=1.0)
