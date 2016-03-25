@@ -163,7 +163,7 @@ def create_db(bpm_directory, db_address=_DEFAULT_DB,
     Base.metadata.create_all(engine)
 
     populate_telescope_table(db_address)
-    populate_bpm_table(bpm_directory, db_address=db_address)
+    populate_bpm_table(bpm_directory, db_address=db_address, configdb_address=configdb_address)
 
 
 def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
@@ -217,7 +217,7 @@ def populate_telescope_table(db_address=_DEFAULT_DB,
 
     cameras = parse_configdb(configdb_address=configdb_address)
 
-    db_session = get_session(db_address)
+    db_session = get_session(db_address=db_address)
 
     for camera in cameras:
 
@@ -235,7 +235,7 @@ def populate_telescope_table(db_address=_DEFAULT_DB,
 
 
 def populate_bpm_table(directory, db_address=_DEFAULT_DB):
-    db_session = get_session(db_address)
+    db_session = get_session(db_address=db_address)
     bpm_filenames = glob(os.path.join(directory, 'bpm*.fits'))
     for bpm_filename in bpm_filenames:
         site = fits.getval(bpm_filename, 'SITEID').lower()
@@ -255,127 +255,24 @@ def populate_bpm_table(directory, db_address=_DEFAULT_DB):
     db_session.close()
 
 
-def save_images(images):
-    """
-    Save images to the database.
-
-    :param images: List of images to save.
-    :return: Not needed.
-    """
-
-    with contextlib.closing(get_session()) as session:
-        for image in images:
-            session.add(image)
-        session.commit()
-
-    return
-
-
-def get_telescope_list(args):
-    db_session = get_session()
-    telescope_query = sqlalchemy.sql.expression.true()
-
-    if args.site != '':
-        telescope_query &= Telescope.site == args.site
-
-    if args.instrument != '':
-        telescope_query &= Telescope.instrument == args.instrument
-
-    if args.telescope != '':
-        telescope_query &= Telescope.telescope_id == args.telescope
-
-    if args.camera_type != '':
-        telescope_query &= Telescope.camera_type == args.camera_type
-
-    telescope_list = db_session.query(Telescope).filter(telescope_query).all()
-
-    db_session.close()
-    return telescope_list
-
-
-def generate_initial_query(args):
-    # Get the telescopes for which we want to reduce data.
-    db_session = get_session()
-
-    image_query = sqlalchemy.sql.expression.true()
-
-    if args.filter != '':
-        image_query &= Image.filter_name == args.filter
-
-    if args.binning != '':
-        ccdsum = args.binning.replace('x', ' ')
-        image_query &= Image.ccdsum == ccdsum
-
-    db_session.close()
-    return image_query
-
-
-def select_input_images(telescope, epoch, initial_query, previous_stage_done, group_by_list):
-    # Select only the images we want to work on
-    query = initial_query & (Image.telescope_id == telescope.id)
-    query &= (Image.dayobs == epoch)
-
-    # Only select images that have had the previous stage completed
-    query &= previous_stage_done
-
-    db_session = get_session()
-
-    if group_by_list:
-        config_list = []
-        # Get the distinct values of ccdsum and filters
-        for group_by in group_by_list:
-            config_query = db_session.query(group_by)
-
-            distinct_configs = config_query.filter(query).distinct().all()
-            config_list.append([x[0] for x in distinct_configs])
-        config_queries = []
-
-        for config in itertools.product(*config_list):
-            config_query = query
-
-            for i in range(len(group_by_list)):
-                # Select images with the correct binning/filter
-                config_query &= (group_by_list[i] == config[i])
-            config_queries.append(config_query)
-
-    else:
-        config_queries = [query]
-
-    input_image_list = []
-    config_list = []
-    for image_config in config_queries:
-
-        image_list = db_session.query(Image).filter(image_config).all()
-
-        # Convert from image objects to file names
-        input_image_list.append(image_list)
-
-        if len(image_list) == 0:
-            config_list.append([])
-        else:
-            config_list.append(image_list[0])
-    db_session.close()
-    return input_image_list, config_list
-
-
-def get_telescope_id(site, instrument):
+def get_telescope_id(site, instrument, db_address=_DEFAULT_DB):
     # TODO:  This dies if the telescope is not in the telescopes table. Maybe ping the configdb?
-    db_session = get_session()
+    db_session = get_session(db_address=db_address)
     criteria = (Telescope.site == site) & (Telescope.instrument == instrument)
     telescope = db_session.query(Telescope).filter(criteria).first()
     db_session.close()
     return telescope.id
 
 
-def get_telescope(telescope_id):
-    db_session = get_session()
+def get_telescope(telescope_id, db_address=_DEFAULT_DB):
+    db_session = get_session(db_address=db_address)
     telescope = db_session.query(Telescope).filter(Telescope.id == telescope_id).first()
     db_session.close()
     return telescope
 
 
-def get_bpm(telescope_id, ccdsum):
-    db_session = get_session()
+def get_bpm(telescope_id, ccdsum, db_address=_DEFAULT_DB):
+    db_session = get_session(db_address=db_address)
     bpm = db_session.query(BadPixelMask).filter(BadPixelMask.telescope_id == telescope_id,
                                                 BadPixelMask.ccdsum == ccdsum).first()
     db_session.close()
@@ -386,10 +283,10 @@ def get_bpm(telescope_id, ccdsum):
     return bpm_path
 
 
-def save_calibration_info(cal_type, output_file, image_config):
+def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAULT_DB):
     # Store the information into the calibration table
     # Check and see if the bias file is already in the database
-    db_session = get_session()
+    db_session = get_session(db_address=db_address)
     image_query = db_session.query(CalibrationImage)
     output_filename = os.path.basename(output_file)
     image_query = image_query.filter(CalibrationImage.filename == output_filename)

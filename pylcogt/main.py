@@ -29,48 +29,7 @@ class PipelineContext(object):
         self.post_to_archive = args.post_to_archive
         self.fpack = args.fpack
         self.rlevel = args.rlevel
-
-
-def get_telescope_info():
-    """
-    Get information about the available telescopes/instruments from the database.
-
-    Returns
-    -------
-    all_sites:  list
-        List of all site codes, e.g. "lsc".
-    all_instruments: list
-        List of all instrument code, e.g. "kb78"
-    all_telescope_ids: list
-        List of all telescope IDs, e.g. "1m0-009"
-    all_camera_types: list
-        List of available camera types. e.g. "Sinistro" or "SBig"
-
-    Notes
-    -----
-    The output of this function is used to limit what data is reduced and to validate use input.
-"""
-    db_session = dbs.get_session()
-
-    all_sites = []
-    for site in db_session.query(dbs.Telescope.site).distinct():
-        all_sites.append(site[0])
-
-    all_instruments = []
-    for instrument in db_session.query(dbs.Telescope.instrument).distinct():
-        all_instruments.append(instrument[0])
-
-    all_telescope_ids = []
-    for telescope_id in db_session.query(dbs.Telescope.telescope_id).distinct():
-        all_telescope_ids.append(telescope_id[0])
-
-    all_camera_types = []
-    for camera_type in db_session.query(dbs.Telescope.camera_type).distinct():
-        all_camera_types.append(camera_type[0])
-
-    db_session.close()
-
-    return all_sites, all_instruments, all_telescope_ids, all_camera_types
+        self.db_address = args.db_address
 
 
 def make_master_bias(cmd_args=None):
@@ -133,10 +92,13 @@ def run(stages_to_do, image_type='', calibration_maker=False, log_message='', cm
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
-    parser.add_argument('--db-host', default='mysql+mysqlconnector://cmccully:password@localhost/test')
+    parser.add_argument('--db-address', dest='db_address',
+                        default='mysql+mysqlconnector://cmccully:password@localhost/test',
+                        help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
     parser.add_argument('--rlevel', dest='rlevel', default=91, help='Reduction level')
+
     args = parser.parse_args(cmd_args)
 
     logs.start_logging(log_level=args.log_level)
@@ -147,7 +109,7 @@ def run(stages_to_do, image_type='', calibration_maker=False, log_message='', cm
 
     image_list = file_utils.make_image_list(pipeline_context)
     image_list = file_utils.select_images(image_list, image_type)
-    images = file_utils.read_images(image_list)
+    images = file_utils.read_images(image_list, pipeline_context)
 
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)

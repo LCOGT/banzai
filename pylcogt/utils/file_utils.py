@@ -16,7 +16,7 @@ logger = logs.get_logger(__name__)
 
 def make_output_directory(pipeline_context, image):
     # Get the telescope from the image
-    telescope = dbs.get_telescope(image)
+    telescope = dbs.get_telescope(image, db_address=pipeline_context.db_address)
     # Create output directory if necessary
     output_directory = os.path.join(pipeline_context.processed_path, telescope.site,
                                     telescope.instrument, image.dayobs)
@@ -38,8 +38,9 @@ def post_to_archive_queue(image_path):
         put({'path': image_path})
 
 
-def get_bpm(image):
-    bpm_filename = dbs.get_bpm(image.telescope_id, image.ccdsum)
+def get_bpm(image, pipeline_context):
+    bpm_filename = dbs.get_bpm(image.telescope_id, image.ccdsum,
+                               db_address=pipeline_context.db_address)
     if bpm_filename is None:
         bpm_data = np.zeros((image.ny, image.nx), dtype=np.uint8)
         image.header['L1IDMASK'] = ''
@@ -50,13 +51,13 @@ def get_bpm(image):
     return np.array(bpm_data, dtype=np.uint8)
 
 
-def read_images(image_list):
+def read_images(image_list, pipeline_context):
     images = []
     for filename in image_list:
         try:
             image = Image(filename=filename)
             if image.bpm is None:
-                image.bpm = get_bpm(image)
+                image.bpm = get_bpm(image, pipeline_context)
             images.append(image)
         except Exception as e:
             logger.error('Error loading {0}'.format(filename))
@@ -78,7 +79,8 @@ def save_images(pipeline_context, images, master_calibration=False):
             image_filename += '.fz'
             filepath += '.fz'
         if master_calibration:
-            dbs.save_calibration_info(image.obstype, filepath, image)
+            dbs.save_calibration_info(image.obstype, filepath, image,
+                                      db_address=pipeline_context.db_address)
 
         if pipeline_context.post_to_archive:
             logger.info('Posting {filename} to the archive'.format(filename=image_filename))
