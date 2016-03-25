@@ -1,3 +1,4 @@
+import pylcogt
 from pylcogt.stages import Stage
 from pylcogt.utils import date_utils
 from datetime import timedelta
@@ -14,14 +15,18 @@ class HeaderUpdater(Stage):
     def do_stage(self, images):
         for image in images:
             image.header['RLEVEL'] = self.pipeline_context.rlevel
+            image.header['PIPEVER'] = (pylcogt.__version__, 'Pipeline version')
 
             if instantly_public(image.header['PROPID']):
                 image.header['L1PUBDAT'] = image.header['DATE-OBS']
+                image.header['L1PUBPRV'] = 'public'
             else:
                 # Wait a year
                 date_observed = date_utils.parse_date_obs(image.header['DATE-OBS'])
                 next_year = date_observed + timedelta(days=365)
                 image.header['L1PUBDAT'] = date_utils.date_obs_to_string(next_year)
+                image.header['L1PUBPRV'] = 'private'
+
         return images
 
 
