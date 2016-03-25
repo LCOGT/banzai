@@ -17,23 +17,37 @@ class DataMunger(Stage):
             # TODO: Currently we only support 1x1 Sinistro frames and only support 1x1 frames.
             # TODO: 2x2 frames cannot use hard coded values because we read out more pixels.
             if 'sinistro' in telescope.camera_type:
-                keywords_to_update = {'BIASSEC1': '[1:2048,2055:2080]',
-                                      'BIASSEC2': '[1:2048,2055:2080]',
-                                      'BIASSEC3': '[1:2048,2055:2080]',
-                                      'BIASSEC4': '[1:2048,2055:2080]',
-                                      'DATASEC1': '[1:2048,1:2048]',
-                                      'DATASEC2': '[1:2048,1:2048]',
-                                      'DETSEC1': '[1:2048,1:2048]',
-                                      'DETSEC2': '[4096:2049,1:2048]',
-                                      'DETSEC3': '[4096:2049,4096:2049]',
-                                      'DETSEC4': '[1:2048,4096:2049]'}
+                keywords_to_update = {'BIASSEC1': ('[1:2048,2055:2080]',
+                                                   '[binned pixel] Section of overscan data for Q1'),
+                                      'BIASSEC2': ('[1:2048,2055:2080]',
+                                                   '[binned pixel] Section of overscan data for  Q2'),
+                                      'BIASSEC3': ('[1:2048,2055:2080]',
+                                                   '[binned pixel] Section of overscan data for Q3'),
+                                      'BIASSEC4': ('[1:2048,2055:2080]',
+                                                   '[binned pixel] Section of overscan data for Q4'),
+                                      'DATASEC1': ('[1:2048,1:2048]',
+                                                   '[binned pixel] Data section for  Q1'),
+                                      'DATASEC2': ('[1:2048,1:2048]',
+                                                   '[binned pixel] Data section for Q2'),
+                                      'DETSEC1': ('[1:2048,1:2048]',
+                                                  '[binned pixel] Detector section for Q1'),
+                                      'DETSEC2': ('[4096:2049,1:2048]',
+                                                  '[binned pixel] Detector section for Q2'),
+                                      'DETSEC3': ('[4096:2049,4096:2049]',
+                                                  '[binned pixel] Detector section for Q3'),
+                                      'DETSEC4': ('[1:2048,4096:2049]',
+                                                  '[binned pixel] Detector section for Q4')}
 
                 if image.data.shape[1] > 2048:
-                    keywords_to_update['DATASEC3'] = '[1:2048,2:2049]'
-                    keywords_to_update['DATASEC4'] = '[1:2048,2:2049]'
+                    keywords_to_update['DATASEC3'] = ('[1:2048,2:2049]',
+                                                      '[binned pixel] Data section for Q3'),
+                    keywords_to_update['DATASEC4'] = ('[1:2048,2:2049]',
+                                                      '[binned pixel] Data section for Q4'),
                 else:
-                    keywords_to_update['DATASEC3'] = '[1:2048,1:2048]'
-                    keywords_to_update['DATASEC4'] = '[1:2048,1:2048]'
+                    keywords_to_update['DATASEC3'] = ('[1:2048,1:2048]',
+                                                      '[binned pixel] Data section for Q3'),
+                    keywords_to_update['DATASEC4'] = ('[1:2048,1:2048]',
+                                                      '[binned pixel] Data section for Q4'),
 
                 set_crosstalk_header_keywords(image)
 
@@ -60,7 +74,8 @@ def set_crosstalk_header_keywords(image):
     for j in range(n_amps):
         for i in range(n_amps):
             if i != j:
-                image.header['CRSTLK{0}{1}'.format(i + 1, j + 1)] = coefficients[j, i]
+                crosstalk_comment = '[Crosstalk coefficient] Q{i} signal due to Q{j}'.format(i=i+1, j=j+1)
+                image.header['CRSTLK{0}{1}'.format(i + 1, j + 1)] = (coefficients[j, i], crosstalk_comment)
 
 crosstalk_coefficients = {'fl01': np.array([[0.0, 0.00074, 0.00081, 0.00115],
                                             [0.0007, 0.0, 0.00118, 0.00085],
