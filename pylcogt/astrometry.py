@@ -26,10 +26,12 @@ class WCSSolver(Stage):
     def do_stage(self, images):
 
         for i, image in enumerate(images):
-            self.logger.info('Solving WCS for {filename}'.format(filename=image.filename))
+            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
 
             # Save the catalog to a temporary file
             filename = os.path.basename(image.filename)
+            logs.add_tag(logging_tags, 'filename', filename)
+
             catalog_name = filename.replace('.fits', '.cat.fits')
             image.write_catalog(catalog_name, nsources=40)
             # Run astrometry.net
@@ -39,9 +41,10 @@ class WCSSolver(Stage):
                                       catalog_name=catalog_name, nx=image.nx, ny=image.ny)
 
             console_output = subprocess.check_output(shlex.split(command))
-            self.logger.debug(console_output)
+            self.logger.debug(console_output, extra=logging_tags)
+
             # Cleanup temp files created by astrometry.net
-            basename = catalog_name[:-5] # Split off the .fits from the image filename
+            basename = catalog_name[:-5]  # Split off the .fits from the image filename
             # Remove the extra temporary files
             if os.path.exists(basename + '.axy'):
                 os.remove(basename + '.axy')
@@ -57,13 +60,16 @@ class WCSSolver(Stage):
                 for keyword in header_keywords_to_update:
                     image.header[keyword] = new_header[keyword]
 
-                image.header['WCSERR'] = 0
+                image.header['WCSERR'] = (0, 'Error status of WCS fit. 0 for no error')
 
                 # Clean up wcs file
                 os.remove(wcs_name)
             else:
-                image.header['WCSERR'] = 4
+                image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
 
             # Clean up the catalog file
             os.remove(catalog_name)
+
+            logs.add_tag(logging_tags, 'WCSERR', image.header['WCSERR'])
+            self.logger.info('Attempted WCS Solve', extra=logging_tags)
         return images
