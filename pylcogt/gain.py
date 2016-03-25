@@ -16,7 +16,7 @@ class GainNormalizer(Stage):
         for image in images:
 
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            logs.add_tag(logging_tags, 'filename', os.basename(image.filename))
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             logs.add_tag(logging_tags, 'gain', image.gain)
             self.logger.debug('Multiplying by gain', extra=logging_tags)
 
