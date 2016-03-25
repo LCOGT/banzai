@@ -18,7 +18,7 @@ class GainNormalizer(Stage):
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             logs.add_tag(logging_tags, 'gain', image.gain)
-            self.logger.debug('Multiplying by gain', extra=logging_tags)
+            self.logger.info('Multiplying by gain', extra=logging_tags)
 
             if len(image.data.shape) > 2:
                 n_amps = image.data.shape[0]

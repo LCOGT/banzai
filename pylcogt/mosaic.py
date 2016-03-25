@@ -37,7 +37,7 @@ class MosaicCreator(Stage):
                 image.data = mosaiced_data
                 image.update_shape(nx, ny)
 
-                self.logger.debug('Mosaiced image', extra=logging_tags)
+                self.logger.info('Mosaiced image', extra=logging_tags)
         return images
 
 

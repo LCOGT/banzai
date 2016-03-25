@@ -6,6 +6,7 @@ from astropy.io import fits
 
 __author__ = 'cmccully'
 
+
 class WCSSolver(Stage):
     cmd = 'solve-field --crpix-center --no-verify --no-fits2fits --no-tweak ' \
           ' --radius 2.0 --ra {ra} --dec {dec} --guess-scale ' \

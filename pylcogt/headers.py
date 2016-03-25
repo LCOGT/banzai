@@ -33,7 +33,7 @@ class HeaderUpdater(Stage):
             logs.add_tag(logging_tags, 'rlevel', image.header['RLEVEL'])
             logs.add_tag(logging_tags, 'pipeline_version', image.header['PIPEVER'])
             logs.add_tag(logging_tags, 'l1pubdat', image.header['L1PUBDAT'])
-            self.logger.debug('Updating header', extra=logging_tags)
+            self.logger.info('Updating header', extra=logging_tags)
 
         return images
 
