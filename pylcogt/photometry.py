@@ -2,11 +2,11 @@ from __future__ import absolute_import, print_function, division
 import os
 import numpy as np
 
-from astropy.io import fits
 from astropy.table import Table
-from .utils import stats
+from pylcogt.utils import stats
 
-from .stages import Stage
+from pylcogt.stages import Stage
+from pylcogt import logs
 
 import sep
 
@@ -27,7 +27,6 @@ class SourceDetector(Stage):
 
     def do_stage(self, images):
         for i, image in enumerate(images):
-            self.logger.info('Extracting sources from {filename}'.format(filename=image.filename))
             data = image.data.copy()
             error = (np.abs(data) + image.readnoise ** 2.0) ** 0.5
             mask = image.bpm > 0
@@ -66,7 +65,7 @@ class SourceDetector(Stage):
             sources = sources[hwhm > 0.5]
             hwhm = hwhm[hwhm > 0.5]
             hwhm_mean = stats.sigma_clipped_mean(hwhm, 3.0)
-            self.logger.debug('FWHM for {image} is {fwhm}'.format(image=image.filename, fwhm = hwhm_mean * 2))
+
             hwhm_std = stats.robust_standard_deviation(hwhm)
 
             good_stars = hwhm > (hwhm_mean - 3.0 * hwhm_std)
@@ -80,5 +79,37 @@ class SourceDetector(Stage):
             image.catalog.sort('flux')
             image.catalog.reverse()
 
-            image.header['FWHM'] = 2.0 * hwhm_mean
+            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
+
+            # Save some background statistics in the header
+            mean_background = stats.sigma_clipped_mean(bkg.back(), 5.0)
+            image.header['L1MEAN'] = (mean_background,
+                                      '[counts] Sigma clipped mean of frame background')
+            logs.add_tag(logging_tags, 'L1MEAN', mean_background)
+
+            median_background = np.median(bkg.back())
+            image.header['L1MEDIAN'] = (median_background,
+                                        '[counts] Median of frame background')
+            logs.add_tag(logging_tags, 'L1MEDIAN', median_background)
+
+            std_background = stats.robust_standard_deviation(bkg.back(), 5.0)
+            image.header['L1SIGMA'] = (std_background,
+                                       '[counts] Robust std dev of frame background')
+            logs.add_tag(logging_tags, 'L1SIGMA', std_background)
+
+            # Save some image statistics to the header
+            fwhm = 2.0 * hwhm_mean * image.pixel_scale
+            image.header['L1FWHM'] = (fwhm, '[arcsec] Frame FWHM in arcsec')
+            logs.add_tag(logging_tags, 'L1FWHM', fwhm)
+
+            mean_ellipticity = stats.sigma_clipped_mean(1.0 - (sources['b'] / sources['a']), 3.0)
+            image.header['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
+            logs.add_tag(logging_tags, 'L1ELLIP', mean_ellipticity)
+
+            mean_position_angle = stats.sigma_clipped_mean(sources['theta'], 3.0)
+            image.header['L1ELLIPA'] = (mean_position_angle, '[deg] PA of mean image ellipticity')
+            logs.add_tag(logging_tags, 'L1ELLIPA', mean_position_angle)
+
+            self.logger('Extracted sources', extra=logging_tags)
         return images
