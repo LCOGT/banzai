@@ -14,18 +14,6 @@ __author__ = 'cmccully'
 logger = logs.get_logger(__name__)
 
 
-def make_output_directory(pipeline_context, image):
-    # Get the telescope from the image
-    telescope = dbs.get_telescope(image, db_address=pipeline_context.db_address)
-    # Create output directory if necessary
-    output_directory = os.path.join(pipeline_context.processed_path, telescope.site,
-                                    telescope.instrument, image.dayobs)
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-
-    return
-
-
 def post_to_archive_queue(image_path):
     def errback(exc, interval):
         logger.error('Error: %r', exc, exc_info=1)
@@ -68,12 +56,13 @@ def read_images(image_list, pipeline_context):
 
 def save_images(pipeline_context, images, master_calibration=False):
     for image in images:
+        output_directory = make_output_directory(pipeline_context, image)
         if not master_calibration:
             image.filename = image.filename.replace('00.fits',
                                                     '{:02d}.fits'.format(pipeline_context.rlevel))
 
         image_filename = os.path.basename(image.filename)
-        filepath = os.path.join(pipeline_context.processed_path, image_filename)
+        filepath = os.path.join(output_directory, image_filename)
         image.writeto(filepath, pipeline_context.fpack)
         if pipeline_context.fpack:
             image_filename += '.fz'
@@ -96,20 +85,24 @@ def make_image_list(pipeline_context):
 
     search_path = os.path.join(pipeline_context.raw_path)
 
-    # return the list of file and a dummy image configuration
-    fits_files = glob(search_path + '/*.fits')
-    fz_files = glob(search_path + '/*.fits.fz')
+    if pipeline_context.filename is None:
+        # return the list of file and a dummy image configuration
+        fits_files = glob(search_path + '/*.fits')
+        fz_files = glob(search_path + '/*.fits.fz')
 
-    fz_files_to_remove = []
-    for i, f in enumerate(fz_files):
-        if f[:-3] in fits_files:
-            fz_files_to_remove.append(i)
-    fz_files_to_remove.sort(reverse=True)
+        fz_files_to_remove = []
+        for i, f in enumerate(fz_files):
+            if f[:-3] in fits_files:
+                fz_files_to_remove.append(i)
+        fz_files_to_remove.sort(reverse=True)
 
-    for i in fz_files_to_remove:
-        fz_files.pop(i)
+        for i in fz_files_to_remove:
+            fz_files.pop(i)
+        image_list = fits_files + fz_files
 
-    return fits_files + fz_files
+    else:
+        image_list = glob(os.path.join(pipeline_context.raw_path, pipeline_context.filename))
+    return image_list
 
 
 def select_images(image_list, image_type):
@@ -124,3 +117,19 @@ def select_images(image_list, image_type):
             continue
 
     return images
+
+
+def make_output_directory(pipeline_context, image_config):
+    # Create output directory if necessary
+    output_directory = os.path.join(pipeline_context.processed_path, image_config.site,
+                                    image_config.instrument, image_config.epoch)
+
+    if pipeline_context.preview_mode:
+        os.path.join('preview')
+    else:
+        os.path.join('processed')
+
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+
+    return output_directory

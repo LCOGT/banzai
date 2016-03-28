@@ -17,15 +17,6 @@ logger = logs.get_logger(__name__)
 __author__ = 'cmccully'
 
 
-def make_output_directory(pipeline_context, image_config):
-    # Create output directory if necessary
-    output_directory = os.path.join(pipeline_context.processed_path)
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-
-    return
-
-
 class Stage(object):
     __metaclass__ = abc.ABCMeta
 
@@ -48,7 +39,6 @@ class Stage(object):
         return grouping_criteria
 
     def run_stage(self, image_set, image_config):
-        make_output_directory(self.pipeline_context, image_config)
         image_set = list(image_set)
         tags = logs.image_config_to_tags(image_set[0], self.group_by_keywords)
         self.logger.info('Running {0}'.format(self.stage_name), extra=tags)
@@ -99,14 +89,13 @@ class CalibrationMaker(Stage):
             return self.make_master_calibration_frame(images, image_config, logging_tags)
 
     def get_calibration_filename(self, image):
-        output_directory = os.path.join(self.pipeline_context.processed_path)
-        cal_file = '{filepath}/{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
+        cal_file = '{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
         if 'filter' in self.group_by_keywords:
             filter_str = '_{filter}'.format(filter=image.filter)
         else:
             filter_str = ''
 
-        cal_file = cal_file.format(filepath=output_directory, instrument=image.instrument,
+        cal_file = cal_file.format(instrument=image.instrument,
                                    epoch=image.epoch, bin=image.ccdsum.replace(' ', 'x'),
                                    cal_type=self.calibration_type.lower(), filter=filter_str)
         return cal_file

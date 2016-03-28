@@ -13,8 +13,10 @@ import argparse
 
 from pylcogt import munge, crosstalk, gain, mosaic
 from pylcogt import bias, dark, flats, trim, photometry, astrometry, headers
-from pylcogt import dbs, logs
+from pylcogt import logs
 from pylcogt.utils import file_utils
+import os
+import sys
 
 # A dictionary converting the string input by the user into the corresponding Python object
 reduction_stages = [bias.BiasMaker]
@@ -30,39 +32,50 @@ class PipelineContext(object):
         self.fpack = args.fpack
         self.rlevel = args.rlevel
         self.db_address = args.db_address
+        self.log_level = args.log_level
+        self.preview_mode = args.preview_mode
+        self.filename = args.filename
 
 
 def make_master_bias(cmd_args=None):
+    pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasMaker,
                     headers.HeaderUpdater]
-    run(stages_to_do=stages_to_do, image_type='BIAS', calibration_maker=True,
+    run(stages_to_do, pipeline_context, image_type='BIAS', calibration_maker=True,
         log_message='Making Master BIAS', cmd_args=cmd_args)
 
 
 def make_master_dark(cmd_args=None):
+    pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
                     bias.BiasSubtractor, dark.DarkMaker, headers.HeaderUpdater]
-    run(stages_to_do=stages_to_do, image_type='DARK', calibration_maker=True,
+    run(stages_to_do, pipeline_context, image_type='DARK', calibration_maker=True,
         log_message='Making Master Dark', cmd_args=cmd_args)
 
 
 def make_master_flat(cmd_args=None):
+    pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatMaker, headers.HeaderUpdater]
-    run(stages_to_do=stages_to_do, image_type='SKYFLAT', calibration_maker=True,
+    run(stages_to_do, pipeline_context, image_type='SKYFLAT', calibration_maker=True,
         log_message='Making Master Flat', cmd_args=cmd_args)
 
 
 def reduce_science_frames(cmd_args=None):
+    pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
                     astrometry.WCSSolver, headers.HeaderUpdater]
-    run(stages_to_do=stages_to_do, image_type='EXPOSE', log_message='Reducing Science Frames',
-        cmd_args=cmd_args)
+
+    image_list = file_utils.make_image_list(pipeline_context)
+    for image in image_list:
+        pipeline_context.filename = os.path.basename(image)
+        run(stages_to_do, pipeline_context, image_type='EXPOSE',
+            log_message='Reducing Science Frames')
 
 
 def create_master_calibrations(cmd_args=None):
@@ -78,34 +91,41 @@ def reduce_night(cmd_args=None):
     reduce_science_frames(cmd_args=cmd_args)
 
 
-def run(stages_to_do, image_type='', calibration_maker=False, log_message='', cmd_args=None):
-    """
-    Main driver script for PyLCOGT.
-    """
-    # Get the available instruments/telescopes
-
-    parser = argparse.ArgumentParser(description='Make master calibration frames from LCOGT imaging data.')
+def parse_command_line_arguments(cmd_args=None):
+    parser = argparse.ArgumentParser(
+        description='Make master calibration frames from LCOGT imaging data.')
     parser.add_argument("--raw-path", default='/archive/engineering',
                         help='Top level directory where the raw data is stored')
     parser.add_argument("--processed-path", default='/nethome/supernova/pylcogt',
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
-                                                               'critical', 'fatal', 'error'])
-    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
+                                                                'critical', 'fatal', 'error'])
+    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
+                        default=False)
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql+mysqlconnector://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
     parser.add_argument('--rlevel', dest='rlevel', default=91, help='Reduction level')
+    parser.add_argument('--preview-mode', dest='preview_mode', action='store_true',
+                        help='Store the data preview mode?')
 
+    parser.add_argument('--filename', dest='filename', default=None,
+                        help='Filename of the image to reduce.')
     args = parser.parse_args(cmd_args)
 
-    logs.start_logging(log_level=args.log_level)
+    return PipelineContext(args)
+
+
+def run(stages_to_do, pipeline_context, image_type='', calibration_maker=False, log_message=''):
+    """
+    Main driver script for PyLCOGT.
+    """
+
+    logs.start_logging(log_level=pipeline_context.log_level)
 
     logger.info(log_message)
-
-    pipeline_context = PipelineContext(args)
 
     image_list = file_utils.make_image_list(pipeline_context)
     image_list = file_utils.select_images(image_list, image_type)
@@ -118,3 +138,4 @@ def run(stages_to_do, image_type='', calibration_maker=False, log_message='', cm
     file_utils.save_images(pipeline_context, images, master_calibration=calibration_maker)
     # Clean up
     logs.stop_logging()
+
