@@ -41,33 +41,40 @@ class PipelineContext(object):
 
 def make_master_bias(cmd_args=None):
     pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
+    logs.start_logging(log_level=pipeline_context.log_level)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasMaker,
                     headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_type='BIAS', calibration_maker=True,
         log_message='Making Master BIAS', cmd_args=cmd_args)
-
+    logs.stop_logging()
 
 def make_master_dark(cmd_args=None):
     pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
+    logs.start_logging(log_level=pipeline_context.log_level)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
                     bias.BiasSubtractor, dark.DarkMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_type='DARK', calibration_maker=True,
         log_message='Making Master Dark', cmd_args=cmd_args)
+    logs.stop_logging()
 
 
 def make_master_flat(cmd_args=None):
     pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
+    logs.start_logging(log_level=pipeline_context.log_level)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_type='SKYFLAT', calibration_maker=True,
         log_message='Making Master Flat', cmd_args=cmd_args)
+    logs.stop_logging()
 
 
 def reduce_science_frames(cmd_args=None):
+
     pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
+    logs.start_logging(log_level=pipeline_context.log_level)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
@@ -78,7 +85,7 @@ def reduce_science_frames(cmd_args=None):
         pipeline_context.filename = os.path.basename(image)
         run(stages_to_do, pipeline_context, image_type='EXPOSE',
             log_message='Reducing Science Frames')
-
+    logs.stop_logging()
 
 def create_master_calibrations(cmd_args=None):
     make_master_bias(cmd_args=cmd_args)
@@ -124,9 +131,6 @@ def run(stages_to_do, pipeline_context, image_type='', calibration_maker=False, 
     """
     Main driver script for PyLCOGT.
     """
-
-    logs.start_logging(log_level=pipeline_context.log_level)
-
     logger.info(log_message)
 
     image_list = file_utils.make_image_list(pipeline_context)
@@ -138,8 +142,6 @@ def run(stages_to_do, pipeline_context, image_type='', calibration_maker=False, 
         images = stage_to_run.run(images)
 
     file_utils.save_images(pipeline_context, images, master_calibration=calibration_maker)
-    # Clean up
-    logs.stop_logging()
 
 
 def run_preview_pipeline(cmd_args=None):
@@ -157,6 +159,7 @@ def run_preview_pipeline(cmd_args=None):
             listener.run()
         except KeyboardInterrupt:
             logger.info('Shutting down preview pipeline listener...')
+            logs.stop_logging()
             sys.exit(0)
 
 
