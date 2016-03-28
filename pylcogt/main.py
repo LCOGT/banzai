@@ -17,6 +17,8 @@ from pylcogt import logs
 from pylcogt.utils import file_utils
 import os
 import sys
+from kombu.mixins import ConsumerMixin
+from kombu import Connection, Queue, Exchange
 
 # A dictionary converting the string input by the user into the corresponding Python object
 reduction_stages = [bias.BiasMaker]
@@ -139,3 +141,43 @@ def run(stages_to_do, pipeline_context, image_type='', calibration_maker=False, 
     # Clean up
     logs.stop_logging()
 
+
+def run_preview_pipeline(cmd_args=None):
+    pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
+    logs.start_logging(log_level=pipeline_context.log_level)
+    logger.info('Starting pipeline preview mode listener')
+    crawl_exchange = Exchange('fits_files', type='fanout')
+
+    listener = PreviewModeListener('amqp://guest:guest@cerberus.lco.gtn', pipeline_context)
+
+    with Connection(listener.broker_url) as connection:
+        listener.connection = connection
+        listener.queue = Queue('preview_pipeline', crawl_exchange)
+        try:
+            listener.run()
+        except KeyboardInterrupt:
+            logger.info('Shutting down preview pipeline listener...')
+            sys.exit(0)
+
+
+class PreviewModeListener(ConsumerMixin):
+    def __init__(self, broker_url, pipeline_context):
+        self.broker_url = broker_url
+        self.pipeline_context = pipeline_context
+
+    def get_consumers(self, Consumer, channel):
+        return [Consumer(queues=[self.queue], callbacks=[self.on_message])]
+
+    def on_message(self, body, message):
+        path = body.get('path')
+        stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
+                        gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
+                        bias.BiasSubtractor,
+                        dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
+                        astrometry.WCSSolver, headers.HeaderUpdater]
+        logger.info('Running preview reduction on {}'.format(path))
+        self.pipeline_context.filename = os.path.basename(path)
+        self.pipeline_context.raw_path = os.path.dirname(path)
+        run(stages_to_do, self.pipeline_context, image_type='EXPOSE')
+
+        message.ack()  # acknowledge to the sender we got this message (it can be popped)
