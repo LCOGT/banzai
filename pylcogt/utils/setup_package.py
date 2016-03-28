@@ -42,7 +42,8 @@ def check_openmp():
 def get_extensions():
 
     med_sources = [str(os.path.join(UTIL_DIR, "median_utils.pyx")),
-                   str(os.path.join(UTIL_DIR, "quick_select.c"))]
+                   str(os.path.join(UTIL_DIR, "quick_select.c")),
+                   str(os.path.join(UTIL_DIR, "_median_utils.c"))]
 
     include_dirs = ['numpy', UTIL_DIR]
 

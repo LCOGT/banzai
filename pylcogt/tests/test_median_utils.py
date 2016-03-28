@@ -2,8 +2,9 @@ from ..utils import median_utils
 import numpy as np
 
 def _compare_median1d(a, mask):
+    a_copy = a.copy()
     actual = median_utils.median1d(a.astype('f4'), mask=mask.astype(np.uint8))
-    expected = np.median(a[mask==0].astype('f4'))
+    expected = np.median(a_copy[mask == 0].astype('f4'))
     assert actual == np.float32(expected)
 
 
