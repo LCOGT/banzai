@@ -170,14 +170,15 @@ class PreviewModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         path = body.get('path')
-        stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
-                        gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
-                        bias.BiasSubtractor,
-                        dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
-                        astrometry.WCSSolver, headers.HeaderUpdater]
-        logger.info('Running preview reduction on {}'.format(path))
-        self.pipeline_context.filename = os.path.basename(path)
-        self.pipeline_context.raw_path = os.path.dirname(path)
-        run(stages_to_do, self.pipeline_context, image_type='EXPOSE')
+        if 'e00.fits' in path:
+            stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
+                            gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
+                            bias.BiasSubtractor,
+                            dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
+                            astrometry.WCSSolver, headers.HeaderUpdater]
+            logger.info('Running preview reduction on {}'.format(path))
+            self.pipeline_context.filename = os.path.basename(path)
+            self.pipeline_context.raw_path = os.path.dirname(path)
+            run(stages_to_do, self.pipeline_context, image_type='EXPOSE')
 
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
