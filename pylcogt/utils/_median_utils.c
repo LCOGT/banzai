@@ -13,7 +13,7 @@ void _median2d(float* d, uint8_t* mask, float* output_array, int nx, int ny){
     float* median_array;
     int i, j, n_unmasked_pixels, nxj, nxji;
 
-#pragma omp parallel firstprivate(output, data, mask, nx, ny) private(i, j, nxj, nxji, median_array, n_unmasked_pixels)
+#pragma omp parallel firstprivate(output_array, d, mask, nx, ny) private(i, j, nxj, nxji, median_array, n_unmasked_pixels)
     {
        /*Each thread allocates its own array. */
        median_array = (float *) malloc(nx * sizeof(float));
