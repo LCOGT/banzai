@@ -96,7 +96,6 @@ class BiasSubtractor(ApplyCalibration):
 
         for image in images:
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            self.logger.info('Subtracting bias', extra=logging_tags)
 
             image.subtract(master_bias_level)
             image.subtract(master_bias_data)
@@ -107,6 +106,8 @@ class BiasSubtractor(ApplyCalibration):
             master_bias_filename = os.path.basename(master_calibration_image.filename)
             image.header['L1IDBIAS'] = (master_bias_filename, 'ID of bias frame used')
             image.header['L1STATBI'] = (1, "Status flag for bias frame correction")
+            logs.add_tag(logging_tags, 'L1IDBIAS', image.header['L1IDBIAS'])
+
             self.logger.info('Subtracting bias', extra=logging_tags)
         return images
 
