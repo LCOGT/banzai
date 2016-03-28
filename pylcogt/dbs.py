@@ -72,7 +72,7 @@ class Image(Base):
     dateobs = Column(DateTime)
     dayobs = Column(Date, index=True)
     exptime = Column(Float)
-    filter_name = Column(String(2))
+    filter_name = Column(String(6))
     obstype = Column(String(20))
     airmass = Column(Float)
     ra = Column(Float)
@@ -115,11 +115,11 @@ class CalibrationImage(Base):
     __tablename__ = 'calimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
     type = Column(String(30), index=True)
-    filename = Column(String(40), unique=True)
+    filename = Column(String(50), unique=True)
     filepath = Column(String(100))
     dayobs = Column(Date, index=True)
     ccdsum = Column(String(20))
-    filter_name = Column(String(2))
+    filter_name = Column(String(6))
     telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
 
 
@@ -143,7 +143,7 @@ class BadPixelMask(Base):
     __tablename__ = 'bpms'
     id = Column(Integer, primary_key=True, autoincrement=True)
     telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
-    filename = Column(String(40))
+    filename = Column(String(50))
     filepath = Column(String(100))
     ccdsum = Column(String(20))
 
