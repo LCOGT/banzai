@@ -31,10 +31,10 @@ def get_bpm(image, pipeline_context):
                                db_address=pipeline_context.db_address)
     if bpm_filename is None:
         bpm_data = np.zeros((image.ny, image.nx), dtype=np.uint8)
-        image.header['L1IDMASK'] = ''
+        image.header['L1IDMASK'] = ('', 'Id. of mask file used')
     else:
         bpm_data = fits.getdata(bpm_filename)
-        image.header['L1IDMASK'] = os.path.basename(bpm_filename)
+        image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
 
     return np.array(bpm_data, dtype=np.uint8)
 

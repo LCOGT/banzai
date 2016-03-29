@@ -128,9 +128,8 @@ class OverscanSubtractor(Stage):
             # Subtract the overscan if it exists
             if len(image.data.shape) > 2:
                 for i in range(image.data.shape[0]):
-                    _subtract_overscan_3d(image, i)
-                    logs.add_tag(logging_tags, 'overscan', overscan_level)
-                    logs.add_tag(logging_tags, 'quadrant', i + 1)
+                    overscan_level = _subtract_overscan_3d(image, i)
+                    logs.add_tag(logging_tags, 'OVERSCN{0}'.format(i + 1), overscan_level)
                     self.logger.info('Subtracting overscan', extra=logging_tags)
             else:
                 overscan_level = _subtract_overscan_2d(image)
