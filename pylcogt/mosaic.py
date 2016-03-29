@@ -23,6 +23,7 @@ class MosaicCreator(Stage):
                 n_amps = image.data.shape[0]
                 nx, ny = get_mosaic_size(image, n_amps)
                 mosaiced_data = np.zeros((ny, nx))
+                mosaiced_bpm = np.zeros((ny, nx))
                 for i in range(n_amps):
                     datasec = image.header['DATASEC{0}'.format(i + 1)]
                     amp_slice = fits_utils.parse_region_keyword(datasec)
@@ -33,8 +34,10 @@ class MosaicCreator(Stage):
                     logs.add_tag(logging_tags, 'DETSEC{0}'.format(i + 1), datasec)
 
                     mosaiced_data[mosaic_slice] = image.data[i][amp_slice]
+                    mosaiced_bpm[mosaic_slice] = image.bpm[i][amp_slice]
 
                 image.data = mosaiced_data
+                image.bpm = mosaiced_bpm
                 image.update_shape(nx, ny)
 
                 self.logger.info('Mosaiced image', extra=logging_tags)
