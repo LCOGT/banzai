@@ -32,8 +32,7 @@ class BiasMaker(CalibrationMaker):
 
     def make_master_calibration_frame(self, images, image_config, logging_tags):
 
-        bias_data = np.zeros((image_config.ny, image_config.nx, len(images)))
-
+        bias_data = np.zeros((image_config.ny, image_config.nx, len(images)), dtype=np.float32)
         bias_mask = np.zeros((image_config.ny, image_config.nx, len(images)), dtype=np.uint8)
         bias_level_array = np.zeros(len(images))
 

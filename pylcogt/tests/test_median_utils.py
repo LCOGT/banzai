@@ -36,8 +36,8 @@ def test_median1d_bimodel_arange_nomask():
     for i in range(100):
         size1 = np.random.randint(1, 10000)
         size2 = np.random.randint(1, 10000)
-        start1 = np.random.choice(10000)
-        start2 = np.random.choice(10000)
+        start1 = np.random.randint(0, 10000)
+        start2 = np.random.randint(0, 10000)
         a = np.append(np.arange(size1, dtype=np.float32) + start1,
                       np.arange(size2, dtype=np.float32) + start2)
         _compare_median1d(a, np.zeros(size1 + size2, dtype=np.uint8))
@@ -76,11 +76,11 @@ def test_median1d_all_masks_returns_zero():
 
 def test_median1d_arange_mask():
     for i in range(100):
-        size = np.random.choice(10000)
+        size = np.random.randint(1, 10000)
         a = np.arange(size, dtype=np.float32)
         np.random.shuffle(a)
         mask = np.zeros(size, dtype=np.uint8)
-        mask[np.random.choice(size - 1, size=np.random.randint(1, size - 1))] = 1
+        mask[np.random.randint(0, size - 1, size=np.random.randint(1, size - 1))] = 1
         _compare_median1d(a, mask)
 
 
@@ -91,16 +91,16 @@ def test_median1d_normal_distribution_mask():
         size = np.random.randint(1, 10000)
         a = np.random.normal(mean, sigma, size=size)
         mask = np.zeros(size, dtype=np.uint8)
-        mask[np.random.choice(size - 1, size=np.random.randint(1, size - 1))] = 1
+        mask[np.random.randint(0, size - 1, size=np.random.randint(1, size - 1))] = 1
         _compare_median1d(a.astype('f4'), mask)
 
 
 def test_median1d_uniform_distribution_mask():
     for i in range(100):
-        size = np.random.choice(10000)
+        size = np.random.randint(1, 10000)
         a = np.random.uniform(-1000.0, 1000.0, size=size)
         mask = np.zeros(size, dtype=np.uint8)
-        mask[np.random.choice(size - 1, size=np.random.randint(1, size - 1))] = 1
+        mask[np.random.randint(0, size - 1, size=np.random.randint(1, size - 1))] = 1
         _compare_median1d(a.astype('f4'), mask)
 
 
@@ -108,10 +108,10 @@ def test_median1d_bimodel_arange_mask():
     for i in range(100):
         size1 = np.random.randint(1, 10000)
         size2 = np.random.randint(1, 10000)
-        start1 = np.random.choice(10000)
-        start2 = np.random.choice(10000)
+        start1 = np.random.randint(0, 10000)
+        start2 = np.random.randint(0, 10000)
         mask = np.zeros(size1 + size2, dtype=np.uint8)
-        mask[np.random.choice(size1 + size2 - 1, size=np.random.randint(1, size1 + size2 - 1))] = 1
+        mask[np.random.randint(0, size1 + size2 - 1, size=np.random.randint(1, size1 + size2 - 1))] = 1
         a = np.append(np.arange(size1, dtype=np.float32) + start1,
                       np.arange(size2, dtype=np.float32) + start2)
         _compare_median1d(a, mask)
@@ -128,7 +128,7 @@ def test_median1d_bimodal_normal_distribution_mask():
         a = np.append(np.random.normal(mean1, sigma1, size=size1),
                       np.random.normal(mean2, sigma2, size=size2))
         mask = np.zeros(size1 + size2, dtype=np.uint8)
-        mask[np.random.choice(size1 + size2 - 1, size=np.random.randint(1, size1 + size2 - 1))] = 1
+        mask[np.random.randint(0, size1 + size2 - 1, size=np.random.randint(1, size1 + size2 - 1))] = 1
         _compare_median1d(a, mask)
 
 
@@ -139,7 +139,7 @@ def test_median1d_bimodal_uniformal_distribution_mask():
         center1 = np.random.uniform(-10000.0, 10000.0)
         center2 = np.random.uniform(-10000.0, 10000.0)
         mask = np.zeros(size1 + size2, dtype=np.uint8)
-        mask[np.random.choice(size1 + size2 - 1, size=np.random.randint(1, size1 + size2 - 1))] = 1
+        mask[np.random.randint(0, size1 + size2 - 1, size=np.random.randint(1, size1 + size2 - 1))] = 1
         a = np.append(np.random.normal(-1000.0, 1000.0, size=size1) + center1,
                       np.random.normal(-1000.0, 1000.0, size=size2) + center2)
         _compare_median1d(a, mask)

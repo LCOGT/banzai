@@ -7,7 +7,7 @@ __author__ = 'cmccully'
 
 
 def median(d, axis=None, mask=None):
-    """median(d, axis=None, mask=None)\n
+    """
     Find the median of a numpy array. If an axis is provided, then find the median along
     the given axis. If mask is included, elements in d that have a non-zero mask value will
     be ignored.
@@ -17,9 +17,9 @@ def median(d, axis=None, mask=None):
     d : float32 numpy array
         Input array to find the median.
 
-    axis : int
+    axis : int (default is None)
            Index of the array to take the median
-    mask: unit8 numpy array
+    mask : unit8 or boolean numpy array (default is None)
           Numpy array of bitmask values. Non-zero values are ignored when calculating the median.
 
     Returns
@@ -29,7 +29,7 @@ def median(d, axis=None, mask=None):
 
     Notes
     -----
-    Makes extensive use of the quick select algorithm written in C, included in median_utils.c.
+    Makes extensive use of the quick select algorithm written in C, included in quick_select.c.
     If all of the elements in the array are masked (or all of the elements of the axis of interest
     are masked), we return zero.
     """
@@ -38,19 +38,22 @@ def median(d, axis=None, mask=None):
             median_mask = mask.ravel()
         else:
             median_mask = np.zeros(d.size, dtype=np.uint8)
-        output_median = median_utils.median1d(d.ravel().astype('f4'), median_mask.astype(np.uint8))
+        output_median = median_utils.median1d(np.ascontiguousarray(d.ravel(), dtype=np.float32),
+                                              np.ascontiguousarray(median_mask, dtype=np.uint8))
     else:
-        output_shape = np.delete(d.shape, axis)
+
         nx = d.shape[axis]
         ny = d.size // nx
 
+        output_shape = np.delete(d.shape, axis)
+
         if mask is not None:
-            median_mask = np.swapaxes(mask, axis, -1).reshape(ny, nx).astype(np.uint8)
+            median_mask = np.rollaxis(mask, axis, len(d.shape)).reshape(ny, nx).astype(np.uint8)
         else:
             median_mask = np.zeros((ny, nx), dtype=np.uint8)
 
-        med = median_utils.median2d(np.swapaxes(d, axis, -1).reshape(ny, nx).astype('f4'),
-                        mask=median_mask)
+        med = median_utils.median2d(np.ascontiguousarray(np.rollaxis(d, axis, len(d.shape)).reshape(ny, nx), dtype=np.float32),
+                                    mask=np.ascontiguousarray(median_mask, dtype=np.uint8))
         median_array = np.array(med)
         output_median = median_array.reshape(output_shape)
 
@@ -58,7 +61,32 @@ def median(d, axis=None, mask=None):
 
 
 def absolute_deviation(a, axis=None, mask=None):
-    # Calculate the image deviation
+    """
+    Find the absolute deviation from the median of a numpy array. If an axis is provided,
+    then the median is calculated along the given axis.
+    If mask is included, elements in a that have a non-zero mask value will be ignored.
+
+    Parameters
+    ----------
+    a : float32 numpy array
+        Input array to find the absolute deviation from the median.
+
+    axis : int (default is None)
+           Index of the array to take the median
+    mask : unit8 or boolean numpy array (default is None)
+          Numpy array of bitmask values. Non-zero values are ignored when calculating the median.
+
+    Returns
+    -------
+    absdev : float32 numpy array
+        The absolute deviation from the median. If axis is None, then we return a single float.
+
+    Notes
+    -----
+    If all of the elements in the array are masked (or all of the elements of the axis of interest
+    are masked), the original array is returned.
+    """
+
     a_median = median(a, axis=axis, mask=mask)
     if axis is not None:
         a_median = np.expand_dims(a_median, axis=axis)
@@ -87,7 +115,7 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None, fill_value=0.0):
         robust_std = np.expand_dims(robust_std, axis=axis)
 
     # Throw away any values that are N sigma from the median
-    sigma_mask = (abs_deviation > (sigma * robust_std))
+    sigma_mask = abs_deviation > (sigma * robust_std)
 
     if mask is not None:
         sigma_mask = np.logical_or(sigma_mask, mask > 0)
@@ -97,7 +125,7 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None, fill_value=0.0):
     # Take the sigma clipped mean
     mean_values = a.sum(axis=axis)
 
-    n_good_pixels = (~sigma_mask).sum(axis=axis)
+    n_good_pixels = np.logical_not(sigma_mask).sum(axis=axis)
     if axis is None:
         if n_good_pixels > 0:
             mean_values /= n_good_pixels

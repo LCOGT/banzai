@@ -30,7 +30,7 @@ class FlatMaker(CalibrationMaker):
         return 5
 
     def make_master_calibration_frame(self, images, image_config, logging_tags):
-        flat_data = np.zeros((images[0].ny, images[0].nx, len(images)))
+        flat_data = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         flat_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
         quarter_nx = images[0].nx // 4

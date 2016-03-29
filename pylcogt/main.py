@@ -46,7 +46,7 @@ def make_master_bias(cmd_args=None):
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasMaker,
                     headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_type='BIAS', calibration_maker=True,
-        log_message='Making Master BIAS', cmd_args=cmd_args)
+        log_message='Making Master BIAS')
     logs.stop_logging()
 
 def make_master_dark(cmd_args=None):
@@ -56,7 +56,7 @@ def make_master_dark(cmd_args=None):
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
                     bias.BiasSubtractor, dark.DarkMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_type='DARK', calibration_maker=True,
-        log_message='Making Master Dark', cmd_args=cmd_args)
+        log_message='Making Master Dark')
     logs.stop_logging()
 
 
@@ -67,7 +67,7 @@ def make_master_flat(cmd_args=None):
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_type='SKYFLAT', calibration_maker=True,
-        log_message='Making Master Flat', cmd_args=cmd_args)
+        log_message='Making Master Flat')
     logs.stop_logging()
 
 
@@ -86,6 +86,7 @@ def reduce_science_frames(cmd_args=None):
         run(stages_to_do, pipeline_context, image_type='EXPOSE',
             log_message='Reducing Science Frames')
     logs.stop_logging()
+
 
 def create_master_calibrations(cmd_args=None):
     make_master_bias(cmd_args=cmd_args)

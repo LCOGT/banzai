@@ -28,7 +28,7 @@ class DarkMaker(CalibrationMaker):
         return 5
 
     def make_master_calibration_frame(self, images, image_config, logging_tags):
-        dark_data = np.zeros((images[0].ny, images[0].nx, len(images)))
+        dark_data = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         dark_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
         master_dark_filename = self.get_calibration_filename(images[0])
