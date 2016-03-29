@@ -42,7 +42,7 @@ class DarkMaker(CalibrationMaker):
             dark_data[:, :, i] /= image.exptime
             dark_mask[:, :, i] = image.bpm[:, :]
 
-        master_dark = stats.sigma_clipped_mean(dark_data, 3.0, axis=2, mask=dark_mask)
+        master_dark = stats.sigma_clipped_mean(dark_data, 3.0, axis=2, mask=dark_mask, inplace=True)
 
         # Memory cleanup
         del dark_data

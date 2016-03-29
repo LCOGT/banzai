@@ -52,7 +52,7 @@ class FlatMaker(CalibrationMaker):
 
         logs.pop_tag(logging_tags, 'flat_normalization')
         master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2, mask=flat_mask,
-                                               fill_value=1.0)
+                                               fill_value=1.0, inplace=True)
 
         master_bpm = np.array(master_flat == 1.0, dtype=np.uint8)
 
