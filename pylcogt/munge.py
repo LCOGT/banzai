@@ -16,7 +16,7 @@ class DataMunger(Stage):
             telescope = dbs.get_telescope(image.telescope_id)
             # TODO: Currently we only support 1x1 Sinistro frames and only support 1x1 frames.
             # TODO: 2x2 frames cannot use hard coded values because we read out more pixels.
-            if 'sinistro' in telescope.camera_type:
+            if 'sinistro' in telescope.camera_type.lower():
                 keywords_to_update = {'BIASSEC1': ('[1:2048,2055:2080]',
                                                    '[binned pixel] Section of overscan data for Q1'),
                                       'BIASSEC2': ('[1:2048,2055:2080]',
@@ -59,6 +59,7 @@ class DataMunger(Stage):
             elif '0m4' in telescope.camera_type or '0m8' in telescope.camera_type:
                 image.header['SATURATE'] = (56000.0, '[ADU] Saturation level used')
 
+            image.bpm[image.data >= image.header['SATURATE']] = 2
         return images
 
 

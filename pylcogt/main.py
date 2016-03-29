@@ -49,6 +49,7 @@ def make_master_bias(cmd_args=None):
         log_message='Making Master BIAS')
     logs.stop_logging()
 
+
 def make_master_dark(cmd_args=None):
     pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
     logs.start_logging(log_level=pipeline_context.log_level)
