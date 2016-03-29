@@ -110,7 +110,7 @@ def open_image(filename):
         data = hdu[0].data.astype(np.float32)
         header = hdu[0].header
         try:
-            bpm = hdu['BPM'].data
+            bpm = hdu['BPM'].data.astype(np.uint8)
         except KeyError:
             bpm = None
         hdu.close()

@@ -45,7 +45,7 @@ def read_images(image_list, pipeline_context):
         try:
             image = Image(filename=filename)
             if image.bpm is None:
-                image.bpm = get_bpm(image, pipeline_context)
+                image.bpm = get_bpm(image, pipeline_context).astype(np.uint8)
             images.append(image)
         except Exception as e:
             logger.error('Error loading {0}'.format(filename))
