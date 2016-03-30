@@ -22,8 +22,8 @@ class MosaicCreator(Stage):
 
                 n_amps = image.data.shape[0]
                 nx, ny = get_mosaic_size(image, n_amps)
-                mosaiced_data = np.zeros((ny, nx))
-                mosaiced_bpm = np.zeros((ny, nx))
+                mosaiced_data = np.zeros((ny, nx), dtype=np.float32)
+                mosaiced_bpm = np.zeros((ny, nx), dtype=np.uint8)
                 for i in range(n_amps):
                     datasec = image.header['DATASEC{0}'.format(i + 1)]
                     amp_slice = fits_utils.parse_region_keyword(datasec)

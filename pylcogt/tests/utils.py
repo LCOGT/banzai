@@ -14,7 +14,7 @@ class FakeImage(object):
         self.instrument = 'kb76'
         self.ccdsum = ccdsum
         self.epoch = epoch
-        self.data = image_multiplier * np.ones((ny, nx))
+        self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
         self.filename = 'test.fits'
         self.filter = 'U'
         self.dateobs = datetime(2016, 1, 1)

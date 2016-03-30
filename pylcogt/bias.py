@@ -34,7 +34,7 @@ class BiasMaker(CalibrationMaker):
 
         bias_data = np.zeros((image_config.ny, image_config.nx, len(images)), dtype=np.float32)
         bias_mask = np.zeros((image_config.ny, image_config.nx, len(images)), dtype=np.uint8)
-        bias_level_array = np.zeros(len(images))
+        bias_level_array = np.zeros(len(images), dtype=np.float32)
 
         master_bias_filename = self.get_calibration_filename(image_config)
         logs.add_tag(logging_tags, 'master_bias', os.path.basename(master_bias_filename))

@@ -1,6 +1,7 @@
 from pylcogt.stages import Stage
 import numpy as np
 from pylcogt import dbs
+from pylcogt.utils import array_utils
 
 
 class DataMunger(Stage):
@@ -59,7 +60,8 @@ class DataMunger(Stage):
             elif '0m4' in telescope.camera_type or '0m8' in telescope.camera_type:
                 image.header['SATURATE'] = (56000.0, '[ADU] Saturation level used')
 
-            image.bpm[image.data >= image.header['SATURATE']] = 2
+            bpm_slices = array_utils.array_indices_to_slices(image.bpm)
+            image.bpm[image.data[bpm_slices] >= float(image.header['SATURATE'])] = 2
         return images
 
 
