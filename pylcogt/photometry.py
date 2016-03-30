@@ -93,7 +93,7 @@ class SourceDetector(Stage):
                                         '[counts] Median of frame background')
             logs.add_tag(logging_tags, 'L1MEDIAN', median_background)
 
-            std_background = stats.robust_standard_deviation(bkg.back(), 5.0)
+            std_background = stats.robust_standard_deviation(bkg.back())
             image.header['L1SIGMA'] = (std_background,
                                        '[counts] Robust std dev of frame background')
             logs.add_tag(logging_tags, 'L1SIGMA', std_background)
