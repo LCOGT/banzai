@@ -47,9 +47,9 @@ def split_slice(pixel_section):
         pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]), 1)
     else:
         if int(pixels[1]) == 1:
-            pixel_slice = slice(int(pixels[0]) - 1, None,1)
+            pixel_slice = slice(int(pixels[0]) - 1, None, -1)
         else:
-            pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]) - 2,1)
+            pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]) - 2, -1)
     return pixel_slice
 
 
