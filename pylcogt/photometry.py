@@ -111,5 +111,5 @@ class SourceDetector(Stage):
             image.header['L1ELLIPA'] = (mean_position_angle, '[deg] PA of mean image ellipticity')
             logs.add_tag(logging_tags, 'L1ELLIPA', mean_position_angle)
 
-            self.logger('Extracted sources', extra=logging_tags)
+            self.logger.info('Extracted sources', extra=logging_tags)
         return images
