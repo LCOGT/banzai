@@ -109,7 +109,11 @@ def select_images(image_list, image_type):
     images = []
     for filename in image_list:
         try:
-            if fits.getval(filename, 'OBSTYPE') == image_type:
+            if os.path.splitext(filename)[1] =='.fz':
+                ext = 1
+            else:
+                ext = 0
+            if fits.getval(filename, 'OBSTYPE', ext=ext) == image_type:
                 images.append(filename)
         except Exception as e:
             logger.error('Unable to get OBSTYPE from {0}.'.format(filename))

@@ -42,7 +42,7 @@ class BiasMaker(CalibrationMaker):
             bias_level_array[i] = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
 
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'bias', bias_level_array[i])
+            logs.add_tag(logging_tags, 'BIASLVL', float(bias_level_array[i]))
             self.logger.debug('Calculating bias level', extra=logging_tags)
             # Subtract the bias level for each image
             bias_data[:, :, i] = image.data[:, :] - bias_level_array[i]
@@ -66,7 +66,7 @@ class BiasMaker(CalibrationMaker):
 
         logs.pop_tag(logging_tags, 'master_bias')
         logs.add_tag(logging_tags, 'filename', os.path.basename(master_bias_image.filename))
-        logs.add_tag(logging_tags, 'bias', mean_bias_level)
+        logs.add_tag(logging_tags, 'BIASLVL', mean_bias_level)
         self.logger.debug('Average bias level in ADU', extra=logging_tags)
 
         return [master_bias_image]
@@ -105,6 +105,7 @@ class BiasSubtractor(ApplyCalibration):
             master_bias_filename = os.path.basename(master_calibration_image.filename)
             image.header['L1IDBIAS'] = (master_bias_filename, 'ID of bias frame used')
             image.header['L1STATBI'] = (1, "Status flag for bias frame correction")
+            logs.add_tag(logging_tags, 'BIASLVL', image.header['BIASLVL'])
             logs.add_tag(logging_tags, 'L1IDBIAS', image.header['L1IDBIAS'])
 
             self.logger.info('Subtracting bias', extra=logging_tags)
@@ -133,7 +134,7 @@ class OverscanSubtractor(Stage):
                     self.logger.info('Subtracting overscan', extra=logging_tags)
             else:
                 overscan_level = _subtract_overscan_2d(image)
-                logs.add_tag(logging_tags, 'overscan', overscan_level)
+                logs.add_tag(logging_tags, 'OVERSCAN', overscan_level)
                 self.logger.info('Subtracting overscan', extra=logging_tags)
 
         return images
