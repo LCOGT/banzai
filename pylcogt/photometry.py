@@ -86,30 +86,30 @@ class SourceDetector(Stage):
             mean_background = stats.sigma_clipped_mean(bkg.back(), 5.0)
             image.header['L1MEAN'] = (mean_background,
                                       '[counts] Sigma clipped mean of frame background')
-            logs.add_tag(logging_tags, 'L1MEAN', mean_background)
+            logs.add_tag(logging_tags, 'L1MEAN', float(mean_background))
 
             median_background = np.median(bkg.back())
             image.header['L1MEDIAN'] = (median_background,
                                         '[counts] Median of frame background')
-            logs.add_tag(logging_tags, 'L1MEDIAN', median_background)
+            logs.add_tag(logging_tags, 'L1MEDIAN', float(median_background))
 
             std_background = stats.robust_standard_deviation(bkg.back())
             image.header['L1SIGMA'] = (std_background,
                                        '[counts] Robust std dev of frame background')
-            logs.add_tag(logging_tags, 'L1SIGMA', std_background)
+            logs.add_tag(logging_tags, 'L1SIGMA', float(std_background))
 
             # Save some image statistics to the header
             fwhm = 2.0 * hwhm_mean * image.pixel_scale
             image.header['L1FWHM'] = (fwhm, '[arcsec] Frame FWHM in arcsec')
-            logs.add_tag(logging_tags, 'L1FWHM', fwhm)
+            logs.add_tag(logging_tags, 'L1FWHM', float(fwhm))
 
             mean_ellipticity = stats.sigma_clipped_mean(1.0 - (sources['b'] / sources['a']), 3.0)
             image.header['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
-            logs.add_tag(logging_tags, 'L1ELLIP', mean_ellipticity)
+            logs.add_tag(logging_tags, 'L1ELLIP', float(mean_ellipticity))
 
             mean_position_angle = stats.sigma_clipped_mean(sources['theta'], 3.0)
             image.header['L1ELLIPA'] = (mean_position_angle, '[deg] PA of mean image ellipticity')
-            logs.add_tag(logging_tags, 'L1ELLIPA', mean_position_angle)
+            logs.add_tag(logging_tags, 'L1ELLIPA', float(mean_position_angle))
 
             self.logger.info('Extracted sources', extra=logging_tags)
         return images

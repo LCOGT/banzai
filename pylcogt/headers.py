@@ -30,7 +30,7 @@ class HeaderUpdater(Stage):
                                             '[UTC] Date the frame becomes public')
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'rlevel', image.header['RLEVEL'])
+            logs.add_tag(logging_tags, 'rlevel', int(image.header['RLEVEL']))
             logs.add_tag(logging_tags, 'pipeline_version', image.header['PIPEVER'])
             logs.add_tag(logging_tags, 'l1pubdat', image.header['L1PUBDAT'])
             self.logger.info('Updating header', extra=logging_tags)

@@ -59,7 +59,7 @@ def save_images(pipeline_context, images, master_calibration=False):
         output_directory = make_output_directory(pipeline_context, image)
         if not master_calibration:
             image.filename = image.filename.replace('00.fits',
-                                                    '{:02d}.fits'.format(pipeline_context.rlevel))
+                                                    '{:02d}.fits'.format(int(pipeline_context.rlevel)))
 
         image_filename = os.path.basename(image.filename)
         filepath = os.path.join(output_directory, image_filename)
