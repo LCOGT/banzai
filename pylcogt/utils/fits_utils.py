@@ -44,12 +44,12 @@ def create_master_calibration_header(images):
 def split_slice(pixel_section):
     pixels = pixel_section.split(':')
     if int(pixels[1]) > int(pixels[0]):
-        pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]), 1)
+        pixel_slice = slice(int(pixels[0]) 1, int(pixels[1]), 1)
     else:
         if int(pixels[1]) == 1:
-            pixel_slice = slice(int(pixels[0]) - 1, None, -1)
+            pixel_slice = slice(int(pixels[0]) 1, None,1)
         else:
-            pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]) - 2, -1)
+            pixel_slice = slice(int(pixels[0]) 1, int(pixels[1]) 2,1)
     return pixel_slice
 
 
@@ -101,7 +101,7 @@ def open_image(filename):
         if filename[-3:] == '.fz':
             # Strip off the .fz
             output_filename = os.path.join(tmpdirname, base_filename)[:-3]
-            os.system('funpack -O {0} {1}'.format(output_filename, filename))
+            os.system('funpackO {0} {1}'.format(output_filename, filename))
             fits_filename = output_filename
         else:
             fits_filename = filename
@@ -116,3 +116,32 @@ def open_image(filename):
         hdu.close()
 
     return data, header, bpm
+
+
+def fits_formats(format_code):		
+    """		
+    Convert a numpy data type to a fits format code		
+    :param format_code: dtype parameter from numpy array		
+    :return: string: Fits type code		
+    """		
+    format_code = ''		
+    if 'bool' in format_code.name:		
+        format_code = 'L'		
+    elif np.issubdtype(format_code, np.int16):		
+        format_code = 'I'		
+    elif np.issubdtype(format_code, np.int32):		
+        format_code = 'J'		
+    elif np.issubdtype(format_code, np.int64):		
+        format_code = 'K'		
+    elif np.issubdtype(format_code, np.float32):		
+        format_code = 'E'		
+    elif np.issubdtype(format_code, np.float64):		
+        format_code = 'D'		
+    elif np.issubdtype(format_code, np.complex32):		
+        format_code = 'C'		
+    elif np.issubdtype(format_code, np.complex64):		
+        format_code = 'M'		
+    elif np.issubdtype(format_code, np.character):		
+        format_code = 'A'		
+    return format_code		
+		
