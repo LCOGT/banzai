@@ -1,6 +1,7 @@
 from __future__ import absolute_import, print_function, division
 from pylcogt.stages import Stage
-from . import dbs, logs
+from pylcogt import logs
+from pylcogt.images import MissingCatalogException
 import os, subprocess, shlex
 from astropy.io import fits
 
@@ -33,7 +34,13 @@ class WCSSolver(Stage):
             logs.add_tag(logging_tags, 'filename', filename)
 
             catalog_name = filename.replace('.fits', '.cat.fits')
-            image.write_catalog(catalog_name, nsources=40)
+            try:
+                image.write_catalog(catalog_name, nsources=40)
+            except MissingCatalogException as e:
+                self.logger.error('No source catalog. Not attempting WCS solution',
+                                  extra=logging_tags)
+                continue
+
             # Run astrometry.net
             wcs_name = filename.replace('.fits', '.wcs.fits')
             command = self.cmd.format(ra=image.ra, dec=image.dec, scale_low=0.9*image.pixel_scale,

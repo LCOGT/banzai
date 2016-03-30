@@ -68,7 +68,10 @@ class Image(object):
         self.ny = ny
 
     def write_catalog(self, filename, nsources=None):
-        self.catalog[:nsources].write(filename, format='fits', overwrite=True)
+        if self.catalog is None:
+            raise MissingCatalogException
+        else:
+            self.catalog[:nsources].write(filename, format='fits', overwrite=True)
 
     def add_history(self, msg):
         self.header.add_history(msg)
@@ -83,3 +86,7 @@ def check_image_homogeneity(images):
         if len({getattr(image, attribute) for image in images}) > 1:
             raise InhomogeneousSetException('Images have different {}s'.format(attribute))
     return images[0]
+
+
+class MissingCatalogException(Exception):
+    pass
