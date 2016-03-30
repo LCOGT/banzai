@@ -101,7 +101,7 @@ def open_image(filename):
         if filename[-3:] == '.fz':
             # Strip off the .fz
             output_filename = os.path.join(tmpdirname, base_filename)[:-3]
-            os.system('funpackO {0} {1}'.format(output_filename, filename))
+            os.system('funpack -O {0} {1}'.format(output_filename, filename))
             fits_filename = output_filename
         else:
             fits_filename = filename
