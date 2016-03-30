@@ -56,6 +56,10 @@ class FlatMaker(CalibrationMaker):
 
         master_bpm = np.array(master_flat == 1.0, dtype=np.uint8)
 
+        master_bpm = np.logical_and(master_bpm, master_flat < 0.2)
+
+        master_flat[master_flat < 0.2] = 1.0
+
         master_flat_header = fits_utils.create_master_calibration_header(images)
 
         master_flat_image = Image(data=master_flat, header=master_flat_header)
