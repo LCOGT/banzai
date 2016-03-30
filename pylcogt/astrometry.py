@@ -37,6 +37,7 @@ class WCSSolver(Stage):
             try:
                 image.write_catalog(catalog_name, nsources=40)
             except MissingCatalogException as e:
+                image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
                 self.logger.error('No source catalog. Not attempting WCS solution',
                                   extra=logging_tags)
                 continue
