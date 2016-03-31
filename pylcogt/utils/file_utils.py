@@ -141,5 +141,6 @@ def make_output_directory(pipeline_context, image_config):
 
 
 def get_md5(filepath):
-    file = open(filepath)
-    return hashlib.md5(file.read()).hexdigest()
+    with open(filepath, rb) as file:
+        md5 = hashlib.md5(file.read()).hexdigest()
+    return md5
