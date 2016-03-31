@@ -10,18 +10,16 @@ October 2015
 from __future__ import absolute_import, print_function, division
 
 import os.path
-import contextlib
-import itertools
 
-import sqlalchemy
 from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTime, Boolean, CHAR
 from sqlalchemy.ext.declarative import declarative_base
 
 from glob import glob
 from astropy.io import fits
 import requests
+from pylcogt.utils import file_utils
 
 
 # Define how to get to the database
@@ -146,6 +144,13 @@ class BadPixelMask(Base):
     filename = Column(String(50))
     filepath = Column(String(100))
     ccdsum = Column(String(20))
+
+
+class PreviewImage(Base):
+    __tablename__ = 'previewimages'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    filename = Column(String(50), index=True)
+    checksum = Column(CHAR(32), index=True)
 
 
 def create_db(bpm_directory, db_address=_DEFAULT_DB,
@@ -309,5 +314,22 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
     calibration_image.filepath = os.path.dirname(output_file)
 
     db_session.add(calibration_image)
+    db_session.commit()
+    db_session.close()
+
+
+def preview_file_already_processed(path, db_address=_DEFAULT_DB):
+    db_session = get_session(db_address=db_address)
+    query = db_session.query(PreviewImage)
+    criteria = PreviewImage.filename == os.path.basename(path)
+    criteria &= PreviewImage.checksum == file_utils.get_md5(path)
+    query = query.filter(criteria)
+    return len(query.all()) > 0
+
+
+def set_preview_file_as_processed(path, db_address=_DEFAULT_DB):
+    preview_image = PreviewImage(filename=os.basename(path), checksum=file_utils.get_md5(path))
+    db_session = get_session(db_address=db_address)
+    db_session.add(preview_image)
     db_session.commit()
     db_session.close()

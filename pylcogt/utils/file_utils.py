@@ -3,6 +3,7 @@ from kombu import Connection, Queue, Exchange
 from glob import glob
 from astropy.io import fits
 import numpy as np
+import hashlib
 
 from pylcogt import dbs
 from pylcogt import logs
@@ -137,3 +138,8 @@ def make_output_directory(pipeline_context, image_config):
         os.makedirs(output_directory)
 
     return output_directory
+
+
+def get_md5(filepath):
+    file = open(filepath)
+    return hashlib.md5(file.read()).hexdigest()

@@ -15,6 +15,7 @@ from pylcogt import munge, crosstalk, gain, mosaic
 from pylcogt import bias, dark, flats, trim, photometry, astrometry, headers
 from pylcogt import logs
 from pylcogt.utils import file_utils
+from pylcogt import dbs
 import os
 import sys
 from kombu.mixins import ConsumerMixin
@@ -170,20 +171,28 @@ class PreviewModeListener(ConsumerMixin):
         self.broker_url = broker_url
         self.pipeline_context = pipeline_context
 
+    def on_connection_error(self, exc, interval):
+        logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
+
     def get_consumers(self, Consumer, channel):
-        return [Consumer(queues=[self.queue], callbacks=[self.on_message])]
+        consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
+        # Only fetch one thing off the queue at a time
+        consumer.qos(prefetch_count=1)
+        return [consumer]
 
     def on_message(self, body, message):
         path = body.get('path')
         if 'e00.fits' in path:
-            stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
-                            gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
-                            bias.BiasSubtractor,
-                            dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
-                            astrometry.WCSSolver, headers.HeaderUpdater]
-            logger.info('Running preview reduction on {}'.format(path))
-            self.pipeline_context.filename = os.path.basename(path)
-            self.pipeline_context.raw_path = os.path.dirname(path)
-            run(stages_to_do, self.pipeline_context, image_type='EXPOSE')
+            if not dbs.preview_file_already_processed(path, db_address=self.pipeline_context.db_address):
+                stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector,
+                                bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
+                                trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                                flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
+                                headers.HeaderUpdater]
+                logger.info('Running preview reduction on {}'.format(path))
+                self.pipeline_context.filename = os.path.basename(path)
+                self.pipeline_context.raw_path = os.path.dirname(path)
+                run(stages_to_do, self.pipeline_context, image_type='EXPOSE')
+                dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
