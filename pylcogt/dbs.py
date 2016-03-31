@@ -328,7 +328,7 @@ def preview_file_already_processed(path, db_address=_DEFAULT_DB):
 
 
 def set_preview_file_as_processed(path, db_address=_DEFAULT_DB):
-    preview_image = PreviewImage(filename=os.basename(path), checksum=file_utils.get_md5(path))
+    preview_image = PreviewImage(filename=os.path.basename(path), checksum=file_utils.get_md5(path))
     db_session = get_session(db_address=db_address)
     db_session.add(preview_image)
     db_session.commit()
