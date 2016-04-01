@@ -4,6 +4,7 @@ from pylcogt import logs
 from pylcogt.images import MissingCatalogException
 import os, subprocess, shlex
 from astropy.io import fits
+import tempfile
 
 __author__ = 'cmccully'
 
@@ -33,50 +34,40 @@ class WCSSolver(Stage):
             filename = os.path.basename(image.filename)
             logs.add_tag(logging_tags, 'filename', filename)
 
-            catalog_name = filename.replace('.fits', '.cat.fits')
-            try:
-                image.write_catalog(catalog_name, nsources=40)
-            except MissingCatalogException as e:
-                image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
-                self.logger.error('No source catalog. Not attempting WCS solution',
-                                  extra=logging_tags)
-                continue
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                catalog_name = os.path.join(tmpdirname, filename.replace('.fits', '.cat.fits'))
+                try:
+                    image.write_catalog(catalog_name, nsources=40)
+                except MissingCatalogException:
+                    image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+                    self.logger.error('No source catalog. Not attempting WCS solution',
+                                      extra=logging_tags)
+                    continue
 
-            # Run astrometry.net
-            wcs_name = filename.replace('.fits', '.wcs.fits')
-            command = self.cmd.format(ra=image.ra, dec=image.dec, scale_low=0.9*image.pixel_scale,
-                                      scale_high=1.1*image.pixel_scale, wcs_name=wcs_name,
-                                      catalog_name=catalog_name, nx=image.nx, ny=image.ny)
+                # Run astrometry.net
+                wcs_name = os.path.join(tmpdirname, filename.replace('.fits', '.wcs.fits'))
+                command = self.cmd.format(ra=image.ra, dec=image.dec, scale_low=0.9*image.pixel_scale,
+                                          scale_high=1.1*image.pixel_scale, wcs_name=wcs_name,
+                                          catalog_name=catalog_name, nx=image.nx, ny=image.ny)
 
-            console_output = subprocess.check_output(shlex.split(command))
-            self.logger.debug(console_output, extra=logging_tags)
+                console_output = subprocess.check_output(shlex.split(command))
+                self.logger.debug(console_output, extra=logging_tags)
 
-            # Cleanup temp files created by astrometry.net
-            basename = catalog_name[:-5]  # Split off the .fits from the image filename
-            # Remove the extra temporary files
-            if os.path.exists(basename + '.axy'):
-                os.remove(basename + '.axy')
-            if os.path.exists(basename + '-indx.xyls'):
-                os.remove(basename + '-indx.xyls')
+                if os.path.exists(wcs_name):
+                    # Copy the WCS keywords into original image
+                    new_header = fits.getheader(wcs_name)
 
-            if os.path.exists(wcs_name):
-                # Copy the WCS keywords into original image
-                new_header = fits.getheader(wcs_name)
+                    header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
+                                                 'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
+                    for keyword in header_keywords_to_update:
+                        image.header[keyword] = new_header[keyword]
 
-                header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
-                                             'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
-                for keyword in header_keywords_to_update:
-                    image.header[keyword] = new_header[keyword]
+                    image.header['WCSERR'] = (0, 'Error status of WCS fit. 0 for no error')
 
-                image.header['WCSERR'] = (0, 'Error status of WCS fit. 0 for no error')
-
-                # Clean up wcs file
-                os.remove(wcs_name)
-            else:
-                image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
-
-            # Clean up the catalog file
-            os.remove(catalog_name)
+                    # Clean up wcs file
+                    os.remove(wcs_name)
+                else:
+                    image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
 
             logs.add_tag(logging_tags, 'WCSERR', image.header['WCSERR'])
             self.logger.info('Attempted WCS Solve', extra=logging_tags)

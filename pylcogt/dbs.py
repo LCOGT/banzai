@@ -328,8 +328,16 @@ def preview_file_already_processed(path, db_address=_DEFAULT_DB):
 
 
 def set_preview_file_as_processed(path, db_address=_DEFAULT_DB):
-    preview_image = PreviewImage(filename=os.path.basename(path), checksum=file_utils.get_md5(path))
+    filename = os.path.basename(path)
+    checksum = file_utils.get_md5(path)
+
     db_session = get_session(db_address=db_address)
-    db_session.add(preview_image)
-    db_session.commit()
+    query = db_session.query(PreviewImage)
+    criteria = PreviewImage.filename == filename
+    criteria &= PreviewImage.checksum == checksum
+    query = query.filter(criteria)
+    if len(query.all()) == 0:
+        preview_image = PreviewImage(filename=filename, checksum=checksum)
+        db_session.add(preview_image)
+        db_session.commit()
     db_session.close()
