@@ -161,4 +161,5 @@ class ApplyCalibration(Stage):
         else:
             calibration_file = os.path.join(calibration_image.filepath, calibration_image.filename)
 
+        db_session.close()
         return calibration_file

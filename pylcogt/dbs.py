@@ -324,7 +324,9 @@ def preview_file_already_processed(path, db_address=_DEFAULT_DB):
     criteria = PreviewImage.filename == os.path.basename(path)
     criteria &= PreviewImage.checksum == file_utils.get_md5(path)
     query = query.filter(criteria)
-    return len(query.all()) > 0
+    already_processed = len(query.all()) > 0
+    db_session.close()
+    return already_processed
 
 
 def set_preview_file_as_processed(path, db_address=_DEFAULT_DB):
