@@ -106,15 +106,15 @@ def make_image_list(pipeline_context):
     return image_list
 
 
-def select_images(image_list, image_type):
+def select_images(image_list, image_types):
     images = []
     for filename in image_list:
         try:
-            if os.path.splitext(filename)[1] =='.fz':
+            if os.path.splitext(filename)[1] == '.fz':
                 ext = 1
             else:
                 ext = 0
-            if fits.getval(filename, 'OBSTYPE', ext=ext) == image_type:
+            if fits.getval(filename, 'OBSTYPE', ext=ext) in image_types:
                 images.append(filename)
         except Exception as e:
             logger.error('Unable to get OBSTYPE from {0}.'.format(filename))
