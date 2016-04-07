@@ -12,7 +12,9 @@ class Image(object):
 
         if filename is not None:
             data, header, bpm = fits_utils.open_image(filename)
-            self.filename = filename
+            if '.fz' == filename[-3:]:
+                filename = filename[:-3]
+            self.filename = os.path.basename(filename)
 
         self.data = data
         self.header = header
