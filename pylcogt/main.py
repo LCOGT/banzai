@@ -192,7 +192,7 @@ class PreviewModeListener(ConsumerMixin):
                 logger.info('Running preview reduction on {}'.format(path))
                 self.pipeline_context.filename = os.path.basename(path)
                 self.pipeline_context.raw_path = os.path.dirname(path)
-                run(stages_to_do, self.pipeline_context, image_type='EXPOSE')
+                run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD'])
                 dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
