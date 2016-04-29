@@ -1,4 +1,10 @@
 ***************
+Running PyLCOGT
+***************
+
+The PyLCOGT runs on the chanunpa computer, under username 'cmccully'.
+
+***************
 PyLCOGT package
 ***************
 
