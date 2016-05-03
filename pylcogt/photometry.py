@@ -90,9 +90,9 @@ class SourceDetector(Stage):
                                                    6.0 * sources['a'], [0.25, 0.5, 0.75],
                                                    normflux=sources['flux'], subpix=5)
                 sources['flag'] |= flag
-                sources['fluxrad25'] = flux_radii[0]
-                sources['fluxrad50'] = flux_radii[1]
-                sources['fluxrad75'] = flux_radii[2]
+                sources['fluxrad25'] = flux_radii[:, 0]
+                sources['fluxrad50'] = flux_radii[:, 1]
+                sources['fluxrad75'] = flux_radii[:, 2]
 
                 # Calculate the windowed positions
                 sig = 2.0 / 2.35 * sources['fluxrad50']
