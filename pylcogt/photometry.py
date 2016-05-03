@@ -104,7 +104,7 @@ class SourceDetector(Stage):
                 # Calculate the average background at each source
                 bkgflux, fluxerr, flag = sep.sum_ellipse(bkg.back(), sources['x'], sources['y'],
                                                          sources['a'], sources['b'], np.pi / 2.0,
-                                                         2.5 * kronrad, subpix=1)
+                                                         2.5 * sources['kronrad'], subpix=1)
                 #masksum, fluxerr, flag = sep.sum_ellipse(mask, sources['x'], sources['y'],
                 #                                         sources['a'], sources['b'], np.pi / 2.0,
                 #                                         2.5 * kronrad, subpix=1)
@@ -201,7 +201,7 @@ class SourceDetector(Stage):
 
                 seeing = np.median(image.catalog['fwhm'][good_objects]) * image.pixel_scale
                 image.header['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
-                logs.add_tag(logging_tags, 'L1FWHM', float(fwhm))
+                logs.add_tag(logging_tags, 'L1FWHM', float(seeing))
 
                 mean_ellipticity = stats.sigma_clipped_mean(sources['ellipticity'][good_objects],
                                                             3.0)
