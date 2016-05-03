@@ -88,8 +88,7 @@ class SourceDetector(Stage):
                 # Measure the flux profile
                 flux_radii, flag = sep.flux_radius(data, sources['x'], sources['y'],
                                                    6.0 * sources['a'], [0.25, 0.5, 0.75],
-                                                   normflux=sources['flux'], subpix=5,
-                                                   error=error)
+                                                   normflux=sources['flux'], subpix=5)
                 sources['flag'] |= flag
                 sources['fluxrad25'] = flux_radii[0]
                 sources['fluxrad50'] = flux_radii[1]
@@ -97,8 +96,7 @@ class SourceDetector(Stage):
 
                 # Calculate the windowed positions
                 sig = 2.0 / 2.35 * sources['fluxrad50']
-                xwin, ywin, flag = sep.winpos(data, sources['x'], sources['y'], sig,
-                                            error=error)
+                xwin, ywin, flag = sep.winpos(data, sources['x'], sources['y'], sig)
                 sources['flag'] |= flag
                 sources['xwin'] = xwin
                 sources['ywin'] = ywin
