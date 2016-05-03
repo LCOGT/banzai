@@ -109,15 +109,15 @@ class SourceDetector(Stage):
                 #                                         sources['a'], sources['b'], np.pi / 2.0,
                 #                                         2.5 * kronrad, subpix=1)
 
-                background_area = (2.5 * kronrad) ** 2.0 * sources['a'] * sources['b'] * np.pi
+                background_area = (2.5 * sources['kronrad']) ** 2.0 * sources['a'] * sources['b'] * np.pi
                 sources['background'] = bkgflux / background_area  #- masksum)
 
                 # Update the catalog to match fits convention instead of python array convention
                 sources['x'] += 1.0
                 sources['y'] += 1.0
 
-                sources['xpeak'] += 1.0
-                sources['ypeak'] += 1.0
+                sources['xpeak'] += 1
+                sources['ypeak'] += 1
 
                 sources['xwin'] += 1.0
                 sources['ywin'] += 1.0
