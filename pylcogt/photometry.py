@@ -47,8 +47,9 @@ class SourceDetector(Stage):
                 bkg.subfrom(data)
 
                 # Do an initial source detection
+                # TODO: Add back in masking after we are sure SEP works
                 sources = sep.extract(data, self.threshold, minarea=self.min_area,
-                                      err=error, mask=mask, deblend_cont=0.01)
+                                      err=error, deblend_cont=0.005)
 
                 # Convert the detections into a table
                 sources = Table(sources)
@@ -64,7 +65,7 @@ class SourceDetector(Stage):
                 # Calculate the kron radius
                 kronrad, krflag = sep.kron_radius(data, sources['x'], sources['y'],
                                                   sources['a'], sources['b'],
-                                                  sources['theta'], 6.0, mask=mask)
+                                                  sources['theta'], 6.0)
                 sources['flag'] |= krflag
                 sources['kronrad'] = kronrad
 
@@ -72,7 +73,7 @@ class SourceDetector(Stage):
                 flux, fluxerr, flag = sep.sum_ellipse(data, sources['x'], sources['y'],
                                                       sources['a'], sources['b'],
                                                       np.pi / 2.0, 2.5 * kronrad,
-                                                      subpix=1, err=error, mask=mask)
+                                                      subpix=1, err=error)
                 sources['flux'] = flux
                 sources['fluxerr'] = fluxerr
                 sources['flag'] |= flag
@@ -87,7 +88,7 @@ class SourceDetector(Stage):
                 # Measure the flux profile
                 flux_radii, flag = sep.flux_radius(data, sources['x'], sources['y'],
                                                    6.0 * sources['a'], [0.25, 0.5, 0.75],
-                                                   normflux=sources['flux'], subpix=5, mask=mask,
+                                                   normflux=sources['flux'], subpix=5,
                                                    error=error)
                 sources['flag'] |= flag
                 sources['fluxrad25'] = flux_radii[0]
@@ -97,7 +98,7 @@ class SourceDetector(Stage):
                 # Calculate the windowed positions
                 sig = 2.0 / 2.35 * sources['fluxrad50']
                 xwin, ywin, flag = sep.winpos(data, sources['x'], sources['y'], sig,
-                                              mask=mask, error=error)
+                                            error=error)
                 sources['flag'] |= flag
                 sources['xwin'] = xwin
                 sources['ywin'] = ywin
@@ -105,13 +106,13 @@ class SourceDetector(Stage):
                 # Calculate the average background at each source
                 bkgflux, fluxerr, flag = sep.sum_ellipse(bkg.back(), sources['x'], sources['y'],
                                                          sources['a'], sources['b'], np.pi / 2.0,
-                                                         2.5 * kronrad, subpix=1, mask=mask)
-                masksum, fluxerr, flag = sep.sum_ellipse(mask, sources['x'], sources['y'],
-                                                         sources['a'], sources['b'], np.pi / 2.0,
                                                          2.5 * kronrad, subpix=1)
+                #masksum, fluxerr, flag = sep.sum_ellipse(mask, sources['x'], sources['y'],
+                #                                         sources['a'], sources['b'], np.pi / 2.0,
+                #                                         2.5 * kronrad, subpix=1)
 
                 background_area = (2.5 * kronrad) ** 2.0 * sources['a'] * sources['b'] * np.pi
-                sources['background'] = bkgflux / (background_area - masksum)
+                sources['background'] = bkgflux / background_area  #- masksum)
 
                 # Update the catalog to match fits convention instead of python array convention
                 sources['x'] += 1.0
