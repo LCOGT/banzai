@@ -39,6 +39,7 @@ class MosaicCreator(Stage):
                 image.data = mosaiced_data
                 image.bpm = mosaiced_bpm
                 image.update_shape(nx, ny)
+                image.header['NAXIS'] = 2
 
                 self.logger.info('Mosaiced image', extra=logging_tags)
         return images
