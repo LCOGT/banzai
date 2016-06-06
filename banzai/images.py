@@ -1,7 +1,7 @@
 from astropy.io import fits
-from pylcogt.utils import date_utils
-from pylcogt.utils import fits_utils
-from pylcogt import dbs
+from banzai.utils import date_utils
+from banzai.utils import fits_utils
+from banzai import dbs
 import numpy as np
 import os
 

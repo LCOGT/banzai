@@ -1,7 +1,7 @@
-import pylcogt
-from pylcogt import logs
-from pylcogt.stages import Stage
-from pylcogt.utils import date_utils
+import banzai
+from banzai import logs
+from banzai.stages import Stage
+from banzai.utils import date_utils
 from datetime import timedelta
 import os
 
@@ -17,7 +17,7 @@ class HeaderUpdater(Stage):
     def do_stage(self, images):
         for image in images:
             image.header['RLEVEL'] = (self.pipeline_context.rlevel, 'Reduction level')
-            image.header['PIPEVER'] = (pylcogt.__version__, 'Pipeline version')
+            image.header['PIPEVER'] = (banzai.__version__, 'Pipeline version')
 
             if instantly_public(image.header['PROPID']):
                 image.header['L1PUBDAT'] = (image.header['DATE-OBS'],

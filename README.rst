@@ -25,7 +25,7 @@ For more information, see:
 Status reports for developers
 -----------------------------
 
-.. image:: https://travis-ci.org/cmccully/pylcogt.png?branch=master
-    :target: https://travis-ci.org/cmccully/pylcogt
+.. image:: https://travis-ci.org/cmccully/banzai.png?branch=master
+    :target: https://travis-ci.org/cmccully/banzai
     :alt: Test Status
 

@@ -1,4 +1,4 @@
-""" main.py: Main driver script for PyLCOGT.
+""" main.py: Main driver script for banzai.
 
     The main() function is a console entry point.
 
@@ -11,11 +11,11 @@ from __future__ import absolute_import, print_function, division
 
 import argparse
 
-from pylcogt import munge, crosstalk, gain, mosaic
-from pylcogt import bias, dark, flats, trim, photometry, astrometry, headers
-from pylcogt import logs
-from pylcogt.utils import file_utils
-from pylcogt import dbs
+from banzai import munge, crosstalk, gain, mosaic
+from banzai import bias, dark, flats, trim, photometry, astrometry, headers
+from banzai import logs
+from banzai.utils import file_utils
+from banzai import dbs
 import os
 import sys
 from kombu.mixins import ConsumerMixin
@@ -108,7 +108,7 @@ def parse_command_line_arguments(cmd_args=None):
         description='Make master calibration frames from LCOGT imaging data.')
     parser.add_argument("--raw-path", default='/archive/engineering',
                         help='Top level directory where the raw data is stored')
-    parser.add_argument("--processed-path", default='/nethome/supernova/pylcogt',
+    parser.add_argument("--processed-path", default='/nethome/supernova/banzai',
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
@@ -132,7 +132,7 @@ def parse_command_line_arguments(cmd_args=None):
 
 def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False, log_message=''):
     """
-    Main driver script for PyLCOGT.
+    Main driver script for banzai.
     """
     logger.info(log_message)
 

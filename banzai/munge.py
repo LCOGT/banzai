@@ -1,7 +1,7 @@
-from pylcogt.stages import Stage
+from banzai.stages import Stage
 import numpy as np
-from pylcogt import dbs
-from pylcogt.utils import array_utils
+from banzai import dbs
+from banzai.utils import array_utils
 
 
 class DataMunger(Stage):

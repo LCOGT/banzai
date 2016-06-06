@@ -4,7 +4,7 @@ import os.path
 
 import numpy as np
 
-from pylcogt.images import Image
+from banzai.images import Image
 from . import logs
 from .stages import CalibrationMaker, ApplyCalibration, Stage
 from .utils import stats, fits_utils

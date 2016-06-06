@@ -1,7 +1,7 @@
 from __future__ import absolute_import, print_function, division
 import numpy as np
 
-from pylcogt.utils import median_utils
+from banzai.utils import median_utils
 
 __author__ = 'cmccully'
 

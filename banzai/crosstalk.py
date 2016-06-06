@@ -1,5 +1,5 @@
-from pylcogt.stages import Stage
-from pylcogt import logs
+from banzai.stages import Stage
+from banzai import logs
 import numpy as np
 import os
 

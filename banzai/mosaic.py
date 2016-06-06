@@ -1,7 +1,7 @@
-from pylcogt.stages import Stage
+from banzai.stages import Stage
 import numpy as np
-from pylcogt.utils import fits_utils
-from pylcogt import logs
+from banzai.utils import fits_utils
+from banzai import logs
 import os
 
 

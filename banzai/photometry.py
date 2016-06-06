@@ -3,10 +3,10 @@ import os
 import numpy as np
 
 from astropy.table import Table
-from pylcogt.utils import stats
+from banzai.utils import stats
 
-from pylcogt.stages import Stage
-from pylcogt import logs
+from banzai.stages import Stage
+from banzai import logs
 
 import sep
 

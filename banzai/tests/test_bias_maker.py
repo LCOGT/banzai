@@ -25,7 +25,7 @@ def test_group_by_keywords():
     assert maker.group_by_keywords == ['ccdsum']
 
 
-@mock.patch('pylcogt.bias.Image')
+@mock.patch('banzai.bias.Image')
 def test_header_master_bias_level_returns_1(mock_image):
     maker = BiasMaker(FakeContext())
 
@@ -36,7 +36,7 @@ def test_header_master_bias_level_returns_1(mock_image):
     assert header['BIASLVL'] == 1.0
 
 
-@mock.patch('pylcogt.bias.Image')
+@mock.patch('banzai.bias.Image')
 def test_header_master_bias_level_returns_2(mock_image):
     maker = BiasMaker(FakeContext())
 
@@ -47,7 +47,7 @@ def test_header_master_bias_level_returns_2(mock_image):
     assert header['BIASLVL'] == 2.0
 
 
-@mock.patch('pylcogt.bias.Image')
+@mock.patch('banzai.bias.Image')
 def test_header_cal_type_bias(mock_image):
 
     maker = BiasMaker(FakeContext())
@@ -59,27 +59,27 @@ def test_header_cal_type_bias(mock_image):
     assert header['OBSTYPE'].upper() == 'BIAS'
 
 
-@mock.patch('pylcogt.bias.Image')
+@mock.patch('banzai.bias.Image')
 def test_raises_an_exection_if_ccdsums_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ccdsum', '1 1')
 
 
-@mock.patch('pylcogt.bias.Image')
+@mock.patch('banzai.bias.Image')
 def test_raises_an_exection_if_epochs_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'epoch', '20160102')
 
 
-@mock.patch('pylcogt.bias.Image')
+@mock.patch('banzai.bias.Image')
 def test_raises_an_exection_if_nx_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'nx', 105)
 
 
-@mock.patch('pylcogt.bias.Image')
+@mock.patch('banzai.bias.Image')
 def test_raises_an_exection_if_ny_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ny', 107)
 
 
-@mock.patch('pylcogt.bias.Image')
+@mock.patch('banzai.bias.Image')
 def test_makes_a_sensible_master_bias(mock_images):
     nimages = 20
     expected_bias = 1183.0

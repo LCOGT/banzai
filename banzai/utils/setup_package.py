@@ -48,7 +48,7 @@ def get_extensions():
 
     libraries = []
 
-    ext_med = Extension(name=str('pylcogt.utils.median_utils'),
+    ext_med = Extension(name=str('banzai.utils.median_utils'),
                         sources=med_sources,
                         include_dirs=include_dirs,
                         libraries=libraries,
@@ -64,7 +64,7 @@ def get_extensions():
             ext_med.extra_link_args = ['-g', '-fopenmp']
     else:
         log.warn('OpenMP was not found. '
-                 'pylcogt will be compiled without OpenMP. '
+                 'banzai will be compiled without OpenMP. '
                  '(Use the "-v" option of setup.py for more details.)')
         log.debug(('(Start of OpenMP info)\n'
                    'compiler stdout:\n{0}\n'

@@ -3,5 +3,5 @@
 # This sub-module is destined for common non-package specific utility
 # functions that will ultimately be merged into `astropy.utils`
 
-from pylcogt.utils import *
+from banzai.utils import *
 __all__ = ['stats']

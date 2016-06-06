@@ -5,9 +5,9 @@ from astropy.io import fits
 import numpy as np
 import hashlib
 
-from pylcogt import dbs
-from pylcogt import logs
-from pylcogt.images import Image
+from banzai import dbs
+from banzai import logs
+from banzai.images import Image
 
 
 __author__ = 'cmccully'

@@ -1,7 +1,7 @@
 from __future__ import absolute_import, print_function, division
-from pylcogt.stages import Stage
-from pylcogt import logs
-from pylcogt.images import MissingCatalogException
+from banzai.stages import Stage
+from banzai import logs
+from banzai.images import MissingCatalogException
 import os, subprocess, shlex
 from astropy.io import fits
 import tempfile
