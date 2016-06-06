@@ -10,7 +10,7 @@ This repo contains the data reduction pacakge for LCOGT.
 Status reports for developers
 -----------------------------
 
-.. image:: https://travis-ci.org/lcogt/banzai.png?branch=master
-    :target: https://travis-ci.org/lcogt/banzai
+.. image:: https://travis-ci.org/LCOGT/banzai.png?branch=master
+    :target: https://travis-ci.org/LCOGT/banzai
     :alt: Test Status
 
