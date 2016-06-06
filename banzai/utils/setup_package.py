@@ -11,12 +11,29 @@ from astropy_helpers import setup_helpers
 
 UTIL_DIR = os.path.relpath(os.path.dirname(__file__))
 
-CODELINES = """
+CODELINES = r"""
 import sys
+import os
 from distutils.ccompiler import new_compiler
 ccompiler = new_compiler()
 ccompiler.add_library('gomp')
-sys.exit(int(ccompiler.has_function('omp_get_num_threads')))
+has_omp_functions = ccompiler.has_function('omp_get_num_threads')
+with open('openmp_check.c', 'w') as f:
+    f.write('#include<stdio.h>\n')
+    f.write('main()\n')
+    f.write('{\n')
+    f.write('printf("Hello World");')
+    f.write('}')
+try:
+    import pdb; pdb.set_trace()
+    ccompiler.compile(['openmp_check.c'], extra_postargs=['-fopenmp'])
+    fopenmp_flag_works = True
+except:
+    fopenmp_flag_works = False
+os.remove('openmp_check.c')
+if os.path.exists('openmp_check.o'):
+    os.remove('openmp_check.o')
+sys.exit(int(has_omp_functions & fopenmp_flag_works))
 """
 
 
