@@ -1,6 +1,6 @@
 from banzai.stages import Stage
 import numpy as np
-improt os
+import os
 from banzai import dbs
 from banzai.utils import array_utils
 
