@@ -1,4 +1,4 @@
-""" dbs.py: Database utility functions for PyLCOGT
+""" dbs.py: Database utility functions for banzai
 
     This is built around the SQLAlchemy ORM
 
@@ -19,7 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from glob import glob
 from astropy.io import fits
 import requests
-from pylcogt.utils import file_utils
+from banzai.utils import file_utils
 
 
 # Define how to get to the database

@@ -4,8 +4,8 @@ import numpy as np
 import os.path
 
 from .utils import stats, fits_utils
-from pylcogt import logs
-from pylcogt.images import Image
+from banzai import logs
+from banzai.images import Image
 from .stages import CalibrationMaker, ApplyCalibration
 
 __author__ = 'cmccully'

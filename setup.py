@@ -15,8 +15,8 @@ else:
     import __builtin__ as builtins
 builtins._ASTROPY_SETUP_ = True
 
-from astropy_helpers.setup_helpers import (
-    register_commands, adjust_compiler, get_debug_option, get_package_info)
+from astropy_helpers.setup_helpers import (register_commands, get_debug_option,
+                                           get_package_info)
 from astropy_helpers.git_helpers import get_git_devstr
 from astropy_helpers.version_helpers import generate_version_py
 
@@ -28,8 +28,12 @@ except:
 
 
 # Get some values from the setup.cfg
-from distutils import config
-conf = config.ConfigParser()
+try:
+    from ConfigParser import ConfigParser
+except ImportError:
+    from configparser import ConfigParser
+
+conf = ConfigParser()
 conf.read(['setup.cfg'])
 metadata = dict(conf.items('metadata'))
 
@@ -62,10 +66,6 @@ if not RELEASE:
 # invoking any other functionality from distutils since it can potentially
 # modify distutils' behavior.
 cmdclassd = register_commands(PACKAGENAME, VERSION, RELEASE)
-
-# Adjust the compiler in case the default on this platform is to use a
-# broken one.
-adjust_compiler(PACKAGENAME)
 
 # Freeze build information in version.py
 generate_version_py(PACKAGENAME, VERSION, RELEASE,
@@ -113,12 +113,14 @@ else:
     install_requires = install_requires.strip().split()
 
 
-def split_requirements_into_list(keyword):
+def split_requirements_into_list(metadata, keyword):
     """
     Split a requirements keyword from the setup.cfg file into a list that setup() will accept.
 
     Parameters
     ----------
+    metadata: dict
+        Dictionary of metadata values
     keyword : string
         Name of requirements keyword (e.g. install_requires)
 
@@ -143,9 +145,9 @@ if is_distutils_display_option():
     tests_require = []
     install_requires = []
 else:
-    setup_requires = split_requirements_into_list('setup_requires')
-    install_requires = split_requirements_into_list('install_requires')
-    tests_require = split_requirements_into_list('tests_require')
+    setup_requires = split_requirements_into_list(metadata, 'setup_requires')
+    install_requires = split_requirements_into_list(metadata, 'install_requires')
+    tests_require = split_requirements_into_list(metadata, 'tests_require')
 
 
 # Note that requires and provides should not be included in the call to

@@ -11,12 +11,29 @@ from astropy_helpers import setup_helpers
 
 UTIL_DIR = os.path.relpath(os.path.dirname(__file__))
 
-CODELINES = """
+CODELINES = r"""
 import sys
+import os
 from distutils.ccompiler import new_compiler
 ccompiler = new_compiler()
 ccompiler.add_library('gomp')
-sys.exit(int(ccompiler.has_function('omp_get_num_threads')))
+has_omp_functions = ccompiler.has_function('omp_get_num_threads')
+with open('openmp_check.c', 'w') as f:
+    f.write('#include<stdio.h>\n')
+    f.write('main()\n')
+    f.write('{\n')
+    f.write('printf("Hello World");')
+    f.write('}')
+try:
+    import pdb; pdb.set_trace()
+    ccompiler.compile(['openmp_check.c'], extra_postargs=['-fopenmp'])
+    fopenmp_flag_works = True
+except:
+    fopenmp_flag_works = False
+os.remove('openmp_check.c')
+if os.path.exists('openmp_check.o'):
+    os.remove('openmp_check.o')
+sys.exit(int(has_omp_functions & fopenmp_flag_works))
 """
 
 
@@ -48,7 +65,7 @@ def get_extensions():
 
     libraries = []
 
-    ext_med = Extension(name=str('pylcogt.utils.median_utils'),
+    ext_med = Extension(name=str('banzai.utils.median_utils'),
                         sources=med_sources,
                         include_dirs=include_dirs,
                         libraries=libraries,
@@ -64,7 +81,7 @@ def get_extensions():
             ext_med.extra_link_args = ['-g', '-fopenmp']
     else:
         log.warn('OpenMP was not found. '
-                 'pylcogt will be compiled without OpenMP. '
+                 'banzai will be compiled without OpenMP. '
                  '(Use the "-v" option of setup.py for more details.)')
         log.debug(('(Start of OpenMP info)\n'
                    'compiler stdout:\n{0}\n'

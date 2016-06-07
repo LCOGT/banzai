@@ -10,8 +10,8 @@ import pytest
 
 from astropy.io import fits
 
-from pylcogt.main import *
-from pylcogt.dbs import create_db
+from banzai.main import *
+from banzai.dbs import create_db
 
 
 def setup_function(function):
@@ -23,7 +23,7 @@ def teardown_function(function):
 
 
 def full_pipeline():
-    data_path = '/nethome/cmccully/workspace/pylcogt/pylcogt/tests/data/'
+    data_path = '/nethome/cmccully/workspace/banzai/banzai/tests/data/'
     site = 'elp'
     instrument = 'kb74'
     epoch = '20150325'
@@ -43,4 +43,4 @@ def full_pipeline():
 
 
 if __name__ == '__main__':
-    pytest.main([__file__, '--cov=pylcogt', '--cov-report=html', '--pdb'])
+    pytest.main([__file__, '--cov=banzai', '--cov-report=html', '--pdb'])

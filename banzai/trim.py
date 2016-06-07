@@ -1,8 +1,8 @@
 from __future__ import absolute_import, print_function, division
 
-from pylcogt import logs
-from pylcogt.utils import fits_utils
-from pylcogt.stages import Stage
+from banzai import logs
+from banzai.utils import fits_utils
+from banzai.stages import Stage
 
 import os
 

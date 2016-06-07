@@ -1,10 +1,11 @@
 from __future__ import absolute_import, print_function, division
-from pylcogt.stages import Stage
-from pylcogt import logs
-from pylcogt.images import MissingCatalogException
+from banzai.stages import Stage
+from banzai import logs
+from banzai.images import MissingCatalogException
 import os, subprocess, shlex
 from astropy.io import fits
 import tempfile
+from astropy.wcs import WCS
 
 __author__ = 'cmccully'
 
@@ -66,9 +67,23 @@ class WCSSolver(Stage):
 
                     # Clean up wcs file
                     os.remove(wcs_name)
+
+                    # Add the RA and Dec values to the catalog
+                    add_ra_dec_to_catalog(image)
                 else:
                     image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
 
             logs.add_tag(logging_tags, 'WCSERR', image.header['WCSERR'])
             self.logger.info('Attempted WCS Solve', extra=logging_tags)
         return images
+
+
+def add_ra_dec_to_catalog(image):
+    image_wcs = WCS(image.header)
+    ras, decs = image_wcs.all_pix2world(image.catalog['x'], image.catalog['y'], 1)
+    image.catalog['ra'] = ras
+    image.catalog['dec'] = decs
+    image.catalog['ra'].unit = 'degrees'
+    image.catalog['dec'].unit = 'degrees'
+    image.catalog['ra'].description = 'Right Ascension'
+    image.catalog['dec'].description = 'Declination'

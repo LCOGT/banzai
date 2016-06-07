@@ -5,8 +5,8 @@ import os.path
 
 from .utils import stats, fits_utils
 from .stages import CalibrationMaker, ApplyCalibration
-from pylcogt.images import Image
-from pylcogt import logs
+from banzai.images import Image
+from banzai import logs
 
 __author__ = 'cmccully'
 

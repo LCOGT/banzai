@@ -24,8 +24,8 @@ def test_group_by_keywords():
     assert subtractor.group_by_keywords == ['ccdsum']
 
 
-@mock.patch('pylcogt.stages.Image')
-@mock.patch('pylcogt.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.stages.Image')
+@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_header_has_biaslevel(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage()
     subtractor = BiasSubtractor(None)
@@ -34,8 +34,8 @@ def test_header_has_biaslevel(mock_cal, mock_image):
         assert image.header['BIASLVL'][0] == 0
 
 
-@mock.patch('pylcogt.stages.Image')
-@mock.patch('pylcogt.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.stages.Image')
+@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_header_biaslevel_is_1(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage(bias_level=1)
     subtractor = BiasSubtractor(None)
@@ -44,8 +44,8 @@ def test_header_biaslevel_is_1(mock_cal, mock_image):
         assert image.header['BIASLVL'][0] == 1
 
 
-@mock.patch('pylcogt.stages.Image')
-@mock.patch('pylcogt.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.stages.Image')
+@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_header_biaslevel_is_2(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage(bias_level=2.0)
     subtractor = BiasSubtractor(None)
@@ -54,34 +54,34 @@ def test_header_biaslevel_is_2(mock_cal, mock_image):
         assert image.header['BIASLVL'][0] == 2
 
 
-@mock.patch('pylcogt.stages.Image')
-@mock.patch('pylcogt.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.stages.Image')
+@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exection_if_ccdsums_are_different(mock_cal, mock_images):
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'ccdsum', '1 1')
 
 
-@mock.patch('pylcogt.stages.Image')
-@mock.patch('pylcogt.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.stages.Image')
+@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exection_if_epochs_are_different(mock_cal, mock_images):
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'epoch', '20160102')
 
 
-@mock.patch('pylcogt.stages.Image')
-@mock.patch('pylcogt.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.stages.Image')
+@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exection_if_nx_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'nx', 105)
 
 
-@mock.patch('pylcogt.stages.Image')
-@mock.patch('pylcogt.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.stages.Image')
+@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exection_if_ny_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'ny', 107)
 
 
-@mock.patch('pylcogt.stages.Image')
-@mock.patch('pylcogt.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.stages.Image')
+@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_exception_if_no_master_calibration(mock_cal, mock_images):
     mock_cal.return_value = None
     mock_images.return_value = FakeBiasImage()
@@ -91,8 +91,8 @@ def test_raises_exception_if_no_master_calibration(mock_cal, mock_images):
         images = subtractor.do_stage([FakeImage() for x in range(6)])
 
 
-@mock.patch('pylcogt.stages.Image')
-@mock.patch('pylcogt.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.stages.Image')
+@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_bias_subtraction_is_reasonable(mock_cal, mock_image):
     mock_cal.return_value = 'test.fits'
     input_bias = 1000.0

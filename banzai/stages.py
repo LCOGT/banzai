@@ -8,7 +8,7 @@ from sqlalchemy.sql import func
 from . import dbs
 from .utils import date_utils
 from . import logs
-from pylcogt.images import check_image_homogeneity, Image
+from banzai.images import check_image_homogeneity, Image
 
 import abc
 
