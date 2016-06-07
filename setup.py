@@ -113,12 +113,14 @@ else:
     install_requires = install_requires.strip().split()
 
 
-def split_requirements_into_list(keyword):
+def split_requirements_into_list(metadata, keyword):
     """
     Split a requirements keyword from the setup.cfg file into a list that setup() will accept.
 
     Parameters
     ----------
+    metadata: dict
+        Dictionary of metadata values
     keyword : string
         Name of requirements keyword (e.g. install_requires)
 
@@ -143,9 +145,9 @@ if is_distutils_display_option():
     tests_require = []
     install_requires = []
 else:
-    setup_requires = split_requirements_into_list('setup_requires')
-    install_requires = split_requirements_into_list('install_requires')
-    tests_require = split_requirements_into_list('tests_require')
+    setup_requires = split_requirements_into_list(metadata, 'setup_requires')
+    install_requires = split_requirements_into_list(metadata, 'install_requires')
+    tests_require = split_requirements_into_list(metadata, 'tests_require')
 
 
 # Note that requires and provides should not be included in the call to
