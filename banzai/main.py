@@ -12,7 +12,7 @@ from __future__ import absolute_import, print_function, division
 import argparse
 
 from banzai import munge, crosstalk, gain, mosaic
-from banzai import bias, dark, flats, trim, photometry, astrometry, headers
+from banzai import bias, dark, flats, trim, photometry, astrometry, headers, qc
 from banzai import logs
 from banzai.utils import file_utils
 from banzai import dbs
@@ -43,7 +43,7 @@ class PipelineContext(object):
 def make_master_bias(cmd_args=None):
     pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
     logs.start_logging(log_level=pipeline_context.log_level)
-    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasMaker,
                     headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['BIAS'], calibration_maker=True,
@@ -54,7 +54,7 @@ def make_master_bias(cmd_args=None):
 def make_master_dark(cmd_args=None):
     pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
     logs.start_logging(log_level=pipeline_context.log_level)
-    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
                     bias.BiasSubtractor, dark.DarkMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['DARK'], calibration_maker=True,
@@ -65,7 +65,7 @@ def make_master_dark(cmd_args=None):
 def make_master_flat(cmd_args=None):
     pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
     logs.start_logging(log_level=pipeline_context.log_level)
-    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['SKYFLAT'], calibration_maker=True,
@@ -77,7 +77,8 @@ def reduce_science_frames(cmd_args=None):
 
     pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
     logs.start_logging(log_level=pipeline_context.log_level)
-    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
+
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
                     astrometry.WCSSolver, headers.HeaderUpdater]
@@ -184,7 +185,7 @@ class PreviewModeListener(ConsumerMixin):
         path = body.get('path')
         if 'e00.fits' in path or 's00.fits' in path:
             if not dbs.preview_file_already_processed(path, db_address=self.pipeline_context.db_address):
-                stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector,
+                stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                                 bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
                                 trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
                                 flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
