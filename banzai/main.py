@@ -115,7 +115,7 @@ def parse_command_line_arguments(cmd_args=None):
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
                         default=False)
     parser.add_argument('--db-address', dest='db_address',
-                        default='mysql+mysqlconnector://cmccully:password@localhost/test',
+                        default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')

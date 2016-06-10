@@ -24,7 +24,7 @@ from banzai.utils import file_utils
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
-_DEFAULT_DB = 'mysql+mysqlconnector://cmccully:password@localhost/test'
+_DEFAULT_DB = 'mysql://cmccully:password@localhost/test'
 
 Base = declarative_base()
 
@@ -209,7 +209,7 @@ def populate_telescope_table(db_address=_DEFAULT_DB,
     ----------
     db_address : str
                  sqlalchemy address to the database of the form
-                 mysql+mysqlconnector://cmccully:password@localhost/test
+                 mysql://username:password@localhost/test
 
     configdb_address : str
                        URL of the configdb
