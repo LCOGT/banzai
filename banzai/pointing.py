@@ -12,8 +12,7 @@ class PointingTest(Stage):
     (as determined by a WCS solve) is within tolerance.
     """
 
-    # Typical poiting is within 30" of requested pointing (decimal degrees).
-    # Error threshold is over 100".
+    # Typical pointing is within 5" of requested pointing (decimal degrees).
     WARNING_THRESHOLD = 5.0
     SEVERE_THRESHOLD = 30.0
 
