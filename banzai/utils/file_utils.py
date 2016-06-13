@@ -130,9 +130,9 @@ def make_output_directory(pipeline_context, image_config):
                                     image_config.instrument, image_config.epoch)
 
     if pipeline_context.preview_mode:
-        os.path.join('preview')
+        output_directory = os.path.join(output_directory, 'preview')
     else:
-        os.path.join('processed')
+        output_directory = os.path.join(output_directory, 'processed')
 
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
