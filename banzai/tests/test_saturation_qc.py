@@ -26,3 +26,20 @@ def test_no_pixels_saturated():
     for image in images:
         assert image.header['SATFRAC'][0] == 0.0
     assert len(images) == 6
+
+
+def test_nonzero_but_no_pixels_saturated():
+    tester = SaturationTest(None)
+    nx = 101
+    ny = 103
+
+    images = [FakeImage(nx=nx, ny=ny) for x in range(6)]
+    for image in images:
+        image.header['SATURATE'] = 65535
+        image.data += 5.0
+
+    images = tester.do_stage(images)
+    for image in images:
+        assert image.header['SATFRAC'][0] == 0.0
+    assert len(images) == 6
+
