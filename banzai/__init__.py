@@ -12,6 +12,6 @@ from ._astropy_init import *
 
 # For egg_info test builds to pass, put package imports here.
 if not _ASTROPY_SETUP_:
-    from .dbs import *
-    from . import utils
+    from banzai.dbs import *
+    from banzai import utils
 __all__ = ['utils']

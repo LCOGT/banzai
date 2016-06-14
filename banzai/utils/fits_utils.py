@@ -5,7 +5,7 @@ from astropy import units
 import numpy as np
 import os
 import tempfile
-from . import date_utils
+from banzai.utils import date_utils
 
 __author__ = 'cmccully'
 

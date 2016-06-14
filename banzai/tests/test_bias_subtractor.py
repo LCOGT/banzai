@@ -1,6 +1,6 @@
-from ..bias import BiasSubtractor
-from .utils import FakeImage, throws_inhomogeneous_set_exception
-from ..stages import MasterCalibrationDoesNotExist
+from banzai.bias import BiasSubtractor
+from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception
+from banzai.stages import MasterCalibrationDoesNotExist
 import pytest
 import mock
 

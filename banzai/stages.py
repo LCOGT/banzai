@@ -5,9 +5,9 @@ import itertools
 
 from sqlalchemy.sql import func
 
-from . import dbs
-from .utils import date_utils
-from . import logs
+from banzai import dbs
+from banzai.utils import date_utils
+from banzai import logs
 from banzai.images import check_image_homogeneity, Image
 
 import abc

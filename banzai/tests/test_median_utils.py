@@ -1,5 +1,6 @@
-from ..utils import median_utils
+from banzai.utils import median_utils
 import numpy as np
+
 
 def _compare_median1d(a, mask):
     a_copy = a.copy()

@@ -5,9 +5,9 @@ import os.path
 import numpy as np
 
 from banzai.images import Image
-from . import logs
-from .stages import CalibrationMaker, ApplyCalibration, Stage
-from .utils import stats, fits_utils
+from banzai import logs
+from banzai.stages import CalibrationMaker, ApplyCalibration, Stage
+from banzai.utils import stats, fits_utils
 
 
 __author__ = 'cmccully'

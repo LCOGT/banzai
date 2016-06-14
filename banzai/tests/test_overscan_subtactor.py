@@ -1,5 +1,5 @@
-from ..bias import OverscanSubtractor
-from .utils import FakeImage
+from banzai.bias import OverscanSubtractor
+from banzai.tests.utils import FakeImage
 
 import numpy as np
 

@@ -3,8 +3,8 @@ from __future__ import absolute_import, print_function, division
 import numpy as np
 import os.path
 
-from .utils import stats, fits_utils
-from .stages import CalibrationMaker, ApplyCalibration
+from banzai.utils import stats, fits_utils
+from banzai.stages import CalibrationMaker, ApplyCalibration
 from banzai.images import Image
 from banzai import logs
 

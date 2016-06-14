@@ -1,5 +1,5 @@
 import pytest
-from ..images import InhomogeneousSetException
+from banzai.images import InhomogeneousSetException
 import numpy as np
 from datetime import datetime
 

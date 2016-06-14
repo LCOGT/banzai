@@ -1,4 +1,4 @@
-from ..utils import stats
+from banzai.utils import stats
 import numpy as np
 from numpy import ma
 np.random.seed(10031312)
