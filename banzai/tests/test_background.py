@@ -21,17 +21,15 @@ def test_group_by_keywords():
     assert tester.group_by_keywords is None
 
 
-def test_background_step():
+def test_no_background_step():
     tester = SkyBackgroundTest(None)
     nx = 501
     ny = 503
 
     images = [FakeImage(nx=nx, ny=ny) for x in range(3)]
-    for image in images:
-        image.header['SATURATE'] = 65535
 
     images = tester.do_stage(images)
     for image in images:
-        assert 'AMPINFX' image.header['AMPINFX'][0] == 0.0
+        assert 'AMPINFX' in image.header
     assert len(images) == 3
 
