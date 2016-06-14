@@ -1,7 +1,7 @@
 LCOGT Data Reduction Package
 ============================
 
-This repo contains the data reduction pacakge for LCOGT.
+This repo contains the data reduction package for LCOGT.
 
 .. image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
     :target: http://www.astropy.org

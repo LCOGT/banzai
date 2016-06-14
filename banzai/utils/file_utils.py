@@ -20,7 +20,7 @@ def post_to_archive_queue(image_path):
         logger.error('Error: %r', exc, exc_info=1)
         logger.info('Retry in %s seconds.', interval)
     fits_exchange = Exchange('fits_files', type='fanout')
-    producer_queue = Queue('pipeline', fits_exchange, exclusive=True)
+    producer_queue = Queue('pipeline', fits_exchange, exclusive=False, auto_delete=True)
     with Connection('amqp://guest:guest@cerberus.lco.gtn') as conn:
         queue = conn.SimpleQueue(producer_queue)
         put = conn.ensure(queue, queue.put, max_retries=30, errback=errback)
@@ -130,9 +130,9 @@ def make_output_directory(pipeline_context, image_config):
                                     image_config.instrument, image_config.epoch)
 
     if pipeline_context.preview_mode:
-        os.path.join('preview')
+        output_directory = os.path.join(output_directory, 'preview')
     else:
-        os.path.join('processed')
+        output_directory = os.path.join(output_directory, 'processed')
 
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
