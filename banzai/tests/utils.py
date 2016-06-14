@@ -1,3 +1,4 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
 import pytest
 from banzai.utils import image_utils
 import numpy as np

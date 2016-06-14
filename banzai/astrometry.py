@@ -1,4 +1,4 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 from banzai.stages import Stage
 from banzai import logs
 from banzai.utils import image_utils
