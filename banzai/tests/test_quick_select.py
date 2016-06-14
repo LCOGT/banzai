@@ -4,7 +4,7 @@ import numpy as np
 
 
 def test_quick_select_arange():
-    for i in range(100):
+    for i in range(20):
         size = np.random.randint(2, 10000)
         index = np.random.randint(0, size - 1)
         expected = index
@@ -22,7 +22,7 @@ def _compare_quick_select(a, index):
 
 
 def test_quick_select_normal_distribution():
-    for i in range(100):
+    for i in range(20):
         mean = np.random.uniform(-1000.0, 1000.0)
         sigma = np.random.uniform(0, 100.0)
         size = np.random.randint(2, 10000)
@@ -32,7 +32,7 @@ def test_quick_select_normal_distribution():
 
 
 def test_quick_select_uniform_distribution():
-    for i in range(100):
+    for i in range(20):
         size = np.random.randint(2, 10000)
         index = np.random.randint(0, size - 2)
         a = np.random.uniform(-1000.0, 1000.0, size=size)
@@ -40,7 +40,7 @@ def test_quick_select_uniform_distribution():
 
 
 def test_quick_select_bimodel_arange():
-    for i in range(100):
+    for i in range(20):
         size1 = np.random.randint(2, 10000)
         size2 = np.random.randint(2, 10000)
         start1 = np.random.randint(0, 10000)
@@ -53,7 +53,7 @@ def test_quick_select_bimodel_arange():
 
 
 def test_quick_select_bimodal_normal_distribution():
-    for i in range(100):
+    for i in range(20):
         mean1 = np.random.uniform(-1000.0, 1000.0)
         sigma1 = np.random.uniform(0, 100.0)
         mean2 = np.random.uniform(-1000.0, 1000.0)
@@ -67,7 +67,7 @@ def test_quick_select_bimodal_normal_distribution():
 
 
 def test_quick_select_bimodal_uniformal_distribution():
-    for i in range(100):
+    for i in range(20):
         size1 = np.random.randint(2, 10000)
         size2 = np.random.randint(2, 10000)
         center1 = np.random.uniform(-10000.0, 10000.0)
