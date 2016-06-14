@@ -11,6 +11,8 @@ from __future__ import absolute_import, print_function, division
 
 import argparse
 
+import banzai.images
+from banzai.utils import image_utils
 from banzai import munge, crosstalk, gain, mosaic
 from banzai import bias, dark, flats, trim, photometry, astrometry, headers
 from banzai import logs
@@ -82,7 +84,7 @@ def reduce_science_frames(cmd_args=None):
                     dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
                     astrometry.WCSSolver, headers.HeaderUpdater]
 
-    image_list = file_utils.make_image_list(pipeline_context)
+    image_list = image_utils.make_image_list(pipeline_context)
     for image in image_list:
         pipeline_context.filename = os.path.basename(image)
         run(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD'],
@@ -136,15 +138,15 @@ def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False,
     """
     logger.info(log_message)
 
-    image_list = file_utils.make_image_list(pipeline_context)
-    image_list = file_utils.select_images(image_list, image_types)
-    images = file_utils.read_images(image_list, pipeline_context)
+    image_list = image_utils.make_image_list(pipeline_context)
+    image_list = image_utils.select_images(image_list, image_types)
+    images = banzai.utils.image_utils.read_images(image_list, pipeline_context)
 
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
 
-    file_utils.save_images(pipeline_context, images, master_calibration=calibration_maker)
+    image_utils.save_images(pipeline_context, images, master_calibration=calibration_maker)
 
 
 def run_preview_pipeline(cmd_args=None):

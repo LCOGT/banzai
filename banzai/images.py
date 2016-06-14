@@ -1,10 +1,15 @@
-from astropy.io import fits
-from banzai.utils import date_utils
-from banzai.utils import fits_utils
-from banzai import dbs
-import numpy as np
 import os
 
+import numpy as np
+from astropy.io import fits
+
+from banzai import dbs
+from banzai.utils import date_utils
+from banzai.utils import fits_utils
+from banzai.utils import image_utils
+from banzai import logs
+
+logger = logs.get_logger(__name__)
 
 class Image(object):
 
@@ -71,7 +76,7 @@ class Image(object):
 
     def write_catalog(self, filename, nsources=None):
         if self.catalog is None:
-            raise MissingCatalogException
+            raise image_utils.MissingCatalogException
         else:
             self.catalog[:nsources].write(filename, format='fits', overwrite=True)
 
@@ -79,16 +84,16 @@ class Image(object):
         self.header.add_history(msg)
 
 
-class InhomogeneousSetException(Exception):
-    pass
-
-
-def check_image_homogeneity(images):
-    for attribute in ('nx', 'ny', 'ccdsum', 'epoch', 'site', 'instrument'):
-        if len({getattr(image, attribute) for image in images}) > 1:
-            raise InhomogeneousSetException('Images have different {}s'.format(attribute))
-    return images[0]
-
-
-class MissingCatalogException(Exception):
-    pass
+def read_images(image_list, pipeline_context):
+    images = []
+    for filename in image_list:
+        try:
+            image = Image(filename=filename)
+            if image.bpm is None:
+                image.bpm = image_utils.get_bpm(image, pipeline_context).astype(np.uint8)
+            images.append(image)
+        except Exception as e:
+            logger.error('Error loading {0}'.format(filename))
+            logger.error(e)
+            continue
+    return images
