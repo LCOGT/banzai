@@ -329,7 +329,7 @@ def test_absolute_deviation_axis_none_mask():
         a_masked = ma.array(a, mask=mask, dtype=np.float32)
         expected = np.abs(a_masked - ma.median(a_masked))
         actual = stats.absolute_deviation(a, mask=mask)
-        np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
+        np.testing.assert_allclose(actual[~mask], np.float32(expected)[~mask], atol=1e-4)
 
 
 def test_absolute_deviation_2d_axis_none_mask():
