@@ -12,19 +12,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse
 
 import banzai.images
-from banzai.utils import image_utils
+from banzai.utils import image_utils, date_utils
 from banzai import munge, crosstalk, gain, mosaic
 from banzai import bias, dark, flats, trim, photometry, astrometry, headers
 from banzai import logs
-from banzai.utils import file_utils
 from banzai import dbs
 import os
-import sys
+import multiprocessing
 from kombu.mixins import ConsumerMixin
 from kombu import Connection, Queue, Exchange
-
-# A dictionary converting the string input by the user into the corresponding Python object
-reduction_stages = [bias.BiasMaker]
 
 logger = logs.get_logger(__name__)
 
@@ -42,8 +38,9 @@ class PipelineContext(object):
         self.filename = args.filename
 
 
-def make_master_bias(cmd_args=None):
-    pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
+def make_master_bias(pipeline_context=None):
+    if pipeline_context is None:
+        pipeline_context = parse_end_of_night_command_line_arguments()
     logs.start_logging(log_level=pipeline_context.log_level)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasMaker,
@@ -53,8 +50,10 @@ def make_master_bias(cmd_args=None):
     logs.stop_logging()
 
 
-def make_master_dark(cmd_args=None):
-    pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
+def make_master_dark(pipeline_context=None):
+    if pipeline_context is None:
+        pipeline_context = parse_end_of_night_command_line_arguments()
+
     logs.start_logging(log_level=pipeline_context.log_level)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
@@ -64,8 +63,9 @@ def make_master_dark(cmd_args=None):
     logs.stop_logging()
 
 
-def make_master_flat(cmd_args=None):
-    pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
+def make_master_flat(pipeline_context=None):
+    if pipeline_context is None:
+        pipeline_context = parse_end_of_night_command_line_arguments()
     logs.start_logging(log_level=pipeline_context.log_level)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
@@ -75,9 +75,10 @@ def make_master_flat(cmd_args=None):
     logs.stop_logging()
 
 
-def reduce_science_frames(cmd_args=None):
+def reduce_science_frames(pipeline_context=None):
+    if pipeline_context is None:
+        pipeline_context = parse_end_of_night_command_line_arguments()
 
-    pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
     logs.start_logging(log_level=pipeline_context.log_level)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
@@ -92,25 +93,71 @@ def reduce_science_frames(cmd_args=None):
     logs.stop_logging()
 
 
-def create_master_calibrations(cmd_args=None):
-    make_master_bias(cmd_args=cmd_args)
-    make_master_dark(cmd_args=cmd_args)
-    make_master_flat(cmd_args=cmd_args)
+def create_master_calibrations():
+    make_master_bias()
+    make_master_dark()
+    make_master_flat()
 
     
-def reduce_night(cmd_args=None):
-    make_master_bias(cmd_args=cmd_args)
-    make_master_dark(cmd_args=cmd_args)
-    make_master_flat(cmd_args=cmd_args)
-    reduce_science_frames(cmd_args=cmd_args)
+def reduce_night():
+    parser = argparse.ArgumentParser(
+        description='Reduce all the data from a site at the end of a night.')
+    parser.add_argument('--site', dest='site', help='Site code (e.g. ogg)')
+    parser.add_argument('--dayobs', dest='dayobs',
+                        default=None, help='Day-Obs to reduce (e.g. 20160201)')
+    parser.add_argument('--raw-path-root', dest='rawpath_root', default='/archive/engineering',
+                        help='Top level directory with raw data.')
+    parser.add_argument("--processed-path", default='/archive/engineering',
+                        help='Top level directory where the processed data will be stored')
+
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
+    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
+                        default=False)
+    parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
+                        help='Fpack the output files?')
+
+    parser.add_argument('--rlevel', dest='rlevel', default=91, help='Reduction level')
+    parser.add_argument('--db-address', dest='db_address',
+                        default='mysql://cmccully:password@localhost/test',
+                        help='Database address: Should be in SQLAlchemy form')
+
+    args = parser.parse_args()
+
+    pipeline_context = PipelineContext(args)
+
+    # Ping the configdb to get currently schedulable telescopes
+    try:
+        dbs.populate_telescope_tables(pipeline_context.db_address)
+    except Exception as e:
+        logger.error('Could not connect to the configdb.')
+        logger.error(e)
+
+    timezone = dbs.get_timezone(args.site, db_address=args.db_address)
+
+    telescopes = dbs.get_scheduable_telescopes(args.site, db_address=args.db_address)
+
+    if timezone is not None:
+        # If no dayobs is given, calculate it.
+        date_utils.get_dayobs(timezone=timezone)
+
+        # For each telescope at the given site
+        for telescope in telescopes:
+            pipeline_context.raw_path = os.path.join(args.rawpath_root, args.site,
+                                                     telescope.instrument, 'raw')
+            # Run the reductions on the given dayobs
+            make_master_bias(pipeline_context=pipeline_context)
+            make_master_dark(pipeline_context=pipeline_context)
+            make_master_flat(pipeline_context=pipeline_context)
+            reduce_science_frames(pipeline_context=pipeline_context)
 
 
-def parse_command_line_arguments(cmd_args=None):
+def parse_end_of_night_command_line_arguments():
     parser = argparse.ArgumentParser(
         description='Make master calibration frames from LCOGT imaging data.')
     parser.add_argument("--raw-path", default='/archive/engineering',
                         help='Top level directory where the raw data is stored')
-    parser.add_argument("--processed-path", default='/nethome/supernova/banzai',
+    parser.add_argument("--processed-path", default='/archive/engineering/',
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
@@ -122,13 +169,12 @@ def parse_command_line_arguments(cmd_args=None):
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
     parser.add_argument('--rlevel', dest='rlevel', default=91, help='Reduction level')
-    parser.add_argument('--preview-mode', dest='preview_mode', action='store_true',
-                        help='Store the data preview mode?')
 
     parser.add_argument('--filename', dest='filename', default=None,
                         help='Filename of the image to reduce.')
-    args = parser.parse_args(cmd_args)
+    args = parser.parse_args()
 
+    args.preview_mode = False
     return PipelineContext(args)
 
 
@@ -149,13 +195,52 @@ def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False,
     image_utils.save_images(pipeline_context, images, master_calibration=calibration_maker)
 
 
-def run_preview_pipeline(cmd_args=None):
-    pipeline_context = parse_command_line_arguments(cmd_args=cmd_args)
+def run_preview_pipeline():
+    parser = argparse.ArgumentParser(
+        description='Make master calibration frames from LCOGT imaging data.')
+
+    parser.add_argument("--processed-path", default='/archive/engineering',
+                        help='Top level directory where the processed data will be stored')
+    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
+                                                                'critical', 'fatal', 'error'])
+    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
+                        default=False)
+    parser.add_argument('--db-address', dest='db_address',
+                        default='mysql://cmccully:password@localhost/test',
+                        help='Database address: Should be in SQLAlchemy form')
+    parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
+                        help='Fpack the output files?')
+    parser.add_argument('--rlevel', dest='rlevel', default=11, help='Reduction level')
+
+    parser.add_argument('--n-processes', dest='n_processes', default=12,
+                        help='Number of listener processes to spawn.')
+
+    parser.add_argument('--broker-url', dest='broker_url',
+                        default='amqp://guest:guest@cerberus.lco.gtn',
+                        help='URL for the broker service.')
+    args = parser.parse_args()
+    args.preview_mode = True
+    pipeline_context = PipelineContext(args)
+
+    try:
+        dbs.populate_telescope_tables(pipeline_context.db_address)
+    except Exception as e:
+        logger.error('Could not connect to the configdb.')
+        logger.error(e)
+
     logs.start_logging(log_level=pipeline_context.log_level)
     logger.info('Starting pipeline preview mode listener')
+
+    for i in range(args.n_processes):
+        multiprocessing.Process(run_indiviudal_listener, (args.broker_url, pipeline_context)).start()
+
+    logs.stop_logging()
+
+
+def run_indiviudal_listener(broker_url, pipeline_context):
     crawl_exchange = Exchange('fits_files', type='fanout')
 
-    listener = PreviewModeListener('amqp://guest:guest@cerberus.lco.gtn', pipeline_context)
+    listener = PreviewModeListener(broker_url, pipeline_context)
 
     with Connection(listener.broker_url) as connection:
         listener.connection = connection
@@ -163,9 +248,7 @@ def run_preview_pipeline(cmd_args=None):
         try:
             listener.run()
         except KeyboardInterrupt:
-            logger.info('Shutting down preview pipeline listener...')
-            logs.stop_logging()
-            sys.exit(0)
+            logger.info('Shutting down preview pipeline listener.')
 
 
 class PreviewModeListener(ConsumerMixin):
