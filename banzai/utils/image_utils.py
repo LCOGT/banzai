@@ -56,7 +56,7 @@ def make_image_list(pipeline_context):
 def check_image_homogeneity(images):
     for attribute in ['nx', 'ny', 'ccdsum', 'epoch', 'site', 'instrument']:
         if len(set([getattr(image, attribute) for image in images])) > 1:
-            raise InhomogeneousSetException('Images have different {}s'.format(attribute))
+            raise InhomogeneousSetException('Images have different {0}s'.format(attribute))
     return images[0]
 
 

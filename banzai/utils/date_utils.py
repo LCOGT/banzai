@@ -97,5 +97,11 @@ def date_obs_to_string(date_obs):
 
 def mean_date(dates):
     time_offsets = np.array([d - min(dates) for d in dates])
-    average_offset = time_offsets.sum().total_seconds() / time_offsets.size
+    average_offset = total_seconds(time_offsets.sum())/ time_offsets.size
     return min(dates) + datetime.timedelta(seconds=average_offset)
+
+
+def total_seconds(timedelta):
+    seconds = timedelta.seconds + timedelta.days * 24.0 * 3600.0
+    microseconds = (timedelta.microseconds + seconds * 1e6)
+    return microseconds / 1e6
