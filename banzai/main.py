@@ -126,6 +126,7 @@ def reduce_night():
 
     args.preview_mode = False
     args.raw_path = None
+    args.filename = None
     
     pipeline_context = PipelineContext(args)
 
