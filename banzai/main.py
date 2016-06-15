@@ -223,6 +223,7 @@ def run_preview_pipeline():
     args = parser.parse_args()
     args.preview_mode = True
     args.raw_path = None
+    args.filename = None
     pipeline_context = PipelineContext(args)
 
     try:
