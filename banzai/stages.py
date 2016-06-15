@@ -1,14 +1,15 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 import itertools
 
 from sqlalchemy.sql import func
 
-from . import dbs
-from .utils import date_utils
-from . import logs
-from banzai.images import check_image_homogeneity, Image
+from banzai import dbs
+from banzai.utils import date_utils
+from banzai import logs
+from banzai.images import Image
+from banzai.utils import image_utils
 
 import abc
 
@@ -83,7 +84,7 @@ class CalibrationMaker(Stage):
             self.logger.warning('Not enough images to combine.')
             return []
         else:
-            image_config = check_image_homogeneity(images)
+            image_config = image_utils.check_image_homogeneity(images)
             logging_tags = logs.image_config_to_tags(image_config, self.group_by_keywords)
 
             return self.make_master_calibration_frame(images, image_config, logging_tags)
@@ -120,7 +121,7 @@ class ApplyCalibration(Stage):
             # Abort!
             return []
         else:
-            image_config = check_image_homogeneity(images)
+            image_config = image_utils.check_image_homogeneity(images)
             logging_tags = logs.image_config_to_tags(image_config, self.group_by_keywords)
             master_calibration_filename = self.get_calibration_filename(images[0])
 

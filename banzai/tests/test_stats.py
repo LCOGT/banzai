@@ -1,11 +1,12 @@
-from ..utils import stats
+from __future__ import absolute_import, division, print_function, unicode_literals
+from banzai.utils import stats
 import numpy as np
 from numpy import ma
 np.random.seed(10031312)
 
 
 def test_median_axis_none_mask_none():
-    for i in range(1000):
+    for i in range(25):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
@@ -16,9 +17,9 @@ def test_median_axis_none_mask_none():
 
 
 def test_median_2d_axis_none_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -28,10 +29,10 @@ def test_median_2d_axis_none_mask_none():
 
 
 def test_median_3d_axis_none_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -41,9 +42,9 @@ def test_median_3d_axis_none_mask_none():
 
 
 def test_median_2d_axis_0_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -53,9 +54,9 @@ def test_median_2d_axis_0_mask_none():
 
 
 def test_median_2d_axis_1_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -65,10 +66,10 @@ def test_median_2d_axis_1_mask_none():
 
 
 def test_median_3d_axis_0_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -78,10 +79,10 @@ def test_median_3d_axis_0_mask_none():
 
 
 def test_median_3d_axis_1_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -91,10 +92,10 @@ def test_median_3d_axis_1_mask_none():
 
 
 def test_median_3d_axis_2_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -104,7 +105,7 @@ def test_median_3d_axis_2_mask_none():
 
 
 def test_median_axis_none_mask():
-    for i in range(1000):
+    for i in range(25):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
@@ -117,9 +118,9 @@ def test_median_axis_none_mask():
 
 
 def test_median_2d_axis_none_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         value_to_mask = np.random.uniform(0, 1)
@@ -131,10 +132,10 @@ def test_median_2d_axis_none_mask():
 
 
 def test_median_3d_axis_none_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         value_to_mask = np.random.uniform(0, 1)
@@ -146,9 +147,9 @@ def test_median_3d_axis_none_mask():
 
 
 def test_median_2d_axis_0_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         value_to_mask = np.random.uniform(0, 1)
@@ -160,9 +161,9 @@ def test_median_2d_axis_0_mask():
 
 
 def test_median_2d_axis_1_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         value_to_mask = np.random.uniform(0, 1)
@@ -174,10 +175,10 @@ def test_median_2d_axis_1_mask():
 
 
 def test_median_3d_axis_0_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         value_to_mask = np.random.uniform(0, 1)
@@ -189,10 +190,10 @@ def test_median_3d_axis_0_mask():
 
 
 def test_median_3d_axis_1_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         value_to_mask = np.random.uniform(0, 1)
@@ -204,10 +205,10 @@ def test_median_3d_axis_1_mask():
 
 
 def test_median_3d_axis_2_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         value_to_mask = np.random.uniform(0, 1)
@@ -219,7 +220,7 @@ def test_median_3d_axis_2_mask():
 
 
 def test_absolute_deviation_axis_none_mask_none():
-    for i in range(1000):
+    for i in range(250):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
@@ -230,9 +231,9 @@ def test_absolute_deviation_axis_none_mask_none():
 
 
 def test_absolute_deviation_2d_axis_none_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -242,10 +243,10 @@ def test_absolute_deviation_2d_axis_none_mask_none():
 
 
 def test_absolute_deviation_3d_axis_none_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -255,9 +256,9 @@ def test_absolute_deviation_3d_axis_none_mask_none():
 
 
 def test_absolute_deviation_2d_axis_0_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -267,9 +268,9 @@ def test_absolute_deviation_2d_axis_0_mask_none():
 
 
 def test_absolute_deviation_2d_axis_1_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -279,10 +280,10 @@ def test_absolute_deviation_2d_axis_1_mask_none():
 
 
 def test_absolute_deviation_3d_axis_0_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -292,33 +293,33 @@ def test_absolute_deviation_3d_axis_0_mask_none():
 
 
 def test_absolute_deviation_3d_axis_1_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
-        expected = np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=1, keepdims=True))
+        expected = np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=1).reshape(size1, 1, size3))
         actual = stats.absolute_deviation(a, axis=1)
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
 def test_absolute_deviation_3d_axis_2_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
-        expected = np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=2, keepdims=True))
+        expected = np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=2).reshape(size1, size2, 1))
         actual = stats.absolute_deviation(a, axis=2)
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
 def test_absolute_deviation_axis_none_mask():
-    for i in range(1000):
+    for i in range(25):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
@@ -328,13 +329,13 @@ def test_absolute_deviation_axis_none_mask():
         a_masked = ma.array(a, mask=mask, dtype=np.float32)
         expected = np.abs(a_masked - ma.median(a_masked))
         actual = stats.absolute_deviation(a, mask=mask)
-        np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
+        np.testing.assert_allclose(actual[~mask], np.float32(expected)[~mask], atol=1e-4)
 
 
 def test_absolute_deviation_2d_axis_none_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -347,10 +348,10 @@ def test_absolute_deviation_2d_axis_none_mask():
 
 
 def test_absolute_deviation_3d_axis_none_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -363,9 +364,9 @@ def test_absolute_deviation_3d_axis_none_mask():
 
 
 def test_absolute_deviation_2d_axis_0_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -378,9 +379,9 @@ def test_absolute_deviation_2d_axis_0_mask():
 
 
 def test_absolute_deviation_2d_axis_1_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -393,10 +394,10 @@ def test_absolute_deviation_2d_axis_1_mask():
 
 
 def test_absolute_deviation_3d_axis_0_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -409,10 +410,10 @@ def test_absolute_deviation_3d_axis_0_mask():
 
 
 def test_absolute_deviation_3d_axis_1_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -425,10 +426,10 @@ def test_absolute_deviation_3d_axis_1_mask():
 
 
 def test_absolute_deviation_3d_axis_2_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -441,7 +442,7 @@ def test_absolute_deviation_3d_axis_2_mask():
 
 
 def test_mad_axis_none_mask_none():
-    for i in range(1000):
+    for i in range(25):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
@@ -452,9 +453,9 @@ def test_mad_axis_none_mask_none():
 
 
 def test_mad_2d_axis_none_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -464,10 +465,10 @@ def test_mad_2d_axis_none_mask_none():
 
 
 def test_mad_3d_axis_none_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -477,9 +478,9 @@ def test_mad_3d_axis_none_mask_none():
 
 
 def test_mad_2d_axis_0_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -489,9 +490,9 @@ def test_mad_2d_axis_0_mask_none():
 
 
 def test_mad_2d_axis_1_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -501,10 +502,10 @@ def test_mad_2d_axis_1_mask_none():
 
 
 def test_mad_3d_axis_0_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -514,33 +515,33 @@ def test_mad_3d_axis_0_mask_none():
 
 
 def test_mad_3d_axis_1_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
-        expected = np.median(np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=1, keepdims=True)), axis=1)
+        expected = np.median(np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=1).reshape(size1, 1, size3)), axis=1)
         actual = stats.median_absolute_deviation(a, axis=1)
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
 def test_mad_3d_axis_2_mask_none():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
-        expected = np.median(np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=2, keepdims=True)), axis=2)
+        expected = np.median(np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=2).reshape(size1, size2, 1)), axis=2)
         actual = stats.median_absolute_deviation(a, axis=2)
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
 def test_mad_axis_none_mask():
-    for i in range(1000):
+    for i in range(25):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
@@ -554,9 +555,9 @@ def test_mad_axis_none_mask():
 
 
 def test_mad_2d_axis_none_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -569,10 +570,10 @@ def test_mad_2d_axis_none_mask():
 
 
 def test_mad_3d_axis_none_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -585,9 +586,9 @@ def test_mad_3d_axis_none_mask():
 
 
 def test_mad_2d_axis_0_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -600,9 +601,9 @@ def test_mad_2d_axis_0_mask():
 
 
 def test_mad_2d_axis_1_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 1000)
-        size2 = np.random.randint(1, 1000)
+    for i in range(5):
+        size1 = np.random.randint(1, 300)
+        size2 = np.random.randint(1, 300)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2))
@@ -615,10 +616,10 @@ def test_mad_2d_axis_1_mask():
 
 
 def test_mad_3d_axis_0_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -631,10 +632,10 @@ def test_mad_3d_axis_0_mask():
 
 
 def test_mad_3d_axis_1_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
@@ -647,10 +648,10 @@ def test_mad_3d_axis_1_mask():
 
 
 def test_mad_3d_axis_2_mask():
-    for i in range(10):
-        size1 = np.random.randint(1, 100)
-        size2 = np.random.randint(1, 100)
-        size3 = np.random.randint(1, 100)
+    for i in range(5):
+        size1 = np.random.randint(1, 50)
+        size2 = np.random.randint(1, 50)
+        size3 = np.random.randint(1, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
