@@ -236,8 +236,10 @@ def run_preview_pipeline():
     logger.info('Starting pipeline preview mode listener')
 
     for i in range(args.n_processes):
-        multiprocessing.Process(run_indiviudal_listener, (args.broker_url, args.queue_name,
-                                                          PipelineContext(args))).start()
+        p = multiprocessing.Process(target=run_indiviudal_listener, args=(args.broker_url,
+                                                                      args.queue_name,
+                                                                      PipelineContext(args)))
+        p.start()
 
     logs.stop_logging()
 
