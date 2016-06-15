@@ -126,8 +126,8 @@ def create_db(bpm_directory, db_address=_DEFAULT_DB,
     # This only needs to be run once on initialization.
     Base.metadata.create_all(engine)
 
-    populate_telescope_tables(db_address)
-    populate_bpm_table(bpm_directory, db_address=db_address, configdb_address=configdb_address)
+    populate_telescope_tables(db_address, configdb_address=configdb_address)
+    populate_bpm_table(bpm_directory, db_address=db_address)
 
 
 def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
