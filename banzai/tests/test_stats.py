@@ -300,7 +300,7 @@ def test_absolute_deviation_3d_axis_1_mask_none():
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
-        expected = np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=1, keepdims=True))
+        expected = np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=1).reshape(size1, 1, size3))
         actual = stats.absolute_deviation(a, axis=1)
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
@@ -313,7 +313,7 @@ def test_absolute_deviation_3d_axis_2_mask_none():
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
-        expected = np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=2, keepdims=True))
+        expected = np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=2).reshape(size1, size2, 1))
         actual = stats.absolute_deviation(a, axis=2)
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
@@ -522,7 +522,7 @@ def test_mad_3d_axis_1_mask_none():
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
-        expected = np.median(np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=1, keepdims=True)), axis=1)
+        expected = np.median(np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=1).reshape(size1, 1, size3)), axis=1)
         actual = stats.median_absolute_deviation(a, axis=1)
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
@@ -535,7 +535,7 @@ def test_mad_3d_axis_2_mask_none():
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
-        expected = np.median(np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=2, keepdims=True)), axis=2)
+        expected = np.median(np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=2).reshape(size1, size2, 1)), axis=2)
         actual = stats.median_absolute_deviation(a, axis=2)
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
