@@ -186,7 +186,7 @@ def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False,
 
     image_list = image_utils.make_image_list(pipeline_context)
     image_list = image_utils.select_images(image_list, image_types)
-    images = banzai.utils.image_utils.read_images(image_list, pipeline_context)
+    images = banzai.images.read_images(image_list, pipeline_context)
 
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
