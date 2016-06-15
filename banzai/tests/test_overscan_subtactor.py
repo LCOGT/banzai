@@ -1,5 +1,6 @@
-from ..bias import OverscanSubtractor
-from .utils import FakeImage
+from __future__ import absolute_import, division, print_function, unicode_literals
+from banzai.bias import OverscanSubtractor
+from banzai.tests.utils import FakeImage
 
 import numpy as np
 
