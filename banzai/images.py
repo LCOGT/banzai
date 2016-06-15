@@ -12,6 +12,7 @@ from banzai import logs
 
 logger = logs.get_logger(__name__)
 
+
 class Image(object):
 
     def __init__(self, filename=None, data=None, header={}, bpm=None):
