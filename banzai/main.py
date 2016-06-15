@@ -92,8 +92,7 @@ def reduce_science_frames(pipeline_context=None):
     image_list = image_utils.make_image_list(pipeline_context)
     for image in image_list:
         pipeline_context.filename = os.path.basename(image)
-        run(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD'],
-            log_message='Reducing Science Frame')
+        run(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD'])
 
 
 def reduce_science_frames_console():
@@ -206,7 +205,7 @@ def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False,
     Main driver script for banzai.
     """
     if len(log_message) > 0:
-        logger.info(log_message)
+        logger.info(log_message, extra={'tags': {'raw_path': pipeline_context.raw_path}})
 
     image_list = image_utils.make_image_list(pipeline_context)
     image_list = image_utils.select_images(image_list, image_types)
