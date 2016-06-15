@@ -88,7 +88,7 @@ class Site(Base):
 
     This defines the sites table structure
     """
-    __tablename = 'sites'
+    __tablename__ = 'sites'
     id = Column(String(3), primary_key=True)
     timezone = Column(Integer)
 
