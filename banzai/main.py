@@ -222,6 +222,7 @@ def run_preview_pipeline():
                         help='Name of the queue to listen to from the fits exchange.')
     args = parser.parse_args()
     args.preview_mode = True
+    args.raw_path = None
     pipeline_context = PipelineContext(args)
 
     try:
@@ -235,7 +236,7 @@ def run_preview_pipeline():
 
     for i in range(args.n_processes):
         multiprocessing.Process(run_indiviudal_listener, (args.broker_url, args.queue_name,
-                                                          pipeline_context)).start()
+                                                          PipelineContext(args))).start()
 
     logs.stop_logging()
 
