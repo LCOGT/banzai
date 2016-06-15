@@ -38,48 +38,52 @@ class PipelineContext(object):
         self.filename = args.filename
 
 
-def make_master_bias(pipeline_context=None):
-    if pipeline_context is None:
-        pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
+def make_master_bias(pipeline_context):
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasMaker,
                     headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['BIAS'], calibration_maker=True,
         log_message='Making Master BIAS')
+
+
+def make_master_bias_console():
+    pipeline_context = parse_end_of_night_command_line_arguments()
+    logs.start_logging(log_level=pipeline_context.log_level)
+    make_master_bias(pipeline_context)
     logs.stop_logging()
 
 
-def make_master_dark(pipeline_context=None):
-    if pipeline_context is None:
-        pipeline_context = parse_end_of_night_command_line_arguments()
-
-    logs.start_logging(log_level=pipeline_context.log_level)
+def make_master_dark(pipeline_context):
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
                     bias.BiasSubtractor, dark.DarkMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['DARK'], calibration_maker=True,
         log_message='Making Master Dark')
+
+
+def make_master_dark_console():
+    pipeline_context = parse_end_of_night_command_line_arguments()
+    logs.start_logging(log_level=pipeline_context.log_level)
+    make_master_dark(pipeline_context)
     logs.stop_logging()
 
 
-def make_master_flat(pipeline_context=None):
-    if pipeline_context is None:
-        pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
+def make_master_flat(pipeline_context):
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['SKYFLAT'], calibration_maker=True,
         log_message='Making Master Flat')
+
+
+def make_master_flat_console():
+    pipeline_context = parse_end_of_night_command_line_arguments()
+    logs.start_logging(log_level=pipeline_context.log_level)
+    make_master_flat(pipeline_context)
     logs.stop_logging()
 
 
 def reduce_science_frames(pipeline_context=None):
-    if pipeline_context is None:
-        pipeline_context = parse_end_of_night_command_line_arguments()
-
-    logs.start_logging(log_level=pipeline_context.log_level)
     stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
                     gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
                     dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
@@ -89,14 +93,23 @@ def reduce_science_frames(pipeline_context=None):
     for image in image_list:
         pipeline_context.filename = os.path.basename(image)
         run(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD'],
-            log_message='Reducing Science Frames')
+            log_message='Reducing Science Frame')
+
+
+def reduce_science_frames_console():
+    pipeline_context = parse_end_of_night_command_line_arguments()
+    logs.start_logging(log_level=pipeline_context.log_level)
+    reduce_science_frames(pipeline_context)
     logs.stop_logging()
 
 
 def create_master_calibrations():
+    pipeline_context = parse_end_of_night_command_line_arguments()
+    logs.start_logging(log_level=pipeline_context.log_level)
     make_master_bias()
     make_master_dark()
     make_master_flat()
+    logs.stop_logging()
 
     
 def reduce_night():
@@ -130,6 +143,8 @@ def reduce_night():
 
     pipeline_context = PipelineContext(args)
 
+    logs.start_logging(log_level=pipeline_context.log_level)
+
     # Ping the configdb to get currently schedulable telescopes
     try:
         dbs.populate_telescope_tables(pipeline_context.db_address)
@@ -151,10 +166,12 @@ def reduce_night():
             pipeline_context.raw_path = os.path.join(args.rawpath_root, args.site,
                                                      telescope.instrument, args.dayobs, 'raw')
             # Run the reductions on the given dayobs
-            make_master_bias(pipeline_context=pipeline_context)
-            make_master_dark(pipeline_context=pipeline_context)
-            make_master_flat(pipeline_context=pipeline_context)
-            reduce_science_frames(pipeline_context=pipeline_context)
+            make_master_bias(pipeline_context)
+            make_master_dark(pipeline_context)
+            make_master_flat(pipeline_context)
+            reduce_science_frames(pipeline_context)
+
+    logs.stop_logging()
 
 
 def parse_end_of_night_command_line_arguments():
@@ -188,7 +205,8 @@ def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False,
     """
     Main driver script for banzai.
     """
-    logger.info(log_message)
+    if len(log_message) > 0:
+        logger.info(log_message)
 
     image_list = image_utils.make_image_list(pipeline_context)
     image_list = image_utils.select_images(image_list, image_types)
@@ -232,13 +250,14 @@ def run_preview_pipeline():
     args.filename = None
     pipeline_context = PipelineContext(args)
 
+    logs.start_logging(log_level=pipeline_context.log_level)
+
     try:
         dbs.populate_telescope_tables(pipeline_context.db_address)
     except Exception as e:
         logger.error('Could not connect to the configdb.')
         logger.error(e)
 
-    logs.start_logging(log_level=pipeline_context.log_level)
     logger.info('Starting pipeline preview mode listener')
 
     for i in range(args.n_processes):
