@@ -49,59 +49,6 @@ def get_session(db_address=_DEFAULT_DB):
     return session
 
 
-class Image(Base):
-    """
-    Image Database Record
-
-    This defines the images table. Most of these keywords are parsed from the headers.
-    telescope_id is a foreign key to the telescopes table.
-    """
-    __tablename__ = 'images'
-
-    # Define the table structure
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    filename = Column(String(36), index=True, unique=True)
-    telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
-    filepath = Column(String(100))
-    rawfilename = Column(String(36))
-    rawpath = Column(String(100))
-    object_name = Column(String(50))
-    mjd = Column(Float, index=True)
-    dateobs = Column(DateTime)
-    dayobs = Column(Date, index=True)
-    exptime = Column(Float)
-    filter_name = Column(String(6))
-    obstype = Column(String(20))
-    airmass = Column(Float)
-    ra = Column(Float)
-    dec = Column(Float)
-    userid = Column(String(20))
-    propid = Column(String(20))
-    tracknum = Column(String(20))
-    reqnum = Column(String(20))
-    ccdsum = Column(String(10))
-    gain = Column(Float)
-    readnoise = Column(Float)
-    naxis1 = Column(Integer)
-    naxis2 = Column(Integer)
-    pixel_scale = Column(Float)
-    focus = Column(Integer)
-    # Reduction Status
-    ingest_done = Column(Boolean, default=False)
-    bias_done = Column(Boolean, default=False)
-    trim_done = Column(Boolean, default=False)
-    dark_done = Column(Boolean, default=False)
-    flat_done = Column(Boolean, default=False)
-    wcs_done = Column(Boolean, default=False)
-    cat_done = Column(Boolean, default=False)
-
-    def get_full_filename(self, suffix, extension='.fits'):
-        image_file = os.path.join(self.filepath, self.filename)
-        image_file += suffix + extension
-
-        return image_file
-
-
 class CalibrationImage(Base):
     """
     Master Calibration Image Database Record
