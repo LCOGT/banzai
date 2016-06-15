@@ -175,6 +175,7 @@ def parse_end_of_night_command_line_arguments():
     args = parser.parse_args()
 
     args.preview_mode = False
+    args.raw_path = None
     return PipelineContext(args)
 
 
