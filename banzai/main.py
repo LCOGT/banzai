@@ -127,7 +127,7 @@ def reduce_night():
     args.preview_mode = False
     args.raw_path = None
     args.filename = None
-    
+
     pipeline_context = PipelineContext(args)
 
     # Ping the configdb to get currently schedulable telescopes
@@ -143,12 +143,13 @@ def reduce_night():
 
     if timezone is not None:
         # If no dayobs is given, calculate it.
-        date_utils.get_dayobs(timezone=timezone)
+        if args.dayobs is None:
+            args.dayobs = date_utils.get_dayobs(timezone=timezone)
 
         # For each telescope at the given site
         for telescope in telescopes:
             pipeline_context.raw_path = os.path.join(args.rawpath_root, args.site,
-                                                     telescope.instrument, 'raw')
+                                                     telescope.instrument, args.dayobs, 'raw')
             # Run the reductions on the given dayobs
             make_master_bias(pipeline_context=pipeline_context)
             make_master_dark(pipeline_context=pipeline_context)
