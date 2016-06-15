@@ -141,6 +141,8 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
 
     Returns
     -------
+    sites : list of dicts
+            each site dictionary contains a timezone.
     cameras : list of dicts
               each camera dictionary contains a site, instrument code, and camera type.
     """
@@ -153,9 +155,7 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
             for tel in enc['telescope_set']:
                 for ins in tel['instrument_set']:
                     sci_cam = ins.get('science_camera')
-                    # Sometimes true and false are all lower case so do a string comparison instead
-                    # of a cast to bool.
-                    if ins['schedulable'].lower == 'true':
+                    if ins['schedulable']:
                         cameras.append({'site': site['code'],
                                         'instrument': sci_cam['code'],
                                         'camera_type': sci_cam['camera_type']['code']})
