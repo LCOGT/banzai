@@ -155,10 +155,11 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
             for tel in enc['telescope_set']:
                 for ins in tel['instrument_set']:
                     sci_cam = ins.get('science_camera')
-                    if ins['schedulable']:
+                    if sci_cam is not None:
                         cameras.append({'site': site['code'],
                                         'instrument': sci_cam['code'],
-                                        'camera_type': sci_cam['camera_type']['code']})
+                                        'camera_type': sci_cam['camera_type']['code'],
+                                        'schedulable': sci_cam['schedulable']})
     return sites, cameras
 
 
@@ -210,9 +211,10 @@ def populate_telescope_tables(db_address=_DEFAULT_DB,
 
         if len(matching_cameras) == 0:
             db_session.add(Telescope(site=camera['site'], instrument=camera['instrument'],
-                                     camera_type=camera['camera_type'], schedulable=True))
+                                     camera_type=camera['camera_type'],
+                                     schedulable=camera['schedulable']))
         else:
-            matching_cameras[0].schedulable = True
+            matching_cameras[0].schedulable = camera['schedulable']
 
     db_session.commit()
     db_session.close()
