@@ -1,5 +1,7 @@
-from ..utils import median_utils
+from __future__ import absolute_import, division, print_function, unicode_literals
+from banzai.utils import median_utils
 import numpy as np
+
 
 def _compare_median1d(a, mask):
     a_copy = a.copy()
@@ -9,7 +11,7 @@ def _compare_median1d(a, mask):
 
 
 def test_median1d_arange_nomask():
-    for i in range(100):
+    for i in range(20):
         size = np.random.choice(10000)
         a = np.arange(size, dtype=np.float32)
         np.random.shuffle(a)
@@ -17,7 +19,7 @@ def test_median1d_arange_nomask():
 
 
 def test_median1d_normal_distribution_nomask():
-    for i in range(100):
+    for i in range(20):
         mean = np.random.uniform(-1000.0, 1000.0)
         sigma = np.random.uniform(0, 100.0)
         size = np.random.choice(10000)
@@ -26,14 +28,14 @@ def test_median1d_normal_distribution_nomask():
 
 
 def test_median1d_uniform_distribution_nomask():
-    for i in range(100):
+    for i in range(20):
         size = np.random.choice(10000)
         a = np.random.uniform(-1000.0, 1000.0, size=size)
         _compare_median1d(a.astype('f4'), np.zeros(size, dtype=np.uint8))
 
 
 def test_median1d_bimodel_arange_nomask():
-    for i in range(100):
+    for i in range(20):
         size1 = np.random.randint(1, 10000)
         size2 = np.random.randint(1, 10000)
         start1 = np.random.randint(0, 10000)
@@ -44,7 +46,7 @@ def test_median1d_bimodel_arange_nomask():
 
 
 def test_median1d_bimodal_normal_distribution_nomask():
-    for i in range(100):
+    for i in range(20):
         mean1 = np.random.uniform(-1000.0, 1000.0)
         sigma1 = np.random.uniform(0, 100.0)
         mean2 = np.random.uniform(-1000.0, 1000.0)
@@ -57,7 +59,7 @@ def test_median1d_bimodal_normal_distribution_nomask():
 
 
 def test_median1d_bimodal_uniformal_distribution_nomask():
-    for i in range(100):
+    for i in range(20):
         size1 = np.random.randint(1, 10000)
         size2 = np.random.randint(1, 10000)
         center1 = np.random.uniform(-10000.0, 10000.0)
@@ -75,7 +77,7 @@ def test_median1d_all_masks_returns_zero():
 
 
 def test_median1d_arange_mask():
-    for i in range(100):
+    for i in range(20):
         size = np.random.randint(1, 10000)
         a = np.arange(size, dtype=np.float32)
         np.random.shuffle(a)
@@ -85,7 +87,7 @@ def test_median1d_arange_mask():
 
 
 def test_median1d_normal_distribution_mask():
-    for i in range(100):
+    for i in range(20):
         mean = np.random.uniform(-1000.0, 1000.0)
         sigma = np.random.uniform(0, 100.0)
         size = np.random.randint(1, 10000)
@@ -96,7 +98,7 @@ def test_median1d_normal_distribution_mask():
 
 
 def test_median1d_uniform_distribution_mask():
-    for i in range(100):
+    for i in range(20):
         size = np.random.randint(1, 10000)
         a = np.random.uniform(-1000.0, 1000.0, size=size)
         mask = np.zeros(size, dtype=np.uint8)
@@ -105,7 +107,7 @@ def test_median1d_uniform_distribution_mask():
 
 
 def test_median1d_bimodel_arange_mask():
-    for i in range(100):
+    for i in range(20):
         size1 = np.random.randint(1, 10000)
         size2 = np.random.randint(1, 10000)
         start1 = np.random.randint(0, 10000)
@@ -118,7 +120,7 @@ def test_median1d_bimodel_arange_mask():
 
 
 def test_median1d_bimodal_normal_distribution_mask():
-    for i in range(100):
+    for i in range(20):
         mean1 = np.random.uniform(-1000.0, 1000.0)
         sigma1 = np.random.uniform(0, 100.0)
         mean2 = np.random.uniform(-1000.0, 1000.0)
@@ -133,7 +135,7 @@ def test_median1d_bimodal_normal_distribution_mask():
 
 
 def test_median1d_bimodal_uniformal_distribution_mask():
-    for i in range(100):
+    for i in range(20):
         size1 = np.random.randint(1, 10000)
         size2 = np.random.randint(1, 10000)
         center1 = np.random.uniform(-10000.0, 10000.0)
@@ -156,25 +158,25 @@ def _compare_median2d(a, mask):
 
 
 def test_median2d_arange_nomask():
-    for i in range(10):
-        size_x, size_y = np.random.randint(1, 1000), np.random.randint(1, 1000)
+    for i in range(5):
+        size_x, size_y = np.random.randint(1, 200), np.random.randint(1, 200)
         a = np.arange(size_x * size_y, dtype=np.float32).reshape(size_y, size_x)
         np.random.shuffle(a)
         _compare_median2d(a, np.zeros((size_y, size_x), dtype=np.uint8))
 
 
 def test_median2d_normal_distribution_nomask():
-    for i in range(10):
+    for i in range(5):
         mean = np.random.uniform(-1000.0, 1000.0)
         sigma = np.random.uniform(0, 100.0)
-        size_x, size_y = np.random.randint(1, 1000), np.random.randint(1, 1000)
+        size_x, size_y = np.random.randint(1, 200), np.random.randint(1, 200)
         a = np.random.normal(mean, sigma, size=(size_y, size_x))
         _compare_median2d(a.astype('f4'), np.zeros((size_y, size_x), dtype=np.uint8))
 
 
 def test_median2d_uniform_distribution_nomask():
-    for i in range(10):
-        size_x, size_y = np.random.randint(1, 1000), np.random.randint(1, 1000)
+    for i in range(5):
+        size_x, size_y = np.random.randint(1, 200), np.random.randint(1, 200)
         a = np.random.uniform(-1000.0, 1000.0, size=(size_y, size_x))
         _compare_median2d(a.astype('f4'), np.zeros((size_y, size_x), dtype=np.uint8))
 

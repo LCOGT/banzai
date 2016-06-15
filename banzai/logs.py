@@ -1,11 +1,11 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import logutils.queue
 import logging
 import multiprocessing
 import sys
 from lcogt_logging import LCOGTFormatter
-from .utils import date_utils
+from banzai.utils import date_utils
 
 def get_logger(name):
     logger = logging.getLogger(name)

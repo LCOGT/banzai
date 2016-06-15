@@ -1,6 +1,7 @@
-from ..bias import BiasSubtractor
-from .utils import FakeImage, throws_inhomogeneous_set_exception
-from ..stages import MasterCalibrationDoesNotExist
+from __future__ import absolute_import, division, print_function, unicode_literals
+from banzai.bias import BiasSubtractor
+from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception
+from banzai.stages import MasterCalibrationDoesNotExist
 import pytest
 import mock
 
@@ -8,8 +9,8 @@ import numpy as np
 
 
 class FakeBiasImage(FakeImage):
-    def __init__(self, *args, bias_level=0.0, **kwargs):
-        super(FakeBiasImage, self).__init__(*args, image_multiplier=bias_level, **kwargs)
+    def __init__(self, bias_level=0.0):
+        super(FakeBiasImage, self).__init__(image_multiplier=bias_level)
         self.header = {'BIASLVL': bias_level}
 
 

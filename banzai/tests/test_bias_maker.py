@@ -1,7 +1,8 @@
-from ..bias import BiasMaker
+from __future__ import absolute_import, division, print_function, unicode_literals
+from banzai.bias import BiasMaker
 import numpy as np
 
-from .utils import FakeImage, FakeContext, throws_inhomogeneous_set_exception
+from banzai.tests.utils import FakeImage, FakeContext, throws_inhomogeneous_set_exception
 
 import mock
 
