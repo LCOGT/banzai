@@ -218,6 +218,8 @@ def run_preview_pipeline():
     parser.add_argument('--broker-url', dest='broker_url',
                         default='amqp://guest:guest@cerberus.lco.gtn',
                         help='URL for the broker service.')
+    parser.add_argument('--queue-name', dest='queue_name', default='preview_pipeline',
+                        help='Name of the queue to listen to from the fits exchange.')
     args = parser.parse_args()
     args.preview_mode = True
     pipeline_context = PipelineContext(args)
@@ -232,19 +234,20 @@ def run_preview_pipeline():
     logger.info('Starting pipeline preview mode listener')
 
     for i in range(args.n_processes):
-        multiprocessing.Process(run_indiviudal_listener, (args.broker_url, pipeline_context)).start()
+        multiprocessing.Process(run_indiviudal_listener, (args.broker_url, args.queue_name,
+                                                          pipeline_context)).start()
 
     logs.stop_logging()
 
 
-def run_indiviudal_listener(broker_url, pipeline_context):
+def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
     crawl_exchange = Exchange('fits_files', type='fanout')
 
     listener = PreviewModeListener(broker_url, pipeline_context)
 
     with Connection(listener.broker_url) as connection:
         listener.connection = connection
-        listener.queue = Queue('preview_pipeline', crawl_exchange)
+        listener.queue = Queue(queue_name, crawl_exchange)
         try:
             listener.run()
         except KeyboardInterrupt:
