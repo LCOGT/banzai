@@ -101,6 +101,7 @@ def mean_date(dates):
     return min(dates) + datetime.timedelta(seconds=average_offset)
 
 
+# Necessary for Python 2.6 support. This should go away at some point.
 def total_seconds(timedelta):
     seconds = timedelta.seconds + timedelta.days * 24.0 * 3600.0
     microseconds = (timedelta.microseconds + seconds * 1e6)
