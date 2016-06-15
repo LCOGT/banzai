@@ -124,6 +124,9 @@ def reduce_night():
 
     args = parser.parse_args()
 
+    args.preview_mode = False
+    args.raw_path = None
+    
     pipeline_context = PipelineContext(args)
 
     # Ping the configdb to get currently schedulable telescopes
@@ -155,7 +158,7 @@ def reduce_night():
 def parse_end_of_night_command_line_arguments():
     parser = argparse.ArgumentParser(
         description='Make master calibration frames from LCOGT imaging data.')
-    parser.add_argument("--raw-path", default='/archive/engineering',
+    parser.add_argument("--raw-path", dest='raw_path', default='/archive/engineering',
                         help='Top level directory where the raw data is stored')
     parser.add_argument("--processed-path", default='/archive/engineering/',
                         help='Top level directory where the processed data will be stored')
@@ -175,7 +178,7 @@ def parse_end_of_night_command_line_arguments():
     args = parser.parse_args()
 
     args.preview_mode = False
-    args.raw_path = None
+
     return PipelineContext(args)
 
 
