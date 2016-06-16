@@ -93,9 +93,11 @@ def reduce_science_frames(pipeline_context=None):
                     headers.HeaderUpdater]
 
     image_list = image_utils.make_image_list(pipeline_context)
+    original_filename = pipeline_context.filename
     for image in image_list:
         pipeline_context.filename = os.path.basename(image)
         run(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD'])
+    pipeline_context.filename = original_filename
 
 
 def reduce_science_frames_console():
