@@ -41,11 +41,11 @@ def make_image_list(pipeline_context):
         fz_files_to_remove = []
         for i, f in enumerate(fz_files):
             if f[:-3] in fits_files:
-                fz_files_to_remove.append(i)
-        fz_files_to_remove.sort(reverse=True)
-
-        for i in fz_files_to_remove:
-            fz_files.pop(i)
+                fz_files_to_remove.append(f)
+        # This may not be strictly necessary, but I was hesitant to edit the list at the same
+        # time as we iterate over it.
+        for f in fz_files_to_remove:
+            fz_files.remove(f)
         image_list = fits_files + fz_files
 
     else:
