@@ -1,7 +1,7 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 from banzai.stages import Stage
 from banzai import logs
-from banzai.images import MissingCatalogException
+from banzai.utils import image_utils
 import os, subprocess, shlex
 from astropy.io import fits
 import tempfile
@@ -39,7 +39,7 @@ class WCSSolver(Stage):
                 catalog_name = os.path.join(tmpdirname, filename.replace('.fits', '.cat.fits'))
                 try:
                     image.write_catalog(catalog_name, nsources=40)
-                except MissingCatalogException:
+                except image_utils.MissingCatalogException:
                     image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
                     self.logger.error('No source catalog. Not attempting WCS solution',
                                       extra=logging_tags)

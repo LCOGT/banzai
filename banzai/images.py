@@ -1,14 +1,21 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+import os
+
+import numpy as np
 from astropy.io import fits
+
+from banzai import dbs
 from banzai.utils import date_utils
 from banzai.utils import fits_utils
-from banzai import dbs
-import numpy as np
-import os
+from banzai.utils import image_utils
+from banzai import logs
+
+logger = logs.get_logger(__name__)
 
 
 class Image(object):
 
-    def __init__(self, filename=None, data=None, header={}, bpm=None):
+    def __init__(self, pipeline_context, filename=None, data=None, header={}, bpm=None):
 
         if filename is not None:
             data, header, bpm = fits_utils.open_image(filename)
@@ -29,7 +36,8 @@ class Image(object):
         self.gain = header.get('GAIN')
         self.ccdsum = header.get('CCDSUM')
         self.filter = header.get('FILTER')
-        self.telescope_id = dbs.get_telescope_id(self.site, self.instrument)
+        self.telescope_id = dbs.get_telescope_id(self.site, self.instrument,
+                                                 db_address=pipeline_context.db_address)
 
         self.obstype = header.get('OBSTYPE')
         self.exptime = float(header.get('EXPTIME'))
@@ -71,7 +79,7 @@ class Image(object):
 
     def write_catalog(self, filename, nsources=None):
         if self.catalog is None:
-            raise MissingCatalogException
+            raise image_utils.MissingCatalogException
         else:
             self.catalog[:nsources].write(filename, format='fits', overwrite=True)
 
@@ -79,16 +87,16 @@ class Image(object):
         self.header.add_history(msg)
 
 
-class InhomogeneousSetException(Exception):
-    pass
-
-
-def check_image_homogeneity(images):
-    for attribute in ('nx', 'ny', 'ccdsum', 'epoch', 'site', 'instrument'):
-        if len({getattr(image, attribute) for image in images}) > 1:
-            raise InhomogeneousSetException('Images have different {}s'.format(attribute))
-    return images[0]
-
-
-class MissingCatalogException(Exception):
-    pass
+def read_images(image_list, pipeline_context):
+    images = []
+    for filename in image_list:
+        try:
+            image = Image(pipeline_context, filename=filename)
+            if image.bpm is None:
+                image.bpm = image_utils.get_bpm(image, pipeline_context).astype(np.uint8)
+            images.append(image)
+        except Exception as e:
+            logger.error('Error loading {0}'.format(filename))
+            logger.error(e)
+            continue
+    return images

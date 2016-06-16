@@ -1,12 +1,12 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import numpy as np
 import os.path
 
-from .utils import stats, fits_utils
+from banzai.utils import stats, fits_utils
 from banzai import logs
 from banzai.images import Image
-from .stages import CalibrationMaker, ApplyCalibration
+from banzai.stages import CalibrationMaker, ApplyCalibration
 
 __author__ = 'cmccully'
 
@@ -53,7 +53,8 @@ class DarkMaker(CalibrationMaker):
 
         # Save the master dark image with all of the combined images in the header
         master_dark_header = fits_utils.create_master_calibration_header(images)
-        master_dark_image = Image(data=master_dark, header=master_dark_header)
+        master_dark_image = Image(self.pipeline_context, data=master_dark,
+                                  header=master_dark_header)
         master_dark_image.filename = master_dark_filename
         master_dark_image.bpm = master_bpm
 
