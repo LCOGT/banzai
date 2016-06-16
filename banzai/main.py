@@ -14,7 +14,7 @@ import argparse
 import banzai.images
 from banzai.utils import image_utils, date_utils
 from banzai import munge, crosstalk, gain, mosaic
-from banzai import bias, dark, flats, trim, photometry, astrometry, headers
+from banzai import bias, dark, flats, trim, photometry, astrometry, headers, qc
 from banzai import logs
 from banzai import dbs
 import os
@@ -39,9 +39,9 @@ class PipelineContext(object):
 
 
 def make_master_bias(pipeline_context):
-    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
-                    gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasMaker,
-                    headers.HeaderUpdater]
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
+                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
+                    trim.Trimmer, bias.BiasMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['BIAS'], calibration_maker=True,
         log_message='Making Master BIAS')
 
@@ -54,9 +54,10 @@ def make_master_bias_console():
 
 
 def make_master_dark(pipeline_context):
-    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
-                    gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer,
-                    bias.BiasSubtractor, dark.DarkMaker, headers.HeaderUpdater]
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
+                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
+                    trim.Trimmer, bias.BiasSubtractor, dark.DarkMaker,
+                    headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['DARK'], calibration_maker=True,
         log_message='Making Master Dark')
 
@@ -69,9 +70,10 @@ def make_master_dark_console():
 
 
 def make_master_flat(pipeline_context):
-    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
-                    gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
-                    dark.DarkSubtractor, flats.FlatMaker, headers.HeaderUpdater]
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
+                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
+                    trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                    flats.FlatMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['SKYFLAT'], calibration_maker=True,
         log_message='Making Master Flat')
 
@@ -84,10 +86,11 @@ def make_master_flat_console():
 
 
 def reduce_science_frames(pipeline_context=None):
-    stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
-                    gain.GainNormalizer, mosaic.MosaicCreator, trim.Trimmer, bias.BiasSubtractor,
-                    dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
-                    astrometry.WCSSolver, headers.HeaderUpdater]
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
+                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
+                    trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                    flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
+                    headers.HeaderUpdater]
 
     image_list = image_utils.make_image_list(pipeline_context)
     for image in image_list:
@@ -300,7 +303,7 @@ class PreviewModeListener(ConsumerMixin):
         path = body.get('path')
         if 'e00.fits' in path or 's00.fits' in path:
             if not dbs.preview_file_already_processed(path, db_address=self.pipeline_context.db_address):
-                stages_to_do = [munge.DataMunger, crosstalk.CrosstalkCorrector,
+                stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                                 bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
                                 trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
                                 flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
