@@ -60,7 +60,7 @@ class BiasMaker(CalibrationMaker):
         header = fits_utils.create_master_calibration_header(images)
 
         header['BIASLVL'] = (mean_bias_level, 'Mean bias level of master bias')
-        master_bias_image = Image(data=master_bias, header=header)
+        master_bias_image = Image(self.pipeline_context, data=master_bias, header=header)
         master_bias_image.filename = master_bias_filename
         master_bias_image.bpm = master_bpm
 

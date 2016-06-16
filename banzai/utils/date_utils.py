@@ -11,7 +11,6 @@ import datetime
 import numpy as np
 
 
-
 def epoch_string_to_date(epoch):
     """
     Convert a string in the form of "YYYYMMDD" into a datetime object
@@ -106,3 +105,13 @@ def total_seconds(timedelta):
     seconds = timedelta.seconds + timedelta.days * 24.0 * 3600.0
     microseconds = (timedelta.microseconds + seconds * 1e6)
     return microseconds / 1e6
+
+
+def get_dayobs(timezone):
+    # Get the current utc
+    now = datetime.datetime.utcnow()
+    # Add the timezone offset
+    now += datetime.timedelta(hours=timezone)
+    # Assume that the night is over, so we want yesterday's dayobs
+    yesterday = now - datetime.timedelta(days=1)
+    return epoch_date_to_string(yesterday.date())

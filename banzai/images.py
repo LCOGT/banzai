@@ -12,9 +12,10 @@ from banzai import logs
 
 logger = logs.get_logger(__name__)
 
+
 class Image(object):
 
-    def __init__(self, filename=None, data=None, header={}, bpm=None):
+    def __init__(self, pipeline_context, filename=None, data=None, header={}, bpm=None):
 
         if filename is not None:
             data, header, bpm = fits_utils.open_image(filename)
@@ -35,7 +36,8 @@ class Image(object):
         self.gain = header.get('GAIN')
         self.ccdsum = header.get('CCDSUM')
         self.filter = header.get('FILTER')
-        self.telescope_id = dbs.get_telescope_id(self.site, self.instrument)
+        self.telescope_id = dbs.get_telescope_id(self.site, self.instrument,
+                                                 db_address=pipeline_context.db_address)
 
         self.obstype = header.get('OBSTYPE')
         self.exptime = float(header.get('EXPTIME'))
@@ -89,7 +91,7 @@ def read_images(image_list, pipeline_context):
     images = []
     for filename in image_list:
         try:
-            image = Image(filename=filename)
+            image = Image(pipeline_context, filename=filename)
             if image.bpm is None:
                 image.bpm = image_utils.get_bpm(image, pipeline_context).astype(np.uint8)
             images.append(image)
