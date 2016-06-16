@@ -11,6 +11,7 @@ from banzai.utils import file_utils
 
 logger = logs.get_logger(__name__)
 
+
 def select_images(image_list, image_types):
     images = []
     for filename in image_list:
