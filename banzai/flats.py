@@ -62,7 +62,8 @@ class FlatMaker(CalibrationMaker):
 
         master_flat_header = fits_utils.create_master_calibration_header(images)
 
-        master_flat_image = Image(data=master_flat, header=master_flat_header)
+        master_flat_image = Image(self.pipeline_context, data=master_flat,
+                                  header=master_flat_header)
         master_flat_image.filename = master_flat_filename
         master_flat_image.bpm = master_bpm
 

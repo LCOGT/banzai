@@ -146,14 +146,14 @@ def reduce_night():
 
     # Ping the configdb to get currently schedulable telescopes
     try:
-        dbs.populate_telescope_tables(pipeline_context.db_address)
+        dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
     except Exception as e:
         logger.error('Could not connect to the configdb.')
         logger.error(e)
 
     timezone = dbs.get_timezone(args.site, db_address=args.db_address)
 
-    telescopes = dbs.get_scheduable_telescopes(args.site, db_address=args.db_address)
+    telescopes = dbs.get_schedulable_telescopes(args.site, db_address=args.db_address)
 
     if timezone is not None:
         # If no dayobs is given, calculate it.
@@ -252,7 +252,7 @@ def run_preview_pipeline():
     logs.start_logging(log_level=pipeline_context.log_level)
 
     try:
-        dbs.populate_telescope_tables(pipeline_context.db_address)
+        dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
     except Exception as e:
         logger.error('Could not connect to the configdb.')
         logger.error(e)

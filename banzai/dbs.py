@@ -126,7 +126,7 @@ def create_db(bpm_directory, db_address=_DEFAULT_DB,
     # This only needs to be run once on initialization.
     Base.metadata.create_all(engine)
 
-    populate_telescope_tables(db_address, configdb_address=configdb_address)
+    populate_telescope_tables(db_address=db_address, configdb_address=configdb_address)
     populate_bpm_table(bpm_directory, db_address=db_address)
 
 
@@ -159,7 +159,7 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
                         cameras.append({'site': site['code'],
                                         'instrument': sci_cam['code'],
                                         'camera_type': sci_cam['camera_type']['code'],
-                                        'schedulable': sci_cam['schedulable']})
+                                        'schedulable': ins['schedulable']})
     return sites, cameras
 
 
@@ -327,7 +327,7 @@ def set_preview_file_as_processed(path, db_address=_DEFAULT_DB):
 
 
 def get_timezone(site, db_address=_DEFAULT_DB):
-    db_session = get_session(db_address)
+    db_session = get_session(db_address=db_address)
     site_list = db_session.query(Site).filter(Site.id == site).all()
     if len(site_list) > 0:
         timezone = site_list[0].timezone
@@ -337,8 +337,8 @@ def get_timezone(site, db_address=_DEFAULT_DB):
     return timezone
 
 
-def get_scheduable_telescopes(site, db_address=_DEFAULT_DB):
-    db_session = get_session(db_address)
+def get_schedulable_telescopes(site, db_address=_DEFAULT_DB):
+    db_session = get_session(db_address=db_address)
     query = (Telescope.site == site) & Telescope.schedulable
     telescopes = db_session.query(Telescope).filter(query).all()
     db_session.close()
