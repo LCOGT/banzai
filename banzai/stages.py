@@ -130,7 +130,8 @@ class ApplyCalibration(Stage):
                                   extra=logging_tags)
                 raise MasterCalibrationDoesNotExist
 
-            master_calibration_image = Image(master_calibration_filename)
+            master_calibration_image = Image(self.pipeline_context,
+                                             filename=master_calibration_filename)
             return self.apply_master_calibration(images, master_calibration_image, logging_tags)
 
     @abc.abstractmethod
@@ -147,7 +148,7 @@ class ApplyCalibration(Stage):
             else:
                 calibration_criteria &= getattr(dbs.CalibrationImage, criterion) == getattr(image, criterion)
 
-        db_session = dbs.get_session()
+        db_session = dbs.get_session(db_address=self.pipeline_context.db_address)
 
         calibration_query = db_session.query(dbs.CalibrationImage).filter(calibration_criteria)
         epoch_datetime = date_utils.epoch_string_to_date(image.epoch)
