@@ -1,6 +1,5 @@
 ***************
 BANZAI package
-=======
 ***************
 
 This pipeline is designed to take raw data taken from Las Cumbres Observatory Global Telescope (LCOGT) Network and produce

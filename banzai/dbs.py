@@ -7,13 +7,13 @@ Author
 
 October 2015
 """
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os.path
 
 from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTime, Boolean, CHAR
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR
 from sqlalchemy.ext.declarative import declarative_base
 
 from glob import glob
@@ -49,59 +49,6 @@ def get_session(db_address=_DEFAULT_DB):
     return session
 
 
-class Image(Base):
-    """
-    Image Database Record
-
-    This defines the images table. Most of these keywords are parsed from the headers.
-    telescope_id is a foreign key to the telescopes table.
-    """
-    __tablename__ = 'images'
-
-    # Define the table structure
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    filename = Column(String(36), index=True, unique=True)
-    telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
-    filepath = Column(String(100))
-    rawfilename = Column(String(36))
-    rawpath = Column(String(100))
-    object_name = Column(String(50))
-    mjd = Column(Float, index=True)
-    dateobs = Column(DateTime)
-    dayobs = Column(Date, index=True)
-    exptime = Column(Float)
-    filter_name = Column(String(6))
-    obstype = Column(String(20))
-    airmass = Column(Float)
-    ra = Column(Float)
-    dec = Column(Float)
-    userid = Column(String(20))
-    propid = Column(String(20))
-    tracknum = Column(String(20))
-    reqnum = Column(String(20))
-    ccdsum = Column(String(10))
-    gain = Column(Float)
-    readnoise = Column(Float)
-    naxis1 = Column(Integer)
-    naxis2 = Column(Integer)
-    pixel_scale = Column(Float)
-    focus = Column(Integer)
-    # Reduction Status
-    ingest_done = Column(Boolean, default=False)
-    bias_done = Column(Boolean, default=False)
-    trim_done = Column(Boolean, default=False)
-    dark_done = Column(Boolean, default=False)
-    flat_done = Column(Boolean, default=False)
-    wcs_done = Column(Boolean, default=False)
-    cat_done = Column(Boolean, default=False)
-
-    def get_full_filename(self, suffix, extension='.fits'):
-        image_file = os.path.join(self.filepath, self.filename)
-        image_file += suffix + extension
-
-        return image_file
-
-
 class CalibrationImage(Base):
     """
     Master Calibration Image Database Record
@@ -129,9 +76,21 @@ class Telescope(Base):
     """
     __tablename__ = 'telescopes'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    site = Column(String(10), index=True)
+    site = Column(String(10), ForeignKey('sites.id'), index=True)
     instrument = Column(String(20), index=True)
     camera_type = Column(String(20))
+    schedulable = Column(Boolean, default=False)
+
+
+class Site(Base):
+    """
+    Site Database Record
+
+    This defines the sites table structure
+    """
+    __tablename__ = 'sites'
+    id = Column(String(3), primary_key=True)
+    timezone = Column(Integer)
 
 
 class BadPixelMask(Base):
@@ -167,8 +126,8 @@ def create_db(bpm_directory, db_address=_DEFAULT_DB,
     # This only needs to be run once on initialization.
     Base.metadata.create_all(engine)
 
-    populate_telescope_table(db_address)
-    populate_bpm_table(bpm_directory, db_address=db_address, configdb_address=configdb_address)
+    populate_telescope_tables(db_address=db_address, configdb_address=configdb_address)
+    populate_bpm_table(bpm_directory, db_address=db_address)
 
 
 def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
@@ -182,26 +141,30 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
 
     Returns
     -------
+    sites : list of dicts
+            each site dictionary contains a timezone.
     cameras : list of dicts
               each camera dictionary contains a site, instrument code, and camera type.
     """
-    sites = requests.get(configdb_address).json()['results']
+    results = requests.get(configdb_address).json()['results']
     cameras = []
-    for site in sites:
+    sites = []
+    for site in results:
+        sites.append({'code': site['code'], 'timezone': site['timezone']})
         for enc in site['enclosure_set']:
             for tel in enc['telescope_set']:
                 for ins in tel['instrument_set']:
                     sci_cam = ins.get('science_camera')
                     if sci_cam is not None:
-                        if 'SciCam' in sci_cam['camera_type']['code']:
-                            cameras.append({'site': site['code'],
-                                            'instrument': sci_cam['code'],
-                                            'camera_type': sci_cam['camera_type']['code']})
-    return cameras
+                        cameras.append({'site': site['code'],
+                                        'instrument': sci_cam['code'],
+                                        'camera_type': sci_cam['camera_type']['code'],
+                                        'schedulable': ins['schedulable']})
+    return sites, cameras
 
 
-def populate_telescope_table(db_address=_DEFAULT_DB,
-                             configdb_address='http://configdb.lco.gtn/sites/'):
+def populate_telescope_tables(db_address=_DEFAULT_DB,
+                              configdb_address='http://configdb.lco.gtn/sites/'):
     """
     Populate the telescope table
 
@@ -220,9 +183,24 @@ def populate_telescope_table(db_address=_DEFAULT_DB,
     added to the network
     """
 
-    cameras = parse_configdb(configdb_address=configdb_address)
+    sites, cameras = parse_configdb(configdb_address=configdb_address)
 
     db_session = get_session(db_address=db_address)
+
+    for site in sites:
+        site_query = Site.id == site['code']
+        matching_sites = db_session.query(Site).filter(site_query).all()
+
+        if len(matching_sites) == 0:
+            db_session.add(Site(id=site['code'], timezone=site['timezone']))
+
+    db_session.commit()
+
+    # Set all cameras in the table to be schedulable and turn them back on below as needed.
+    all_cameras = db_session.query(Telescope).all()
+    for camera in all_cameras:
+        camera.schedulable = False
+    db_session.commit()
 
     for camera in cameras:
 
@@ -233,7 +211,10 @@ def populate_telescope_table(db_address=_DEFAULT_DB,
 
         if len(matching_cameras) == 0:
             db_session.add(Telescope(site=camera['site'], instrument=camera['instrument'],
-                                     camera_type=camera['camera_type']))
+                                     camera_type=camera['camera_type'],
+                                     schedulable=camera['schedulable']))
+        else:
+            matching_cameras[0].schedulable = camera['schedulable']
 
     db_session.commit()
     db_session.close()
@@ -343,3 +324,22 @@ def set_preview_file_as_processed(path, db_address=_DEFAULT_DB):
         db_session.add(preview_image)
         db_session.commit()
     db_session.close()
+
+
+def get_timezone(site, db_address=_DEFAULT_DB):
+    db_session = get_session(db_address=db_address)
+    site_list = db_session.query(Site).filter(Site.id == site).all()
+    if len(site_list) > 0:
+        timezone = site_list[0].timezone
+    else:
+        timezone = None
+    db_session.close()
+    return timezone
+
+
+def get_schedulable_telescopes(site, db_address=_DEFAULT_DB):
+    db_session = get_session(db_address=db_address)
+    query = (Telescope.site == site) & Telescope.schedulable
+    telescopes = db_session.query(Telescope).filter(query).all()
+    db_session.close()
+    return telescopes
