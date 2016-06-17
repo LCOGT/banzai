@@ -27,6 +27,9 @@ def test_no_background_step():
     ny = 503
 
     images = [FakeImage(nx=nx, ny=ny) for x in range(3)]
+    for image in images:
+        image.header['NAXIS1'] = ny
+        image.header['NAXIS2'] = nx
 
     images = tester.do_stage(images)
     for image in images:
