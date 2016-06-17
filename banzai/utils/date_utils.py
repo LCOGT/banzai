@@ -5,11 +5,10 @@ Author
 
 October 2015
 """
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import datetime
 import numpy as np
-
 
 
 def epoch_string_to_date(epoch):
@@ -97,5 +96,22 @@ def date_obs_to_string(date_obs):
 
 def mean_date(dates):
     time_offsets = np.array([d - min(dates) for d in dates])
-    average_offset = time_offsets.sum() / time_offsets.size
-    return min(dates) + average_offset
+    average_offset = total_seconds(time_offsets.sum())/ time_offsets.size
+    return min(dates) + datetime.timedelta(seconds=average_offset)
+
+
+# Necessary for Python 2.6 support. This should go away at some point.
+def total_seconds(timedelta):
+    seconds = timedelta.seconds + timedelta.days * 24.0 * 3600.0
+    microseconds = (timedelta.microseconds + seconds * 1e6)
+    return microseconds / 1e6
+
+
+def get_dayobs(timezone):
+    # Get the current utc
+    now = datetime.datetime.utcnow()
+    # Add the timezone offset
+    now += datetime.timedelta(hours=timezone)
+    # Assume that the night is over, so we want yesterday's dayobs
+    yesterday = now - datetime.timedelta(days=1)
+    return epoch_date_to_string(yesterday.date())

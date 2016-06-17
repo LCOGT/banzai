@@ -1,10 +1,10 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import numpy as np
 import os.path
 
-from .utils import stats, fits_utils
-from .stages import CalibrationMaker, ApplyCalibration
+from banzai.utils import stats, fits_utils
+from banzai.stages import CalibrationMaker, ApplyCalibration
 from banzai.images import Image
 from banzai import logs
 
@@ -62,7 +62,8 @@ class FlatMaker(CalibrationMaker):
 
         master_flat_header = fits_utils.create_master_calibration_header(images)
 
-        master_flat_image = Image(data=master_flat, header=master_flat_header)
+        master_flat_image = Image(self.pipeline_context, data=master_flat,
+                                  header=master_flat_header)
         master_flat_image.filename = master_flat_filename
         master_flat_image.bpm = master_bpm
 

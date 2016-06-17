@@ -1,14 +1,15 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 import itertools
 
 from sqlalchemy.sql import func
 
-from . import dbs
-from .utils import date_utils
-from . import logs
-from banzai.images import check_image_homogeneity, Image
+from banzai import dbs
+from banzai.utils import date_utils
+from banzai import logs
+from banzai.images import Image
+from banzai.utils import image_utils
 
 import abc
 
@@ -83,7 +84,7 @@ class CalibrationMaker(Stage):
             self.logger.warning('Not enough images to combine.')
             return []
         else:
-            image_config = check_image_homogeneity(images)
+            image_config = image_utils.check_image_homogeneity(images)
             logging_tags = logs.image_config_to_tags(image_config, self.group_by_keywords)
 
             return self.make_master_calibration_frame(images, image_config, logging_tags)
@@ -120,7 +121,7 @@ class ApplyCalibration(Stage):
             # Abort!
             return []
         else:
-            image_config = check_image_homogeneity(images)
+            image_config = image_utils.check_image_homogeneity(images)
             logging_tags = logs.image_config_to_tags(image_config, self.group_by_keywords)
             master_calibration_filename = self.get_calibration_filename(images[0])
 
@@ -129,7 +130,8 @@ class ApplyCalibration(Stage):
                                   extra=logging_tags)
                 raise MasterCalibrationDoesNotExist
 
-            master_calibration_image = Image(master_calibration_filename)
+            master_calibration_image = Image(self.pipeline_context,
+                                             filename=master_calibration_filename)
             return self.apply_master_calibration(images, master_calibration_image, logging_tags)
 
     @abc.abstractmethod
@@ -146,7 +148,7 @@ class ApplyCalibration(Stage):
             else:
                 calibration_criteria &= getattr(dbs.CalibrationImage, criterion) == getattr(image, criterion)
 
-        db_session = dbs.get_session()
+        db_session = dbs.get_session(db_address=self.pipeline_context.db_address)
 
         calibration_query = db_session.query(dbs.CalibrationImage).filter(calibration_criteria)
         epoch_datetime = date_utils.epoch_string_to_date(image.epoch)

@@ -1,5 +1,6 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
 import pytest
-from ..images import InhomogeneousSetException
+from banzai.utils import image_utils
 import numpy as np
 from datetime import datetime
 
@@ -42,7 +43,7 @@ class FakeContext(object):
 def throws_inhomogeneous_set_exception(stagetype, context, keyword, value):
     stage = stagetype(context)
 
-    with pytest.raises(InhomogeneousSetException) as exception_info:
+    with pytest.raises(image_utils.InhomogeneousSetException) as exception_info:
         kwargs = {keyword: value}
         images = [FakeImage(**kwargs)]
         images += [FakeImage() for x in range(6)]
