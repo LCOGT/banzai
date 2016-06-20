@@ -6,6 +6,8 @@ import os, subprocess, shlex
 from astropy.io import fits
 import tempfile
 from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+from astropy import units
 
 __author__ = 'cmccully'
 
@@ -65,6 +67,10 @@ class WCSSolver(Stage):
 
                     image.header['WCSERR'] = (0, 'Error status of WCS fit. 0 for no error')
 
+                    # Update the RA and Dec header keywords
+                    image.header['RA'], image.header['DEC'] = get_ra_dec_in_sexagesimal(image.header['CRVAL1'],
+                                                                                        image.header['CRVAL2'])
+
                     # Clean up wcs file
                     os.remove(wcs_name)
 
@@ -87,3 +93,29 @@ def add_ra_dec_to_catalog(image):
     image.catalog['dec'].unit = 'degrees'
     image.catalog['ra'].description = 'Right Ascension'
     image.catalog['dec'].description = 'Declination'
+
+
+def get_ra_dec_in_sexagesimal(ra, dec):
+    """
+    Convert a decimal RA and Dec to sexagesimal
+
+    Parameters
+    ----------
+    ra : float
+         Right Ascension in decimal form
+    dec : float
+         Declination in decimal form
+
+    Returns
+    -------
+    tuple of str : RA, Dec converted to a string
+
+    """
+    coord = SkyCoord(ra, dec, unit=(units.deg, units.deg))
+    coord_str = coord.to_string('hmsdms', precision=4, pad=True)
+    ra_str, dec_str = coord_str.split()
+    ra_str = ra_str.replace('h', ':').replace('m', ':').replace('s', '')
+    dec_str = dec_str.replace('d', ':').replace('m', ':').replace('s', '')
+    # Return one less digit of precision for the dec
+    dec_str = dec_str[:-1]
+    return ra_str, dec_str
