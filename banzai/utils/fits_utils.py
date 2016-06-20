@@ -30,7 +30,9 @@ def create_master_calibration_header(images):
     header = fits.Header()
     for h in images[0].header.keys():
         try:
-            header[h] = images[0].header[h]
+            # Dump empty header keywords
+            if len(h) > 0:
+                header[h] = images[0].header[h]
         except ValueError as e:
             logging_tags = logs.image_config_to_tags(images[0], None)
             logs.add_tag(logging_tags, 'filename', images[0].filename)
