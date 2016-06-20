@@ -13,3 +13,5 @@ COPY . /lco/banzai
 RUN python /lco/banzai/setup.py install
 
 USER archive
+
+WORKDIR /home/archive
