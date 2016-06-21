@@ -27,12 +27,30 @@ def test_no_background_step():
     ny = 503
 
     images = [FakeImage(nx=nx, ny=ny) for x in range(3)]
-    for image in images:
+    for i,image in enumerate(images):
         image.header['NAXIS1'] = ny
         image.header['NAXIS2'] = nx
+        image.header['INDEX'] = i
 
     images = tester.do_stage(images)
     for image in images:
         assert 'AMPINFX' in image.header
     assert len(images) == 3
+
+
+def test_background_step():
+    tester = SkyBackgroundTest(None)
+    nx = 501
+    ny = 503
+
+    images = [FakeImage(nx=nx, ny=ny) for x in range(3)]
+    for i,image in enumerate(images):
+        image.header['NAXIS1'] = ny
+        image.header['NAXIS2'] = nx
+        image.header['INDEX'] = i
+        image.data[(ny/2):ny,:] += 50.0
+
+    images = tester.do_stage(images)
+
+    assert len(images) == 0
 

@@ -8,7 +8,9 @@ Created on Mon Jun 13 13:56:27 2016
 from __future__ import division
 import numpy as np
 from banzai.stages import Stage
-
+from banzai import logs
+import os
+import copy
 
 class SkyBackgroundTest(Stage):
     """
@@ -33,8 +35,12 @@ class SkyBackgroundTest(Stage):
         return None
 
     def do_stage(self, images):
-
+        
+        bad_image_list = []
+        
         for image in images:
+            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
 
             # Calculate statistics of pixel box grid
             (xposition, yposition, sky_mean, sky_stddev) = \
@@ -50,9 +56,10 @@ class SkyBackgroundTest(Stage):
 
             # Look for an inflexion point in the sky gradient with y-position,
             # and calculate the metrics used for the QC test
-            (y_inflex, amp_inflex, delta_mean, delta_stddev) = \
-                    gradient_inflexion(xposition, yposition, dmean_dpix)
-
+            (y_inflex, amp_inflex, delta_mean, delta_stddev, dmean_dpix_bkgd) \
+                    = gradient_inflexion(xposition, yposition, dmean_dpix)
+            (dmean_mean,dmean_stddev) = rms_clip(dmean_dpix_bkgd, 3.0, 3)
+            
             # Establish test criteria, which are set relative to the
             # the mean sky background in this particular image:
             inflexion_threshold = delta_mean + 3.0*delta_stddev
@@ -66,16 +73,20 @@ class SkyBackgroundTest(Stage):
                     inflexion_test = False
             else:
               	inflexion_test = False
-
+            
             if inflexion_test == True:
                 self.logger.info(\
                 'Measured amplitude of inflexion in background gradient', \
                 extra=logging_tags)
-                images.remove(image)
+                bad_image_list.append(image)                
             else:
                 image.header['AMPINFX'] = (amp_inflex.mean(), \
                                 "Amplitude of inflexion in background gradient")
-
+                logs.add_tag(logging_tags, 'AMPINFX', amp_inflex.mean())
+                
+        for image in bad_image_list:
+            images.remove(image)
+            
         return images
 
 def box_statistics(image):
@@ -170,6 +181,7 @@ def gradient_inflexion(xposition,yposition,dmean_dpix):
     y_inflex = []
     amp_inflex = []
     delta_inflex = []
+    dmean_dpix_bkgd = []
     for i,xcen in enumerate(xposition):
         (dmean_col,dmean_stddev_col) = rms_clip(dmean_dpix[:,i],3.0,3)
         delta = abs(dmean_dpix[:,i] - dmean_col)
@@ -180,11 +192,15 @@ def gradient_inflexion(xposition,yposition,dmean_dpix):
         deltalist = delta.tolist()
         deltalist.pop(idx[0][0])
         delta_inflex.append(deltalist)
+        dmeanlist = (dmean_dpix[:,i].tolist())
+        dmeanlist.pop(idx[0][0])
+        dmean_dpix_bkgd.append(dmeanlist)
     y_inflex = np.array(y_inflex)
     amp_inflex = np.array(amp_inflex)
     delta_inflex = np.array(delta_inflex)
-
+    dmean_dpix_bkgd = np.array(dmean_dpix_bkgd)
+    
     (delta_mean,delta_stddev) = rms_clip(delta_inflex,3.0,3)
 
-    return y_inflex, amp_inflex, delta_mean, delta_stddev
+    return y_inflex, amp_inflex, delta_mean, delta_stddev, dmean_dpix_bkgd
 
