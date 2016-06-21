@@ -7,6 +7,7 @@ import sys
 from lcogt_logging import LCOGTFormatter
 from banzai.utils import date_utils
 
+
 def get_logger(name):
     logger = logging.getLogger(name)
     # This allows us to control the logging level with the root logger.

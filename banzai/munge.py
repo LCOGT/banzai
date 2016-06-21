@@ -16,7 +16,8 @@ class DataMunger(Stage):
 
     def do_stage(self, images):
         for image in images:
-            telescope = dbs.get_telescope(image.telescope_id)
+            telescope = dbs.get_telescope(image.telescope_id,
+                                          db_address=self.pipeline_context.db_address)
             # TODO: Currently we only support 1x1 Sinistro frames and only support 1x1 frames.
             # TODO: 2x2 frames cannot use hard coded values because we read out more pixels.
             if 'sinistro' in telescope.camera_type.lower():

@@ -6,6 +6,9 @@ import numpy as np
 import os
 import tempfile
 from banzai.utils import date_utils
+from banzai import logs
+
+logger = logs.get_logger(__name__)
 
 __author__ = 'cmccully'
 
@@ -26,7 +29,15 @@ def sanitizeheader(header):
 def create_master_calibration_header(images):
     header = fits.Header()
     for h in images[0].header.keys():
-        header[h] = images[0].header[h]
+        try:
+            # Dump empty header keywords
+            if len(h) > 0:
+                header[h] = images[0].header[h]
+        except ValueError as e:
+            logging_tags = logs.image_config_to_tags(images[0], None)
+            logs.add_tag(logging_tags, 'filename', images[0].filename)
+            logger.error('Could not add keyword {0}'.format(h), extra=logging_tags)
+            continue
 
     header = sanitizeheader(header)
 

@@ -12,9 +12,10 @@ from banzai import logs
 
 logger = logs.get_logger(__name__)
 
+
 class Image(object):
 
-    def __init__(self, filename=None, data=None, header={}, bpm=None):
+    def __init__(self, pipeline_context, filename=None, data=None, header={}, bpm=None):
 
         if filename is not None:
             data, header, bpm = fits_utils.open_image(filename)
@@ -35,7 +36,8 @@ class Image(object):
         self.gain = header.get('GAIN')
         self.ccdsum = header.get('CCDSUM')
         self.filter = header.get('FILTER')
-        self.telescope_id = dbs.get_telescope_id(self.site, self.instrument)
+        self.telescope_id = dbs.get_telescope_id(self.site, self.instrument,
+                                                 db_address=pipeline_context.db_address)
 
         self.obstype = header.get('OBSTYPE')
         self.exptime = float(header.get('EXPTIME'))
@@ -50,6 +52,10 @@ class Image(object):
 
     def writeto(self, filename, fpack=False):
         image_hdu = fits.PrimaryHDU(self.data.astype(np.float32), header=self.header)
+        image_hdu.header['BITPIX'] = -32
+        image_hdu.header['BSCALE'] = 1.0
+        image_hdu.header['BZERO'] = 0.0
+        image_hdu.header['SIMPLE'] = True
         image_hdu.header['EXTEND'] = True
         image_hdu.update_ext_name('SCI')
         hdu_list = [image_hdu]
@@ -63,7 +69,20 @@ class Image(object):
             hdu_list.append(bpm_hdu)
 
         hdu_list = fits.HDUList(hdu_list)
-        hdu_list.writeto(filename, clobber=True)
+        try:
+            hdu_list.verify(option='exception')
+        except fits.VerifyError as fits_error:
+            logging_tags = logs.image_config_to_tags(self, None)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(self.filename))
+            logger.warn('Error in FITS Verification. {0}. Attempting fix.'.format(fits_error),
+                        extra=logging_tags)
+            try:
+                hdu_list.verify(option='silentfix+exception')
+            except fits.VerifyError as fix_attempt_error:
+                logger.error('Could not repair FITS header. {0}'.format(fix_attempt_error),
+                             extra=logging_tags)
+
+        hdu_list.writeto(filename, clobber=True, output_verify='fix+warn')
         if fpack:
             if os.path.exists(filename + '.fz'):
                 os.remove(filename + '.fz')
@@ -89,7 +108,7 @@ def read_images(image_list, pipeline_context):
     images = []
     for filename in image_list:
         try:
-            image = Image(filename=filename)
+            image = Image(pipeline_context, filename=filename)
             if image.bpm is None:
                 image.bpm = image_utils.get_bpm(image, pipeline_context).astype(np.uint8)
             images.append(image)
