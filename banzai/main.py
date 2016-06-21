@@ -13,7 +13,7 @@ import argparse
 
 import banzai.images
 from banzai.utils import image_utils, date_utils
-from banzai import munge, crosstalk, gain, mosaic
+from banzai import munge, crosstalk, gain, mosaic, pointing
 from banzai import bias, dark, flats, trim, photometry, astrometry, headers, qc
 from banzai import logs
 from banzai import dbs
@@ -90,7 +90,7 @@ def reduce_science_frames(pipeline_context=None):
                     bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
                     trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
                     flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
-                    headers.HeaderUpdater]
+                    headers.HeaderUpdater, pointing.PointingTest]
 
     image_list = image_utils.make_image_list(pipeline_context)
     original_filename = pipeline_context.filename
@@ -185,8 +185,8 @@ def parse_end_of_night_command_line_arguments():
                         help='Top level directory where the raw data is stored')
     parser.add_argument("--processed-path", default='/archive/engineering/',
                         help='Top level directory where the processed data will be stored')
-    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
-                                                                'critical', 'fatal', 'error'])
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
                         default=False)
     parser.add_argument('--db-address', dest='db_address',
@@ -229,8 +229,8 @@ def run_preview_pipeline():
 
     parser.add_argument("--processed-path", default='/archive/engineering',
                         help='Top level directory where the processed data will be stored')
-    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
-                                                                'critical', 'fatal', 'error'])
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
                         default=False)
     parser.add_argument('--db-address', dest='db_address',
@@ -309,7 +309,7 @@ class PreviewModeListener(ConsumerMixin):
                                 bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
                                 trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
                                 flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
-                                headers.HeaderUpdater]
+                                headers.HeaderUpdater, pointing.PointingTest]
                 logger.info('Running preview reduction on {}'.format(path))
                 self.pipeline_context.filename = os.path.basename(path)
                 self.pipeline_context.raw_path = os.path.dirname(path)
