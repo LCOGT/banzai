@@ -31,6 +31,7 @@ Base = declarative_base()
 
 logger = logs.get_logger(__name__)
 
+
 def get_session(db_address=_DEFAULT_DB):
     """
     Get a connection to the database.
@@ -45,7 +46,7 @@ def get_session(db_address=_DEFAULT_DB):
 
     # We don't use autoflush typically. I have run into issues where SQLAlchemy would try to flush
     # incomplete records causing a crash. None of the queries here are large, so it should be ok.
-    db_session = sessionmaker(bind=engine, autoflush=False)
+    db_session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     session = db_session()
 
     return session
