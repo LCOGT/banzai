@@ -36,6 +36,7 @@ class PipelineContext(object):
         self.log_level = args.log_level
         self.preview_mode = args.preview_mode
         self.filename = args.filename
+        self.max_preview_tries = args.max_preview_tries
 
 
 def make_master_bias(pipeline_context):
@@ -144,6 +145,7 @@ def reduce_night():
     args.preview_mode = False
     args.raw_path = None
     args.filename = None
+    args.max_preview_tries = 5
 
     pipeline_context = PipelineContext(args)
 
@@ -201,6 +203,7 @@ def parse_end_of_night_command_line_arguments():
     args = parser.parse_args()
 
     args.preview_mode = False
+    args.max_preview_tries = 5
 
     return PipelineContext(args)
 
@@ -248,6 +251,8 @@ def run_preview_pipeline():
                         help='URL for the broker service.')
     parser.add_argument('--queue-name', dest='queue_name', default='preview_pipeline',
                         help='Name of the queue to listen to from the fits exchange.')
+    parser.add_argument('--max-preview-tries', dest='max_preivew_tries', default=5,
+                        help='Maximum number of tries to produce a preview image.')
     args = parser.parse_args()
     args.preview_mode = True
     args.raw_path = None
@@ -278,7 +283,12 @@ def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
 
     listener = PreviewModeListener(broker_url, pipeline_context)
 
-    with Connection(listener.broker_url) as connection:
+    def errback(exc, interval):
+        logger.error('Error: %r', exc, exc_info=1)
+        logger.info('Retry in %s seconds.', interval)
+
+    with Connection.ensure_connection(listener.broker_url, max_retries=10,
+                                      errback=errback) as connection:
         listener.connection = connection
         listener.queue = Queue(queue_name, crawl_exchange)
         try:
@@ -304,16 +314,24 @@ class PreviewModeListener(ConsumerMixin):
     def on_message(self, body, message):
         path = body.get('path')
         if 'e00.fits' in path or 's00.fits' in path:
-            if not dbs.preview_file_already_processed(path, db_address=self.pipeline_context.db_address):
+            if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
+                                        max_tries=self.pipeline_context.max_preview_tries):
                 stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                                 bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
                                 trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
                                 flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
                                 headers.HeaderUpdater, pointing.PointingTest]
-                logger.info('Running preview reduction on {}'.format(path))
+
+                logging_tags = {'tags': {'filename': os.path.basename(path)}}
+                logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)
                 self.pipeline_context.filename = os.path.basename(path)
                 self.pipeline_context.raw_path = os.path.dirname(path)
-                run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD'])
-                dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
+                try:
+                    run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD'])
+                    dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
+                except Exception as e:
+                    logging_tags = {'tags': {'filename': os.path.basename(path)}}
+                    logger.error("Could not produce preview frame. {0}. {1}".format(e, path),
+                                 extra=logging_tags)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)

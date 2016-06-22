@@ -16,7 +16,8 @@ def post_to_archive_queue(image_path):
         logger.info('Retry in %s seconds.', interval)
     fits_exchange = Exchange('fits_files', type='fanout')
     producer_queue = Queue('', fits_exchange, exclusive=True)
-    with Connection('amqp://guest:guest@cerberus.lco.gtn') as conn:
+    with Connection.ensure_connection('amqp://guest:guest@cerberus.lco.gtn', max_retries=10,
+                                      errback=errback) as conn:
         queue = conn.SimpleQueue(producer_queue)
         put = conn.ensure(queue, queue.put, max_retries=30, errback=errback)
         put({'path': image_path})
