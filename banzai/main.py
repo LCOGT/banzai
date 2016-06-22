@@ -287,7 +287,7 @@ def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
         logger.error('Error: %r', exc, exc_info=1)
         logger.info('Retry in %s seconds.', interval)
 
-    with Connection.ensure_connection(listener.broker_url) as connection:
+    with Connection(listener.broker_url) as connection:
         connection.ensure_connection(max_retries=10, errback=errback)
         listener.connection = connection
         listener.queue = Queue(queue_name, crawl_exchange)
