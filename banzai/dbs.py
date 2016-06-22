@@ -20,6 +20,7 @@ from glob import glob
 from astropy.io import fits
 import requests
 from banzai.utils import file_utils
+from banzai import logs
 
 
 # Define how to get to the database
@@ -28,6 +29,7 @@ _DEFAULT_DB = 'mysql://cmccully:password@localhost/test'
 
 Base = declarative_base()
 
+logger = logs.get_logger(__name__)
 
 def get_session(db_address=_DEFAULT_DB):
     """
@@ -109,7 +111,9 @@ class PreviewImage(Base):
     __tablename__ = 'previewimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String(50), index=True)
-    checksum = Column(CHAR(32), index=True)
+    checksum = Column(CHAR(32), index=True, default='0'*32)
+    success = Column(Boolean, default=False)
+    tries = Column(Integer, default=0)
 
 
 def create_db(bpm_directory, db_address=_DEFAULT_DB,
@@ -299,31 +303,66 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
     db_session.close()
 
 
-def preview_file_already_processed(path, db_address=_DEFAULT_DB):
+def need_to_make_preview(path, db_address=_DEFAULT_DB, max_tries=5):
+    # Get the preview image in db. If it doesn't exist add it.
+    preview_image = get_preview_image(path, db_address=db_address)
+    # If there was an issue with the database return none and move on and return false
+    if preview_image is None:
+        need_to_process = False
+    else:
+        # Otherwise increment the number of tries
+        preview_image.tries += 1
+        commit_preview_image(preview_image, db_address=db_address)
+
+        try:
+            # As long as the preview file exists, check the md5.
+            checksum = file_utils.get_md5(path)
+            if preview_image.checksum == checksum and (preview_image.tries >= max_tries or
+                                                           preview_image.success):
+                need_to_process = False
+            else:
+                need_to_process = True
+                preview_image.checksum = checksum
+                commit_preview_image(preview_image, db_address)
+        except IOError as e:
+            logger.error('{0}. {1}'.format(e, path), extra={'tags': {'filename': os.path.basename(path)}})
+            need_to_process = False
+    return need_to_process
+
+
+def get_preview_image(path, db_address=_DEFAULT_DB):
+    filename = os.path.basename(path)
     db_session = get_session(db_address=db_address)
-    query = db_session.query(PreviewImage)
-    criteria = PreviewImage.filename == os.path.basename(path)
-    criteria &= PreviewImage.checksum == file_utils.get_md5(path)
-    query = query.filter(criteria)
-    already_processed = len(query.all()) > 0
+    try:
+        query = db_session.query(PreviewImage)
+        criteria = PreviewImage.filename == filename
+        query = query.filter(criteria)
+        preview_image = query.first()
+        if preview_image is None:
+            preview_image = PreviewImage(filename=filename)
+            db_session.add(preview_image)
+            db_session.commit()
+    except Exception as e:
+        logging_tags = {'tags': {'filename': filename}}
+        logger.error('Error processing preview image. {0}. {1}'.format(e, path), extra=logging_tags)
+        preview_image = None
+
     db_session.close()
-    return already_processed
+    return preview_image
+
+
+def commit_preview_image(preview_image, db_address=_DEFAULT_DB):
+    db_session = get_session(db_address=db_address)
+    db_session.add(preview_image)
+    db_session.commit()
+    db_session.close()
 
 
 def set_preview_file_as_processed(path, db_address=_DEFAULT_DB):
-    filename = os.path.basename(path)
-    checksum = file_utils.get_md5(path)
-
-    db_session = get_session(db_address=db_address)
-    query = db_session.query(PreviewImage)
-    criteria = PreviewImage.filename == filename
-    criteria &= PreviewImage.checksum == checksum
-    query = query.filter(criteria)
-    if len(query.all()) == 0:
-        preview_image = PreviewImage(filename=filename, checksum=checksum)
-        db_session.add(preview_image)
-        db_session.commit()
-    db_session.close()
+    preview_image = get_preview_image(path, db_address=db_address)
+    if preview_image is not None:
+        preview_image.success = True
+        commit_preview_image(preview_image, db_address=db_address)
 
 
 def get_timezone(site, db_address=_DEFAULT_DB):
