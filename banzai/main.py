@@ -251,7 +251,7 @@ def run_preview_pipeline():
                         help='URL for the broker service.')
     parser.add_argument('--queue-name', dest='queue_name', default='preview_pipeline',
                         help='Name of the queue to listen to from the fits exchange.')
-    parser.add_argument('--max-preview-tries', dest='max_preivew_tries', default=5,
+    parser.add_argument('--max-preview-tries', dest='max_preview_tries', default=5,
                         help='Maximum number of tries to produce a preview image.')
     args = parser.parse_args()
     args.preview_mode = True
