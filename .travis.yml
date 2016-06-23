@@ -29,7 +29,7 @@ env:
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - SETUP_CMD='test'
-        - PIP_DEPENDENCIES='astropy sqlalchemy logutils numpy cython mysqlclient lcogt_logging sep kombu requests mock pytest'
+        - PIP_DEPENDENCIES='astropy>=0.4 sqlalchemy logutils numpy cython mysqlclient lcogt_logging sep kombu requests mock pytest'
 
         # For this package-template, we include examples of Cython modules,
         # so Cython is required for testing. If your package does not include
@@ -127,4 +127,4 @@ after_success:
     # If coveralls.io is set up for this package, uncomment the line
     # below and replace "packagename" with the name of your package.
     # The coveragerc file may be customized as needed for your package.
-    # - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='packagename/tests/coveragerc'; fi
+    - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='banzai/tests/coveragerc'; fi
