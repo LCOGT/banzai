@@ -17,6 +17,7 @@ def post_to_archive_queue(image_path):
     fits_exchange = Exchange('fits_files', type='fanout')
     producer_queue = Queue('', fits_exchange, exclusive=True)
     with Connection('amqp://guest:guest@cerberus.lco.gtn') as conn:
+        conn.ensure_connection(max_retries=10, errback=errback)
         queue = conn.SimpleQueue(producer_queue)
         put = conn.ensure(queue, queue.put, max_retries=30, errback=errback)
         put({'path': image_path})
