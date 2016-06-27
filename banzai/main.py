@@ -97,7 +97,11 @@ def reduce_science_frames(pipeline_context=None):
     original_filename = pipeline_context.filename
     for image in image_list:
         pipeline_context.filename = os.path.basename(image)
-        run(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD'])
+        try:
+            run(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD'])
+        except Exception as e:
+            logger.error('{0}'.format(e), extra={'tags': {'filename': pipeline_context.filename,
+                                                          'filepath': pipeline_context.raw_path}})
     pipeline_context.filename = original_filename
 
 
@@ -327,6 +331,8 @@ class PreviewModeListener(ConsumerMixin):
                 self.pipeline_context.filename = os.path.basename(path)
                 self.pipeline_context.raw_path = os.path.dirname(path)
 
+                # Increment the number of tries for this file
+                dbs.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
                 try:
                     run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD'])
                     dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)

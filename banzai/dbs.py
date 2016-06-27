@@ -311,15 +311,11 @@ def need_to_make_preview(path, db_address=_DEFAULT_DB, max_tries=5):
     if preview_image is None:
         need_to_process = False
     else:
-        # Otherwise increment the number of tries
-        preview_image.tries += 1
-        commit_preview_image(preview_image, db_address=db_address)
-
         try:
             # As long as the preview file exists, check the md5.
             checksum = file_utils.get_md5(path)
             if preview_image.checksum == checksum and (preview_image.tries >= max_tries or
-                                                           preview_image.success):
+                                                       preview_image.success):
                 need_to_process = False
             else:
                 need_to_process = True
@@ -329,6 +325,13 @@ def need_to_make_preview(path, db_address=_DEFAULT_DB, max_tries=5):
             logger.error('{0}. {1}'.format(e, path), extra={'tags': {'filename': os.path.basename(path)}})
             need_to_process = False
     return need_to_process
+
+
+def increment_preview_try_number(path, db_address=_DEFAULT_DB):
+    preview_image = get_preview_image(path, db_address=db_address)
+    # Otherwise increment the number of tries
+    preview_image.tries += 1
+    commit_preview_image(preview_image, db_address=db_address)
 
 
 def get_preview_image(path, db_address=_DEFAULT_DB):
