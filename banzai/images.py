@@ -113,8 +113,7 @@ def read_images(image_list, pipeline_context):
                 bpm = image_utils.get_bpm(image, pipeline_context)
                 if bpm is None:
                     logger.error('No BPM file exists for this image.',
-                                 extra={'tags': {'filename': image.filename,
-                                                 'filepath': image.raw_path}})
+                                 extra={'tags': {'filename': image.filename}})
                 else:
                     image.bpm = bpm
                     images.append(image)
