@@ -14,3 +14,6 @@ Status reports for developers
     :target: https://travis-ci.org/LCOGT/banzai
     :alt: Test Status
 
+.. image:: https://coveralls.io/repos/github/LCOGT/banzai/badge.svg
+    :target: https://coveralls.io/github/LCOGT/banzai
+    :alt: Coverage Status
