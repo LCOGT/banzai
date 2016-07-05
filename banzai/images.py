@@ -27,6 +27,8 @@ class Image(object):
         self.header = header
         self.bpm = bpm
 
+        self.request_number = header.get('REQNUM')
+
         self.site = header.get('SITEID')
         self.instrument = header.get('INSTRUME')
         self.epoch = header.get('DAY-OBS')

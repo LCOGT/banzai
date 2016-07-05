@@ -56,7 +56,8 @@ def stop_logging():
 def image_config_to_tags(image_config, group_by_keywords):
     tags = {'tags': {'site': image_config.site,
                      'instrument': image_config.instrument,
-                     'epoch': date_utils.epoch_date_to_string(image_config.epoch)}}
+                     'epoch': date_utils.epoch_date_to_string(image_config.epoch),
+                     'request_num': image_config.request_number}}
     if group_by_keywords is not None:
         for i, keyword in enumerate(group_by_keywords):
             tags['tags'][keyword] = getattr(image_config, keyword)

@@ -101,7 +101,21 @@ def parse_ra_dec(header):
         ra = coord.ra.deg
         dec = coord.dec.deg
     except ValueError:
-        ra, dec = np.nan, np.nan
+        # Fallback to CRVAL1 and CRVAL2
+        try:
+            coord = SkyCoord(header.get('CRVAl1'), header.get('CRVAL2'), unit=(units.degree, units.degree))
+            ra = coord.ra.deg
+            dec = coord.dec.deg
+        except ValueError:
+            # Fallback to Cat-RA and CAT-DEC
+            try:
+                coord = SkyCoord(header.get('CAT-RA'), header.get('CAT-DEC'), unit=(units.hourangle, units.degree))
+                ra = coord.ra.deg
+                dec = coord.dec.deg
+            except ValueError as e:
+                logger.error('Could not get initial pointing guess. {0}'.format(e),
+                             extra={'tags': {'filename': header.get('ORIGNAME')}})
+                ra, dec = np.nan, np.nan
     return ra, dec
 
 
