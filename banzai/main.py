@@ -10,17 +10,19 @@ October 2015
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
+import multiprocessing
+import os
+
+from kombu import Connection, Queue, Exchange
+from kombu.mixins import ConsumerMixin
 
 import banzai.images
-from banzai.utils import image_utils, date_utils
-from banzai import munge, crosstalk, gain, mosaic, pointing
 from banzai import bias, dark, flats, trim, photometry, astrometry, headers, qc
-from banzai import logs
 from banzai import dbs
-import os
-import multiprocessing
-from kombu.mixins import ConsumerMixin
-from kombu import Connection, Queue, Exchange
+from banzai import logs
+from banzai import munge, crosstalk, gain, mosaic
+from banzai.qc import pointing
+from banzai.utils import image_utils, date_utils
 
 logger = logs.get_logger(__name__)
 
@@ -227,7 +229,9 @@ def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False,
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
 
-    image_utils.save_images(pipeline_context, images, master_calibration=calibration_maker)
+    output_files = image_utils.save_images(pipeline_context, images,
+                                           master_calibration=calibration_maker)
+    return output_files
 
 
 def run_preview_pipeline():
@@ -334,8 +338,10 @@ class PreviewModeListener(ConsumerMixin):
                 # Increment the number of tries for this file
                 dbs.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
                 try:
-                    run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD'])
-                    dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
+                    output_files = run(stages_to_do, self.pipeline_context,
+                                       image_types=['EXPOSE', 'STANDARD'])
+                    if os.path.exists(output_files[0]):
+                        dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
                 except Exception as e:
                     logging_tags = {'tags': {'filename': os.path.basename(path)}}
                     logger.error("Could not produce preview frame. {0}. {1}".format(e, path),

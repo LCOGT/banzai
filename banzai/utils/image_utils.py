@@ -70,6 +70,7 @@ class MissingCatalogException(Exception):
 
 
 def save_images(pipeline_context, images, master_calibration=False):
+    output_files = []
     for image in images:
         output_directory = file_utils.make_output_directory(pipeline_context, image)
         if not master_calibration:
@@ -78,6 +79,7 @@ def save_images(pipeline_context, images, master_calibration=False):
 
         image_filename = os.path.basename(image.filename)
         filepath = os.path.join(output_directory, image_filename)
+        output_files.append(filepath)
         image.writeto(filepath, pipeline_context.fpack)
         if pipeline_context.fpack:
             image_filename += '.fz'
@@ -94,6 +96,7 @@ def save_images(pipeline_context, images, master_calibration=False):
                 logger.error("Could not post {0} to ingester.".format(filepath))
                 logger.error(e)
                 continue
+    return output_files
 
 
 def get_bpm(image, pipeline_context):
