@@ -19,8 +19,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from glob import glob
 from astropy.io import fits
 import requests
-from banzai.utils import file_utils
+from banzai.utils import file_utils, date_utils
 from banzai import logs
+
+import datetime
+import numpy as np
 
 
 # Define how to get to the database
@@ -67,7 +70,7 @@ class CalibrationImage(Base):
     filepath = Column(String(100))
     dayobs = Column(Date, index=True)
     ccdsum = Column(String(20))
-    filter_name = Column(String(6))
+    filter_name = Column(String(32))
     telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
 
 
@@ -291,7 +294,7 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
         # In principle we could just skip this, but this should be fast
         calibration_image = image_query[0]
 
-    calibration_image.dayobs = image_config.epoch
+    calibration_image.dayobs = date_utils.epoch_string_to_date(image_config.epoch)
     calibration_image.ccdsum = image_config.ccdsum
     calibration_image.filter_name = image_config.filter
     calibration_image.telescope_id = image_config.telescope_id
@@ -386,3 +389,39 @@ def get_schedulable_telescopes(site, db_address=_DEFAULT_DB):
     telescopes = db_session.query(Telescope).filter(query).all()
     db_session.close()
     return telescopes
+
+
+def get_master_calibration_image(image, calibration_type, group_by_keywords,
+                                 db_address=_DEFAULT_DB):
+    calibration_criteria = CalibrationImage.type == calibration_type.upper()
+    calibration_criteria &= CalibrationImage.telescope_id == image.telescope_id
+
+    for criterion in group_by_keywords:
+        if criterion == 'filter':
+            calibration_criteria &= CalibrationImage.filter_name == getattr(image, criterion)
+        else:
+            calibration_criteria &= getattr(CalibrationImage, criterion) == getattr(image, criterion)
+
+    # Only grab the last year. In principle we could go farther back, but this limits the number
+    # of files we get back. And if we are using calibrations that are more than a year old
+    # it is probably a bad idea anyway.
+    epoch_datetime = date_utils.epoch_string_to_date(image.epoch)
+
+    calibration_criteria &= CalibrationImage.dayobs < (epoch_datetime + datetime.timedelta(days=365))
+    calibration_criteria &= CalibrationImage.dayobs > (epoch_datetime - datetime.timedelta(days=365))
+
+    db_session = get_session(db_address=db_address)
+
+    calibration_images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
+
+    # Find the closest date
+    if len(calibration_images) == 0:
+        calibration_file = None
+    else:
+        date_deltas = np.abs(np.array([i.dayobs - epoch_datetime for i in calibration_images]))
+        closest_calibration_image = calibration_images[np.argmin(date_deltas)]
+        calibration_file = os.path.join(closest_calibration_image.filepath,
+                                        closest_calibration_image.filename)
+
+    db_session.close()
+    return calibration_file

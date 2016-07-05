@@ -139,29 +139,5 @@ class ApplyCalibration(Stage):
         pass
 
     def get_calibration_filename(self, image):
-        calibration_criteria = dbs.CalibrationImage.type == self.calibration_type.upper()
-        calibration_criteria &= dbs.CalibrationImage.telescope_id == image.telescope_id
-
-        for criterion in self.group_by_keywords:
-            if criterion == 'filter':
-                calibration_criteria &= dbs.CalibrationImage.filter_name == getattr(image, criterion)
-            else:
-                calibration_criteria &= getattr(dbs.CalibrationImage, criterion) == getattr(image, criterion)
-
-        db_session = dbs.get_session(db_address=self.pipeline_context.db_address)
-
-        calibration_query = db_session.query(dbs.CalibrationImage).filter(calibration_criteria)
-        epoch_datetime = date_utils.epoch_string_to_date(image.epoch)
-
-        find_closest = func.DATEDIFF(epoch_datetime, dbs.CalibrationImage.dayobs)
-        find_closest = func.ABS(find_closest)
-
-        calibration_query = calibration_query.order_by(find_closest.asc())
-        calibration_image = calibration_query.first()
-        if calibration_image is None:
-            calibration_file = None
-        else:
-            calibration_file = os.path.join(calibration_image.filepath, calibration_image.filename)
-
-        db_session.close()
-        return calibration_file
+        return dbs.get_master_calibration_image(image, self.calibration_type, self.group_by_keywords,
+                                                db_address=self.pipeline_context.db_address)
