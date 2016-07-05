@@ -8,6 +8,7 @@ import tempfile
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units
+import numpy as np
 
 __author__ = 'cmccully'
 
@@ -16,7 +17,7 @@ class WCSSolver(Stage):
     cmd = 'solve-field --crpix-center --no-verify --no-fits2fits --no-tweak ' \
           ' --radius 2.0 --ra {ra} --dec {dec} --guess-scale ' \
           '--scale-units arcsecperpix --scale-low {scale_low} --scale-high {scale_high} ' \
-          '--no-plots -N none --use-sextractor --no-remove-lines ' \
+          '--no-plots -N none --no-remove-lines ' \
           '--code-tolerance 0.003 --pixel-error 20 -d 1-200 ' \
           '--solved none --match none --rdls none --wcs {wcs_name} --corr none --overwrite ' \
           '-X X -Y Y -s FLUX --width {nx} --height {ny} {catalog_name}'
@@ -36,6 +37,12 @@ class WCSSolver(Stage):
             # Save the catalog to a temporary file
             filename = os.path.basename(image.filename)
             logs.add_tag(logging_tags, 'filename', filename)
+
+            # Skip the image if we don't have some kind of initial RA and Dec guess
+            if np.isnan(image.ra) or np.isnan(image.dec):
+                self.logger.error('Skipping WCS solution. No initial pointing guess from header.',
+                                  extra=logging_tags)
+                continue
 
             with tempfile.TemporaryDirectory() as tmpdirname:
                 catalog_name = os.path.join(tmpdirname, filename.replace('.fits', '.cat.fits'))
