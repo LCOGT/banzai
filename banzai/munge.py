@@ -58,9 +58,9 @@ class DataMunger(Stage):
 
                 for keyword, value in keywords_to_update:
                     _add_header_keyword(keyword, value, image)
-                if telescope.instrument == 'fl08':
-                    if image.header['SATURATE'] == 0:
-                        image.header['SATURATE'] = 47500.0
+
+                if image.header['SATURATE'] == 0:
+                    image.header['SATURATE'] = 47500.0
 
             # 1m SBIGS
             elif '1m0' in telescope.camera_type:
