@@ -340,10 +340,14 @@ class PreviewModeListener(ConsumerMixin):
                 try:
                     output_files = run(stages_to_do, self.pipeline_context,
                                        image_types=['EXPOSE', 'STANDARD'])
-                    if os.path.exists(output_files[0]):
+                    if len(output_files) > 0:
                         dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
+                    else:
+                        logging_tags = {'tags': {'filename': os.path.basename(path)}}
+                        logger.error("Could not produce preview image. {1}".format(path),
+                                     extra=logging_tags)
                 except Exception as e:
                     logging_tags = {'tags': {'filename': os.path.basename(path)}}
-                    logger.error("Could not produce preview frame. {0}. {1}".format(e, path),
+                    logger.error("Exception producing preview frame. {0}. {1}".format(e, path),
                                  extra=logging_tags)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
