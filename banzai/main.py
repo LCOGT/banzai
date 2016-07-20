@@ -344,7 +344,7 @@ class PreviewModeListener(ConsumerMixin):
                         dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
                     else:
                         logging_tags = {'tags': {'filename': os.path.basename(path)}}
-                        logger.error("Could not produce preview image. {1}".format(path),
+                        logger.error("Could not produce preview image. {0}".format(path),
                                      extra=logging_tags)
                 except Exception as e:
                     logging_tags = {'tags': {'filename': os.path.basename(path)}}
