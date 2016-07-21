@@ -5,6 +5,20 @@ be removed in affiliated packages.
 The changes below indicate what file the change was made in so that these can
 be copied over manually if desired.
 
+1.1.3 (unreleased)
+------------------
+
+- Removed Python 2.6 tests from travis.yml file as astropy 1.2 no longer supports Python 2.6 [#183]
+
+1.1.2 (2016-07-02)
+------------------
+
+- Updated .travis.yml to show usage of SETUP_XVFB ci-helpers option. [#177]
+
+- Updated astropy-helpers to v1.2. [#180]
+
+- Fixed import of ``configparser`` in ``docs/conf.py``. [#180]
+
 1.1.1 (2016-06-03)
 ------------------
 

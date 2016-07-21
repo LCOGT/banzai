@@ -19,7 +19,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from glob import glob
 from astropy.io import fits
 import requests
-from banzai.utils import file_utils
+from banzai.utils import file_utils, date_utils
+from banzai import logs
+
+import datetime
+import numpy as np
 
 
 # Define how to get to the database
@@ -27,6 +31,8 @@ from banzai.utils import file_utils
 _DEFAULT_DB = 'mysql://cmccully:password@localhost/test'
 
 Base = declarative_base()
+
+logger = logs.get_logger(__name__)
 
 
 def get_session(db_address=_DEFAULT_DB):
@@ -43,7 +49,7 @@ def get_session(db_address=_DEFAULT_DB):
 
     # We don't use autoflush typically. I have run into issues where SQLAlchemy would try to flush
     # incomplete records causing a crash. None of the queries here are large, so it should be ok.
-    db_session = sessionmaker(bind=engine, autoflush=False)
+    db_session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     session = db_session()
 
     return session
@@ -64,7 +70,7 @@ class CalibrationImage(Base):
     filepath = Column(String(100))
     dayobs = Column(Date, index=True)
     ccdsum = Column(String(20))
-    filter_name = Column(String(6))
+    filter_name = Column(String(32))
     telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
 
 
@@ -109,7 +115,9 @@ class PreviewImage(Base):
     __tablename__ = 'previewimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String(50), index=True)
-    checksum = Column(CHAR(32), index=True)
+    checksum = Column(CHAR(32), index=True, default='0'*32)
+    success = Column(Boolean, default=False)
+    tries = Column(Integer, default=0)
 
 
 def create_db(bpm_directory, db_address=_DEFAULT_DB,
@@ -286,7 +294,7 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
         # In principle we could just skip this, but this should be fast
         calibration_image = image_query[0]
 
-    calibration_image.dayobs = image_config.epoch
+    calibration_image.dayobs = date_utils.epoch_string_to_date(image_config.epoch)
     calibration_image.ccdsum = image_config.ccdsum
     calibration_image.filter_name = image_config.filter
     calibration_image.telescope_id = image_config.telescope_id
@@ -299,31 +307,69 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
     db_session.close()
 
 
-def preview_file_already_processed(path, db_address=_DEFAULT_DB):
+def need_to_make_preview(path, db_address=_DEFAULT_DB, max_tries=5):
+    # Get the preview image in db. If it doesn't exist add it.
+    preview_image = get_preview_image(path, db_address=db_address)
+    # If there was an issue with the database return none and move on and return false
+    if preview_image is None:
+        need_to_process = False
+    else:
+        try:
+            # As long as the preview file exists, check the md5.
+            checksum = file_utils.get_md5(path)
+            if preview_image.checksum == checksum and (preview_image.tries >= max_tries or
+                                                       preview_image.success):
+                need_to_process = False
+            else:
+                need_to_process = True
+                preview_image.checksum = checksum
+                commit_preview_image(preview_image, db_address)
+        except IOError as e:
+            logger.error('{0}. {1}'.format(e, path), extra={'tags': {'filename': os.path.basename(path)}})
+            need_to_process = False
+    return need_to_process
+
+
+def increment_preview_try_number(path, db_address=_DEFAULT_DB):
+    preview_image = get_preview_image(path, db_address=db_address)
+    # Otherwise increment the number of tries
+    preview_image.tries += 1
+    commit_preview_image(preview_image, db_address=db_address)
+
+
+def get_preview_image(path, db_address=_DEFAULT_DB):
+    filename = os.path.basename(path)
     db_session = get_session(db_address=db_address)
-    query = db_session.query(PreviewImage)
-    criteria = PreviewImage.filename == os.path.basename(path)
-    criteria &= PreviewImage.checksum == file_utils.get_md5(path)
-    query = query.filter(criteria)
-    already_processed = len(query.all()) > 0
+    try:
+        query = db_session.query(PreviewImage)
+        criteria = PreviewImage.filename == filename
+        query = query.filter(criteria)
+        preview_image = query.first()
+        if preview_image is None:
+            preview_image = PreviewImage(filename=filename)
+            db_session.add(preview_image)
+            db_session.commit()
+    except Exception as e:
+        logging_tags = {'tags': {'filename': filename}}
+        logger.error('Error processing preview image. {0}. {1}'.format(e, path), extra=logging_tags)
+        preview_image = None
+
     db_session.close()
-    return already_processed
+    return preview_image
+
+
+def commit_preview_image(preview_image, db_address=_DEFAULT_DB):
+    db_session = get_session(db_address=db_address)
+    db_session.add(preview_image)
+    db_session.commit()
+    db_session.close()
 
 
 def set_preview_file_as_processed(path, db_address=_DEFAULT_DB):
-    filename = os.path.basename(path)
-    checksum = file_utils.get_md5(path)
-
-    db_session = get_session(db_address=db_address)
-    query = db_session.query(PreviewImage)
-    criteria = PreviewImage.filename == filename
-    criteria &= PreviewImage.checksum == checksum
-    query = query.filter(criteria)
-    if len(query.all()) == 0:
-        preview_image = PreviewImage(filename=filename, checksum=checksum)
-        db_session.add(preview_image)
-        db_session.commit()
-    db_session.close()
+    preview_image = get_preview_image(path, db_address=db_address)
+    if preview_image is not None:
+        preview_image.success = True
+        commit_preview_image(preview_image, db_address=db_address)
 
 
 def get_timezone(site, db_address=_DEFAULT_DB):
@@ -343,3 +389,39 @@ def get_schedulable_telescopes(site, db_address=_DEFAULT_DB):
     telescopes = db_session.query(Telescope).filter(query).all()
     db_session.close()
     return telescopes
+
+
+def get_master_calibration_image(image, calibration_type, group_by_keywords,
+                                 db_address=_DEFAULT_DB):
+    calibration_criteria = CalibrationImage.type == calibration_type.upper()
+    calibration_criteria &= CalibrationImage.telescope_id == image.telescope_id
+
+    for criterion in group_by_keywords:
+        if criterion == 'filter':
+            calibration_criteria &= CalibrationImage.filter_name == getattr(image, criterion)
+        else:
+            calibration_criteria &= getattr(CalibrationImage, criterion) == getattr(image, criterion)
+
+    # Only grab the last year. In principle we could go farther back, but this limits the number
+    # of files we get back. And if we are using calibrations that are more than a year old
+    # it is probably a bad idea anyway.
+    epoch_datetime = date_utils.epoch_string_to_date(image.epoch)
+
+    calibration_criteria &= CalibrationImage.dayobs < (epoch_datetime + datetime.timedelta(days=365))
+    calibration_criteria &= CalibrationImage.dayobs > (epoch_datetime - datetime.timedelta(days=365))
+
+    db_session = get_session(db_address=db_address)
+
+    calibration_images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
+
+    # Find the closest date
+    if len(calibration_images) == 0:
+        calibration_file = None
+    else:
+        date_deltas = np.abs(np.array([i.dayobs - epoch_datetime for i in calibration_images]))
+        closest_calibration_image = calibration_images[np.argmin(date_deltas)]
+        calibration_file = os.path.join(closest_calibration_image.filepath,
+                                        closest_calibration_image.filename)
+
+    db_session.close()
+    return calibration_file

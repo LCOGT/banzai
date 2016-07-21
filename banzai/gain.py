@@ -31,7 +31,7 @@ class GainNormalizer(Stage):
             else:
                 image.data *= image.gain
                 image.header['SATURATE'] *= image.gain
-                image.header['MAXLIN'] *= 1.0
+                image.header['MAXLIN'] *= image.gain
 
             image.gain = 1.0
             image.header['GAIN'] = 1.0

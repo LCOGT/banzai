@@ -27,6 +27,8 @@ class Image(object):
         self.header = header
         self.bpm = bpm
 
+        self.request_number = header.get('REQNUM')
+
         self.site = header.get('SITEID')
         self.instrument = header.get('INSTRUME')
         self.epoch = header.get('DAY-OBS')
@@ -110,8 +112,13 @@ def read_images(image_list, pipeline_context):
         try:
             image = Image(pipeline_context, filename=filename)
             if image.bpm is None:
-                image.bpm = image_utils.get_bpm(image, pipeline_context).astype(np.uint8)
-            images.append(image)
+                bpm = image_utils.get_bpm(image, pipeline_context)
+                if bpm is None:
+                    logger.error('No BPM file exists for this image.',
+                                 extra={'tags': {'filename': image.filename}})
+                else:
+                    image.bpm = bpm
+                    images.append(image)
         except Exception as e:
             logger.error('Error loading {0}'.format(filename))
             logger.error(e)

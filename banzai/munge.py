@@ -15,6 +15,7 @@ class DataMunger(Stage):
         return None
 
     def do_stage(self, images):
+        images_to_remove = []
         for image in images:
             telescope = dbs.get_telescope(image.telescope_id,
                                           db_address=self.pipeline_context.db_address)
@@ -57,6 +58,10 @@ class DataMunger(Stage):
 
                 for keyword, value in keywords_to_update:
                     _add_header_keyword(keyword, value, image)
+
+                if image.header['SATURATE'] == 0:
+                    image.header['SATURATE'] = 47500.0
+
             # 1m SBIGS
             elif '1m0' in telescope.camera_type:
                 image.header['SATURATE'] = (46000.0, '[ADU] Saturation level used')
@@ -74,13 +79,17 @@ class DataMunger(Stage):
             # Throw an exception if the saturate value is set to zero
             try:
                 if float(image.header['SATURATE']) == 0.0:
-                    images.remove(image)
+                    images_to_remove.append(image)
                     raise ValueError('SATURATE keyword cannot be zero: {filename}'.format(filename=os.path.basename(image.filename)))
             except ValueError:
                 continue
 
             bpm_slices = array_utils.array_indices_to_slices(image.bpm)
             image.bpm[image.data[bpm_slices] >= float(image.header['SATURATE'])] = 2
+
+        for image in images_to_remove:
+            images.remove(image)
+
         return images
 
 

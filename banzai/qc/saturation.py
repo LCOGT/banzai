@@ -18,6 +18,7 @@ class SaturationTest(Stage):
         return None
 
     def do_stage(self, images):
+        images_to_remove = []
         for image in images:
             saturation_level = float(image.header['SATURATE'])
             saturated_pixels = image.data >= saturation_level
@@ -30,8 +31,11 @@ class SaturationTest(Stage):
             self.logger.info('Measured saturation fraction.', extra=logging_tags)
             if saturation_fraction >= self.threshold:
                 self.logger.error('SATFRAC exceeds threshold.', extra=logging_tags)
-                images.remove(image)
+                images_to_remove.append(image)
             else:
                 image.header['SATFRAC'] = (saturation_fraction, "Fraction of Pixels that are Saturated")
+
+        for image in images_to_remove:
+            images.remove(image)
 
         return images

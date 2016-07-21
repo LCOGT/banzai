@@ -70,6 +70,7 @@ class MissingCatalogException(Exception):
 
 
 def save_images(pipeline_context, images, master_calibration=False):
+    output_files = []
     for image in images:
         output_directory = file_utils.make_output_directory(pipeline_context, image)
         if not master_calibration:
@@ -78,6 +79,7 @@ def save_images(pipeline_context, images, master_calibration=False):
 
         image_filename = os.path.basename(image.filename)
         filepath = os.path.join(output_directory, image_filename)
+        output_files.append(filepath)
         image.writeto(filepath, pipeline_context.fpack)
         if pipeline_context.fpack:
             image_filename += '.fz'
@@ -94,16 +96,17 @@ def save_images(pipeline_context, images, master_calibration=False):
                 logger.error("Could not post {0} to ingester.".format(filepath))
                 logger.error(e)
                 continue
+    return output_files
 
 
 def get_bpm(image, pipeline_context):
     bpm_filename = dbs.get_bpm(image.telescope_id, image.ccdsum,
                                db_address=pipeline_context.db_address)
     if bpm_filename is None:
-        bpm_data = np.zeros((image.ny, image.nx), dtype=np.uint8)
+        bpm = None
         image.header['L1IDMASK'] = ('', 'Id. of mask file used')
     else:
-        bpm_data = fits.getdata(bpm_filename)
+        bpm = np.array(fits.getdata(bpm_filename), dtype=np.uint8)
         image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
 
-    return np.array(bpm_data, dtype=np.uint8)
+    return bpm
