@@ -3,6 +3,7 @@ from banzai.utils import array_utils
 
 
 class BPMUpdater(Stage):
+    @property
     def group_by_keywords(self):
         return None
 
