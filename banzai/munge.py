@@ -86,6 +86,8 @@ class DataMunger(Stage):
                 for keyword, value in keywords_to_update:
                     _add_header_keyword(keyword, value, image)
 
+                if image.header['CCDSUM'] == '2 2':
+                    image.header['TRIMSEC'] = ('[1:2048,1:2048]', '[binned pixel] Section of useful data')
                 if image.header['SATURATE'] == 0:
                     image.header['SATURATE'] = 47500.0
 
