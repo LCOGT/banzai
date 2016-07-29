@@ -22,37 +22,64 @@ class DataMunger(Stage):
             # TODO: Currently we only support 1x1 Sinistro frames and only support 1x1 frames.
             # TODO: 2x2 frames cannot use hard coded values because we read out more pixels.
             if 'sinistro' in telescope.camera_type.lower():
-                keywords_to_update = [('BIASSEC1', ('[1:2048,2055:2080]',
-                                                    '[binned pixel] Section of overscan data for Q1')),
-                                      ('BIASSEC2', ('[1:2048,2055:2080]',
-                                                    '[binned pixel] Section of overscan data for  Q2')),
-                                      ('BIASSEC3', ('[1:2048,2055:2080]',
-                                                    '[binned pixel] Section of overscan data for Q3')),
-                                      ('BIASSEC4', ('[1:2048,2055:2080]',
-                                                    '[binned pixel] Section of overscan data for Q4')),
-                                      ('DATASEC1', ('[1:2048,1:2048]',
-                                                    '[binned pixel] Data section for  Q1')),
-                                      ('DATASEC2', ('[1:2048,1:2048]',
-                                                    '[binned pixel] Data section for Q2'))]
+                if image.header['CCDSUM'] == '1 1':
+                    keywords_to_update = [('BIASSEC1', ('[1:2048,2055:2080]',
+                                                        '[binned pixel] Section of overscan data for Q1')),
+                                          ('BIASSEC2', ('[1:2048,2055:2080]',
+                                                        '[binned pixel] Section of overscan data for  Q2')),
+                                          ('BIASSEC3', ('[1:2048,2055:2080]',
+                                                        '[binned pixel] Section of overscan data for Q3')),
+                                          ('BIASSEC4', ('[1:2048,2055:2080]',
+                                                        '[binned pixel] Section of overscan data for Q4')),
+                                          ('DATASEC1', ('[1:2048,1:2048]',
+                                                        '[binned pixel] Data section for  Q1')),
+                                          ('DATASEC2', ('[1:2048,1:2048]',
+                                                        '[binned pixel] Data section for Q2'))]
 
-                if image.data.shape[1] > 2048:
-                    keywords_to_update.append(('DATASEC3',  ('[1:2048,2:2049]',
-                                               '[binned pixel] Data section for Q3')))
-                    keywords_to_update.append(('DATASEC4', ('[1:2048,2:2049]',
-                                               '[binned pixel] Data section for Q4')))
-                else:
-                    keywords_to_update.append(('DATASEC3', ('[1:2048,1:2048]',
-                                                            '[binned pixel] Data section for Q3')))
-                    keywords_to_update.append(('DATASEC4', ('[1:2048,1:2048]',
-                                                            '[binned pixel] Data section for Q4')))
-                keywords_to_update.append(('DETSEC1', ('[1:2048,1:2048]',
-                                                       '[binned pixel] Detector section for Q1')))
-                keywords_to_update.append(('DETSEC2', ('[4096:2049,1:2048]',
-                                                       '[binned pixel] Detector section for Q2')))
-                keywords_to_update.append(('DETSEC3', ('[4096:2049,4096:2049]',
-                                                       '[binned pixel] Detector section for Q3')))
-                keywords_to_update.append(('DETSEC4', ('[1:2048,4096:2049]',
-                                                       '[binned pixel] Detector section for Q4')))
+                    if image.data.shape[1] > 2048:
+                        keywords_to_update.append(('DATASEC3',  ('[1:2048,2:2049]',
+                                                   '[binned pixel] Data section for Q3')))
+                        keywords_to_update.append(('DATASEC4', ('[1:2048,2:2049]',
+                                                   '[binned pixel] Data section for Q4')))
+                    else:
+                        keywords_to_update.append(('DATASEC3', ('[1:2048,1:2048]',
+                                                                '[binned pixel] Data section for Q3')))
+                        keywords_to_update.append(('DATASEC4', ('[1:2048,1:2048]',
+                                                                '[binned pixel] Data section for Q4')))
+                    keywords_to_update.append(('DETSEC1', ('[1:2048,1:2048]',
+                                                           '[binned pixel] Detector section for Q1')))
+                    keywords_to_update.append(('DETSEC2', ('[4096:2049,1:2048]',
+                                                           '[binned pixel] Detector section for Q2')))
+                    keywords_to_update.append(('DETSEC3', ('[4096:2049,4096:2049]',
+                                                           '[binned pixel] Detector section for Q3')))
+                    keywords_to_update.append(('DETSEC4', ('[1:2048,4096:2049]',
+                                                           '[binned pixel] Detector section for Q4')))
+                elif image.header['CCDSUM'] == '2 2':
+                    keywords_to_update = [('BIASSEC1', ('[1:1024,1025:1040]',
+                                                        '[binned pixel] Section of overscan data for Q1')),
+                                          ('BIASSEC2', ('[1:1024,1025:1040]',
+                                                        '[binned pixel] Section of overscan data for  Q2')),
+                                          ('BIASSEC3', ('[1:1024,1025:1040]',
+                                                        '[binned pixel] Section of overscan data for Q3')),
+                                          ('BIASSEC4', ('[1:1024,1025:1040]',
+                                                        '[binned pixel] Section of overscan data for Q4')),
+                                          ('DATASEC1', ('[1:1024,1:1024]',
+                                                        '[binned pixel] Data section for  Q1')),
+                                          ('DATASEC2', ('[1:1024,1:1024]',
+                                                        '[binned pixel] Data section for Q2'))]
+
+                    keywords_to_update.append(('DATASEC3', ('[1:1024,1:1024]',
+                                                                '[binned pixel] Data section for Q3')))
+                    keywords_to_update.append(('DATASEC4', ('[1:1024,1:1024]',
+                                                                '[binned pixel] Data section for Q4')))
+                    keywords_to_update.append(('DETSEC1', ('[1:1024,1:1024]',
+                                                           '[binned pixel] Detector section for Q1')))
+                    keywords_to_update.append(('DETSEC2', ('[2048:1025,1:1024]',
+                                                           '[binned pixel] Detector section for Q2')))
+                    keywords_to_update.append(('DETSEC3', ('[2048:1025,2048:1025]',
+                                                           '[binned pixel] Detector section for Q3')))
+                    keywords_to_update.append(('DETSEC4', ('[1:1024,2048:1025]',
+                                                           '[binned pixel] Detector section for Q4')))
 
                 set_crosstalk_header_keywords(image)
 
