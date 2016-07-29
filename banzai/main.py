@@ -20,7 +20,7 @@ import banzai.images
 from banzai import bias, dark, flats, trim, photometry, astrometry, headers, qc
 from banzai import dbs
 from banzai import logs
-from banzai import munge, crosstalk, gain, mosaic
+from banzai import munge, crosstalk, gain, mosaic, bpm
 from banzai.qc import pointing
 from banzai.utils import image_utils, date_utils
 
@@ -44,7 +44,7 @@ class PipelineContext(object):
 def make_master_bias(pipeline_context):
     stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                     bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    trim.Trimmer, bias.BiasMaker, headers.HeaderUpdater]
+                    bpm.BPMUpdater, trim.Trimmer, bias.BiasMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['BIAS'], calibration_maker=True,
         log_message='Making Master BIAS')
 
@@ -59,7 +59,7 @@ def make_master_bias_console():
 def make_master_dark(pipeline_context):
     stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                     bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    trim.Trimmer, bias.BiasSubtractor, dark.DarkMaker,
+                    bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkMaker,
                     headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['DARK'], calibration_maker=True,
         log_message='Making Master Dark')
@@ -75,7 +75,7 @@ def make_master_dark_console():
 def make_master_flat(pipeline_context):
     stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                     bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                    bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
                     flats.FlatMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['SKYFLAT'], calibration_maker=True,
         log_message='Making Master Flat')
@@ -91,7 +91,7 @@ def make_master_flat_console():
 def reduce_science_frames(pipeline_context=None):
     stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                     bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                    bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
                     flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
                     headers.HeaderUpdater, pointing.PointingTest]
 
@@ -326,9 +326,9 @@ class PreviewModeListener(ConsumerMixin):
                                         max_tries=self.pipeline_context.max_preview_tries):
                 stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                                 bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                                trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
-                                flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
-                                headers.HeaderUpdater, pointing.PointingTest]
+                                bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
+                                dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
+                                astrometry.WCSSolver, headers.HeaderUpdater, pointing.PointingTest]
 
                 logging_tags = {'tags': {'filename': os.path.basename(path)}}
                 logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)
