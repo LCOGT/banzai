@@ -84,9 +84,6 @@ class DataMunger(Stage):
             except ValueError:
                 continue
 
-            bpm_slices = array_utils.array_indices_to_slices(image.bpm)
-            image.bpm[image.data[bpm_slices] >= float(image.header['SATURATE'])] = 2
-
         for image in images_to_remove:
             images.remove(image)
 
