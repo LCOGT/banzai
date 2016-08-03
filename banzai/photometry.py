@@ -54,6 +54,10 @@ class SourceDetector(Stage):
                 # Convert the detections into a table
                 sources = Table(sources)
 
+                # We remove anything with a detection flag >= 8
+                # This includes memory overflows and objects that are too close the edge
+                sources = sources[sources['flag'] < 8]
+
                 sources = array_utils.prune_nans_from_table(sources)
 
                 # Calculate the ellipticity
@@ -79,6 +83,14 @@ class SourceDetector(Stage):
                 sources['flux'] = flux
                 sources['fluxerr'] = fluxerr
                 sources['flag'] |= flag
+
+                # Do circular aperture photometry for diameters of 1" to 6"
+                for diameter in [1, 2, 3, 4, 5, 6]:
+                    flux, fluxerr, flag = sep.sum_circle(data, sources['x'], sources['y'],
+                                                         diameter / 2.0, gain=1.0, err=error)
+                    sources['fluxaper{0}'.format(diameter)] = flux
+                    sources['fluxerr{0}'.format(diameter)] = fluxerr
+                    sources['flag'] |= flag
 
                 # Calculate the FWHMs of the stars:
                 fwhm = 2.0 * (np.log(2) * (sources['a'] ** 2.0 + sources['b'] ** 2.0)) ** 0.5
@@ -127,7 +139,10 @@ class SourceDetector(Stage):
                 sources['theta'] = np.degrees(sources['theta'])
 
                 image.catalog = sources['x', 'y', 'xwin', 'ywin', 'xpeak', 'ypeak',
-                                        'flux', 'fluxerr', 'background', 'fwhm',
+                                        'flux', 'fluxerr', 'peak', 'fluxaper1', 'fluxerr1',
+                                        'fluxaper2', 'fluxerr2', 'fluxaper3', 'fluxerr3',
+                                        'fluxaper4', 'fluxerr4', 'fluxaper5', 'fluxerr5',
+                                        'fluxaper6', 'fluxerr6', 'background', 'fwhm',
                                         'a', 'b', 'theta', 'kronrad', 'ellipticity',
                                         'fluxrad25', 'fluxrad50', 'fluxrad75',
                                         'x2', 'y2', 'xy', 'flag']
@@ -148,7 +163,15 @@ class SourceDetector(Stage):
                 image.catalog['flux'].unit = 'counts'
                 image.catalog['flux'].description = 'Flux within a Kron-like elliptical aperture'
                 image.catalog['fluxerr'].unit = 'counts'
-                image.catalog['fluxerr'].description = 'Erronr on the flux within a Kron-like elliptical aperture'
+                image.catalog['fluxerr'].description = 'Error on the flux within a Kron-like elliptical aperture'
+                image.catalog['peak'].unit = 'counts'
+                image.catalog['peak'].description = 'Peak flux (flux at xpeak, ypeak)'
+                for diameter in [1, 2, 3, 4, 5, 6]:
+                    image.catalog['fluxaper{0}'.format(diameter)].unit = 'counts'
+                    image.catalog['fluxaper{0}'.format(diameter)].description = 'Flux from fixed circular aperture: {0}" diameter'.format(diameter)
+                    image.catalog['fluxerr{0}'.format(diameter)].unit = 'counts'
+                    image.catalog['fluxerr{0}'.format(diameter)].description = 'Error on Flux from fixed circular aperture: {0}" diameter'.format(diameter)
+
                 image.catalog['background'].unit = 'counts'
                 image.catalog['background'].description = 'Average background value in the aperture'
                 image.catalog['fwhm'].unit = 'pixel'
