@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 from astropy.table import Table
-from banzai.utils import stats
+from banzai.utils import stats, array_utils
 
 from banzai.stages import Stage
 from banzai import logs
@@ -53,6 +53,8 @@ class SourceDetector(Stage):
 
                 # Convert the detections into a table
                 sources = Table(sources)
+
+                sources = array_utils.prune_nans_from_table(sources)
 
                 # Calculate the ellipticity
                 sources['ellipticity'] = 1.0 - (sources['b'] / sources['a'])
