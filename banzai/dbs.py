@@ -241,7 +241,6 @@ def populate_bpm_table(directory, db_address=_DEFAULT_DB):
         telescope = db_session.query(Telescope).filter(telescope_query).first()
 
         if telescope is not None:
-
             db_session.add(BadPixelMask(telescope_id=telescope.id, filepath=os.path.abspath(directory),
                                         filename=os.path.basename(bpm_filename), ccdsum=ccdsum))
 
