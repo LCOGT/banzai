@@ -167,7 +167,7 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
                         cameras.append({'site': site['code'],
                                         'instrument': sci_cam['code'],
                                         'camera_type': sci_cam['camera_type']['code'],
-                                        'schedulable': ins['schedulable']})
+                                        'schedulable': ins['state'] == 'schedulable'})
     return sites, cameras
 
 
