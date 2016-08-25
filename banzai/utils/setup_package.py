@@ -13,23 +13,25 @@ CODELINES = r"""
 import sys
 import os
 from distutils.ccompiler import new_compiler
+from distutils.sysconfig import customize_compiler
 ccompiler = new_compiler()
+customize_compiler(ccompiler)
 ccompiler.add_library('gomp')
 has_omp_functions = ccompiler.has_function('omp_get_num_threads')
 with open('openmp_check.c', 'w') as f:
     f.write('#include<stdio.h>\n')
-    f.write('main()\n')
+    f.write('int main()\n')
     f.write('{\n')
-    f.write('printf("Hello World");')
+    f.write('printf("Hello World");\n')
     f.write('}')
 try:
-    import pdb; pdb.set_trace()
     ccompiler.compile(['openmp_check.c'], extra_postargs=['-fopenmp'])
     fopenmp_flag_works = True
 except:
     fopenmp_flag_works = False
 os.remove('openmp_check.c')
 if os.path.exists('openmp_check.o'):
+    fopenmp_flag_works = True
     os.remove('openmp_check.o')
 sys.exit(int(has_omp_functions & fopenmp_flag_works))
 """

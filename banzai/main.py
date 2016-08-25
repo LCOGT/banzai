@@ -20,7 +20,7 @@ import banzai.images
 from banzai import bias, dark, flats, trim, photometry, astrometry, headers, qc
 from banzai import dbs
 from banzai import logs
-from banzai import munge, crosstalk, gain, mosaic
+from banzai import munge, crosstalk, gain, mosaic, bpm
 from banzai.qc import pointing
 from banzai.utils import image_utils, date_utils
 
@@ -41,60 +41,63 @@ class PipelineContext(object):
         self.max_preview_tries = args.max_preview_tries
 
 
+def run_end_of_night_from_console(scripts_to_run):
+    pipeline_context = parse_end_of_night_command_line_arguments()
+    logs.start_logging(log_level=pipeline_context.log_level)
+    for script in scripts_to_run:
+        script(pipeline_context)
+    logs.stop_logging()
+
+
 def make_master_bias(pipeline_context):
     stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                     bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    trim.Trimmer, bias.BiasMaker, headers.HeaderUpdater]
+                    bpm.BPMUpdater, trim.Trimmer, bias.BiasMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['BIAS'], calibration_maker=True,
         log_message='Making Master BIAS')
 
 
 def make_master_bias_console():
-    pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
-    make_master_bias(pipeline_context)
-    logs.stop_logging()
+    run_end_of_night_from_console([make_master_bias])
 
 
 def make_master_dark(pipeline_context):
     stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                     bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    trim.Trimmer, bias.BiasSubtractor, dark.DarkMaker,
+                    bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkMaker,
                     headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['DARK'], calibration_maker=True,
         log_message='Making Master Dark')
 
 
 def make_master_dark_console():
-    pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
-    make_master_dark(pipeline_context)
-    logs.stop_logging()
+    run_end_of_night_from_console([make_master_dark])
 
 
 def make_master_flat(pipeline_context):
     stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                     bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                    bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
                     flats.FlatMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['SKYFLAT'], calibration_maker=True,
         log_message='Making Master Flat')
 
 
 def make_master_flat_console():
-    pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
-    make_master_flat(pipeline_context)
-    logs.stop_logging()
+    run_end_of_night_from_console([make_master_flat])
 
 
-def reduce_science_frames(pipeline_context=None):
+def reduce_science_frames(pipeline_context):
     stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                     bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                    bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
                     flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
                     headers.HeaderUpdater, pointing.PointingTest]
 
+    reduce_frames_one_by_one(stages_to_do, pipeline_context)
+
+
+def reduce_frames_one_by_one(stages_to_do, pipeline_context):
     image_list = image_utils.make_image_list(pipeline_context)
     original_filename = pipeline_context.filename
     for image in image_list:
@@ -108,21 +111,23 @@ def reduce_science_frames(pipeline_context=None):
 
 
 def reduce_science_frames_console():
-    pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
-    reduce_science_frames(pipeline_context)
-    logs.stop_logging()
+    run_end_of_night_from_console([reduce_science_frames])
+
+
+def preprocess_sinistro_frames(pipeline_context):
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
+                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator]
+    reduce_frames_one_by_one(stages_to_do, pipeline_context)
+
+
+def preprocess_sinistro_frames_console():
+    run_end_of_night_from_console([preprocess_sinistro_frames])
 
 
 def create_master_calibrations():
-    pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
-    make_master_bias()
-    make_master_dark()
-    make_master_flat()
-    logs.stop_logging()
+    run_end_of_night_from_console([make_master_bias, make_master_dark, make_master_flat])
 
-    
+
 def reduce_night():
     parser = argparse.ArgumentParser(
         description='Reduce all the data from a site at the end of a night.')
@@ -326,9 +331,9 @@ class PreviewModeListener(ConsumerMixin):
                                         max_tries=self.pipeline_context.max_preview_tries):
                 stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                                 bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                                trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
-                                flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
-                                headers.HeaderUpdater, pointing.PointingTest]
+                                bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
+                                dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
+                                astrometry.WCSSolver, headers.HeaderUpdater, pointing.PointingTest]
 
                 logging_tags = {'tags': {'filename': os.path.basename(path)}}
                 logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)
@@ -340,10 +345,14 @@ class PreviewModeListener(ConsumerMixin):
                 try:
                     output_files = run(stages_to_do, self.pipeline_context,
                                        image_types=['EXPOSE', 'STANDARD'])
-                    if os.path.exists(output_files[0]):
+                    if len(output_files) > 0:
                         dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
+                    else:
+                        logging_tags = {'tags': {'filename': os.path.basename(path)}}
+                        logger.error("Could not produce preview image. {0}".format(path),
+                                     extra=logging_tags)
                 except Exception as e:
                     logging_tags = {'tags': {'filename': os.path.basename(path)}}
-                    logger.error("Could not produce preview frame. {0}. {1}".format(e, path),
+                    logger.error("Exception producing preview frame. {0}. {1}".format(e, path),
                                  extra=logging_tags)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)

@@ -90,9 +90,21 @@ def table_to_fits(table):
     :param table: astropy table
     :return: fits BinTableHDU
     """
-    columns = [fits.Column(name=col.upper(), format=fits_formats(table[col].dtype),
+    columns = [fits.Column(name=col.upper(), unit=str(table[col].unit),
+                           format=fits_formats(table[col].dtype),
                            array=table[col]) for col in table.colnames]
-    return fits.BinTableHDU.from_columns(columns)
+    hdu = fits.BinTableHDU.from_columns(columns)
+
+    # Put in the description keywords
+    for k in hdu.header.keys():
+        if 'TTYPE' in k:
+            column_name = hdu.header[k].lower()
+            description = table[column_name].description
+            hdu.header[k] = (column_name.upper(), description)
+            # Get the value of n in TTYPEn
+            n = k[5:]
+            hdu.header['TCOMM{0}'.format(n)] = description
+    return hdu
 
 
 def parse_ra_dec(header):
