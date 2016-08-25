@@ -41,6 +41,14 @@ class PipelineContext(object):
         self.max_preview_tries = args.max_preview_tries
 
 
+def run_end_of_night_from_console(scripts_to_run):
+    pipeline_context = parse_end_of_night_command_line_arguments()
+    logs.start_logging(log_level=pipeline_context.log_level)
+    for script in scripts_to_run:
+        script(pipeline_context)
+    logs.stop_logging()
+
+
 def make_master_bias(pipeline_context):
     stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                     bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
@@ -50,10 +58,7 @@ def make_master_bias(pipeline_context):
 
 
 def make_master_bias_console():
-    pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
-    make_master_bias(pipeline_context)
-    logs.stop_logging()
+    run_end_of_night_from_console([make_master_bias])
 
 
 def make_master_dark(pipeline_context):
@@ -66,10 +71,7 @@ def make_master_dark(pipeline_context):
 
 
 def make_master_dark_console():
-    pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
-    make_master_dark(pipeline_context)
-    logs.stop_logging()
+    run_end_of_night_from_console([make_master_dark])
 
 
 def make_master_flat(pipeline_context):
@@ -82,19 +84,20 @@ def make_master_flat(pipeline_context):
 
 
 def make_master_flat_console():
-    pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
-    make_master_flat(pipeline_context)
-    logs.stop_logging()
+    run_end_of_night_from_console([make_master_flat])
 
 
-def reduce_science_frames(pipeline_context=None):
+def reduce_science_frames(pipeline_context):
     stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
                     bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
                     bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
                     flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
                     headers.HeaderUpdater, pointing.PointingTest]
 
+    reduce_frames_one_by_one(stages_to_do, pipeline_context)
+
+
+def reduce_frames_one_by_one(stages_to_do, pipeline_context):
     image_list = image_utils.make_image_list(pipeline_context)
     original_filename = pipeline_context.filename
     for image in image_list:
@@ -108,21 +111,23 @@ def reduce_science_frames(pipeline_context=None):
 
 
 def reduce_science_frames_console():
-    pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
-    reduce_science_frames(pipeline_context)
-    logs.stop_logging()
+    run_end_of_night_from_console([reduce_science_frames])
+
+
+def preprocess_sinistro_frames(pipeline_context):
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
+                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator]
+    reduce_frames_one_by_one(stages_to_do, pipeline_context)
+
+
+def preprocess_sinistro_frames_console():
+    run_end_of_night_from_console([preprocess_sinistro_frames])
 
 
 def create_master_calibrations():
-    pipeline_context = parse_end_of_night_command_line_arguments()
-    logs.start_logging(log_level=pipeline_context.log_level)
-    make_master_bias()
-    make_master_dark()
-    make_master_flat()
-    logs.stop_logging()
+    run_end_of_night_from_console([make_master_bias, make_master_dark, make_master_flat])
 
-    
+
 def reduce_night():
     parser = argparse.ArgumentParser(
         description='Reduce all the data from a site at the end of a night.')
