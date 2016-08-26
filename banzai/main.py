@@ -97,13 +97,27 @@ def reduce_science_frames(pipeline_context):
     reduce_frames_one_by_one(stages_to_do, pipeline_context)
 
 
-def reduce_frames_one_by_one(stages_to_do, pipeline_context):
+def reduce_experimental_frames(pipeline_context):
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
+                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
+                    bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                    flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
+                    headers.HeaderUpdater, pointing.PointingTest]
+
+    reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['EXPERIMENTAL'])
+
+
+def reduce_experimental_frames_console():
+    run_end_of_night_from_console([reduce_experimental_frames])
+
+
+def reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD']):
     image_list = image_utils.make_image_list(pipeline_context)
     original_filename = pipeline_context.filename
     for image in image_list:
         pipeline_context.filename = os.path.basename(image)
         try:
-            run(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD'])
+            run(stages_to_do, pipeline_context, image_types=image_types)
         except Exception as e:
             logger.error('{0}'.format(e), extra={'tags': {'filename': pipeline_context.filename,
                                                           'filepath': pipeline_context.raw_path}})
