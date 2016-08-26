@@ -15,6 +15,20 @@ def test_group_by_keywords():
     tester = header_checker.HeaderSanity(None)
     assert tester.group_by_keywords is None
 
+def test_no_exptime_in_frames():
+    tester = header_checker.HeaderSanity(None)
+    tester.logger.error = mock.MagicMock()
+    nx = 101
+    ny = 103
+
+    images = [FakeImage(nx=nx, ny=ny) for x in range(6)]
+
+    for image in images:
+
+        tester.check_header_keyword_present('EXPTIME', image)
+        assert tester.logger.error.called
+
+    assert len(images) == 6
 
 def test_bad_RA_format():
     tester = header_checker.HeaderSanity(None)
