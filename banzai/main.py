@@ -111,6 +111,20 @@ def reduce_experimental_frames_console():
     run_end_of_night_from_console([reduce_experimental_frames])
 
 
+def reduce_guide_frames(pipeline_context):
+    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
+                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
+                    bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                    flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
+                    headers.HeaderUpdater, pointing.PointingTest]
+
+    reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['GUIDE'])
+
+
+def reduce_guide_frames_console():
+    run_end_of_night_from_console([reduce_guide_frames])
+
+
 def reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD']):
     image_list = image_utils.make_image_list(pipeline_context)
     original_filename = pipeline_context.filename
