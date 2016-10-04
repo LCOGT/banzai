@@ -31,20 +31,22 @@ class PointingTest(Stage):
         for image in images:
             self.setup_logging(image)
 
-            # OFST-RA/DEC is the same as CAT-RA/DEC but includes user requested offset
-            requested_coords = SkyCoord(
-                image.header['OFST-RA'],
-                image.header['OFST-DEC'],
-                unit=(u.hour, u.deg),
-                frame='icrs'
-            )
+            try:
+                # OFST-RA/DEC is the same as CAT-RA/DEC but includes user requested offset
+                requested_coords = SkyCoord(image.header['OFST-RA'], image.header['OFST-DEC'],
+                                            unit=(u.hour, u.deg), frame='icrs')
+            except ValueError as e:
+                try:
+                    # Fallback to CAT-RA and CAT-DEC
+                    requested_coords = SkyCoord(image.header['CAT-RA'], image.header['CAT-DEC'],
+                                                unit=(u.hour, u.deg), frame='icrs')
+                except:
+                    self.logger.error(e, extra=self.logging_tags)
+                    continue
+
             # This only works assuming CRPIX is at the center of the image
-            solved_coords = SkyCoord(
-                image.header['CRVAL1'],
-                image.header['CRVAL2'],
-                unit=(u.deg, u.deg),
-                frame='icrs'
-            )
+            solved_coords = SkyCoord(image.header['CRVAL1'], image.header['CRVAL2'],
+                                     unit=(u.deg, u.deg), frame='icrs')
 
             angular_separation = solved_coords.separation(requested_coords).arcsec
 
