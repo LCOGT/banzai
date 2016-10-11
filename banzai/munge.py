@@ -23,13 +23,13 @@ class DataMunger(Stage):
             # TODO: 2x2 frames cannot use hard coded values because we read out more pixels.
             if 'sinistro' in telescope.camera_type.lower():
                 if image.header['CCDSUM'] == '1 1':
-                    keywords_to_update = [('BIASSEC1', ('[1:2048,2055:2080]',
+                    keywords_to_update = [('BIASSEC1', ('[2055:2080,1:2048]',
                                                         '[binned pixel] Section of overscan data for Q1')),
-                                          ('BIASSEC2', ('[1:2048,2055:2080]',
+                                          ('BIASSEC2', ('[2055:2080,1:2048]',
                                                         '[binned pixel] Section of overscan data for  Q2')),
-                                          ('BIASSEC3', ('[1:2048,2055:2080]',
+                                          ('BIASSEC3', ('[2055:2080,1:2048]',
                                                         '[binned pixel] Section of overscan data for Q3')),
-                                          ('BIASSEC4', ('[1:2048,2055:2080]',
+                                          ('BIASSEC4', ('[2055:2080,1:2048]',
                                                         '[binned pixel] Section of overscan data for Q4')),
                                           ('DATASEC1', ('[1:2048,1:2048]',
                                                         '[binned pixel] Data section for  Q1')),
@@ -55,13 +55,13 @@ class DataMunger(Stage):
                     keywords_to_update.append(('DETSEC4', ('[1:2048,4096:2049]',
                                                            '[binned pixel] Detector section for Q4')))
                 elif image.header['CCDSUM'] == '2 2':
-                    keywords_to_update = [('BIASSEC1', ('[1:1024,1025:1040]',
+                    keywords_to_update = [('BIASSEC1', ('[1025:1040,1:1024]',
                                                         '[binned pixel] Section of overscan data for Q1')),
-                                          ('BIASSEC2', ('[1:1024,1025:1040]',
+                                          ('BIASSEC2', ('[1025:1040,1:1024]',
                                                         '[binned pixel] Section of overscan data for  Q2')),
-                                          ('BIASSEC3', ('[1:1024,1025:1040]',
+                                          ('BIASSEC3', ('[1025:1040,1:1024]',
                                                         '[binned pixel] Section of overscan data for Q3')),
-                                          ('BIASSEC4', ('[1:1024,1025:1040]',
+                                          ('BIASSEC4', ('[1025:1040,1:1024]',
                                                         '[binned pixel] Section of overscan data for Q4')),
                                           ('DATASEC1', ('[1:1024,1:1024]',
                                                         '[binned pixel] Data section for  Q1')),
