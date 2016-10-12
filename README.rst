@@ -17,3 +17,7 @@ Status reports for developers
 .. image:: https://coveralls.io/repos/github/LCOGT/banzai/badge.svg
     :target: https://coveralls.io/github/LCOGT/banzai
     :alt: Coverage Status
+
+.. image:: https://readthedocs.org/projects/banzai/badge/?version=latest
+    :target: http://banzai.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
