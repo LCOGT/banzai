@@ -3,9 +3,14 @@ from banzai import logs
 
 import os
 
+
 class SaturationTest(Stage):
     """
+    Reject any images that have 5% or more of their pixels saturated.
 
+    Notes
+    =====
+    Typically this means that something went wrong and can lead to bad master flat fields, etc.
     """
     # Empirically we have decided to use a 5% threshold to reject the image
     threshold = 0.05
