@@ -2,8 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from banzai.stages import Stage
 import numpy as np
 import os
-from banzai import dbs
-from banzai.utils import array_utils
+from banzai import dbs, logs
 
 
 class DataMunger(Stage):
@@ -26,18 +25,18 @@ class DataMunger(Stage):
                     keywords_to_update = [('BIASSEC1', ('[2055:2080,1:2048]',
                                                         '[binned pixel] Section of overscan data for Q1')),
                                           ('BIASSEC2', ('[2055:2080,1:2048]',
-                                                        '[binned pixel] Section of overscan data for  Q2')),
+                                                        '[binned pixel] Section of overscan data for Q2')),
                                           ('BIASSEC3', ('[2055:2080,1:2048]',
                                                         '[binned pixel] Section of overscan data for Q3')),
                                           ('BIASSEC4', ('[2055:2080,1:2048]',
                                                         '[binned pixel] Section of overscan data for Q4')),
                                           ('DATASEC1', ('[1:2048,1:2048]',
-                                                        '[binned pixel] Data section for  Q1')),
+                                                        '[binned pixel] Data section for Q1')),
                                           ('DATASEC2', ('[1:2048,1:2048]',
                                                         '[binned pixel] Data section for Q2'))]
 
                     if image.data.shape[1] > 2048:
-                        keywords_to_update.append(('DATASEC3',  ('[1:2048,2:2049]',
+                        keywords_to_update.append(('DATASEC3', ('[1:2048,2:2049]',
                                                    '[binned pixel] Data section for Q3')))
                         keywords_to_update.append(('DATASEC4', ('[1:2048,2:2049]',
                                                    '[binned pixel] Data section for Q4')))
@@ -58,15 +57,15 @@ class DataMunger(Stage):
                     keywords_to_update = [('BIASSEC1', ('[1025:1040,1:1024]',
                                                         '[binned pixel] Section of overscan data for Q1')),
                                           ('BIASSEC2', ('[1025:1040,1:1024]',
-                                                        '[binned pixel] Section of overscan data for  Q2')),
+                                                        '[binned pixel] Section of overscan data for Q2')),
                                           ('BIASSEC3', ('[1025:1040,1:1024]',
                                                         '[binned pixel] Section of overscan data for Q3')),
                                           ('BIASSEC4', ('[1025:1040,1:1024]',
                                                         '[binned pixel] Section of overscan data for Q4')),
                                           ('DATASEC1', ('[1:1024,1:1024]',
-                                                        '[binned pixel] Data section for  Q1')),
+                                                        '[binned pixel] Data section for Q1')),
                                           ('DATASEC2', ('[1:1024,1:1024]',
-                                                        '[binned pixel] Data section for Q2'))]
+                                                        '[binned pixel] Data section forQ2'))]
 
                     keywords_to_update.append(('DATASEC3', ('[1:1024,1:1024]',
                                                                 '[binned pixel] Data section for Q3')))
@@ -81,7 +80,13 @@ class DataMunger(Stage):
                     keywords_to_update.append(('DETSEC4', ('[1:1024,2048:1025]',
                                                            '[binned pixel] Detector section for Q4')))
 
-                set_crosstalk_header_keywords(image)
+                try:
+                    set_crosstalk_header_keywords(image)
+                except KeyError as e:
+                    images_to_remove.append(image)
+                    logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
+                    logs.add_tag(logging_tags, 'filename', image.filename)
+                    self.logger.error('Crosstalk Coefficients missing!', extra=logging_tags)
 
                 for keyword, value in keywords_to_update:
                     _add_header_keyword(keyword, value, image)
@@ -126,13 +131,26 @@ def _add_header_keyword(keyword, value, image):
 
 def set_crosstalk_header_keywords(image):
     n_amps = image.data.shape[0]
-    coefficients = crosstalk_coefficients.get(image.instrument, np.zeros((n_amps, n_amps)))
+    coefficients = crosstalk_coefficients[image.instrument]
 
-    for j in range(n_amps):
-        for i in range(n_amps):
+    for i in range(n_amps):
+        for j in range(n_amps):
             if i != j:
-                crosstalk_comment = '[Crosstalk coefficient] Q{i} signal due to Q{j}'.format(i=i+1, j=j+1)
-                image.header['CRSTLK{0}{1}'.format(i + 1, j + 1)] = (coefficients[j, i], crosstalk_comment)
+                crosstalk_comment = '[Crosstalk coefficient] Signal from Q{i} onto Q{j}'.format(i=i+1, j=j+1)
+                image.header['CRSTLK{0}{1}'.format(i + 1, j + 1)] = (coefficients[i, j], crosstalk_comment)
+
+"""These matrices should have the following structure:
+coeffs = [[Q11, Q12, Q13, Q14],
+          [Q21, Q22, Q23, Q24],
+          [Q31, Q32, Q33, Q34],
+          [Q41, Q42, Q43, Q44]]
+
+The corrected data, D, from quadrant i is
+D1 = D1 - Q21 D2 - Q31 D3 - Q41 D4
+D2 = D2 - Q12 D1 - Q32 D3 - Q42 D4
+D3 = D3 - Q13 D1 - Q23 D2 - Q43 D4
+D4 = D4 - Q14 D1 - Q24 D2 - Q34 D3
+"""
 
 crosstalk_coefficients = {'fl01': np.array([[0.00000, 0.00074, 0.00081, 0.00115],
                                             [0.00070, 0.00000, 0.00118, 0.00085],
