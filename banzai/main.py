@@ -129,6 +129,20 @@ def reduce_science_frames_console():
     run_end_of_night_from_console([reduce_science_frames])
 
 
+def reduce_trailed_frames(pipeline_context):
+    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
+                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
+                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
+                    dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
+                    astrometry.WCSSolver, headers.HeaderUpdater, pointing.PointingTest]
+
+    reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['TRAILED'])
+
+
+def reduce_trailed_frames_console():
+    run_end_of_night_from_console([reduce_trailed_frames])
+
+
 def preprocess_sinistro_frames(pipeline_context):
     stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
                     crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
