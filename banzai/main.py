@@ -290,7 +290,7 @@ def run_preview_pipeline():
                         help='Number of listener processes to spawn.')
 
     parser.add_argument('--broker-url', dest='broker_url',
-                        default='amqp://guest:guest@cerberus.lco.gtn',
+                        default='amqp://guest:guest@rabbitmq.lco.gtn',
                         help='URL for the broker service.')
     parser.add_argument('--queue-name', dest='queue_name', default='preview_pipeline',
                         help='Name of the queue to listen to from the fits exchange.')
