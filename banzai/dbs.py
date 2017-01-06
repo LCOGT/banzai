@@ -275,7 +275,7 @@ def populate_bpm_table(directory, db_address=_DEFAULT_DB):
         creation_date = date_utils.epoch_string_to_date(fits.getval(bpm_filename, 'DAY-OBS',
                                                                     extension_number))
 
-        telescope_id = get_telescope_id(site=site, instrument=instrument)
+        telescope_id = get_telescope_id(site=site, instrument=instrument, db_address=db_address)
 
         bpm_attributes = {'telescope_id': telescope_id, 'filepath': os.path.abspath(directory),
                           'filename': os.path.basename(bpm_filename), 'ccdsum': ccdsum,
