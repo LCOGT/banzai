@@ -11,10 +11,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os.path
 
-from sqlalchemy import create_engine, pool
+from sqlalchemy import create_engine, pool, desc
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql.expression import true
 
 from glob import glob
 from astropy.io import fits
@@ -109,6 +110,7 @@ class BadPixelMask(Base):
     filename = Column(String(50))
     filepath = Column(String(100))
     ccdsum = Column(String(20))
+    creation_date = Column(Date)
 
 
 class PreviewImage(Base):
@@ -188,7 +190,7 @@ def populate_telescope_tables(db_address=_DEFAULT_DB,
     Notes
     -----
     This only works inside the LCOGT VPN. This should be run at least when a new camera is
-    added to the network
+    added to the network.
     """
 
     sites, cameras = parse_configdb(configdb_address=configdb_address)
@@ -196,12 +198,8 @@ def populate_telescope_tables(db_address=_DEFAULT_DB,
     db_session = get_session(db_address=db_address)
 
     for site in sites:
-        site_query = Site.id == site['code']
-        matching_sites = db_session.query(Site).filter(site_query).all()
-
-        if len(matching_sites) == 0:
-            db_session.add(Site(id=site['code'], timezone=site['timezone']))
-
+        add_or_update_record(db_session, Site, {'id': site['code']},
+                             {'id': site['code'], 'timezone': site['timezone']})
     db_session.commit()
 
     # Set all cameras in the table to be schedulable and turn them back on below as needed.
@@ -211,38 +209,74 @@ def populate_telescope_tables(db_address=_DEFAULT_DB,
     db_session.commit()
 
     for camera in cameras:
-
-        # Check and see if the site and instrument combinatation already exists in the table
-        camera_query = Telescope.site == camera['site']
-        camera_query &= Telescope.instrument == camera['instrument']
-        matching_cameras = db_session.query(Telescope).filter(camera_query).all()
-
-        if len(matching_cameras) == 0:
-            db_session.add(Telescope(site=camera['site'], instrument=camera['instrument'],
-                                     camera_type=camera['camera_type'],
-                                     schedulable=camera['schedulable']))
-        else:
-            matching_cameras[0].schedulable = camera['schedulable']
+        add_or_update_record(db_session, Telescope,
+                             {'site': camera['site'], 'instrument': camera['instrument']},
+                             {'site': camera['site'], 'instrument': camera['instrument'],
+                              'camera_type': camera['camera_type'],
+                              'schedulable': camera['schedulable']})
 
     db_session.commit()
     db_session.close()
 
 
+def add_or_update_record(db_session, table_model, equivalence_criteria, record_attributes):
+    """
+    Add a record to the database if it does not exist or update the record if it does exist.
+
+    Parameters
+    ----------
+    db_session : SQLAlchemy database session
+                 session must be active
+
+    table_model : SQLAlchemy Base
+                  The class representation of the table of interest
+
+    equivalence_criteria : dict
+                           record attributes that need to match for the records to be considered
+                           the same
+
+    record_attributes : dict
+                        record attributes that will be set/updated
+
+    Returns
+    -------
+    record : SQLAlchemy Base
+             The object representation of the added/updated record
+
+    Notes
+    -----
+    The added/updated record is added to the database but not committed. You need to call
+    db_session.commit() to write the changes to the database.
+    """
+    query = true()
+    for key in equivalence_criteria.keys():
+        query &= getattr(table_model, key) == equivalence_criteria[key]
+    record = db_session.query(table_model).filter(query).first()
+    if record is None:
+        record = table_model(**record_attributes)
+        db_session.add(record)
+
+    for attribute in record_attributes:
+        setattr(record, attribute, record_attributes[attribute])
+    return record
+
+
 def populate_bpm_table(directory, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
-    bpm_filenames = glob(os.path.join(directory, 'bpm*.fits'))
+    bpm_filenames = glob(os.path.join(directory, 'bpm*.fits*'))
     for bpm_filename in bpm_filenames:
         site = fits.getval(bpm_filename, 'SITEID').lower()
         instrument = fits.getval(bpm_filename, 'INSTRUME').lower()
         ccdsum = fits.getval(bpm_filename, 'CCDSUM')
+        creation_date = date_utils.epoch_string_to_date(fits.getval(bpm_filename, 'DAY-OBS'))
 
-        telescope_query = Telescope.site == site
-        telescope_query &= Telescope.instrument == instrument
-        telescope = db_session.query(Telescope).filter(telescope_query).first()
+        telescope_id = get_telescope_id(site=site, instrument=instrument)
 
-        if telescope is not None:
-            db_session.add(BadPixelMask(telescope_id=telescope.id, filepath=os.path.abspath(directory),
-                                        filename=os.path.basename(bpm_filename), ccdsum=ccdsum))
+        bpm_attributes = {'telescope_id': telescope_id, 'filepath': os.path.abspath(directory),
+                          'filename': os.path.basename(bpm_filename), 'ccdsum': ccdsum,
+                          'creation_date': creation_date}
+
+        add_or_update_record(db_session, BadPixelMask, bpm_attributes, bpm_attributes)
 
     db_session.commit()
     db_session.close()
@@ -274,9 +308,11 @@ def get_telescope(telescope_id, db_address=_DEFAULT_DB):
 
 def get_bpm(telescope_id, ccdsum, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
-    bpm = db_session.query(BadPixelMask).filter(BadPixelMask.telescope_id == telescope_id,
-                                                BadPixelMask.ccdsum == ccdsum).first()
+    bpm_query = db_session.query(BadPixelMask).filter(BadPixelMask.telescope_id == telescope_id,
+                                                      BadPixelMask.ccdsum == ccdsum)
+    bpm = bpm_query.order_by(desc(BadPixelMask.creation_date)).first()
     db_session.close()
+
     if bpm is not None:
         bpm_path = os.path.join(bpm.filepath, bpm.filename)
     else:
@@ -288,28 +324,14 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
     # Store the information into the calibration table
     # Check and see if the bias file is already in the database
     db_session = get_session(db_address=db_address)
-    image_query = db_session.query(CalibrationImage)
     output_filename = os.path.basename(output_file)
-    image_query = image_query.filter(CalibrationImage.filename == output_filename)
-    image_query = image_query.all()
 
-    if len(image_query) == 0:
-        # Create a new row
-        calibration_image = CalibrationImage()
-    else:
-        # Otherwise update the existing data
-        # In principle we could just skip this, but this should be fast
-        calibration_image = image_query[0]
+    add_or_update_record(db_session, CalibrationImage, {'filename': output_filename},
+                         {'dayobs': date_utils.epoch_string_to_date(image_config.epoch),
+                          'ccdsum': image_config.ccdsum, 'filter_name': image_config.filter,
+                          'telescope_id': image_config.telescope_id, 'type': cal_type.upper(),
+                          'filename': output_filename, 'filepath': os.path.dirname(output_file)})
 
-    calibration_image.dayobs = date_utils.epoch_string_to_date(image_config.epoch)
-    calibration_image.ccdsum = image_config.ccdsum
-    calibration_image.filter_name = image_config.filter
-    calibration_image.telescope_id = image_config.telescope_id
-    calibration_image.type = cal_type.upper()
-    calibration_image.filename = output_filename
-    calibration_image.filepath = os.path.dirname(output_file)
-
-    db_session.add(calibration_image)
     db_session.commit()
     db_session.close()
 
@@ -348,14 +370,9 @@ def get_preview_image(path, db_address=_DEFAULT_DB):
     filename = os.path.basename(path)
     db_session = get_session(db_address=db_address)
     try:
-        query = db_session.query(PreviewImage)
-        criteria = PreviewImage.filename == filename
-        query = query.filter(criteria)
-        preview_image = query.first()
-        if preview_image is None:
-            preview_image = PreviewImage(filename=filename)
-            db_session.add(preview_image)
-            db_session.commit()
+        preview_image = add_or_update_record(db_session, PreviewImage, {'filename': filename},
+                                             {'filename': filename})
+        db_session.commit()
     except Exception as e:
         logging_tags = {'tags': {'filename': filename}}
         logger.error('Error processing preview image. {0}. {1}'.format(e, path), extra=logging_tags)
