@@ -265,7 +265,7 @@ def populate_bpm_table(directory, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
     bpm_filenames = glob(os.path.join(directory, 'bpm*.fits*'))
     for bpm_filename in bpm_filenames:
-        if bpm_filename[:-3] == '.fz':
+        if bpm_filename[-3:] == '.fz':
             extension_number = 1
         else:
             extension_number = 0
