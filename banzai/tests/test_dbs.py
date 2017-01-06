@@ -8,7 +8,7 @@ from astropy.utils.data import get_pkg_data_filename
 
 class FakeResponse(object):
     def __init__(self):
-        with open(get_pkg_data_filename('data/configdb_example.json', package='banzai.tests')) as f:
+        with open(get_pkg_data_filename('data/configdb_example.json')) as f:
             self.data = json.load(f)
 
     def json(self):
