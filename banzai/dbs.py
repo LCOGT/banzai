@@ -265,10 +265,15 @@ def populate_bpm_table(directory, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
     bpm_filenames = glob(os.path.join(directory, 'bpm*.fits*'))
     for bpm_filename in bpm_filenames:
-        site = fits.getval(bpm_filename, 'SITEID').lower()
-        instrument = fits.getval(bpm_filename, 'INSTRUME').lower()
-        ccdsum = fits.getval(bpm_filename, 'CCDSUM')
-        creation_date = date_utils.epoch_string_to_date(fits.getval(bpm_filename, 'DAY-OBS'))
+        if bpm_filename[:-3] == '.fz':
+            extension_number = 1
+        else:
+            extension_number = 0
+        site = fits.getval(bpm_filename, 'SITEID', extension_number).lower()
+        instrument = fits.getval(bpm_filename, 'INSTRUME', extension_number).lower()
+        ccdsum = fits.getval(bpm_filename, 'CCDSUM', extension_number)
+        creation_date = date_utils.epoch_string_to_date(fits.getval(bpm_filename, 'DAY-OBS',
+                                                                    extension_number))
 
         telescope_id = get_telescope_id(site=site, instrument=instrument)
 
