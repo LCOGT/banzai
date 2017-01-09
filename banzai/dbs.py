@@ -298,7 +298,9 @@ def get_telescope_id(site, instrument, db_address=_DEFAULT_DB):
     telescope = db_session.query(Telescope).filter(criteria).first()
     db_session.close()
     if telescope is None:
-        raise TelescopeMissingException('Telescope/instrument is not in the database.')
+        err_msg = '{site}/{instrument} is not in the database.'.format(site=site,
+                                                                       instrument=instrument)
+        raise TelescopeMissingException(err_msg)
     return telescope.id
 
 
@@ -307,7 +309,7 @@ def get_telescope(telescope_id, db_address=_DEFAULT_DB):
     telescope = db_session.query(Telescope).filter(Telescope.id == telescope_id).first()
     db_session.close()
     if telescope is None:
-        raise TelescopeMissingException('Telescope/instrument is not in the database.')
+        raise TelescopeMissingException('Telescope ID {id} is not in the database.'.format(id=telescope_id))
     return telescope
 
 
