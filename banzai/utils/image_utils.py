@@ -107,6 +107,14 @@ def get_bpm(image, pipeline_context):
         image.header['L1IDMASK'] = ('', 'Id. of mask file used')
     else:
         bpm = np.array(fits.getdata(bpm_filename), dtype=np.uint8)
+        if bpm.shape != image.data.shape:
+            tags = logs.image_config_to_tags(image, None)
+            logs.add_tag(tags, 'filename', image.filename)
+            logger.error('BPM shape mismatch', extra=tags)
+            err_msg = 'BPM shape mismatch for {filename} ' \
+                      '{site}/{instrument}'.format(filename=image.filename, site=image.site,
+                                                   instrument=image.instrument)
+            raise ValueError(err_msg)
         image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
 
     return bpm
