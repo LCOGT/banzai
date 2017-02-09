@@ -26,6 +26,49 @@ from banzai.utils import image_utils, date_utils
 
 logger = logs.get_logger(__name__)
 
+ordered_stages = [munge.DataMunger,
+                  qc.ThousandsTest,
+                  qc.SaturationTest,
+                  bias.OverscanSubtractor,
+                  crosstalk.CrosstalkCorrector,
+                  gain.GainNormalizer,
+                  mosaic.MosaicCreator,
+                  bpm.BPMUpdater,
+                  trim.Trimmer,
+                  bias.BiasSubtractor,
+                  dark.DarkSubtractor,
+                  flats.FlatDivider,
+                  photometry.SourceDetector,
+                  astrometry.WCSSolver,
+                  pointing.PointingTest]
+
+
+def get_stages_todo(last_stage, extra_stages=[]):
+    """
+
+    Parameters
+    ----------
+    last_stage: banzai.stages.Stage
+                Last stage to do
+    extra_stages: Stages to do after the last stage
+
+    Returns
+    -------
+    stages_todo: list of banzai.stages.Stage
+                 The stages that need to be done
+
+    Notes
+    -----
+    Extra stages can be other stages that are not in the ordered_stages list.
+    The HeaderUpdater stage is always added at the very end.
+    """
+    last_index = ordered_stages.index(last_stage)
+    stages_todo = ordered_stages[:last_index + 1]
+    for stage in extra_stages:
+        stages_todo.append(stage)
+    stages_todo.append(headers.HeaderUpdater)
+    return stages_todo
+
 
 class PipelineContext(object):
     def __init__(self, args):
@@ -50,10 +93,7 @@ def run_end_of_night_from_console(scripts_to_run):
 
 
 def make_master_bias(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
-                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
-                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasMaker,
-                    headers.HeaderUpdater]
+    stages_to_do = get_stages_todo(trim.Trimmer, extra_stages=[bias.BiasMaker])
     run(stages_to_do, pipeline_context, image_types=['BIAS'], calibration_maker=True,
         log_message='Making Master BIAS')
 
@@ -63,10 +103,7 @@ def make_master_bias_console():
 
 
 def make_master_dark(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
-                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
-                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
-                    dark.DarkMaker, headers.HeaderUpdater]
+    stages_to_do = get_stages_todo(bias.BiasSubtractor, extra_stages=[dark.DarkMaker])
     run(stages_to_do, pipeline_context, image_types=['DARK'], calibration_maker=True,
         log_message='Making Master Dark')
 
@@ -76,10 +113,7 @@ def make_master_dark_console():
 
 
 def make_master_flat(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
-                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
-                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
-                    dark.DarkSubtractor, flats.FlatMaker, headers.HeaderUpdater]
+    stages_to_do = get_stages_todo(dark.DarkSubtractor, extra_stages=[flats.FlatMaker])
     run(stages_to_do, pipeline_context, image_types=['SKYFLAT'], calibration_maker=True,
         log_message='Making Master Flat')
 
@@ -89,22 +123,12 @@ def make_master_flat_console():
 
 
 def reduce_science_frames(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
-                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
-                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
-                    dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
-                    astrometry.WCSSolver, headers.HeaderUpdater, pointing.PointingTest]
-
+    stages_to_do = get_stages_todo(pointing.PointingTest)
     reduce_frames_one_by_one(stages_to_do, pipeline_context)
 
 
 def reduce_experimental_frames(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
-                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
-                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
-                    dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
-                    astrometry.WCSSolver, headers.HeaderUpdater, pointing.PointingTest]
-
+    stages_to_do = get_stages_todo(pointing.PointingTest)
     reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['EXPERIMENTAL'])
 
 
@@ -130,12 +154,7 @@ def reduce_science_frames_console():
 
 
 def reduce_trailed_frames(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
-                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
-                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
-                    dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
-                    astrometry.WCSSolver, headers.HeaderUpdater, pointing.PointingTest]
-
+    stages_to_do = get_stages_todo(pointing.PointingTest)
     reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['TRAILED'])
 
 
@@ -144,9 +163,7 @@ def reduce_trailed_frames_console():
 
 
 def preprocess_sinistro_frames(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
-                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
-                    mosaic.MosaicCreator]
+    stages_to_do = get_stages_todo(mosaic.MosaicCreator)
     reduce_frames_one_by_one(stages_to_do, pipeline_context)
 
 
