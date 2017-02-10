@@ -1,5 +1,5 @@
 FROM docker.lcogt.net/miniconda3:4.0.5
-MAINTAINER Ira W. Snyder <isnyder@lcogt.net>
+MAINTAINER Las Cumbres Observatory <webmaster@lco.global>
 
 RUN yum -y install epel-release gcc mariadb-devel \
         && yum -y install fpack \
