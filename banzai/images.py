@@ -15,10 +15,11 @@ logger = logs.get_logger(__name__)
 
 class Image(object):
 
-    def __init__(self, pipeline_context, filename=None, data=None, header={}, bpm=None):
+    def __init__(self, pipeline_context, filename=None, data=None, header={},
+                 extension_headers=[], bpm=None):
 
         if filename is not None:
-            data, header, bpm = fits_utils.open_image(filename)
+            data, header, bpm, extension_headers = fits_utils.open_image(filename)
             if '.fz' == filename[-3:]:
                 filename = filename[:-3]
             self.filename = os.path.basename(filename)
@@ -26,6 +27,8 @@ class Image(object):
         self.data = data
         self.header = header
         self.bpm = bpm
+
+        self.extension_headers = extension_headers
 
         self.request_number = header.get('REQNUM')
 
@@ -35,7 +38,11 @@ class Image(object):
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
 
-        self.gain = header.get('GAIN')
+        if len(self.data.shape) > 2:
+            self.gain = [h.gain for h in extension_headers]
+        else:
+            self.gain = header.get('GAIN')
+
         self.ccdsum = header.get('CCDSUM')
         self.filter = header.get('FILTER')
         self.telescope_id = dbs.get_telescope_id(self.site, self.instrument,
