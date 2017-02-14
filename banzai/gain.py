@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from banzai.stages import Stage
 from banzai import logs
 import os
-import numpy as np
 
 
 class GainNormalizer(Stage):
@@ -23,7 +22,7 @@ class GainNormalizer(Stage):
             self.logger.info('Multiplying by gain', extra=logging_tags)
 
             gain = image.gain
-            if gain_missing(gain):
+            if validate_gain(gain):
                 self.logger.error('Gain missing. Rejecting image.', extra=logging_tags)
                 images_to_remove.append(image)
             else:
@@ -47,15 +46,27 @@ class GainNormalizer(Stage):
         return images
 
 
-def gain_missing(gain):
-    # Catch empty list, gain = 0, and gain is None
-    if gain:
-        # Make sure there aren't any zeros in the list of gains
-        try:
-            missing = not all(gain)
-        # Catch the case when gain is a float (gain = zero and gain = None cases are tested above).
-        except TypeError:
-            missing = False
-    else:
-        missing = True
+def validate_gain(gain):
+    """
+    Validate the gain in the image
+
+    Parameters
+    ----------
+    gain: float or list of floats
+          gain value(s)
+
+    Returns
+    -------
+    missing: boolean
+             True if gain is missing or invalid
+    """
+    missing = True
+    if not gain:
+        return missing
+
+    try:
+        missing = not all(gain)
+    except TypeError:
+        missing = False
+
     return missing

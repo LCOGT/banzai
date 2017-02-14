@@ -1,5 +1,5 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.gain import GainNormalizer, gain_missing
+from banzai.gain import GainNormalizer, validate_gain
 from banzai.tests.utils import FakeImage
 
 import numpy as np
@@ -100,9 +100,9 @@ def test_gain_datacube():
 
 
 def test_gain_missing():
-    assert gain_missing([])
-    assert gain_missing(None)
-    assert gain_missing(0.0)
-    assert not gain_missing(1.0)
-    assert not gain_missing([1.0, 2.0])
-    assert gain_missing([1.0, 0.0, 2.0])
+    assert validate_gain([])
+    assert validate_gain(None)
+    assert validate_gain(0.0)
+    assert not validate_gain(1.0)
+    assert not validate_gain([1.0, 2.0])
+    assert validate_gain([1.0, 0.0, 2.0])
