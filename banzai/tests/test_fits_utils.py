@@ -37,27 +37,33 @@ def test_table_to_fits():
 
 
 def test_get_sci_extensions():
-    hdu0 = fits.PrimaryHDU(header=fits.Header({'test': 'test'}))
-    data1 = np.random.uniform(0, 1, size=(101, 101)).astype(dtype=np.float32)
+    hdulist = [fits.PrimaryHDU(header=fits.Header({'test': 'test'}))]
 
-    hdu1 = fits.ImageHDU(data=data1, header=fits.Header({'EXTNAME': 'SCI', 'EXTVER': 1}))
-    data2 = np.random.uniform(0, 1, size=(101, 101)).astype(dtype=np.float32)
-    hdu2 = fits.ImageHDU(data=data2, header=fits.Header({'EXTNAME': 'SCI', 'EXTVER': 2}))
-    data3 = np.random.uniform(0, 1, size=(101, 101)).astype(dtype=np.float32)
-    hdu3 = fits.ImageHDU(data=data3, header=fits.Header({'EXTNAME': 'SCI', 'EXTVER': 3}))
-    data4 = np.random.uniform(0, 1, size=(101, 101)).astype(dtype=np.float32)
-    hdu4 = fits.ImageHDU(data=data4, header=fits.Header({'EXTNAME': 'SCI', 'EXTVER': 4}))
+    input_data = []
+    for i in range(1, 4):
+        data = np.random.uniform(0, 1, size=(101, 101)).astype(dtype=np.float32)
+        input_data.append(data)
+        # Build the fits header manually because of a bug in the latest stable version of astropy
+        # This should be
+        # header = fits.Header({'EXTNAME': 'SCI', 'EXTVER': i + 1})
+        header = fits.Header()
+        header['EXTNAME'] = 'SCI'
+        header['EXTVER'] = i + 1
+        hdulist.append(fits.ImageHDU(data=data, header=header))
 
-    bpm_hdu = fits.ImageHDU(data=np.zeros((101, 101), dtype=np.uint8),
-                            header=fits.Header({'EXTNAME': 'BPM', 'EXTVER': 1}))
+    bpm_header = fits.Header()
+    bpm_header['EXTNAME'] = 'BPM'
+    bpm_hdu = fits.ImageHDU(data=np.zeros((101, 101), dtype=np.uint8), header=bpm_header)
+    hdulist.append(bpm_hdu)
 
-    hdulist = fits.HDUList([hdu0, hdu1, hdu2, hdu3, hdu4, bpm_hdu])
+    hdulist = fits.HDUList(hdulist)
+
     sci_extensions = fits_utils.get_sci_extensions(hdulist)
+
     assert len(sci_extensions) == 4
-    np.testing.assert_allclose(sci_extensions[0].data, data1, atol=1e-5)
-    np.testing.assert_allclose(sci_extensions[1].data, data2, atol=1e-5)
-    np.testing.assert_allclose(sci_extensions[2].data, data3, atol=1e-5)
-    np.testing.assert_allclose(sci_extensions[3].data, data4, atol=1e-5)
+    for i in range(4):
+        np.testing.assert_allclose(sci_extensions[i].data, input_data[i], atol=1e-5)
+
 
 def test_open_image():
     for fpacked in [True, False]:
