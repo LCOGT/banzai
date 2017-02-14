@@ -40,7 +40,7 @@ def test_get_sci_extensions():
     hdulist = [fits.PrimaryHDU(header=fits.Header({'test': 'test'}))]
 
     input_data = []
-    for i in range(1, 4):
+    for i in range(4):
         data = np.random.uniform(0, 1, size=(101, 101)).astype(dtype=np.float32)
         input_data.append(data)
         # Build the fits header manually because of a bug in the latest stable version of astropy
