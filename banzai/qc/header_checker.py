@@ -1,6 +1,6 @@
 """
-This module performs controls on several critical parameters of image header, contains in
-header_expected_format dictionnary.
+This module performs basic sanity checks that the main image header keywords are the correct
+format and validates their values.
 @author:ebachelet
 """
 from banzai.stages import Stage
@@ -8,7 +8,7 @@ from banzai import logs
 
 class HeaderSanity(Stage):
     """
-       This class contains the needed function/definitions to performs the header check.
+      Stage to validate important header keywords.
     """
 
     def __init__(self, pipeline_context):
@@ -25,13 +25,20 @@ class HeaderSanity(Stage):
         return None
 
     def do_stage(self, images):
-        """ Performs several checks on the header, see the relative functions.
-        :param list images: a list of image object.
-        :returns: the list of image object after check
-        :rtype: list
-        """
-        for image in images:
+        """ Run stage to validate header.
 
+        Parameters
+        ----------
+        images : list
+                 a list of banzais.image.Image object.
+
+        Returns
+        -------
+        images: list
+                the list of validated images object after header check
+
+       """
+        for image in images:
 
             for keyword in self.header_expected_format.keys():
                 self.check_header_keyword_present(keyword, image)
@@ -45,9 +52,15 @@ class HeaderSanity(Stage):
         return images
 
     def check_header_keyword_present(self, keyword, image):
-        """ Return a warning if the keyword is not in the image header.
-        :param str keyword: the stry keyword you look inside the header
-        :param object image: an image object
+        """ Logs a warning if the keyword is not in the image header.
+
+        Parameters
+        ----------
+        keyword : str
+                  the keyword of interest
+        image : object
+                a  banzais.image.Image object.
+
         """
         header = image.header
 
@@ -58,15 +71,19 @@ class HeaderSanity(Stage):
 
             self.logger.error(sentence, extra=logging_tags)
 
-            return 'WARNING'
-        return
-
     def check_header_format(self, keyword, image):
-        """ Return a warning if the keyword is not the expected type
+        """ Logs a warning if the keyword is not the expected type
             in the image header.
-        :param str keyword: the stry keyword you look inside the header
-        :param object image: an image object
+
+        Parameters
+        ----------
+        keyword : str
+                  the keyword of interest
+        image : object
+                a  banzais.image.Image object.
+
         """
+
         header_value = image.header[keyword]
 
         logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
@@ -78,14 +95,20 @@ class HeaderSanity(Stage):
 
             self.logger.error(sentence, extra=logging_tags)
 
-        return
 
     def check_header_na(self, keyword, image):
-        """ Return a warning if the keyword is 'N/A' instead of the
+        """ Logs a warning if the keyword is 'N/A' instead of the
             expected type in the image header.
-        :param str keyword: the stry keyword you look inside the header
-        :param object image: an image object
+
+        Parameters
+        ----------
+        keyword : str
+                  the keyword of interest
+        image : object
+                a  banzais.image.Image object.
+
         """
+
         header_value = image.header[keyword]
 
         logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
@@ -96,12 +119,17 @@ class HeaderSanity(Stage):
                 sentence = 'The header key ' + keyword + ' got the unexpected value : N/A'
                 self.logger.error(sentence, extra=logging_tags)
 
-        return
+
 
     def check_ra_range(self, image):
-        """ Return an error if the keyword right_ascension is not inside
+        """ Logs an error if the keyword right_ascension is not inside
             the expected range (0<ra<360 degrees) in the image header.
-        :param object image: an image object
+
+        Parameters
+        ----------
+        image : object
+                a  banzais.image.Image object.
+
         """
         ra_value = image.header['CRVAL1']
 
@@ -113,13 +141,19 @@ class HeaderSanity(Stage):
                 sentence = 'The header CRVAL1 key got the unexpected value : ' + str(ra_value)
                 self.logger.error(sentence, extra=logging_tags)
 
-        return
+
 
     def check_dec_range(self, image):
-        """ Return an error if the keyword declination is not inside
-            the expected range (-90<ra<90 degrees) in the image header.
-        :param object image: an image object
+        """Logs an error if the keyword declination is not inside
+            the expected range (-90<dec<90 degrees) in the image header.
+
+        Parameters
+        ----------
+        image : object
+                a  banzais.image.Image object.
+
         """
+
         dec_value = image.header['CRVAL2']
 
         logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
@@ -128,15 +162,20 @@ class HeaderSanity(Stage):
             sentence = 'The header CRVAL2 key got the unexpected value : ' + str(dec_value)
             self.logger.error(sentence, extra=logging_tags)
 
-        return
+
 
     def check_exptime_value(self, image):
-        """ Return an error if :
+        """Logs an error if :
 		-1) the keyword exptime is not higher than 0.0
 		-2) the keyword exptime is equal to 0.0 and 'OBSTYPE' keyword is 'EXPOSE'
-            if the OBSTYPE is expose.
-        :param object image: an image object
+
+        Parameters
+        ----------
+        image : object
+                a  banzais.image.Image object.
+
         """
+
         exptime_value = image.header['EXPTIME']
 
         logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
@@ -144,12 +183,12 @@ class HeaderSanity(Stage):
         if exptime_value < 0.0:
             sentence = 'The header EXPTIME key got the unexpected value : negative value'
             self.logger.error(sentence, extra=logging_tags)
-
             return
+
 
         obstype = image.header['OBSTYPE']
         if (exptime_value == 0.0) & (obstype == 'EXPOSE'):
             sentence = 'The header EXPTIME key got the unexpected value : 0.0'
             self.logger.error(sentence, extra=logging_tags)
-
             return
+
