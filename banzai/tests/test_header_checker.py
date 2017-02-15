@@ -1,4 +1,4 @@
-from .utils import FakeImage
+from banzai.tests.utils import FakeImage
 from banzai.qc import header_checker
 
 
@@ -56,7 +56,7 @@ def test_NA_in_RA():
     for image in images:
         image.header['RA'] = 'N/A'
 
-        tester.check_header_NA('RA', image)
+        tester.check_header_na('RA', image)
         assert tester.logger.error.called
 
     assert len(images) == 6
@@ -72,7 +72,7 @@ def test_RA_outside_range():
     for image in images:
         image.header['CRVAL1'] = 7892.28
 
-        tester.check_RA_range(image)
+        tester.check_ra_range(image)
         assert tester.logger.error.called
 
     assert len(images) == 8
@@ -88,7 +88,7 @@ def test_DEC_outside_range():
     for image in images:
         image.header['CRVAL2'] = -189.52
 
-        tester.check_DEC_range(image)
+        tester.check_dec_range(image)
         assert tester.logger.error.called
 
     assert len(images) == 5
@@ -104,7 +104,7 @@ def test_negative_EXPTIME_value():
     for image in images:
         image.header['EXPTIME'] = -np.random.uniform(0, 1000)
 
-        tester.check_EXPTIME_value(image)
+        tester.check_exptime_value(image)
         assert tester.logger.error.called
 
     assert len(images) == 5
@@ -121,7 +121,7 @@ def test_nulle_EXPTIME_value_on_science_frames():
         image.header['EXPTIME'] = 0.0
         image.header['OBSTYPE'] = 'EXPOSE'
 
-        tester.check_EXPTIME_value(image)
+        tester.check_exptime_value(image)
         assert tester.logger.error.called
 
     assert len(images) == 5
