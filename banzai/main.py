@@ -50,9 +50,10 @@ def run_end_of_night_from_console(scripts_to_run):
 
 
 def make_master_bias(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
-                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    bpm.BPMUpdater, trim.Trimmer, bias.BiasMaker, headers.HeaderUpdater]
+    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
+                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
+                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasMaker,
+                    headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['BIAS'], calibration_maker=True,
         log_message='Making Master BIAS')
 
@@ -62,10 +63,10 @@ def make_master_bias_console():
 
 
 def make_master_dark(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
-                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkMaker,
-                    headers.HeaderUpdater]
+    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
+                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
+                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
+                    dark.DarkMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['DARK'], calibration_maker=True,
         log_message='Making Master Dark')
 
@@ -75,10 +76,10 @@ def make_master_dark_console():
 
 
 def make_master_flat(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
-                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
-                    flats.FlatMaker, headers.HeaderUpdater]
+    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
+                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
+                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
+                    dark.DarkSubtractor, flats.FlatMaker, headers.HeaderUpdater]
     run(stages_to_do, pipeline_context, image_types=['SKYFLAT'], calibration_maker=True,
         log_message='Making Master Flat')
 
@@ -88,22 +89,36 @@ def make_master_flat_console():
 
 
 def reduce_science_frames(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
-                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                    bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
-                    flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
-                    headers.HeaderUpdater, pointing.PointingTest]
+    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
+                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
+                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
+                    dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
+                    astrometry.WCSSolver, headers.HeaderUpdater, pointing.PointingTest]
 
     reduce_frames_one_by_one(stages_to_do, pipeline_context)
 
 
-def reduce_frames_one_by_one(stages_to_do, pipeline_context):
+def reduce_experimental_frames(pipeline_context):
+    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
+                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
+                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
+                    dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
+                    astrometry.WCSSolver, headers.HeaderUpdater, pointing.PointingTest]
+
+    reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['EXPERIMENTAL'])
+
+
+def reduce_experimental_frames_console():
+    run_end_of_night_from_console([reduce_experimental_frames])
+
+
+def reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD']):
     image_list = image_utils.make_image_list(pipeline_context)
     original_filename = pipeline_context.filename
     for image in image_list:
         pipeline_context.filename = os.path.basename(image)
         try:
-            run(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD'])
+            run(stages_to_do, pipeline_context, image_types=image_types)
         except Exception as e:
             logger.error('{0}'.format(e), extra={'tags': {'filename': pipeline_context.filename,
                                                           'filepath': pipeline_context.raw_path}})
@@ -114,9 +129,24 @@ def reduce_science_frames_console():
     run_end_of_night_from_console([reduce_science_frames])
 
 
+def reduce_trailed_frames(pipeline_context):
+    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
+                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
+                    mosaic.MosaicCreator, bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
+                    dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
+                    astrometry.WCSSolver, headers.HeaderUpdater, pointing.PointingTest]
+
+    reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['TRAILED'])
+
+
+def reduce_trailed_frames_console():
+    run_end_of_night_from_console([reduce_trailed_frames])
+
+
 def preprocess_sinistro_frames(pipeline_context):
-    stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
-                    bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator]
+    stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
+                    crosstalk.CrosstalkCorrector, bias.OverscanSubtractor, gain.GainNormalizer,
+                    mosaic.MosaicCreator]
     reduce_frames_one_by_one(stages_to_do, pipeline_context)
 
 
@@ -182,12 +212,14 @@ def reduce_night():
         for telescope in telescopes:
             pipeline_context.raw_path = os.path.join(args.rawpath_root, args.site,
                                                      telescope.instrument, args.dayobs, 'raw')
-            # Run the reductions on the given dayobs
-            make_master_bias(pipeline_context)
-            make_master_dark(pipeline_context)
-            make_master_flat(pipeline_context)
-            reduce_science_frames(pipeline_context)
-
+            try:
+                # Run the reductions on the given dayobs
+                make_master_bias(pipeline_context)
+                make_master_dark(pipeline_context)
+                make_master_flat(pipeline_context)
+                reduce_science_frames(pipeline_context)
+            except Exception as e:
+                logger.error(e)
     logs.stop_logging()
 
 
@@ -260,7 +292,7 @@ def run_preview_pipeline():
                         help='Number of listener processes to spawn.')
 
     parser.add_argument('--broker-url', dest='broker_url',
-                        default='amqp://guest:guest@cerberus.lco.gtn',
+                        default='amqp://guest:guest@rabbitmq.lco.gtn',
                         help='URL for the broker service.')
     parser.add_argument('--queue-name', dest='queue_name', default='preview_pipeline',
                         help='Name of the queue to listen to from the fits exchange.')
@@ -329,11 +361,12 @@ class PreviewModeListener(ConsumerMixin):
         if 'e00.fits' in path or 's00.fits' in path:
             if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
                                         max_tries=self.pipeline_context.max_preview_tries):
-                stages_to_do = [munge.DataMunger, qc.SaturationTest, crosstalk.CrosstalkCorrector,
-                                bias.OverscanSubtractor, gain.GainNormalizer, mosaic.MosaicCreator,
-                                bpm.BPMUpdater, trim.Trimmer, bias.BiasSubtractor,
-                                dark.DarkSubtractor, flats.FlatDivider, photometry.SourceDetector,
-                                astrometry.WCSSolver, headers.HeaderUpdater, pointing.PointingTest]
+                stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
+                                crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
+                                gain.GainNormalizer, mosaic.MosaicCreator, bpm.BPMUpdater,
+                                trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
+                                flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
+                                headers.HeaderUpdater, pointing.PointingTest]
 
                 logging_tags = {'tags': {'filename': os.path.basename(path)}}
                 logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)

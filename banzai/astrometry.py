@@ -18,7 +18,7 @@ class WCSSolver(Stage):
           ' --radius 2.0 --ra {ra} --dec {dec} --guess-scale ' \
           '--scale-units arcsecperpix --scale-low {scale_low} --scale-high {scale_high} ' \
           '--no-plots -N none --no-remove-lines ' \
-          '--code-tolerance 0.003 --pixel-error 20 -d 1-200 ' \
+          '--code-tolerance 0.003 --pixel-error 1 -d 1-200 ' \
           '--solved none --match none --rdls none --wcs {wcs_name} --corr none --overwrite ' \
           '-X X -Y Y -s FLUX --width {nx} --height {ny} {catalog_name}'
 

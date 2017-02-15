@@ -31,7 +31,7 @@ class Image(object):
 
         self.site = header.get('SITEID')
         self.instrument = header.get('INSTRUME')
-        self.epoch = header.get('DAY-OBS')
+        self.epoch = str(header.get('DAY-OBS'))
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
 

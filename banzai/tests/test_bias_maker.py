@@ -15,7 +15,6 @@ class FakeBiasImage(FakeImage):
 
 
 def test_min_images():
-
     bias_maker = BiasMaker(None)
     processed_images = bias_maker.do_stage([])
     assert len(processed_images) == 0
