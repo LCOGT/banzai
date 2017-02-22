@@ -16,7 +16,7 @@ def get_logger(name):
 
 
 def start_logging(log_level='INFO', filename=None):
-
+    logging.captureWarnings(True)
     # Set up the message queue
     global queue
     queue = multiprocessing.Queue(-1)
