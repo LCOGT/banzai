@@ -7,6 +7,9 @@ import sys
 from lcogt_logging import LCOGTFormatter
 from banzai.utils import date_utils
 
+queue = None
+listener = None
+
 
 def get_logger(name):
     logger = logging.getLogger(name)
