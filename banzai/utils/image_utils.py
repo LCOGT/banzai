@@ -26,9 +26,10 @@ def select_images(image_list, image_types):
             if obstype in image_types:
                 images.append(filename)
             else:
-                logger.error('Unable to get OBSTYPE', extra={'filename': filename})
+                logger.error('Unable to get OBSTYPE', extra={'tags': {'filename': filename}})
         except Exception as e:
-            logger.error('Exception getting OBSTYPE: {e}'.format(e), extra={'filename': filename})
+            logger.error('Exception getting OBSTYPE: {e}'.format(e=e),
+                         extra={'tags': {'filename': filename}})
     return images
 
 
