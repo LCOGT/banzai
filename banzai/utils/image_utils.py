@@ -2,12 +2,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 from glob import glob
 
-import numpy as np
 from astropy.io import fits
+import numpy as np
 
 from banzai import dbs
 from banzai import logs
 from banzai.utils import file_utils
+from banzai.utils import fits_utils
 
 logger = logs.get_logger(__name__)
 
@@ -106,7 +107,16 @@ def get_bpm(image, pipeline_context):
         bpm = None
         image.header['L1IDMASK'] = ('', 'Id. of mask file used')
     else:
-        bpm = np.array(fits.getdata(bpm_filename), dtype=np.uint8)
+        bpm_hdu = fits.open(bpm_filename)
+        bpm_sci_extensions = fits_utils.get_sci_extensions(bpm_hdu)
+        if len(bpm_sci_extensions) > 1:
+            extension_shape = bpm_sci_extensions[0].data.shape
+            bpm_shape = (bpm_sci_extensions, extension_shape[0], extension_shape[1])
+            bpm = np.zeros(bpm_shape, dtype=np.uint8)
+            for i, sci_extension in enumerate(bpm_sci_extensions):
+                bpm[i, :, :] = sci_extension.data[:, :]
+        else:
+            bpm = np.array(bpm_hdu[0].data, dtype=np.uint8)
         if bpm.shape != image.data.shape:
             tags = logs.image_config_to_tags(image, None)
             logs.add_tag(tags, 'filename', image.filename)
