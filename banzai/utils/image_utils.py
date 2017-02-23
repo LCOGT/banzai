@@ -17,17 +17,18 @@ def select_images(image_list, image_types):
     images = []
     for filename in image_list:
         try:
-            if os.path.splitext(filename)[1] == '.fz':
-                ext = 1
-            else:
-                ext = 0
-            if fits.getval(filename, 'OBSTYPE', ext=ext) in image_types:
-                images.append(filename)
-        except Exception as e:
-            logger.error('Unable to get OBSTYPE from {0}.'.format(filename))
-            logger.error(e)
-            continue
+            obstype = None
+            hdu_list = fits.open(filename)
+            for hdu in hdu_list:
+                if 'OBSTYPE' in hdu.header.keys():
+                    obstype = hdu.header['OBSTYPE']
 
+            if obstype in image_types:
+                images.append(filename)
+            else:
+                logger.error('Unable to get OBSTYPE', extra={'filename': filename})
+        except Exception as e:
+            logger.error('Exception getting OBSTYPE: {e}'.format(e), extra={'filename': filename})
     return images
 
 
@@ -44,8 +45,7 @@ def make_image_list(pipeline_context):
         for i, f in enumerate(fz_files):
             if f[:-3] in fits_files:
                 fz_files_to_remove.append(f)
-        # This may not be strictly necessary, but I was hesitant to edit the list at the same
-        # time as we iterate over it.
+
         for f in fz_files_to_remove:
             fz_files.remove(f)
         image_list = fits_files + fz_files
