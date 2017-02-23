@@ -2,6 +2,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from banzai.stages import Stage
 import numpy as np
 from banzai import dbs, logs
+from astropy.io import fits
+
 
 logger = logs.get_logger(__name__)
 
@@ -95,6 +97,9 @@ sinistro_detsecs = {'missing': ['[1:2048,1:2048]', '[4096:2049,1:2048]',
 
 
 def munge_sinistro(image):
+    if not image.extension_headers:
+        image.extension_headers = [fits.Header() for i in range(4)]
+
     if image.header['SATURATE'] == 0:
         image.header['SATURATE'] = 47500.0
 
