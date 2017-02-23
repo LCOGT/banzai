@@ -100,6 +100,11 @@ def munge_sinistro(image):
     if not image.extension_headers:
         image.extension_headers = [fits.Header() for i in range(4)]
 
+    if not hasattr(image.gain, "__len__"):
+        # Gain is a single value
+        gain = image.gain
+        image.gain = [gain for i in range(4)]
+
     if image.header['SATURATE'] == 0:
         image.header['SATURATE'] = 47500.0
 
