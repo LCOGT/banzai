@@ -164,7 +164,9 @@ def reduce_trailed_frames_console():
 
 def preprocess_sinistro_frames(pipeline_context):
     stages_to_do = get_stages_todo(mosaic.MosaicCreator)
-    reduce_frames_one_by_one(stages_to_do, pipeline_context)
+    reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD',
+                                                                          'BIAS', 'DARK', 'SKYFLAT',
+                                                                          'TRAILED', 'EXPERIMENTAL'])
 
 
 def preprocess_sinistro_frames_console():
