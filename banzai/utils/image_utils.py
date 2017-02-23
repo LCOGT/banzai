@@ -111,7 +111,7 @@ def get_bpm(image, pipeline_context):
         bpm_sci_extensions = fits_utils.get_sci_extensions(bpm_hdu)
         if len(bpm_sci_extensions) > 1:
             extension_shape = bpm_sci_extensions[0].data.shape
-            bpm_shape = (bpm_sci_extensions, extension_shape[0], extension_shape[1])
+            bpm_shape = (len(bpm_sci_extensions), extension_shape[0], extension_shape[1])
             bpm = np.zeros(bpm_shape, dtype=np.uint8)
             for i, sci_extension in enumerate(bpm_sci_extensions):
                 bpm[i, :, :] = sci_extension.data[:, :]
