@@ -141,7 +141,7 @@ class OverscanSubtractor(Stage):
 
 
 def _subtract_overscan_3d(image, i):
-    overscan_region = fits_utils.parse_region_keyword(image.header.get('BIASSEC{0}'.format(i + 1)))
+    overscan_region = fits_utils.parse_region_keyword(image.extension_headers[i].get('BIASSEC'))
     if overscan_region is not None:
         overscan_level = stats.sigma_clipped_mean(image.data[i][overscan_region], 3)
         image.header['L1STATOV'] = (1, 'Status flag for overscan correction')

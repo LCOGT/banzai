@@ -32,7 +32,7 @@ def create_master_calibration_header(images):
         try:
             # Dump empty header keywords
             if len(h) > 0:
-                header[h] = images[0].header[h]
+                header[h] = (images[0].header[h], images[0].header.comments[h])
         except ValueError as e:
             logging_tags = logs.image_config_to_tags(images[0], None)
             logs.add_tag(logging_tags, 'filename', images[0].filename)
@@ -70,8 +70,9 @@ def parse_region_keyword(keyword_value):
     :param keyword_value: Header keyword string
     :return: x, y index slices
     """
-
-    if keyword_value.lower() == 'unknown':
+    if not keyword_value:
+        pixel_slices = None
+    elif keyword_value.lower() == 'unknown':
         pixel_slices = None
     elif keyword_value.lower() == 'n/a':
         pixel_slices = None

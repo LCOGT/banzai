@@ -4,6 +4,7 @@ from banzai.tests.utils import FakeImage
 
 import numpy as np
 
+
 class FakeGainImage(FakeImage):
     def __init__(self, *args, **kwargs):
         super(FakeGainImage, self).__init__(*args, **kwargs)

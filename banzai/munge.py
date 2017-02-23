@@ -1,8 +1,9 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 from banzai.stages import Stage
 import numpy as np
-import os
 from banzai import dbs, logs
+
+logger = logs.get_logger(__name__)
 
 
 class DataMunger(Stage):
@@ -18,83 +19,12 @@ class DataMunger(Stage):
         for image in images:
             telescope = dbs.get_telescope(image.telescope_id,
                                           db_address=self.pipeline_context.db_address)
-            # TODO: Currently we only support 1x1 Sinistro frames and only support 1x1 frames.
-            # TODO: 2x2 frames cannot use hard coded values because we read out more pixels.
+
             if 'sinistro' in telescope.camera_type.lower():
-                if image.header['CCDSUM'] == '1 1':
-                    keywords_to_update = [('BIASSEC1', ('[2055:2080,1:2048]',
-                                                        '[binned pixel] Section of overscan data for Q1')),
-                                          ('BIASSEC2', ('[2055:2080,1:2048]',
-                                                        '[binned pixel] Section of overscan data for Q2')),
-                                          ('BIASSEC3', ('[2055:2080,1:2048]',
-                                                        '[binned pixel] Section of overscan data for Q3')),
-                                          ('BIASSEC4', ('[2055:2080,1:2048]',
-                                                        '[binned pixel] Section of overscan data for Q4')),
-                                          ('DATASEC1', ('[1:2048,1:2048]',
-                                                        '[binned pixel] Data section for Q1')),
-                                          ('DATASEC2', ('[1:2048,1:2048]',
-                                                        '[binned pixel] Data section for Q2'))]
-
-                    if image.data.shape[1] > 2048:
-                        keywords_to_update.append(('DATASEC3', ('[1:2048,2:2049]',
-                                                   '[binned pixel] Data section for Q3')))
-                        keywords_to_update.append(('DATASEC4', ('[1:2048,2:2049]',
-                                                   '[binned pixel] Data section for Q4')))
-                    else:
-                        keywords_to_update.append(('DATASEC3', ('[1:2048,1:2048]',
-                                                                '[binned pixel] Data section for Q3')))
-                        keywords_to_update.append(('DATASEC4', ('[1:2048,1:2048]',
-                                                                '[binned pixel] Data section for Q4')))
-                    keywords_to_update.append(('DETSEC1', ('[1:2048,1:2048]',
-                                                           '[binned pixel] Detector section for Q1')))
-                    keywords_to_update.append(('DETSEC2', ('[4096:2049,1:2048]',
-                                                           '[binned pixel] Detector section for Q2')))
-                    keywords_to_update.append(('DETSEC3', ('[4096:2049,4096:2049]',
-                                                           '[binned pixel] Detector section for Q3')))
-                    keywords_to_update.append(('DETSEC4', ('[1:2048,4096:2049]',
-                                                           '[binned pixel] Detector section for Q4')))
-                elif image.header['CCDSUM'] == '2 2':
-                    keywords_to_update = [('BIASSEC1', ('[1025:1040,1:1024]',
-                                                        '[binned pixel] Section of overscan data for Q1')),
-                                          ('BIASSEC2', ('[1025:1040,1:1024]',
-                                                        '[binned pixel] Section of overscan data for Q2')),
-                                          ('BIASSEC3', ('[1025:1040,1:1024]',
-                                                        '[binned pixel] Section of overscan data for Q3')),
-                                          ('BIASSEC4', ('[1025:1040,1:1024]',
-                                                        '[binned pixel] Section of overscan data for Q4')),
-                                          ('DATASEC1', ('[1:1024,1:1024]',
-                                                        '[binned pixel] Data section for Q1')),
-                                          ('DATASEC2', ('[1:1024,1:1024]',
-                                                        '[binned pixel] Data section forQ2'))]
-
-                    keywords_to_update.append(('DATASEC3', ('[1:1024,1:1024]',
-                                                                '[binned pixel] Data section for Q3')))
-                    keywords_to_update.append(('DATASEC4', ('[1:1024,1:1024]',
-                                                                '[binned pixel] Data section for Q4')))
-                    keywords_to_update.append(('DETSEC1', ('[1:1024,1:1024]',
-                                                           '[binned pixel] Detector section for Q1')))
-                    keywords_to_update.append(('DETSEC2', ('[2048:1025,1:1024]',
-                                                           '[binned pixel] Detector section for Q2')))
-                    keywords_to_update.append(('DETSEC3', ('[2048:1025,2048:1025]',
-                                                           '[binned pixel] Detector section for Q3')))
-                    keywords_to_update.append(('DETSEC4', ('[1:1024,2048:1025]',
-                                                           '[binned pixel] Detector section for Q4')))
-
-                try:
-                    set_crosstalk_header_keywords(image)
-                except KeyError as e:
+                if sinistro_mode_is_supported(image):
+                    munge_sinistro(image)
+                else:
                     images_to_remove.append(image)
-                    logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-                    logs.add_tag(logging_tags, 'filename', image.filename)
-                    self.logger.error('Crosstalk Coefficients missing!', extra=logging_tags)
-
-                for keyword, value in keywords_to_update:
-                    _add_header_keyword(keyword, value, image)
-
-                if image.header['CCDSUM'] == '2 2':
-                    image.header['TRIMSEC'] = ('[1:2048,1:2048]', '[binned pixel] Section of useful data')
-                if image.header['SATURATE'] == 0:
-                    image.header['SATURATE'] = 47500.0
 
             # 1m SBIGS
             elif '1m0' in telescope.camera_type:
@@ -110,13 +40,8 @@ class DataMunger(Stage):
                 elif image.header['CCDSUM'] == '1 1':
                     image.header['SATURATE'] = (125000.0 / float(image.header['GAIN']),
                                                 '[ADU] Saturation level used')
-            # Throw an exception if the saturate value is set to zero
-            try:
-                if float(image.header['SATURATE']) == 0.0:
-                    images_to_remove.append(image)
-                    raise ValueError('SATURATE keyword cannot be zero: {filename}'.format(filename=os.path.basename(image.filename)))
-            except ValueError:
-                continue
+            if not image_has_valid_saturate_value(image):
+                images_to_remove.append(image)
 
         for image in images_to_remove:
             images.remove(image)
@@ -124,9 +49,115 @@ class DataMunger(Stage):
         return images
 
 
-def _add_header_keyword(keyword, value, image):
+def sinistro_mode_is_supported(image):
+    """
+    Check to make sure the Sinistro image was taken in a supported mode.
+
+    Parameters
+    ----------
+    image: banzai.images.Image
+           Sinistro image to check
+
+    Returns
+    -------
+    supported: bool
+               True if reduction is supported
+
+    Notes
+    -----
+    Currently we only support 1x1 binning images.
+    """
+    # TODO Add support for other binnings
+    supported = True
+
+    tags = logs.image_config_to_tags(image, None)
+    logs.add_tag(tags, 'filename', image.filename)
+    if image.header['CCDSUM'] != '1 1':
+        supported = False
+        logger.error('Non-supported Sinistro mode', logging_tags=tags)
+    if image.instrument not in crosstalk_coefficients.keys():
+        supported = False
+        logger.error('Crosstalk Coefficients missing!', extra=tags)
+
+    return supported
+
+
+# We need to properly set the datasec and detsec keywords in case we didn't read out the
+# middle row (the "Missing Row Problem").
+sinistro_datasecs = {'missing': ['[1:2048,1:2048]', '[1:2048,1:2048]',
+                                 '[1:2048,2:2048]', '[1:2048,2:2048]'],
+                     'full': ['[1:2048,1:2048]', '[1:2048,1:2048]',
+                              '[1:2048,2:2049]', '[1:2048,2:2049]']}
+sinistro_detsecs = {'missing': ['[1:2048,1:2048]', '[4096:2049,1:2048]',
+                                '[4096:2049,4096:2050]', '[1:2048,4096:2050]'],
+                    'full': ['[1:2048,1:2048]', '[4096:2049,1:2048]',
+                             '[4096:2049,4096:2049]', '[1:2048,4096:2049]']}
+
+
+def munge_sinistro(image):
+    if image.header['SATURATE'] == 0:
+        image.header['SATURATE'] = 47500.0
+
+    set_crosstalk_header_keywords(image)
+
+    if image.data.shape[1] > 2048:
+        datasecs = sinistro_datasecs['full']
+        detsecs = sinistro_detsecs['full']
+    else:
+        datasecs = sinistro_datasecs['missing']
+        detsecs = sinistro_detsecs['missing']
+
+    for i in range(4):
+        biassec_comment = '[binned pixel] Section of overscan data for Q{0}'.format(i + 1)
+        _add_extension_header_keyword(image, i, 'BIASSEC',
+                                      ('[2055:2080,1:2048]', biassec_comment))
+
+        datasec_comment = '[binned pixel] Data section for Q{0}'.format(i + 1)
+        _add_extension_header_keyword(image, i, 'DATASEC',
+                                      (datasecs[i], datasec_comment))
+
+        detsec_comment = '[unbinned pixel] Detector section for Q{0}'.format(i + 1)
+        _add_extension_header_keyword(image, i, 'DETSEC',
+                                      (detsecs[i], detsec_comment))
+
+
+def image_has_valid_saturate_value(image):
+    """
+    Check if the image has a valid saturate value.
+
+    Parameters
+    ----------
+    image: banzai.images.Image
+
+    Returns
+    -------
+    valid: bool
+           True if the image has a non-zero saturate value. False otherwise.
+
+    Notes
+    -----
+    The saturate keyword being zero causes a lot of headaches so we should just dump
+    the image if the saturate value is zero after we have fixed the typical incorrect values.
+    """
+    valid = True
+
+    if float(image.header['SATURATE']) == 0.0:
+        tags = logs.image_config_to_tags(image, None)
+        logs.add_tag(tags, 'filename', image.filename)
+        logger.error('SATURATE keyword cannot be zero', extra=tags)
+        valid = False
+
+    return valid
+
+
+def _add_header_keyword(image, keyword, value):
     if image.header.get(keyword) is None:
         image.header[keyword] = value
+
+
+def _add_extension_header_keyword(image, extension, keyword, value):
+    if keyword not in image.extension_headers[extension].keys():
+        image.extension_headers[extension][keyword] = value
 
 
 def set_crosstalk_header_keywords(image):
@@ -137,7 +168,8 @@ def set_crosstalk_header_keywords(image):
         for j in range(n_amps):
             if i != j:
                 crosstalk_comment = '[Crosstalk coefficient] Signal from Q{i} onto Q{j}'.format(i=i+1, j=j+1)
-                image.header['CRSTLK{0}{1}'.format(i + 1, j + 1)] = (coefficients[i, j], crosstalk_comment)
+                _add_header_keyword(image, 'CRSTLK{0}{1}'.format(i + 1, j + 1),
+                                    (coefficients[i, j], crosstalk_comment))
 
 """These matrices should have the following structure:
 coeffs = [[Q11, Q12, Q13, Q14],

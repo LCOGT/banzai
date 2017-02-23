@@ -38,10 +38,10 @@ class Image(object):
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
 
-        if len(self.data.shape) > 2:
-            self.gain = [h.gain for h in extension_headers]
+        if len(self.extension_headers) > 0 and 'GAIN' in self.extension_headers[0]:
+                self.gain = [h['GAIN'] for h in extension_headers]
         else:
-            self.gain = header.get('GAIN')
+            self.gain = eval(str(header.get('GAIN')))
 
         self.ccdsum = header.get('CCDSUM')
         self.filter = header.get('FILTER')
