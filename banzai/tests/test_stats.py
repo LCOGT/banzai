@@ -315,7 +315,7 @@ def test_absolute_deviation_3d_axis_2_mask_none():
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
         expected = np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=2).reshape(size1, size2, 1))
         actual = stats.absolute_deviation(a, axis=2)
-        np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
+        np.testing.assert_allclose(actual, expected.astype(np.float32), atol=5e-4)
 
 
 def test_absolute_deviation_axis_none_mask():
@@ -529,15 +529,18 @@ def test_mad_3d_axis_1_mask_none():
 
 def test_mad_3d_axis_2_mask_none():
     for i in range(5):
-        size1 = np.random.randint(1, 50)
-        size2 = np.random.randint(1, 50)
-        size3 = np.random.randint(5, 50)
+        size1 = np.random.randint(10, 50)
+        size2 = np.random.randint(10, 50)
+        size3 = np.random.randint(10, 50)
         mean = np.random.uniform(-1000, 1000)
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
+        b = a.copy()
+        
         expected = np.median(np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=2).reshape(size1, size2, 1)), axis=2)
-        actual = stats.median_absolute_deviation(a, axis=2)
-        np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
+        actual = stats.median_absolute_deviation(b, axis=2)
+       
+        np.testing.assert_allclose(actual, expected, rtol=1e-5)
 
 
 def test_mad_axis_none_mask():
