@@ -32,7 +32,7 @@ def create_master_calibration_header(images):
         try:
             # Dump empty header keywords
             if len(h) > 0:
-                header[h] = images[0].header[h]
+                header[h] = (images[0].header[h], images[0].header.comments[h])
         except ValueError as e:
             logging_tags = logs.image_config_to_tags(images[0], None)
             logs.add_tag(logging_tags, 'filename', images[0].filename)
@@ -70,8 +70,9 @@ def parse_region_keyword(keyword_value):
     :param keyword_value: Header keyword string
     :return: x, y index slices
     """
-
-    if keyword_value.lower() == 'unknown':
+    if not keyword_value:
+        pixel_slices = None
+    elif keyword_value.lower() == 'unknown':
         pixel_slices = None
     elif keyword_value.lower() == 'n/a':
         pixel_slices = None
@@ -132,6 +133,34 @@ def parse_ra_dec(header):
 
 
 def open_image(filename):
+    """
+    Load an image from a FITS file
+
+    Parameters
+    ----------
+    filename: str
+              Full path of the file to open
+
+    Returns
+    -------
+    data: numpy array
+          image data; will have 3 dimensions if the file was either multi-extension or
+          a datacube
+    header: astropy.io.fits.Header
+            Header from the primary extension
+    bpm: numpy array
+         Array of bad pixel mask values if the BPM extension exists. None otherwise.
+    extension_headers: list of astropy.io.fits.Header
+                       List of headers from other SCI extensions that are not the
+                       primary extension
+
+    Notes
+    -----
+    The file can be either compressed or not. If there are multiple extensions,
+    e.g. Sinistros, the extensions should be (SCI, 1), (SCI, 2), ...
+    Sinsitro frames that were taken as datacubes will be munged later so that the
+    output images are consistent
+    """
     base_filename = os.path.basename(filename)
 
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -143,41 +172,79 @@ def open_image(filename):
         else:
             fits_filename = filename
 
-        hdu = fits.open(fits_filename, 'readonly')
-        data = hdu[0].data.astype(np.float32)
-        header = hdu[0].header
+        hdulist = fits.open(fits_filename, 'readonly')
+        # Get the main header
+        header = hdulist[0].header
+
+        # Check for multi-extension fits
+        extension_headers = []
+        sci_extensions = get_sci_extensions(hdulist)
+        if len(sci_extensions) > 1:
+            data = np.zeros((len(sci_extensions), sci_extensions[0].data.shape[0],
+                             sci_extensions[0].data.shape[1]), dtype=np.float32)
+            for i, hdu in enumerate(sci_extensions):
+                data[i, :, :] = hdu.data[:, :]
+                extension_headers.append(hdu.header)
+        else:
+            data = hdulist[0].data.astype(np.float32)
+
         try:
-            bpm = hdu['BPM'].data.astype(np.uint8)
+            bpm = hdulist['BPM'].data.astype(np.uint8)
         except KeyError:
             bpm = None
-        hdu.close()
+        hdulist.close()
 
-    return data, header, bpm
+    return data, header, bpm, extension_headers
+
+
+def get_sci_extensions(fits_hdulist):
+    """
+    Get a list of the science extensions from a multi-extension fits file (HDU list)
+
+    Parameters
+    ----------
+    fits_hdulist: HDUList
+                  input fits HDUList to search for SCI extensions
+
+    Returns
+    -------
+    HDUList: an HDUList object with only the SCI extensions
+    """
+    # The following of using False is just an awful convention and will probably be
+    # deprecated at some point
+    extension_info = fits_hdulist.info(False)
+    return fits.HDUList([fits_hdulist[ext[0]] for ext in extension_info if ext[1] == 'SCI'])
 
 
 def fits_formats(dtype):
-    """		
-    Convert a numpy data type to a fits format code		
-    :param dtype: dtype parameter from numpy array
-    :return: string: Fits type code		
-    """		
-    format_code = ''		
+    """
+    Convert a numpy data type to a fits format code
+
+    Parameters
+    ----------
+    dtype: data type parameter from numpy array
+
+    Returns
+    -------
+    str: Fits type code
+    """
+    format_code = ''
     if 'bool' in dtype.name:
-        format_code = 'L'		
+        format_code = 'L'
     elif np.issubdtype(dtype, np.int16):
-        format_code = 'I'		
+        format_code = 'I'
     elif np.issubdtype(dtype, np.int32):
-        format_code = 'J'		
+        format_code = 'J'
     elif np.issubdtype(dtype, np.int64):
-        format_code = 'K'		
+        format_code = 'K'
     elif np.issubdtype(dtype, np.float32):
-        format_code = 'E'		
+        format_code = 'E'
     elif np.issubdtype(dtype, np.float64):
-        format_code = 'D'		
+        format_code = 'D'
     elif np.issubdtype(dtype, np.complex32):
-        format_code = 'C'		
+        format_code = 'C'
     elif np.issubdtype(dtype, np.complex64):
-        format_code = 'M'		
+        format_code = 'M'
     elif np.issubdtype(dtype, np.character):
-        format_code = 'A'		
-    return format_code		
+        format_code = 'A'
+    return format_code

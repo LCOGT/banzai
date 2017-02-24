@@ -163,14 +163,14 @@ class SourceDetector(Stage):
                 image.catalog['flux'].unit = 'counts'
                 image.catalog['flux'].description = 'Flux within a Kron-like elliptical aperture'
                 image.catalog['fluxerr'].unit = 'counts'
-                image.catalog['fluxerr'].description = 'Error on the flux within a Kron-like elliptical aperture'
+                image.catalog['fluxerr'].description = 'Error on the flux within Kron aperture'
                 image.catalog['peak'].unit = 'counts'
                 image.catalog['peak'].description = 'Peak flux (flux at xpeak, ypeak)'
                 for diameter in [1, 2, 3, 4, 5, 6]:
                     image.catalog['fluxaper{0}'.format(diameter)].unit = 'counts'
                     image.catalog['fluxaper{0}'.format(diameter)].description = 'Flux from fixed circular aperture: {0}" diameter'.format(diameter)
                     image.catalog['fluxerr{0}'.format(diameter)].unit = 'counts'
-                    image.catalog['fluxerr{0}'.format(diameter)].description = 'Error on Flux from fixed circular aperture: {0}" diameter'.format(diameter)
+                    image.catalog['fluxerr{0}'.format(diameter)].description = 'Error on Flux from circular aperture: {0}"'.format(diameter)
 
                 image.catalog['background'].unit = 'counts'
                 image.catalog['background'].description = 'Average background value in the aperture'
@@ -197,7 +197,7 @@ class SourceDetector(Stage):
                 image.catalog['y2'].description = 'Variance on Y coordinate of the object'
                 image.catalog['xy'].unit = 'pixel^2'
                 image.catalog['xy'].description = 'XY covariance of the object'
-                image.catalog['flag'].description = 'Bit mask combination of extraction and photometry flags'
+                image.catalog['flag'].description = 'Bit mask of extraction/photometry flags'
 
                 image.catalog.sort('flux')
                 image.catalog.reverse()

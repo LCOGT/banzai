@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 from banzai.bias import BiasMaker
 import numpy as np
+from astropy.io import fits
 
 from banzai.tests.utils import FakeImage, FakeContext, throws_inhomogeneous_set_exception
 
@@ -11,7 +12,8 @@ class FakeBiasImage(FakeImage):
     def __init__(self, *args, **kwargs):
         super(FakeBiasImage, self).__init__(*args, **kwargs)
         self.caltype = 'bias'
-        self.header = {'OBSTYPE': 'BIAS'}
+        self.header = fits.Header()
+        self.header['OBSTYPE'] = 'BIAS'
 
 
 def test_min_images():

@@ -7,6 +7,9 @@ import sys
 from lcogt_logging import LCOGTFormatter
 from banzai.utils import date_utils
 
+queue = None
+listener = None
+
 
 def get_logger(name):
     logger = logging.getLogger(name)
@@ -16,7 +19,7 @@ def get_logger(name):
 
 
 def start_logging(log_level='INFO', filename=None):
-
+    logging.captureWarnings(True)
     # Set up the message queue
     global queue
     queue = multiprocessing.Queue(-1)

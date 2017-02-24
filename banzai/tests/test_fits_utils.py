@@ -34,3 +34,41 @@ def test_table_to_fits():
     assert hdu.header.cards['TTYPE1'].comment == 'Column a'
     assert hdu.header.cards['TTYPE2'].comment == 'Column b'
     assert hdu.header.cards['TTYPE3'].comment == 'Column c'
+
+
+def test_get_sci_extensions():
+    hdulist = [fits.PrimaryHDU(header=fits.Header({'test': 'test'}))]
+
+    input_data = []
+    for i in range(4):
+        data = np.random.uniform(0, 1, size=(101, 101)).astype(dtype=np.float32)
+        input_data.append(data)
+        # Build the fits header manually because of a bug in the latest stable version of astropy
+        # This should be
+        # header = fits.Header({'EXTNAME': 'SCI', 'EXTVER': i + 1})
+        header = fits.Header()
+        header['EXTNAME'] = 'SCI'
+        header['EXTVER'] = i + 1
+        hdulist.append(fits.ImageHDU(data=data, header=header))
+
+    bpm_header = fits.Header()
+    bpm_header['EXTNAME'] = 'BPM'
+    bpm_hdu = fits.ImageHDU(data=np.zeros((101, 101), dtype=np.uint8), header=bpm_header)
+    hdulist.append(bpm_hdu)
+
+    hdulist = fits.HDUList(hdulist)
+
+    sci_extensions = fits_utils.get_sci_extensions(hdulist)
+
+    assert len(sci_extensions) == 4
+    for i in range(4):
+        np.testing.assert_allclose(sci_extensions[i].data, input_data[i], atol=1e-5)
+
+
+def test_open_image():
+    for fpacked in [True, False]:
+        # Read an image with only a single extension
+        # Read an images with a single extension and a BPM extension
+        # Read an image with a single extension and a datacube
+        # Read an image with multiple sci extensions
+        pass
