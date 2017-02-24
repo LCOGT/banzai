@@ -12,7 +12,8 @@ class FakeBiasImage(FakeImage):
     def __init__(self, *args, **kwargs):
         super(FakeBiasImage, self).__init__(*args, **kwargs)
         self.caltype = 'bias'
-        self.header = fits.Header({'OBSTYPE': 'BIAS'})
+        self.header = fits.Header()
+        self.header['OBSTYPE'] = 'BIAS'
 
 
 def test_min_images():
