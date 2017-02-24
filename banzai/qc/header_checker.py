@@ -52,7 +52,7 @@ class HeaderSanity(Stage):
         return images
 
     def check_header_keyword_present(self, keyword, image):
-        """ Logs a warning if the keyword is not in the image header.
+        """ Logs an error if the keyword is not in the image header.
 
         Parameters
         ----------
@@ -67,12 +67,12 @@ class HeaderSanity(Stage):
         logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
 
         if keyword not in header:
-            sentence = 'WARNING : The header key ' + keyword + ' is not in image header!'
+            sentence = 'The header key ' + keyword + ' is not in image header!'
 
             self.logger.error(sentence, extra=logging_tags)
 
     def check_header_format(self, keyword, image):
-        """ Logs a warning if the keyword is not the expected type
+        """ Logs an error if the keyword is not the expected type
             in the image header.
 
         Parameters
@@ -97,7 +97,7 @@ class HeaderSanity(Stage):
 
 
     def check_header_na(self, keyword, image):
-        """ Logs a warning if the keyword is 'N/A' instead of the
+        """ Logs an error if the keyword is 'N/A' instead of the
             expected type in the image header.
 
         Parameters
