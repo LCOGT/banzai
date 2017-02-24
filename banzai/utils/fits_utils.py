@@ -217,28 +217,34 @@ def get_sci_extensions(fits_hdulist):
 
 
 def fits_formats(dtype):
-    """		
-    Convert a numpy data type to a fits format code		
-    :param dtype: dtype parameter from numpy array
-    :return: string: Fits type code		
-    """		
-    format_code = ''		
+    """
+    Convert a numpy data type to a fits format code
+
+    Parameters
+    ----------
+    dtype: data type parameter from numpy array
+
+    Returns
+    -------
+    str: Fits type code
+    """
+    format_code = ''
     if 'bool' in dtype.name:
-        format_code = 'L'		
+        format_code = 'L'
     elif np.issubdtype(dtype, np.int16):
-        format_code = 'I'		
+        format_code = 'I'
     elif np.issubdtype(dtype, np.int32):
-        format_code = 'J'		
+        format_code = 'J'
     elif np.issubdtype(dtype, np.int64):
-        format_code = 'K'		
+        format_code = 'K'
     elif np.issubdtype(dtype, np.float32):
-        format_code = 'E'		
+        format_code = 'E'
     elif np.issubdtype(dtype, np.float64):
-        format_code = 'D'		
+        format_code = 'D'
     elif np.issubdtype(dtype, np.complex32):
-        format_code = 'C'		
+        format_code = 'C'
     elif np.issubdtype(dtype, np.complex64):
-        format_code = 'M'		
+        format_code = 'M'
     elif np.issubdtype(dtype, np.character):
-        format_code = 'A'		
-    return format_code		
+        format_code = 'A'
+    return format_code

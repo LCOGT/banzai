@@ -6,6 +6,7 @@ format and validates their values.
 from banzai.stages import Stage
 from banzai import logs
 
+
 class HeaderSanity(Stage):
     """
       Stage to validate important header keywords.
@@ -95,7 +96,6 @@ class HeaderSanity(Stage):
 
             self.logger.error(sentence, extra=logging_tags)
 
-
     def check_header_na(self, keyword, image):
         """ Logs an error if the keyword is 'N/A' instead of the
             expected type in the image header.
@@ -119,8 +119,6 @@ class HeaderSanity(Stage):
                 sentence = 'The header key ' + keyword + ' got the unexpected value : N/A'
                 self.logger.error(sentence, extra=logging_tags)
 
-
-
     def check_ra_range(self, image):
         """ Logs an error if the keyword right_ascension is not inside
             the expected range (0<ra<360 degrees) in the image header.
@@ -141,8 +139,6 @@ class HeaderSanity(Stage):
                 sentence = 'The header CRVAL1 key got the unexpected value : ' + str(ra_value)
                 self.logger.error(sentence, extra=logging_tags)
 
-
-
     def check_dec_range(self, image):
         """Logs an error if the keyword declination is not inside
             the expected range (-90<dec<90 degrees) in the image header.
@@ -162,12 +158,10 @@ class HeaderSanity(Stage):
             sentence = 'The header CRVAL2 key got the unexpected value : ' + str(dec_value)
             self.logger.error(sentence, extra=logging_tags)
 
-
-
     def check_exptime_value(self, image):
         """Logs an error if :
-		-1) the keyword exptime is not higher than 0.0
-		-2) the keyword exptime is equal to 0.0 and 'OBSTYPE' keyword is 'EXPOSE'
+        -1) the keyword exptime is not higher than 0.0
+        -2) the keyword exptime is equal to 0.0 and 'OBSTYPE' keyword is 'EXPOSE'
 
         Parameters
         ----------
@@ -185,10 +179,8 @@ class HeaderSanity(Stage):
             self.logger.error(sentence, extra=logging_tags)
             return
 
-
         obstype = image.header['OBSTYPE']
         if (exptime_value == 0.0) & (obstype == 'EXPOSE'):
             sentence = 'The header EXPTIME key got the unexpected value : 0.0'
             self.logger.error(sentence, extra=logging_tags)
             return
-

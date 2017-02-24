@@ -536,10 +536,10 @@ def test_mad_3d_axis_2_mask_none():
         sigma = np.random.uniform(0, 1000)
         a = np.random.normal(mean, sigma, size=(size1, size2, size3))
         b = a.copy()
-        
+
         expected = np.median(np.abs(a.astype(np.float32) - np.median(a.astype(np.float32), axis=2).reshape(size1, size2, 1)), axis=2)
         actual = stats.median_absolute_deviation(b, axis=2)
-       
+
         np.testing.assert_allclose(actual, expected, rtol=1e-5)
 
 
