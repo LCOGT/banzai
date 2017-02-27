@@ -21,6 +21,9 @@ addons:
             - texlive-latex-extra
             - dvipng
 
+services:
+  - mysql
+
 env:
     global:
 
