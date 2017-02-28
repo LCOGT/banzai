@@ -58,7 +58,7 @@ def test_get_sci_extensions():
 
     hdulist = fits.HDUList(hdulist)
 
-    sci_extensions = fits_utils.get_sci_extensions(hdulist)
+    sci_extensions = fits_utils.get_extensions_by_name(hdulist, 'SCI')
 
     assert len(sci_extensions) == 4
     for i in range(4):

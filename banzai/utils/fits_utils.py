@@ -132,6 +132,38 @@ def parse_ra_dec(header):
     return ra, dec
 
 
+def open(filename):
+    """
+    Load a fits file
+
+    Parameters
+    ----------
+    filename: str
+              File name/path to open
+
+    Returns
+    -------
+    hdulist: astropy.io.fits
+
+    Notes
+    -----
+    This is a wrapper to astropy.io.fits.open but funpacks the file first.
+    """
+
+    with tempfile.TemporaryDirectory(dir='/dev/shm/') as tmpdirname:
+
+        base_filename, file_extension = os.path.splitext(filename)
+        if file_extension == '.fz':
+            # Strip off the .fz
+            output_filename = os.path.join(tmpdirname, base_filename)
+            os.system('funpack -O {0} {1}'.format(output_filename, filename))
+            fits_filename = output_filename
+        else:
+            fits_filename = filename
+
+    return fits.open(fits_filename, 'readonly')
+
+
 def open_image(filename):
     """
     Load an image from a FITS file
@@ -161,43 +193,34 @@ def open_image(filename):
     Sinsitro frames that were taken as datacubes will be munged later so that the
     output images are consistent
     """
-    base_filename = os.path.basename(filename)
+    hdulist = open(filename)
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        if filename[-3:] == '.fz':
-            # Strip off the .fz
-            output_filename = os.path.join(tmpdirname, base_filename)[:-3]
-            os.system('funpack -O {0} {1}'.format(output_filename, filename))
-            fits_filename = output_filename
-        else:
-            fits_filename = filename
+    # Get the main header
+    header = hdulist[0].header
 
-        hdulist = fits.open(fits_filename, 'readonly')
-        # Get the main header
-        header = hdulist[0].header
+    # Check for multi-extension fits
+    extension_headers = []
+    sci_extensions = get_extensions_by_name(hdulist, 'SCI')
+    if len(sci_extensions) > 1:
+        data = np.zeros((len(sci_extensions), sci_extensions[0].data.shape[0],
+                         sci_extensions[0].data.shape[1]), dtype=np.float32)
+        for i, hdu in enumerate(sci_extensions):
+            data[i, :, :] = hdu.data[:, :]
+            extension_headers.append(hdu.header)
+    elif len(sci_extensions) == 1:
+        data = sci_extensions[0].data.astype(np.float32)
+    else:
+        data = hdulist[0].data.astype(np.float32)
 
-        # Check for multi-extension fits
-        extension_headers = []
-        sci_extensions = get_sci_extensions(hdulist)
-        if len(sci_extensions) > 1:
-            data = np.zeros((len(sci_extensions), sci_extensions[0].data.shape[0],
-                             sci_extensions[0].data.shape[1]), dtype=np.float32)
-            for i, hdu in enumerate(sci_extensions):
-                data[i, :, :] = hdu.data[:, :]
-                extension_headers.append(hdu.header)
-        else:
-            data = hdulist[0].data.astype(np.float32)
-
-        try:
-            bpm = hdulist['BPM'].data.astype(np.uint8)
-        except KeyError:
-            bpm = None
-        hdulist.close()
+    try:
+        bpm = hdulist['BPM'].data.astype(np.uint8)
+    except KeyError:
+        bpm = None
 
     return data, header, bpm, extension_headers
 
 
-def get_sci_extensions(fits_hdulist):
+def get_extensions_by_name(fits_hdulist, name):
     """
     Get a list of the science extensions from a multi-extension fits file (HDU list)
 
@@ -206,6 +229,9 @@ def get_sci_extensions(fits_hdulist):
     fits_hdulist: HDUList
                   input fits HDUList to search for SCI extensions
 
+    name: str
+          Extension name to collect, e.g. SCI
+
     Returns
     -------
     HDUList: an HDUList object with only the SCI extensions
@@ -213,7 +239,7 @@ def get_sci_extensions(fits_hdulist):
     # The following of using False is just an awful convention and will probably be
     # deprecated at some point
     extension_info = fits_hdulist.info(False)
-    return fits.HDUList([fits_hdulist[ext[0]] for ext in extension_info if ext[1] == 'SCI'])
+    return fits.HDUList([fits_hdulist[ext[0]] for ext in extension_info if ext[1] == name])
 
 
 def fits_formats(dtype):
