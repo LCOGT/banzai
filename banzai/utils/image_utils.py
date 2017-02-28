@@ -109,14 +109,16 @@ def get_bpm(image, pipeline_context):
         bpm = None
         image.header['L1IDMASK'] = ('', 'Id. of mask file used')
     else:
-        bpm_hdu = fits.open(bpm_filename)
-        bpm_sci_extensions = fits_utils.get_sci_extensions(bpm_hdu)
-        if len(bpm_sci_extensions) > 1:
-            extension_shape = bpm_sci_extensions[0].data.shape
-            bpm_shape = (len(bpm_sci_extensions), extension_shape[0], extension_shape[1])
+        bpm_hdu = fits_utils.open(bpm_filename)
+        bpm_extensions = fits_utils.get_extensions_by_name(bpm_hdu, 'BPM')
+        if len(bpm_extensions) > 1:
+            extension_shape = bpm_extensions[0].data.shape
+            bpm_shape = (len(bpm_extensions), extension_shape[0], extension_shape[1])
             bpm = np.zeros(bpm_shape, dtype=np.uint8)
-            for i, sci_extension in enumerate(bpm_sci_extensions):
-                bpm[i, :, :] = sci_extension.data[:, :]
+            for i, extension in enumerate(bpm_extensions):
+                bpm[i, :, :] = extension.data[:, :]
+        elif len(bpm_extensions) == 1:
+            bpm = np.array(bpm_extensions[0].data, dtype=np.uint8)
         else:
             bpm = np.array(bpm_hdu[0].data, dtype=np.uint8)
         if bpm.shape != image.data.shape:
