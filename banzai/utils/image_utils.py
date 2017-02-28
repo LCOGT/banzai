@@ -109,7 +109,7 @@ def get_bpm(image, pipeline_context):
         bpm = None
         image.header['L1IDMASK'] = ('', 'Id. of mask file used')
     else:
-        bpm_hdu = fits_utils.open(bpm_filename)
+        bpm_hdu = fits_utils.open_fits_file(bpm_filename)
         bpm_extensions = fits_utils.get_extensions_by_name(bpm_hdu, 'BPM')
         if len(bpm_extensions) > 1:
             extension_shape = bpm_extensions[0].data.shape
