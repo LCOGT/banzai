@@ -149,17 +149,14 @@ def open(filename):
     -----
     This is a wrapper to astropy.io.fits.open but funpacks the file first.
     """
-
-    with tempfile.TemporaryDirectory() as tmpdirname:
-
-        base_filename, file_extension = os.path.splitext(filename)
-        if file_extension == '.fz':
-            # Strip off the .fz
+    base_filename, file_extension = os.path.splitext(os.path.basename(filename))
+    if file_extension == '.fz':
+        with tempfile.TemporaryDirectory() as tmpdirname:
             output_filename = os.path.join(tmpdirname, base_filename)
             os.system('funpack -O {0} {1}'.format(output_filename, filename))
             fits_filename = output_filename
-        else:
-            fits_filename = filename
+    else:
+        fits_filename = filename
 
     return fits.open(fits_filename, 'readonly')
 
