@@ -132,7 +132,7 @@ def parse_ra_dec(header):
     return ra, dec
 
 
-def open(filename):
+def open_fits_file(filename):
     """
     Load a fits file
 
@@ -154,11 +154,11 @@ def open(filename):
         with tempfile.TemporaryDirectory() as tmpdirname:
             output_filename = os.path.join(tmpdirname, base_filename)
             os.system('funpack -O {0} {1}'.format(output_filename, filename))
-            fits_filename = output_filename
+            hdulist = fits.open(output_filename, 'readonly')
     else:
-        fits_filename = filename
+        hdulist = fits.open(filename, 'readonly')
 
-    return fits.open(fits_filename, 'readonly')
+    return hdulist
 
 
 def open_image(filename):
@@ -190,7 +190,7 @@ def open_image(filename):
     Sinsitro frames that were taken as datacubes will be munged later so that the
     output images are consistent
     """
-    hdulist = open(filename)
+    hdulist = open_fits_file(filename)
 
     # Get the main header
     header = hdulist[0].header
