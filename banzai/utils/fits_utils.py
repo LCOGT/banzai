@@ -150,7 +150,7 @@ def open(filename):
     This is a wrapper to astropy.io.fits.open but funpacks the file first.
     """
 
-    with tempfile.TemporaryDirectory(dir='/dev/shm/') as tmpdirname:
+    with tempfile.TemporaryDirectory() as tmpdirname:
 
         base_filename, file_extension = os.path.splitext(filename)
         if file_extension == '.fz':
