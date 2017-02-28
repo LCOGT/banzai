@@ -648,7 +648,7 @@ class _Bootstrapper(object):
         # needed to read a .gitmodules file).
         gitmodules_fileobj = io.StringIO()
 
-        # Must use io.open_fits_file for cross-Python-compatible behavior wrt unicode
+        # Must use io.open for cross-Python-compatible behavior wrt unicode
         with io.open(gitmodules_path) as f:
             for line in f:
                 # gitconfig files are more flexible with leading whitespace; just

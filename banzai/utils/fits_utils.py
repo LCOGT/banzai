@@ -139,7 +139,7 @@ def open_fits_file(filename):
     Parameters
     ----------
     filename: str
-              File name/path to open_fits_file
+              File name/path to open
 
     Returns
     -------
@@ -147,7 +147,7 @@ def open_fits_file(filename):
 
     Notes
     -----
-    This is a wrapper to astropy.io.fits.open_fits_file but funpacks the file first.
+    This is a wrapper to astropy.io.fits.open but funpacks the file first.
     """
     base_filename, file_extension = os.path.splitext(os.path.basename(filename))
     if file_extension == '.fz':
@@ -168,7 +168,7 @@ def open_image(filename):
     Parameters
     ----------
     filename: str
-              Full path of the file to open_fits_file
+              Full path of the file to open
 
     Returns
     -------

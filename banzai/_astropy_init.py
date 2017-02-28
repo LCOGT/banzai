@@ -87,7 +87,7 @@ def test(package=None, test_path=None, args=None, plugins=None,
         the directory htmlcov.
 
     open_files : bool, optional
-        Fail when any tests leave files open_fits_file.  Off by default, because
+        Fail when any tests leave files open.  Off by default, because
         this adds extra run time to the test suite.  Requires the
         `psutil <https://pypi.python.org/pypi/psutil>`_ package.
 

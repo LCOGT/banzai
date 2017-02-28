@@ -18,7 +18,7 @@ ccompiler = new_compiler()
 customize_compiler(ccompiler)
 ccompiler.add_library('gomp')
 has_omp_functions = ccompiler.has_function('omp_get_num_threads')
-with open_fits_file('openmp_check.c', 'w') as f:
+with open('openmp_check.c', 'w') as f:
     f.write('#include<stdio.h>\n')
     f.write('int main()\n')
     f.write('{\n')
