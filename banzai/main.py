@@ -308,10 +308,10 @@ def run_preview_pipeline():
     parser.add_argument('--rlevel', dest='rlevel', default=11, help='Reduction level')
 
     parser.add_argument('--n-processes', dest='n_processes', default=12,
-                        help='Number of listener processes to spawn.')
+                        help='Number of listener processes to spawn.', type=int)
 
     parser.add_argument('--broker-url', dest='broker_url',
-                        default='amqp://guest:guest@rabbitmq.lco.gtn',
+                        default='amqp://guest:guest@rabbitmq.lco.gtn:5672//?heartbeat=10',
                         help='URL for the broker service.')
     parser.add_argument('--queue-name', dest='queue_name', default='preview_pipeline',
                         help='Name of the queue to listen to from the fits exchange.')
@@ -343,18 +343,13 @@ def run_preview_pipeline():
 
 
 def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
-    crawl_exchange = Exchange('fits_files', type='fanout')
 
+    fits_exchange = Exchange('fits_files', type='fanout')
     listener = PreviewModeListener(broker_url, pipeline_context)
 
-    def errback(exc, interval):
-        logger.error('Error: %r', exc, exc_info=1)
-        logger.info('Retry in %s seconds.', interval)
-
-    with Connection(listener.broker_url) as connection:
-        connection.ensure_connection(max_retries=10, errback=errback)
+    with Connection(listener.broker_url, heartbeat=5) as connection:
         listener.connection = connection
-        listener.queue = Queue(queue_name, crawl_exchange)
+        listener.queue = Queue(queue_name, fits_exchange)
         try:
             listener.run()
         except KeyboardInterrupt:
@@ -380,12 +375,7 @@ class PreviewModeListener(ConsumerMixin):
         if 'e00.fits' in path or 's00.fits' in path:
             if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
                                         max_tries=self.pipeline_context.max_preview_tries):
-                stages_to_do = [munge.DataMunger, qc.ThousandsTest, qc.SaturationTest,
-                                crosstalk.CrosstalkCorrector, bias.OverscanSubtractor,
-                                gain.GainNormalizer, mosaic.MosaicCreator, bpm.BPMUpdater,
-                                trim.Trimmer, bias.BiasSubtractor, dark.DarkSubtractor,
-                                flats.FlatDivider, photometry.SourceDetector, astrometry.WCSSolver,
-                                headers.HeaderUpdater, pointing.PointingTest]
+                stages_to_do = get_stages_todo(pointing.PointingTest)
 
                 logging_tags = {'tags': {'filename': os.path.basename(path)}}
                 logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)
