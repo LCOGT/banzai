@@ -66,15 +66,15 @@ class Image(object):
         image_hdu.header['BZERO'] = 0.0
         image_hdu.header['SIMPLE'] = True
         image_hdu.header['EXTEND'] = True
-        image_hdu.update_ext_name('SCI')
+        image_hdu.name = 'SCI'
         hdu_list = [image_hdu]
         if self.catalog is not None:
             table_hdu = fits_utils.table_to_fits(self.catalog)
-            table_hdu.update_ext_name('CAT')
+            table_hdu.name = 'CAT'
             hdu_list.append(table_hdu)
         if self.bpm is not None:
             bpm_hdu = fits.ImageHDU(self.bpm.astype(np.uint8))
-            bpm_hdu.update_ext_name('BPM')
+            bpm_hdu.name = 'BPM'
             hdu_list.append(bpm_hdu)
 
         hdu_list = fits.HDUList(hdu_list)
@@ -91,7 +91,7 @@ class Image(object):
                 logger.error('Could not repair FITS header. {0}'.format(fix_attempt_error),
                              extra=logging_tags)
 
-        hdu_list.writeto(filename, clobber=True, output_verify='fix+warn')
+        hdu_list.writeto(filename, overwrite=True, output_verify='fix+warn')
         if fpack:
             if os.path.exists(filename + '.fz'):
                 os.remove(filename + '.fz')
