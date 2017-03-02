@@ -11,16 +11,11 @@ logger = logs.get_logger(__name__)
 
 
 def post_to_archive_queue(image_path):
-    def errback(exc, interval):
-        logger.error('Error: %r', exc, exc_info=1)
-        logger.info('Retry in %s seconds.', interval)
-    fits_exchange = Exchange('fits_files', type='fanout')
-    producer_queue = Queue('', fits_exchange, exclusive=True)
-    with Connection('amqp://guest:guest@rabbitmq.lco.gtn') as conn:
-        conn.ensure_connection(max_retries=10, errback=errback)
-        queue = conn.SimpleQueue(producer_queue)
-        put = conn.ensure(queue, queue.put, max_retries=30, errback=errback)
-        put({'path': image_path})
+    exchange = Exchange('fits_files', type='fanout')
+    with Connection('amqp://guest:guest@rabbitmq.lco.gtn:5672//?heartbeat=10') as conn:
+        producer = conn.Producer(exchange=exchange)
+        producer.publish({'path': image_path})
+        producer.release()
 
 
 def make_output_directory(pipeline_context, image_config):
