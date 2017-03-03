@@ -20,9 +20,7 @@ addons:
             - graphviz
             - texlive-latex-extra
             - dvipng
-
-services:
-  - mysql
+    mariadb: '10.0'
 
 env:
     global:
@@ -41,7 +39,7 @@ env:
         # For this package-template, we include examples of Cython modules,
         # so Cython is required for testing. If your package does not include
         # Cython code, you can set CONDA_DEPENDENCIES=''
-        - CONDA_DEPENDENCIES='Cython'
+        - CONDA_DEPENDENCIES='Cython mysql-connector-python'
 
         # Conda packages for affiliated packages are hosted in channel
         # "astropy" while builds for astropy LTS with recent numpy versions
