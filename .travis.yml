@@ -9,6 +9,9 @@ os:
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
 
+services:
+  - mysql
+
 # The apt packages below are needed for sphinx builds. A full list of packages
 # that can be included can be found here:
 #
@@ -20,7 +23,6 @@ addons:
             - graphviz
             - texlive-latex-extra
             - dvipng
-    mariadb: '10.0'
 
 env:
     global:
@@ -121,6 +123,9 @@ matrix:
         # (allow to fail unless your code completely compliant)
         - os: linux
           env: MAIN_CMD='pycodestyle banzai --count' SETUP_CMD=''
+
+before_install:
+  - mysql -e 'CREATE DATABASE banzai_test;'
 
 install:
 
