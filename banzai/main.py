@@ -71,17 +71,21 @@ def get_stages_todo(last_stage, extra_stages=[]):
 
 
 class PipelineContext(object):
+    processed_path = '/archive/engineering'
+    raw_path = '/archive/engineering'
+    post_to_archive = False
+    fpack = True
+    rlevel = 91
+    db_address = 'mysql://cmccully:password@localhost/test'
+    log_level = 'DEBUG'
+    preview_mode = False
+    filename = None
+    max_preview_tries = 5
+
     def __init__(self, args):
-        self.processed_path = args.processed_path
-        self.raw_path = args.raw_path
-        self.post_to_archive = args.post_to_archive
-        self.fpack = args.fpack
-        self.rlevel = args.rlevel
-        self.db_address = args.db_address
-        self.log_level = args.log_level
-        self.preview_mode = args.preview_mode
-        self.filename = args.filename
-        self.max_preview_tries = args.max_preview_tries
+        args_dict = vars(args)
+        for key in args_dict.keys():
+            setattr(self, key, args_dict[key])
 
 
 def run_end_of_night_from_console(scripts_to_run):
