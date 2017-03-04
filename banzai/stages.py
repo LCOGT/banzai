@@ -1,21 +1,69 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os
 import itertools
+import importlib
 
-from sqlalchemy.sql import func
-
-from banzai import dbs
-from banzai.utils import date_utils
-from banzai import logs
+from banzai import headers
 from banzai.images import Image
 from banzai.utils import image_utils
-
+from banzai import dbs
+from banzai import logs
 import abc
+
+__author__ = 'cmccully'
 
 logger = logs.get_logger(__name__)
 
-__author__ = 'cmccully'
+ordered_stages = ['munge.DataMunger',
+                  'qc.ThousandsTest',
+                  'qc.SaturationTest',
+                  'bias.OverscanSubtractor',
+                  'crosstalk.CrosstalkCorrector',
+                  'gain.GainNormalizer',
+                  'mosaic.MosaicCreator',
+                  'bpm.BPMUpdater',
+                  'trim.Trimmer',
+                  'bias.BiasSubtractor',
+                  'dark.DarkSubtractor',
+                  'flats.FlatDivider',
+                  'photometry.SourceDetector',
+                  'astrometry.WCSSolver',
+                  'pointing.PointingTest']
+
+
+def get_stages_todo(last_stage=None, extra_stages=[]):
+    """
+
+    Parameters
+    ----------
+    last_stage: banzai.stages.Stage
+                Last stage to do
+    extra_stages: Stages to do after the last stage
+
+    Returns
+    -------
+    stages_todo: list of banzai.stages.Stage
+                 The stages that need to be done
+
+    Notes
+    -----
+    Extra stages can be other stages that are not in the ordered_stages list.
+    The HeaderUpdater stage is always added at the very end.
+    If last_stage is None then take all of the stages
+    """
+    stages_todo = []
+    if last_stage is None:
+        last_index = None
+    else:
+        last_index = ordered_stages.index(last_stage) + 1
+
+    for stage_name in ordered_stages[:last_index] + extra_stages:
+        importlib.import_module(stage_name, package='banzai')
+        stages_todo.append(eval(stage_name))
+
+    # Tack on the Header Updater task on everything
+    stages_todo.append(headers.HeaderUpdater)
+    return stages_todo
 
 
 class Stage(object):
