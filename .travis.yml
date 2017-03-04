@@ -7,7 +7,7 @@ os:
     - linux
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
-sudo: false
+sudo: required
 
 services:
   - mysql
