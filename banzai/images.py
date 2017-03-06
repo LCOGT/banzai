@@ -3,12 +3,14 @@ import os
 
 import numpy as np
 from astropy.io import fits
+from datetime import timedelta
 
 from banzai import dbs
 from banzai.utils import date_utils
 from banzai.utils import fits_utils
 from banzai.utils import image_utils
 from banzai import logs
+import banzai
 
 logger = logs.get_logger(__name__)
 
@@ -59,7 +61,29 @@ class Image(object):
     def subtract(self, value):
         self.data -= value
 
-    def writeto(self, filename, fpack=False):
+    def save_processing_info(self, pipeline_context):
+        self.header['RLEVEL'] = (pipeline_context.rlevel, 'Reduction level')
+        self.header['PIPEVER'] = (banzai.__version__, 'Pipeline version')
+
+        if image_utils.instantly_public(self.header['PROPID']):
+            self.header['L1PUBDAT'] = (self.header['DATE-OBS'],
+                                       '[UTC] Date the frame becomes public')
+        else:
+            # Wait a year
+            date_observed = date_utils.parse_date_obs(self.header['DATE-OBS'])
+            next_year = date_observed + timedelta(days=365)
+            self.header['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year),
+                                       '[UTC] Date the frame becomes public')
+        logging_tags = logs.image_config_to_tags(self, None)
+        logs.add_tag(logging_tags, 'filename', os.path.basename(self.filename))
+        logs.add_tag(logging_tags, 'rlevel', int(self.header['RLEVEL']))
+        logs.add_tag(logging_tags, 'pipeline_version', self.header['PIPEVER'])
+        logs.add_tag(logging_tags, 'l1pubdat', self.header['L1PUBDAT'])
+        logger.info('Updating header', extra=logging_tags)
+
+    def writeto(self, filename, pipeline_context):
+        self.save_processing_info(pipeline_context)
+
         image_hdu = fits.PrimaryHDU(self.data.astype(np.float32), header=self.header)
         image_hdu.header['BITPIX'] = -32
         image_hdu.header['BSCALE'] = 1.0
@@ -92,7 +116,7 @@ class Image(object):
                              extra=logging_tags)
 
         hdu_list.writeto(filename, overwrite=True, output_verify='fix+warn')
-        if fpack:
+        if pipeline_context.fpack:
             if os.path.exists(filename + '.fz'):
                 os.remove(filename + '.fz')
             os.system('fpack -q 64 {0}'.format(filename))

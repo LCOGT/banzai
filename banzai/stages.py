@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import itertools
 import importlib
 
-from banzai import headers
 from banzai.images import Image
 from banzai.utils import image_utils
 from banzai import dbs
@@ -61,8 +60,6 @@ def get_stages_todo(last_stage=None, extra_stages=[]):
         importlib.import_module(stage_name, package='banzai')
         stages_todo.append(eval(stage_name))
 
-    # Tack on the Header Updater task on everything
-    stages_todo.append(headers.HeaderUpdater)
     return stages_todo
 
 

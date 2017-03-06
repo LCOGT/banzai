@@ -4,13 +4,15 @@ from glob import glob
 
 from astropy.io import fits
 import numpy as np
+import logging
 
 from banzai import dbs
 from banzai import logs
 from banzai.utils import file_utils
 from banzai.utils import fits_utils
 
-logger = logs.get_logger(__name__)
+
+logger = logging.getLogger('banzai')
 
 
 def select_images(image_list, image_types):
@@ -83,7 +85,7 @@ def save_images(pipeline_context, images, master_calibration=False):
         image_filename = os.path.basename(image.filename)
         filepath = os.path.join(output_directory, image_filename)
         output_files.append(filepath)
-        image.writeto(filepath, pipeline_context.fpack)
+        image.writeto(filepath, pipeline_context)
         if pipeline_context.fpack:
             image_filename += '.fz'
             filepath += '.fz'
@@ -132,3 +134,12 @@ def get_bpm(image, pipeline_context):
         image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
 
     return bpm
+
+
+def instantly_public(proposal_id):
+    public_now = False
+    if proposal_id in ['calibrate', 'standard', 'pointing']:
+        public_now = True
+    if 'epo' in proposal_id.lower():
+        public_now = True
+    return public_now

@@ -10,7 +10,7 @@ def test_table_to_fits():
     b = np.random.normal(size=100)
     c = np.random.normal(size=100)
 
-    t = Table([a,b,c], names=('a', 'b', 'c'))
+    t = Table([a, b, c], names=('a', 'b', 'c'))
 
     t['a'].description = 'Column a'
     t['b'].description = 'Column b'
