@@ -35,7 +35,7 @@ env:
         - ASTROPY_VERSION=stable
         - MAIN_CMD='python setup.py'
         - SETUP_CMD='test'
-        - PIP_DEPENDENCIES='astropy>=0.4 sqlalchemy logutils numpy cython mysqlclient lcogt_logging sep kombu requests mock pytest'
+        - PIP_DEPENDENCIES='astropy>=0.4 sqlalchemy logutils numpy cython mysqlclient lcogt_logging sep kombu celery requests mock pytest'
         - EVENT_TYPE='pull_request push'
 
         # For this package-template, we include examples of Cython modules,
@@ -123,9 +123,6 @@ matrix:
         # (allow to fail unless your code completely compliant)
         - os: linux
           env: MAIN_CMD='pycodestyle banzai --count' SETUP_CMD=''
-
-before_install:
-  - mysql -e 'CREATE DATABASE banzai_test;'
 
 install:
 
