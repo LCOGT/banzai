@@ -12,6 +12,9 @@ __author__ = 'cmccully'
 
 
 class DarkMaker(CalibrationMaker):
+    # Electrons / second threshold to reject as bad dark
+    threshold = 0.1
+
     def __init__(self, pipeline_context):
         super(DarkMaker, self).__init__(pipeline_context)
 
@@ -28,6 +31,18 @@ class DarkMaker(CalibrationMaker):
         return 5
 
     def make_master_calibration_frame(self, images, image_config, logging_tags):
+
+        # Reject darks with light leakage
+        images_to_remove = []
+        for image in images:
+            if np.median(image.data) / image.exptime > self.threshold:
+                images_to_remove.append(image)
+
+        for image in images_to_remove:
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
+            self.logger.error('Rejecting dark frame: possible light leakage', extra=logging_tags)
+            images.remove(image)
+
         dark_data = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         dark_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
