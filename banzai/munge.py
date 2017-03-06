@@ -19,7 +19,7 @@ class DataMunger(Stage):
     def do_stage(self, images):
         images_to_remove = []
         for image in images:
-            telescope = dbs.get_telescope(image.telescope_id,
+            telescope = dbs.get_telescope(image.site, image.instrument,
                                           db_address=self.pipeline_context.db_address)
 
             if 'sinistro' in telescope.camera_type.lower():

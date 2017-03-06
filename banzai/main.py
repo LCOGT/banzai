@@ -10,39 +10,21 @@ October 2015
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
-import multiprocessing
-import os
 import logging
+import os
 
 from kombu import Connection, Queue, Exchange
-from kombu.mixins import ConsumerMixin
 
 import banzai.images
-from banzai.stages import get_stages_todo
-from banzai.utils import image_utils, date_utils
-from banzai import logs
 from banzai import dbs
+from banzai import logs
+from banzai.context import PipelineContext
+from banzai import listeners
+from banzai.stages import get_stages_todo
+from banzai.utils import image_utils
 
 
-logger = logging.get_logger('banzai')
-
-
-class PipelineContext(object):
-    processed_path = '/archive/engineering'
-    raw_path = '/archive/engineering'
-    post_to_archive = False
-    fpack = True
-    rlevel = 91
-    db_address = 'mysql://cmccully:password@localhost/test'
-    log_level = 'DEBUG'
-    preview_mode = False
-    filename = None
-    max_preview_tries = 5
-
-    def __init__(self, args):
-        args_dict = vars(args)
-        for key in args_dict.keys():
-            setattr(self, key, args_dict[key])
+logger = logging.getLogger('banzai')
 
 
 def parse_end_of_night_command_line_arguments():
@@ -141,7 +123,14 @@ def reduce_experimental_frames(pipeline_context):
 
 
 def reduce_trailed_frames(pipeline_context):
-    reduce_frames_one_by_one(image_types=['TRAILED'])
+    post_to_archive = pipeline_context.post_to_archive
+    pipeline_context.post_to_archive = False
+    try:
+        reduce_frames_one_by_one(image_types=['TRAILED'])
+    except Exception as e:
+        logger.error(e)
+    finally:
+        pipeline_context.post_to_archive = post_to_archive
 
 
 def preprocess_sinistro_frames(pipeline_context):
@@ -150,13 +139,9 @@ def preprocess_sinistro_frames(pipeline_context):
                                           'TRAILED', 'EXPERIMENTAL'])
 
 
-def reduce_night():
-    parser = argparse.ArgumentParser(
-        description='Reduce all the data from a site at the end of a night.')
-    parser.add_argument('--site', dest='site', help='Site code (e.g. ogg)')
-    parser.add_argument('--dayobs', dest='dayobs',
-                        default=None, help='Day-Obs to reduce (e.g. 20160201)')
-    parser.add_argument('--raw-path-root', dest='rawpath_root', default='/archive/engineering',
+def run_end_of_night_pipeline():
+    parser = argparse.ArgumentParser(description='Start end of a night pipeline')
+    parser.add_argument('--raw-path-root', dest='raw_path_root', default='/archive/engineering',
                         help='Top level directory with raw data.')
     parser.add_argument("--processed-path", default='/archive/engineering',
                         help='Top level directory where the processed data will be stored')
@@ -177,37 +162,26 @@ def reduce_night():
 
     pipeline_context = PipelineContext(args)
 
-    logs.start_logging(log_level=pipeline_context.log_level)
+    logs.set_log_level(log_level=pipeline_context.log_level)
 
-    # Ping the configdb to get currently schedulable telescopes
     try:
         dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
     except Exception as e:
         logger.error('Could not connect to the configdb.')
         logger.error(e)
 
-    timezone = dbs.get_timezone(args.site, db_address=args.db_address)
+    logger.info('Starting pipeline preview mode listener')
 
-    telescopes = dbs.get_schedulable_telescopes(args.site, db_address=args.db_address)
+    listener = listeners.EndOfNightListener(args.broker_url, pipeline_context)
 
-    if timezone is not None:
-        # If no dayobs is given, calculate it.
-        if args.dayobs is None:
-            args.dayobs = date_utils.get_dayobs(timezone=timezone)
+    with Connection(listener.broker_url, heartbeat=5) as connection:
+        listener.connection = connection
+        listener.queue = Queue(args.queue_name)
+        try:
+            listener.run()
+        except KeyboardInterrupt:
+            logger.info('Shutting down end of night pipeline listener.')
 
-        # For each telescope at the given site
-        for telescope in telescopes:
-            pipeline_context.raw_path = os.path.join(args.rawpath_root, args.site,
-                                                     telescope.instrument, args.dayobs, 'raw')
-            try:
-                # Run the reductions on the given dayobs
-                make_master_bias(pipeline_context)
-                make_master_dark(pipeline_context)
-                make_master_flat(pipeline_context)
-                reduce_science_frames(pipeline_context)
-            except Exception as e:
-                logger.error(e)
-    logs.stop_logging()
 
 def run_preview_pipeline():
     parser = argparse.ArgumentParser(
@@ -237,12 +211,10 @@ def run_preview_pipeline():
     parser.add_argument('--max-preview-tries', dest='max_preview_tries', default=5,
                         help='Maximum number of tries to produce a preview image.')
     args = parser.parse_args()
-    args.preview_mode = True
-    args.raw_path = None
-    args.filename = None
+
     pipeline_context = PipelineContext(args)
 
-    logs.start_logging(log_level=pipeline_context.log_level)
+    logs.set_log_level(args.log_level)
 
     try:
         dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
@@ -252,42 +224,13 @@ def run_preview_pipeline():
 
     logger.info('Starting pipeline preview mode listener')
 
-    for i in range(args.n_processes):
-        p = multiprocessing.Process(target=run_indiviudal_listener, args=(args.broker_url,
-                                                                          args.queue_name,
-                                                                          PipelineContext(args)))
-        p.start()
-
-    logs.stop_logging()
-
-
-def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
-
     fits_exchange = Exchange('fits_files', type='fanout')
-    listener = PreviewModeListener(broker_url, pipeline_context)
+    listener = listeners.PreviewModeListener(args.broker_url, pipeline_context)
 
     with Connection(listener.broker_url, heartbeat=5) as connection:
         listener.connection = connection
-        listener.queue = Queue(queue_name, fits_exchange)
+        listener.queue = Queue(args.queue_name, fits_exchange)
         try:
             listener.run()
         except KeyboardInterrupt:
             logger.info('Shutting down preview pipeline listener.')
-
-
-class PreviewModeListener(ConsumerMixin):
-    def __init__(self, broker_url, pipeline_context):
-        self.broker_url = broker_url
-        self.pipeline_context = pipeline_context
-
-    def on_connection_error(self, exc, interval):
-        logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
-
-    def get_consumers(self, Consumer, channel):
-        return [Consumer(queues=[self.queue], callbacks=[self.on_message])]
-
-    def on_message(self, body, message):
-        path = body.get('path')
-        if 'e00.fits' in path or 's00.fits' in path:
-            tasks.reduce_preview_image.delay(path, self.pipeline_context)
-        message.ack()  # acknowledge to the sender we got this message (it can be popped)
