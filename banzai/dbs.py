@@ -346,7 +346,7 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
 
 def get_telescope_for_file(path, db_address=_DEFAULT_DB):
     data, header, bpm, extension_headers = fits_utils.open_image(path)
-    telescope_id = get_telescope_id(header.get('SITEID'), header.get('INSTRUME'))
+    telescope_id = get_telescope_id(header.get('SITEID'), header.get('INSTRUME'), db_address=db_address)
     return get_telescope(telescope_id, db_address=db_address)
 
 
