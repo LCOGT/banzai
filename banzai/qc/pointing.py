@@ -13,8 +13,8 @@ class PointingTest(Stage):
     """
 
     # Typical pointing is within 5" of requested pointing (decimal degrees).
-    WARNING_THRESHOLD = 5.0
-    SEVERE_THRESHOLD = 30.0
+    WARNING_THRESHOLD = 30.0
+    SEVERE_THRESHOLD = 300.0
 
     def __init__(self, pipeline_context):
         super(PointingTest, self).__init__(pipeline_context)

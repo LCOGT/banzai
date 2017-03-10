@@ -22,6 +22,7 @@ from astropy.io import fits
 import requests
 from banzai.utils import file_utils, date_utils
 from banzai import logs
+from banzai.utils import fits_utils
 
 import datetime
 import numpy as np
@@ -343,26 +344,28 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
     db_session.close()
 
 
+def get_telescope_for_file(path, db_address=_DEFAULT_DB):
+    data, header, bpm, extension_headers = fits_utils.open_image(path)
+    telescope_id = get_telescope_id(header.get('SITEID'), header.get('INSTRUME'))
+    return get_telescope(telescope_id, db_address=db_address)
+
+
 def need_to_make_preview(path, db_address=_DEFAULT_DB, max_tries=5):
+    telescope = get_telescope_for_file(path, db_address=db_address)
+    if not telescope.schedulable:
+        return False
+
     # Get the preview image in db. If it doesn't exist add it.
     preview_image = get_preview_image(path, db_address=db_address)
     # If there was an issue with the database return none and move on and return false
-    if preview_image is None:
-        need_to_process = False
-    else:
-        try:
-            # As long as the preview file exists, check the md5.
-            checksum = file_utils.get_md5(path)
-            if preview_image.checksum == checksum and (preview_image.tries >= max_tries or
-                                                       preview_image.success):
-                need_to_process = False
-            else:
-                need_to_process = True
-                preview_image.checksum = checksum
-                commit_preview_image(preview_image, db_address)
-        except IOError as e:
-            logger.error('{0}. {1}'.format(e, path), extra={'tags': {'filename': os.path.basename(path)}})
-            need_to_process = False
+    need_to_process = False
+    # Check the md5.
+    checksum = file_utils.get_md5(path)
+    if preview_image.checksum != checksum and (preview_image.tries <= max_tries and not preview_image.success):
+        need_to_process = True
+        preview_image.checksum = checksum
+        commit_preview_image(preview_image, db_address)
+
     return need_to_process
 
 
@@ -376,15 +379,9 @@ def increment_preview_try_number(path, db_address=_DEFAULT_DB):
 def get_preview_image(path, db_address=_DEFAULT_DB):
     filename = os.path.basename(path)
     db_session = get_session(db_address=db_address)
-    try:
-        preview_image = add_or_update_record(db_session, PreviewImage, {'filename': filename},
-                                             {'filename': filename})
-        db_session.commit()
-    except Exception as e:
-        logging_tags = {'tags': {'filename': filename}}
-        logger.error('Error processing preview image. {0}. {1}'.format(e, path), extra=logging_tags)
-        preview_image = None
-
+    preview_image = add_or_update_record(db_session, PreviewImage, {'filename': filename},
+                                         {'filename': filename})
+    db_session.commit()
     db_session.close()
     return preview_image
 
