@@ -3,6 +3,8 @@ import os
 
 import numpy as np
 from astropy.io import fits
+import tempfile
+import shutil
 
 from banzai import dbs
 from banzai.utils import date_utils
@@ -91,13 +93,19 @@ class Image(object):
                 logger.error('Could not repair FITS header. {0}'.format(fix_attempt_error),
                              extra=logging_tags)
 
-        hdu_list.writeto(filename, overwrite=True, output_verify='fix+warn')
-        if fpack:
-            if os.path.exists(filename + '.fz'):
-                os.remove(filename + '.fz')
-            os.system('fpack -q 64 {0}'.format(filename))
-            os.remove(filename)
-            self.filename += '.fz'
+        with tempfile.TemporaryDirectory() as temp_directory:
+            base_filename = os.path.basename(filename)
+            hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True,
+                             output_verify='fix+warn')
+            if fpack:
+                filename += '.fz'
+                if os.path.exists(filename):
+                    os.remove(filename)
+                os.system('fpack -q 64 {temp_directory}/{basename}'.format(temp_directory=temp_directory,
+                                                                           basename=base_filename))
+                base_filename += '.fz'
+                self.filename += '.fz'
+            shutil.move(os.path.join(temp_directory, base_filename), filename)
 
     def update_shape(self, nx, ny):
         self.nx = nx

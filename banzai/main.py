@@ -12,6 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse
 import multiprocessing
 import os
+import traceback
+import sys
 
 from kombu import Connection, Queue, Exchange
 from kombu.mixins import ConsumerMixin
@@ -395,6 +397,11 @@ class PreviewModeListener(ConsumerMixin):
                                      extra=logging_tags)
                 except Exception as e:
                     logging_tags = {'tags': {'filename': os.path.basename(path)}}
-                    logger.error("Exception producing preview frame. {0}. {1}".format(e, path),
+                    exc_type, exc_value, exc_tb = sys.exc_info()
+                    traceback.format_exception(exc_type, exc_value, exc_tb)
+
+                    logger.error("Exception producing preview frame. {0}. {1}".format(traceback.form, path),
                                  extra=logging_tags)
+                    logger.error(traceback.format_exception(exc_type, exc_value, exc_tb), extra=logging_tags)
+
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
