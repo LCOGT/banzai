@@ -96,7 +96,7 @@ def save_images(pipeline_context, images, master_calibration=False):
         if pipeline_context.post_to_archive:
             logger.info('Posting {filename} to the archive'.format(filename=image_filename))
             try:
-                file_utils.post_to_archive_queue(filepath)
+                file_utils.post_to_archive_queue(filepath, pipeline_context.fits_broker_url)
             except Exception as e:
                 logger.error("Could not post {0} to ingester.".format(filepath))
                 logger.error(e)

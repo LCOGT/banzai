@@ -30,7 +30,7 @@ ordered_stages = ['munge.DataMunger',
                   'pointing.PointingTest']
 
 
-def get_stages_todo(last_stage=None, extra_stages=[]):
+def get_stages_todo(last_stage=None, extra_stages=None):
     """
 
     Parameters
@@ -54,7 +54,10 @@ def get_stages_todo(last_stage=None, extra_stages=[]):
     if last_stage is None:
         last_index = None
     else:
-        last_index = ordered_stages.index(last_stage) + 1
+        last_index = len(ordered_stages)
+
+    if not extra_stages:
+        extra_stages = []
 
     for stage_name in ordered_stages[:last_index] + extra_stages:
         importlib.import_module(stage_name, package='banzai')

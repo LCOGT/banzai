@@ -14,6 +14,7 @@ class PipelineContext(object):
     preview_mode = False
     filename = None
     max_preview_tries = 5
+    fits_broker_url = 'amqp://guest:guest@rabbitmq.lco.gtn:5672/'
 
     def __init__(self, args):
         args_dict = vars(args)

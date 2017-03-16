@@ -150,6 +150,9 @@ def run_end_of_night_pipeline():
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
                         default=False)
+    parser.add_argument('--fits-broker-url', dest='fits_broker_url',
+                        default='amqp://guest:guest@rabbitmq.lco.gtn:5672',
+                        help='URL for the broker service.')
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
 
@@ -170,7 +173,7 @@ def run_end_of_night_pipeline():
         logger.error('Could not connect to the configdb.')
         logger.error(e)
 
-    logger.info('Starting pipeline preview mode listener')
+    logger.info('Starting End of Night listener')
 
     listener = listeners.EndOfNightListener(args.broker_url, pipeline_context)
 
@@ -203,8 +206,8 @@ def run_preview_pipeline():
     parser.add_argument('--n-processes', dest='n_processes', default=12,
                         help='Number of listener processes to spawn.', type=int)
 
-    parser.add_argument('--broker-url', dest='broker_url',
-                        default='amqp://guest:guest@rabbitmq.lco.gtn:5672//?heartbeat=10',
+    parser.add_argument('--fits-broker-url', dest='fits_broker_url',
+                        default='amqp://guest:guest@rabbitmq.lco.gtn:5672',
                         help='URL for the broker service.')
     parser.add_argument('--queue-name', dest='queue_name', default='preview_pipeline',
                         help='Name of the queue to listen to from the fits exchange.')

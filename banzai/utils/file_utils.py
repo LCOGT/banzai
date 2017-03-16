@@ -10,9 +10,10 @@ __author__ = 'cmccully'
 logger = logs.get_logger(__name__)
 
 
-def post_to_archive_queue(image_path):
+def post_to_archive_queue(image_path, fits_broker_url):
     exchange = Exchange('fits_files', type='fanout')
-    with Connection('amqp://guest:guest@rabbitmq.lco.gtn:5672//?heartbeat=10') as conn:
+    with Connection(fits_broker_url) as conn:
+        conn.ensure_connection(max_retries=10)
         producer = conn.Producer(exchange=exchange)
         producer.publish({'path': image_path})
         producer.release()
