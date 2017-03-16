@@ -121,7 +121,7 @@ def get_bpm(image, pipeline_context):
             bpm = np.array(bpm_extensions[0].data, dtype=np.uint8)
         else:
             bpm = np.array(bpm_hdu[0].data, dtype=np.uint8)
-        if bpm.shape != image.data.shape:
+        if not bpm_has_valid_size(bpm, image):
             tags = logs.image_config_to_tags(image, None)
             logs.add_tag(tags, 'filename', image.filename)
             logger.error('BPM shape mismatch', extra=tags)
@@ -132,3 +132,20 @@ def get_bpm(image, pipeline_context):
         image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
 
     return bpm
+
+
+def bpm_has_valid_size(bpm, image):
+
+    # If 3d, check and make sure the number of extensions is the same
+    if len(image.data.shape) > 2:
+        y_slices, x_slices = fits_utils.parse_region_keyword(image.extension_headers[0]['DATASEC'])
+        is_valid = image.data.shape[0] == bpm.shape[0]
+    else:
+        y_slices, x_slices = fits_utils.parse_region_keyword(image.header['DATASEC'])
+        is_valid = True
+
+    # Check if x and y dimensions are less than the datasec
+    is_valid &= bpm.shape[-1] <= x_slices.stop
+    is_valid &= bpm.shape[-2] <= y_slices.stop
+
+    return is_valid
