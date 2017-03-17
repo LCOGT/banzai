@@ -381,6 +381,8 @@ class PreviewModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         path = body.get('path')
+        message.ack()  # acknowledge to the sender we got this message (it can be popped)
+
         if 'e00.fits' in path or 's00.fits' in path:
             if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
                                         max_tries=self.pipeline_context.max_preview_tries):
@@ -410,5 +412,3 @@ class PreviewModeListener(ConsumerMixin):
                     logger.error("Exception producing preview frame. {0}. {1}".format(traceback.form, path),
                                  extra=logging_tags)
                     logger.error(traceback.format_exception(exc_type, exc_value, exc_tb), extra=logging_tags)
-
-        message.ack()  # acknowledge to the sender we got this message (it can be popped)
