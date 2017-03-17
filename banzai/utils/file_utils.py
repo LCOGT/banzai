@@ -38,3 +38,12 @@ def get_md5(filepath):
     with open(filepath, 'rb') as file:
         md5 = hashlib.md5(file.read()).hexdigest()
     return md5
+
+
+def instantly_public(proposal_id):
+    public_now = False
+    if proposal_id in ['calibrate', 'standard', 'pointing']:
+        public_now = True
+    if 'epo' in proposal_id.lower():
+        public_now = True
+    return public_now

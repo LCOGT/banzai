@@ -5,10 +5,13 @@ from glob import glob
 from astropy.io import fits
 import numpy as np
 
+import banzai
 from banzai import dbs
 from banzai import logs
 from banzai.utils import file_utils
 from banzai.utils import fits_utils
+from banzai.utils import date_utils
+from datetime import timedelta
 
 logger = logs.get_logger(__name__)
 
@@ -149,3 +152,24 @@ def bpm_has_valid_size(bpm, image):
     is_valid &= bpm.shape[-2] >= y_slices.stop
 
     return is_valid
+
+
+def save_pipeline_metadata(image, pipeline_context):
+    image.header['RLEVEL'] = (pipeline_context.rlevel, 'Reduction level')
+    image.header['PIPEVER'] = (banzai.__version__, 'Pipeline version')
+
+    if file_utils.instantly_public(image.header['PROPID']):
+        image.header['L1PUBDAT'] = (image.header['DATE-OBS'],
+                                    '[UTC] Date the frame becomes public')
+    else:
+        # Wait a year
+        date_observed = date_utils.parse_date_obs(image.header['DATE-OBS'])
+        next_year = date_observed + timedelta(days=365)
+        image.header['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year),
+                                    '[UTC] Date the frame becomes public')
+    logging_tags = logs.image_config_to_tags(image, None)
+    logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
+    logs.add_tag(logging_tags, 'rlevel', int(image.header['RLEVEL']))
+    logs.add_tag(logging_tags, 'pipeline_version', image.header['PIPEVER'])
+    logs.add_tag(logging_tags, 'l1pubdat', image.header['L1PUBDAT'])
+    logger.info('Updating header', extra=logging_tags)

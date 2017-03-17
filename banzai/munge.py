@@ -1,5 +1,4 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.stages import Stage
 import numpy as np
 from banzai import dbs, logs
 from astropy.io import fits
@@ -8,47 +7,36 @@ from astropy.io import fits
 logger = logs.get_logger(__name__)
 
 
-class DataMunger(Stage):
-    def __init__(self, pipeline_context):
-        super(DataMunger, self).__init__(pipeline_context)
+class SinistroModeNotSupported(Exception):
+    pass
 
-    @property
-    def group_by_keywords(self):
-        return None
 
-    def do_stage(self, images):
-        images_to_remove = []
-        for image in images:
-            telescope = dbs.get_telescope(image.telescope_id,
-                                          db_address=self.pipeline_context.db_address)
+def munge(image, pipeline_context):
+    telescope = dbs.get_telescope(image.telescope_id,
+                                  db_address=pipeline_context.db_address)
 
-            if 'sinistro' in telescope.camera_type.lower():
-                if sinistro_mode_is_supported(image):
-                    munge_sinistro(image)
-                else:
-                    images_to_remove.append(image)
+    if 'sinistro' in telescope.camera_type.lower():
+        if sinistro_mode_is_supported(image):
+            munge_sinistro(image)
+        else:
+            raise SinistroModeNotSupported('Sinistro mode not supported {f}'.format(f=image.filename))
 
-            # 1m SBIGS
-            elif '1m0' in telescope.camera_type:
-                image.header['SATURATE'] = (46000.0, '[ADU] Saturation level used')
-            elif '0m4' in telescope.camera_type or '0m8' in telescope.camera_type:
-                image.header['SATURATE'] = (56000.0, '[ADU] Saturation level used')
-            elif 'fs02' == telescope.instrument:
-                # These values were given by Joe Tufts on 2016-06-07
-                # These should really be measured empirically.
-                if image.header['CCDSUM'] == '2 2':
-                    image.header['SATURATE'] = (500000.0 / float(image.header['GAIN']),
-                                                '[ADU] Saturation level used')
-                elif image.header['CCDSUM'] == '1 1':
-                    image.header['SATURATE'] = (125000.0 / float(image.header['GAIN']),
-                                                '[ADU] Saturation level used')
-            if not image_has_valid_saturate_value(image):
-                images_to_remove.append(image)
-
-        for image in images_to_remove:
-            images.remove(image)
-
-        return images
+    # 1m SBIGS
+    elif '1m0' in telescope.camera_type:
+        image.header['SATURATE'] = (46000.0, '[ADU] Saturation level used')
+    elif '0m4' in telescope.camera_type or '0m8' in telescope.camera_type:
+        image.header['SATURATE'] = (56000.0, '[ADU] Saturation level used')
+    elif 'fs02' == telescope.instrument:
+        # These values were given by Joe Tufts on 2016-06-07
+        # These should really be measured empirically.
+        if image.header['CCDSUM'] == '2 2':
+            image.header['SATURATE'] = (500000.0 / float(image.header['GAIN']),
+                                        '[ADU] Saturation level used')
+        elif image.header['CCDSUM'] == '1 1':
+            image.header['SATURATE'] = (125000.0 / float(image.header['GAIN']),
+                                        '[ADU] Saturation level used')
+    if not image_has_valid_saturate_value(image):
+        raise ValueError('Saturate value not valid {f}'.format(f=image.filename))
 
 
 def sinistro_mode_is_supported(image):
