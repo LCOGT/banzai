@@ -19,17 +19,16 @@ from kombu import Connection, Queue, Exchange
 from kombu.mixins import ConsumerMixin
 
 import banzai.images
-from banzai import bias, dark, flats, trim, photometry, astrometry, headers, qc
+from banzai import bias, dark, flats, trim, photometry, astrometry, qc
 from banzai import dbs
 from banzai import logs
-from banzai import munge, crosstalk, gain, mosaic, bpm
+from banzai import crosstalk, gain, mosaic, bpm
 from banzai.qc import pointing
 from banzai.utils import image_utils, date_utils
 
 logger = logs.get_logger(__name__)
 
-ordered_stages = [munge.DataMunger,
-                  qc.ThousandsTest,
+ordered_stages = [qc.ThousandsTest,
                   qc.SaturationTest,
                   bias.OverscanSubtractor,
                   crosstalk.CrosstalkCorrector,
@@ -45,7 +44,7 @@ ordered_stages = [munge.DataMunger,
                   pointing.PointingTest]
 
 
-def get_stages_todo(last_stage, extra_stages=[]):
+def get_stages_todo(last_stage=None, extra_stages=None):
     """
 
     Parameters
@@ -62,13 +61,16 @@ def get_stages_todo(last_stage, extra_stages=[]):
     Notes
     -----
     Extra stages can be other stages that are not in the ordered_stages list.
-    The HeaderUpdater stage is always added at the very end.
     """
-    last_index = ordered_stages.index(last_stage)
-    stages_todo = ordered_stages[:last_index + 1]
-    for stage in extra_stages:
-        stages_todo.append(stage)
-    stages_todo.append(headers.HeaderUpdater)
+    if extra_stages is None:
+        extra_stages = []
+
+    if last_stage is None:
+        last_index = None
+    else:
+        last_index = ordered_stages.index(last_stage) + 1
+
+    stages_todo = ordered_stages[:last_index] + extra_stages
     return stages_todo
 
 
@@ -125,12 +127,12 @@ def make_master_flat_console():
 
 
 def reduce_science_frames(pipeline_context):
-    stages_to_do = get_stages_todo(pointing.PointingTest)
+    stages_to_do = get_stages_todo()
     reduce_frames_one_by_one(stages_to_do, pipeline_context)
 
 
 def reduce_experimental_frames(pipeline_context):
-    stages_to_do = get_stages_todo(pointing.PointingTest)
+    stages_to_do = get_stages_todo()
     reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['EXPERIMENTAL'])
 
 
@@ -156,7 +158,7 @@ def reduce_science_frames_console():
 
 
 def reduce_trailed_frames(pipeline_context):
-    stages_to_do = get_stages_todo(pointing.PointingTest)
+    stages_to_do = get_stages_todo()
     reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['TRAILED'])
 
 
@@ -313,7 +315,7 @@ def run_preview_pipeline():
                         help='Number of listener processes to spawn.', type=int)
 
     parser.add_argument('--broker-url', dest='broker_url',
-                        default='amqp://guest:guest@rabbitmq.lco.gtn:5672//?heartbeat=10',
+                        default='amqp://guest:guest@rabbitmq.lco.gtn:5672/',
                         help='URL for the broker service.')
     parser.add_argument('--queue-name', dest='queue_name', default='preview_pipeline',
                         help='Name of the queue to listen to from the fits exchange.')
@@ -349,11 +351,14 @@ def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
     fits_exchange = Exchange('fits_files', type='fanout')
     listener = PreviewModeListener(broker_url, pipeline_context)
 
-    with Connection(listener.broker_url, heartbeat=5) as connection:
-        listener.connection = connection
+    with Connection(listener.broker_url) as connection:
+        listener.connection = connection.clone()
         listener.queue = Queue(queue_name, fits_exchange)
         try:
             listener.run()
+        except listener.connection.connection_errors:
+            listener.connection = connection.clone()
+            listener.ensure_connection(max_retries=10)
         except KeyboardInterrupt:
             logger.info('Shutting down preview pipeline listener.')
 
@@ -365,6 +370,8 @@ class PreviewModeListener(ConsumerMixin):
 
     def on_connection_error(self, exc, interval):
         logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
+        self.connection = self.connection.clone()
+        self.connection.ensure_connection(max_retries=10)
 
     def get_consumers(self, Consumer, channel):
         consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
@@ -377,7 +384,7 @@ class PreviewModeListener(ConsumerMixin):
         if 'e00.fits' in path or 's00.fits' in path:
             if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
                                         max_tries=self.pipeline_context.max_preview_tries):
-                stages_to_do = get_stages_todo(pointing.PointingTest)
+                stages_to_do = get_stages_todo()
 
                 logging_tags = {'tags': {'filename': os.path.basename(path)}}
                 logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)

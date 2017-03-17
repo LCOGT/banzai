@@ -11,6 +11,7 @@ from banzai.utils import date_utils
 from banzai.utils import fits_utils
 from banzai.utils import image_utils
 from banzai import logs
+from banzai.munge import munge
 
 logger = logs.get_logger(__name__)
 
@@ -126,6 +127,7 @@ def read_images(image_list, pipeline_context):
     for filename in image_list:
         try:
             image = Image(pipeline_context, filename=filename)
+            munge(image, pipeline_context)
             if image.bpm is None:
                 bpm = image_utils.get_bpm(image, pipeline_context)
                 if bpm is None:
