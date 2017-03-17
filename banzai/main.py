@@ -407,8 +407,7 @@ class PreviewModeListener(ConsumerMixin):
                 except Exception as e:
                     logging_tags = {'tags': {'filename': os.path.basename(path)}}
                     exc_type, exc_value, exc_tb = sys.exc_info()
-                    traceback.format_exception(exc_type, exc_value, exc_tb)
+                    tb_msg = traceback.format_exception(exc_type, exc_value, exc_tb)
 
-                    logger.error("Exception producing preview frame. {0}. {1}".format(traceback.form, path),
+                    logger.error("Exception producing preview frame. {0}. {1}".format(path, tb_msg),
                                  extra=logging_tags)
-                    logger.error(traceback.format_exception(exc_type, exc_value, exc_tb), extra=logging_tags)

@@ -63,7 +63,6 @@ class Image(object):
         self.data -= value
 
     def writeto(self, filename, fpack=False):
-        image_utils.save_pipeline_metadata(self, self.pipeline_context)
         image_hdu = fits.PrimaryHDU(self.data.astype(np.float32), header=self.header)
         image_hdu.header['BITPIX'] = -32
         image_hdu.header['BSCALE'] = 1.0
