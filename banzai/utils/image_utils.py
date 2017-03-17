@@ -145,7 +145,7 @@ def bpm_has_valid_size(bpm, image):
         is_valid = True
 
     # Check if x and y dimensions are less than the datasec
-    is_valid &= bpm.shape[-1] <= x_slices.stop
-    is_valid &= bpm.shape[-2] <= y_slices.stop
+    is_valid &= bpm.shape[-1] >= x_slices.stop
+    is_valid &= bpm.shape[-2] >= y_slices.stop
 
     return is_valid
