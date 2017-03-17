@@ -315,7 +315,7 @@ def run_preview_pipeline():
                         help='Number of listener processes to spawn.', type=int)
 
     parser.add_argument('--broker-url', dest='broker_url',
-                        default='amqp://guest:guest@rabbitmq.lco.gtn:5672//?heartbeat=10',
+                        default='amqp://guest:guest@rabbitmq.lco.gtn:5672/',
                         help='URL for the broker service.')
     parser.add_argument('--queue-name', dest='queue_name', default='preview_pipeline',
                         help='Name of the queue to listen to from the fits exchange.')
@@ -351,11 +351,14 @@ def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
     fits_exchange = Exchange('fits_files', type='fanout')
     listener = PreviewModeListener(broker_url, pipeline_context)
 
-    with Connection(listener.broker_url, heartbeat=5) as connection:
-        listener.connection = connection
+    with Connection(listener.broker_url) as connection:
+        listener.connection = connection.clone()
         listener.queue = Queue(queue_name, fits_exchange)
         try:
             listener.run()
+        except listener.connection.connection_errors:
+            listener.connection = connection.clone()
+            listener.ensure_connection(max_retries=10)
         except KeyboardInterrupt:
             logger.info('Shutting down preview pipeline listener.')
 
@@ -367,6 +370,8 @@ class PreviewModeListener(ConsumerMixin):
 
     def on_connection_error(self, exc, interval):
         logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
+        self.connection = self.connection.clone()
+        self.connection.ensure_connection(max_retries=10)
 
     def get_consumers(self, Consumer, channel):
         consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
