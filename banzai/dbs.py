@@ -351,8 +351,12 @@ def get_telescope_for_file(path, db_address=_DEFAULT_DB):
 
 
 def need_to_make_preview(path, db_address=_DEFAULT_DB, max_tries=5):
-    telescope = get_telescope_for_file(path, db_address=db_address)
-    if not telescope.schedulable:
+    try:
+        telescope = get_telescope_for_file(path, db_address=db_address)
+        if not telescope.schedulable:
+            return False
+    except TelescopeMissingException:
+        logger.error('Telescope/Camera not in database for {f}'.format(path))
         return False
 
     # Get the preview image in db. If it doesn't exist add it.
