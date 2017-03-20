@@ -384,18 +384,19 @@ class PreviewModeListener(ConsumerMixin):
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
         if 'e00.fits' in path or 's00.fits' in path:
-            if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
-                                        max_tries=self.pipeline_context.max_preview_tries):
-                stages_to_do = get_stages_todo()
+            try:
+                if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
+                                            max_tries=self.pipeline_context.max_preview_tries):
+                    stages_to_do = get_stages_todo()
 
-                logging_tags = {'tags': {'filename': os.path.basename(path)}}
-                logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)
-                self.pipeline_context.filename = os.path.basename(path)
-                self.pipeline_context.raw_path = os.path.dirname(path)
+                    logging_tags = {'tags': {'filename': os.path.basename(path)}}
+                    logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)
+                    self.pipeline_context.filename = os.path.basename(path)
+                    self.pipeline_context.raw_path = os.path.dirname(path)
 
-                # Increment the number of tries for this file
-                dbs.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
-                try:
+                    # Increment the number of tries for this file
+                    dbs.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
+
                     output_files = run(stages_to_do, self.pipeline_context,
                                        image_types=['EXPOSE', 'STANDARD'])
                     if len(output_files) > 0:
@@ -404,10 +405,10 @@ class PreviewModeListener(ConsumerMixin):
                         logging_tags = {'tags': {'filename': os.path.basename(path)}}
                         logger.error("Could not produce preview image. {0}".format(path),
                                      extra=logging_tags)
-                except Exception as e:
-                    logging_tags = {'tags': {'filename': os.path.basename(path)}}
-                    exc_type, exc_value, exc_tb = sys.exc_info()
-                    tb_msg = traceback.format_exception(exc_type, exc_value, exc_tb)
+            except Exception as e:
+                logging_tags = {'tags': {'filename': os.path.basename(path)}}
+                exc_type, exc_value, exc_tb = sys.exc_info()
+                tb_msg = traceback.format_exception(exc_type, exc_value, exc_tb)
 
-                    logger.error("Exception producing preview frame. {0}. {1}".format(path, tb_msg),
-                                 extra=logging_tags)
+                logger.error("Exception producing preview frame. {0}. {1}".format(path, tb_msg),
+                             extra=logging_tags)
