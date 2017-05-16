@@ -10,7 +10,6 @@ from banzai import dbs
 from banzai import logs
 from banzai.utils import file_utils
 from banzai.utils import fits_utils
-from banzai.utils import image_utils
 from banzai.utils import date_utils
 from datetime import timedelta
 
@@ -87,7 +86,7 @@ def save_images(pipeline_context, images, master_calibration=False):
         image_filename = os.path.basename(image.filename)
         filepath = os.path.join(output_directory, image_filename)
         output_files.append(filepath)
-        image_utils.save_pipeline_metadata(image, pipeline_context)
+        save_pipeline_metadata(image, pipeline_context)
         image.writeto(filepath, pipeline_context.fpack)
         if pipeline_context.fpack:
             image_filename += '.fz'

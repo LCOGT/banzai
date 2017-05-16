@@ -87,7 +87,7 @@ class SourceDetector(Stage):
                 # Do circular aperture photometry for diameters of 1" to 6"
                 for diameter in [1, 2, 3, 4, 5, 6]:
                     flux, fluxerr, flag = sep.sum_circle(data, sources['x'], sources['y'],
-                                                         diameter / 2.0, gain=1.0, err=error)
+                                                         diameter / 2.0 / image.pixel_scale, gain=1.0, err=error)
                     sources['fluxaper{0}'.format(diameter)] = flux
                     sources['fluxerr{0}'.format(diameter)] = fluxerr
                     sources['flag'] |= flag
