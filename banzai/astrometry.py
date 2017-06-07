@@ -60,7 +60,11 @@ class WCSSolver(Stage):
                                           scale_high=1.1*image.pixel_scale, wcs_name=wcs_name,
                                           catalog_name=catalog_name, nx=image.nx, ny=image.ny)
 
-                console_output = subprocess.check_output(shlex.split(command))
+                try:
+                    console_output = subprocess.check_output(shlex.split(command))
+                except subprocess.CalledProcessError:
+                    self.logger.error('Astrometry.net threw an error.', extra=logging_tags)
+
                 self.logger.debug(console_output, extra=logging_tags)
 
                 if os.path.exists(wcs_name):
