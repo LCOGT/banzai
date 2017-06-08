@@ -30,6 +30,7 @@ logger = logs.get_logger(__name__)
 
 ordered_stages = [qc.ThousandsTest,
                   qc.SaturationTest,
+                  qc.PatternNoiseDetector,
                   bias.OverscanSubtractor,
                   crosstalk.CrosstalkCorrector,
                   gain.GainNormalizer,
@@ -233,8 +234,8 @@ def reduce_night():
 
         # For each telescope at the given site
         for telescope in telescopes:
-            pipeline_context.raw_path = os.path.join(args.rawpath_root, args.site,
-                                                     telescope.instrument, args.dayobs, 'raw')
+            pipeline_context.raw_path = os.path.join(args.rawpath_root, args.site, telescope.instrument,
+                                                     args.dayobs, 'raw')
             try:
                 # Run the reductions on the given dayobs
                 make_master_bias(pipeline_context)

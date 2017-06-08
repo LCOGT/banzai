@@ -35,7 +35,7 @@ env:
         - ASTROPY_VERSION=stable
         - MAIN_CMD='python setup.py'
         - SETUP_CMD='test'
-        - PIP_DEPENDENCIES='astropy>=0.4 sqlalchemy logutils numpy cython mysqlclient lcogt_logging sep kombu requests mock pytest'
+        - PIP_DEPENDENCIES='astropy>=0.4 sqlalchemy logutils numpy cython mysqlclient lcogt_logging sep kombu requests mock pytest elasticsearch'
         - EVENT_TYPE='pull_request push'
 
         # For this package-template, we include examples of Cython modules,
@@ -139,6 +139,7 @@ install:
 
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
+    - if [[ $TRAVIS_OS_NAME == "osx" ]]; then brew update > /dev/null && brew install mariadb && mysql.server start; fi
 
     # As described above, using ci-helpers, you should be able to set up an
     # environment with dependencies installed using conda and pip, but in some
