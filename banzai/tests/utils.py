@@ -50,3 +50,17 @@ def throws_inhomogeneous_set_exception(stagetype, context, keyword, value):
         images += [FakeImage() for x in range(6)]
         stage.do_stage(images)
     assert 'Images have different {0}s'.format(keyword) == str(exception_info.value)
+
+
+def gaussian2d(image_shape, x0, y0, brightness, fwhm):
+    x = np.arange(image_shape[1])
+    y = np.arange(image_shape[0])
+    x2d, y2d = np.meshgrid(x, y)
+
+    sig = fwhm  / 2.35482
+
+    normfactor = brightness / 2.0 / np.pi * sig ** -2.0
+    exponent = -0.5 * sig ** -2.0
+    exponent *= (x2d - x0) ** 2.0 + (y2d - y0) ** 2.0
+
+    return normfactor * np.exp(exponent)
