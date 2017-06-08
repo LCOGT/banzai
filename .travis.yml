@@ -35,7 +35,7 @@ env:
         - ASTROPY_VERSION=stable
         - MAIN_CMD='python setup.py'
         - SETUP_CMD='test'
-        - PIP_DEPENDENCIES='astropy>=0.4 sqlalchemy logutils numpy cython mysqlclient lcogt_logging sep kombu requests mock pytest'
+        - PIP_DEPENDENCIES='astropy>=0.4 sqlalchemy logutils numpy cython mysqlclient lcogt_logging sep kombu requests mock pytest elasticsearch'
         - EVENT_TYPE='pull_request push'
 
         # For this package-template, we include examples of Cython modules,
