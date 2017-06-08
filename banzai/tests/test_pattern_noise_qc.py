@@ -45,7 +45,7 @@ def test_pattern_noise_does_not_detect_stars():
 
 @mock.patch('banzai.qc.pattern_noise.save_qc_results')
 def test_pattern_noise_on_2d_image(mock_save_qc):
-    data = 100.0 * np.sin(np.arange(1e6) / 0.1) + 1000.0 + np.random.normal(0.0, 10.0, size=1e6)
+    data = 100.0 * np.sin(np.arange(1000000) / 0.1) + 1000.0 + np.random.normal(0.0, 10.0, size=1000000)
     data = data.reshape(1000, 1000)
 
     image = FakeImage()
@@ -59,7 +59,7 @@ def test_pattern_noise_on_2d_image(mock_save_qc):
 
 @mock.patch('banzai.qc.pattern_noise.save_qc_results')
 def test_pattern_noise_on_3d_image(mock_save_qc):
-    data = 100.0 * np.sin(np.arange(1e6 * 4) / 0.1) + 1000.0 + np.random.normal(0.0, 10.0, size=1e6 * 4)
+    data = 100.0 * np.sin(np.arange(1000000 * 4) / 0.1) + 1000.0 + np.random.normal(0.0, 10.0, size=1000000 * 4)
     data = data.reshape(4, 1000, 1000)
 
     image = FakeImage()
@@ -74,7 +74,7 @@ def test_pattern_noise_on_3d_image(mock_save_qc):
 
 @mock.patch('banzai.qc.pattern_noise.save_qc_results', return_value=None)
 def test_pattern_noise_in_only_one_quadrant(mock_save_qc):
-    data = np.random.normal(0.0, 10.0, size=1e6 * 4) + 1000.0
+    data = np.random.normal(0.0, 10.0, size=1000000 * 4) + 1000.0
     data = data.reshape(4, 1000, 1000)
     data[3] += 100.0 * np.sin(np.arange(1e6) / 0.1).reshape(1000, 1000)
 
