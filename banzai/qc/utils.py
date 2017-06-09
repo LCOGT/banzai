@@ -23,4 +23,4 @@ def save_qc_results(qc_results, image, es_url='http://elasticsearch.lco.gtn:9200
         results_to_save[key] = value
     es = elasticsearch.Elasticsearch(es_url)
     filename = image.filename.replace('.fits', '').replace('.fz', '')
-    es.index(index='banzai_qc', id=filename, body={'doc': results_to_save, 'doc_as_upsert':True})
+    es.update(index='banzai_qc', doc_type='qc', id=filename, body={'doc': results_to_save, 'doc_as_upsert': True})
