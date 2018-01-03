@@ -14,7 +14,7 @@ __author__ = 'cmccully'
 
 
 class WCSSolver(Stage):
-    cmd = 'solve-field --crpix-center --no-verify --no-fits2fits --no-tweak ' \
+    cmd = 'solve-field --crpix-center --no-verify --no-tweak ' \
           ' --radius 2.0 --ra {ra} --dec {dec} --guess-scale ' \
           '--scale-units arcsecperpix --scale-low {scale_low} --scale-high {scale_high} ' \
           '--no-plots -N none --no-remove-lines ' \
