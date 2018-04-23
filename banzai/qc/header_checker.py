@@ -3,11 +3,11 @@ This module performs basic sanity checks that the main image header keywords are
 format and validates their values.
 @author:ebachelet
 """
-from banzai.stages import Stage
+from banzai.qc.qc_stage import QCStage
 from banzai import logs
 
 
-class HeaderSanity(Stage):
+class HeaderSanity(QCStage):
     """
       Stage to validate important header keywords.
     """
@@ -43,7 +43,10 @@ class HeaderSanity(Stage):
 
             for keyword in self.header_expected_format.keys():
                 self.check_header_keyword_present(keyword, image)
-                self.check_header_format(keyword, image)
+                # Remove for now, until we can re-evaluate what exactly the
+                # expected formats should be. There could be multiple expected
+                # formats per keyword.
+                #self.check_header_format(keyword, image)
                 self.check_header_na(keyword, image)
 
             self.check_ra_range(image)
