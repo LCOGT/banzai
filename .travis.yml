@@ -137,7 +137,7 @@ install:
     # in how to install a package, in which case you can have additional
     # commands in the install: section below.
 
-    - if [[ $TRAVIS_OS_NAME == "osx" ]]; then brew update > /dev/null && brew install mariadb && mysql.server start; fi
+    - if [[ $TRAVIS_OS_NAME == "osx" ]]; then brew update > /dev/null && brew install mysql && mysql.server start; fi
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
 
