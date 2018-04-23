@@ -81,6 +81,7 @@ class PipelineContext(object):
         self.processed_path = args.processed_path
         self.raw_path = args.raw_path
         self.post_to_archive = args.post_to_archive
+        self.post_to_elasticsearch = args.post_to_elasticsearch
         self.fpack = args.fpack
         self.rlevel = args.rlevel
         self.db_address = args.db_address
@@ -198,6 +199,8 @@ def reduce_night():
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
                         default=False)
+    parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
+                        default=False)
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
 
@@ -259,6 +262,8 @@ def parse_end_of_night_command_line_arguments():
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
                         default=False)
+    parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
+                        default=False)
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
@@ -305,6 +310,8 @@ def run_preview_pipeline():
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
+                        default=False)
+    parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
                         default=False)
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
