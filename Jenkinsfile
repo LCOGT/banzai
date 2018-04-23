@@ -28,7 +28,7 @@ pipeline {
 		stage('Test') {
 		    steps {
 		        script {
-                    sh 'docker run --rm "${DOCKER_IMG}" -w=/lco/banzai/ --user=root python setup.py test'
+                    sh 'docker run --rm -w=/lco/banzai/ --user=root "${DOCKER_IMG}" python setup.py test'
 		        }
 		    }
 		}
