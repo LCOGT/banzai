@@ -25,7 +25,8 @@ class Stage(object):
     def stage_name(self):
         return '.'.join([__name__, self.__class__.__name__])
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def group_by_keywords(self):
         pass
 
@@ -66,7 +67,8 @@ class CalibrationMaker(Stage):
     def __init__(self, pipeline_context):
         super(CalibrationMaker, self).__init__(pipeline_context)
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def calibration_type(self):
         pass
 
@@ -74,7 +76,8 @@ class CalibrationMaker(Stage):
     def make_master_calibration_frame(self, images, image_config, logging_tags):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def min_images(self):
         pass
 
@@ -112,7 +115,8 @@ class ApplyCalibration(Stage):
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def calibration_type(self):
         pass
 
