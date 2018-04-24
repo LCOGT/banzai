@@ -9,8 +9,8 @@ RUN yum -y install epel-release gcc mariadb-devel \
 ENV PATH /opt/astrometry.net/bin:$PATH
 
 RUN conda install -y pip numpy cython astropy sqlalchemy pytest>=3.5 mock requests ipython \
-        && conda install -c openastronomy sep
-        && conda install -c conda-forge kombu elasticsearch
+        && conda install -c openastronomy sep \
+        && conda install -c conda-forge kombu elasticsearch \
         && conda clean -y --all
 
 RUN pip install logutils mysqlclient lcogt_logging \
