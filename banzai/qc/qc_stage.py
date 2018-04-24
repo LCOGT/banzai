@@ -57,6 +57,9 @@ class QCStage(Stage):
                            'dayobs': image.epoch,
                            'timestamp': image.dateobs}
         for key, value in qc_results.items():
+            # Elasticsearch does not like numpy.bool_ types
+            if 'numpy.bool_' in str(type(value)):
+                value = bool(value)
             results_to_save[key] = value
         filename = image.filename.replace('.fits', '').replace('.fz', '')
         return filename, results_to_save
