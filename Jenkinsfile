@@ -14,7 +14,7 @@ pipeline {
 		stage('Build image') {
 			steps {
 				script {
-					dockerImage = docker.build("${DOCKER_IMG}")
+					dockerImage = docker.build("${DOCKER_IMG}", "--build-arg MINICONDA_VERSION=4.4.10 .")
 				}
 			}
 		}
@@ -31,29 +31,6 @@ pipeline {
                     sh 'docker run --rm -w=/lco/banzai/ --user=root "${DOCKER_IMG}" python setup.py test'
 		        }
 		    }
-		}
-		stage('Deploy') {
-			parallel {
-				stage('Dev') {
-					when { branch 'dev' }
-					environment {
-						DEV_CREDS = credentials('rancher-cli-dev')
-					}
-					steps {
-						sh '''
-							export DOCKER_IMG="${DOCKER_IMG}"
-							rancher -c ${DEV_CREDS} up --stack BANZAI --force-upgrade --confirm-upgrade -d
-						'''
-					}
-				}
-				stage('Prod') {
-					when { branch 'master' }
-					steps {
-						sh '''
-						'''
-					}
-				}
-			}
 		}
 	}
 }
