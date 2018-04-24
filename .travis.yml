@@ -35,7 +35,7 @@ env:
         - ASTROPY_VERSION=stable
         - MAIN_CMD='python setup.py'
         - SETUP_CMD='test'
-        - PIP_DEPENDENCIES='astropy>=0.4 sqlalchemy logutils numpy cython mysqlclient lcogt_logging sep kombu requests mock pytest>=3.5 elasticsearch'
+        - PIP_DEPENDENCIES='astropy>=3.0 sqlalchemy logutils numpy cython mysqlclient lcogt_logging sep kombu requests mock pytest>=3.5 elasticsearch'
         - EVENT_TYPE='pull_request push'
 
 
@@ -61,7 +61,6 @@ env:
 
     matrix:
         # Make sure that egg_info works without dependencies
-        - PYTHON_VERSION=2.7 SETUP_CMD='egg_info'
         - PYTHON_VERSION=3.5 SETUP_CMD='egg_info'
         - PYTHON_VERSION=3.5 SETUP_CMD='egg_info'
         - PYTHON_VERSION=3.6 SETUP_CMD='egg_info'
@@ -90,8 +89,6 @@ matrix:
           env: ASTROPY_VERSION=development
                EVENT_TYPE='pull_request push cron'
         - os: linux
-          env: PYTHON_VERSION=2.7 ASTROPY_VERSION=lts
-        - os: linux
           env: ASTROPY_VERSION=lts
 
         # Try all python versions and Numpy versions. Since we can assume that
@@ -115,11 +112,6 @@ matrix:
         - os: linux
           env: MAIN_CMD='pycodestyle banzai --count' SETUP_CMD=''
 
-    allow_failures:
-        # Do a PEP8 test with pycodestyle
-        # (allow to fail unless your code completely compliant)
-        - os: linux
-          env: MAIN_CMD='pycodestyle banzai --count' SETUP_CMD=''
 
 install:
 
