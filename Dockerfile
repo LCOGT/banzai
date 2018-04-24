@@ -1,4 +1,5 @@
-FROM docker.lcogt.net/miniconda3:4.0.5
+ARG MINICONDA_VERSION
+FROM docker.lco.global/docker-miniconda3:${MINICONDA_VERSION}
 MAINTAINER Las Cumbres Observatory <webmaster@lco.global>
 
 RUN yum -y install epel-release gcc mariadb-devel \
@@ -8,10 +9,12 @@ RUN yum -y install epel-release gcc mariadb-devel \
 
 ENV PATH /opt/astrometry.net/bin:$PATH
 
-RUN conda install -y pip numpy cython astropy sqlalchemy pytest mock requests ipython \
+RUN conda install -y pip numpy cython astropy sqlalchemy pytest>=3.5 mock requests ipython \
+        && conda install -c openastronomy sep \
+        && conda install -c conda-forge kombu elasticsearch pytest-astropy\
         && conda clean -y --all
 
-RUN pip install logutils sep mysqlclient lcogt_logging kombu elasticsearch \
+RUN pip install logutils mysqlclient lcogt_logging \
         && rm -rf ~/.cache/pip
 
 RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
