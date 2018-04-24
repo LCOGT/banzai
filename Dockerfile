@@ -1,4 +1,4 @@
-FROM docker.lco.global/docker-miniconda3:4.4.10
+FROM docker.lco.global/docker-miniconda3:4.3.21-6-ga718de9
 MAINTAINER Las Cumbres Observatory <webmaster@lco.global>
 
 RUN yum -y install epel-release gcc mariadb-devel \
