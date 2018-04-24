@@ -25,7 +25,7 @@ def test_no_exptime_in_frames():
 
     for image in images:
 
-        tester.check_header_keyword_present('EXPTIME', image)
+        tester.check_header_keyword_present(['EXPTIME'], image)
         assert tester.logger.error.called
 
     assert len(images) == 6
@@ -56,7 +56,7 @@ def test_NA_in_RA():
     for image in images:
         image.header['RA'] = 'N/A'
 
-        tester.check_header_na('RA', image)
+        tester.check_header_na(['RA'], image)
         assert tester.logger.error.called
 
     assert len(images) == 6
