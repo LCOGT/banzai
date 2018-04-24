@@ -124,17 +124,19 @@ def test_header_checker_es_update():
     # Set initial values
     qc_stage = QCStage(FakeElasticsearchContext())
     image = FakeImage()
-    header_check_booleans = ['HeaderBadDecValue', 'HeaderBadRAValue',
-                             'HeaderKeywordsMissing', 'HeaderKeywordsNA']
-
-    qc_stage.save_qc_results({'PatternNoise': True}, image)
+    header_checks = ['HeaderBadDecValue', 'HeaderBadRAValue',
+                     'HeaderExptimeNegative', 'HeaderExptimeZero',
+                     'HeaderKeywordsMissing', 'HeaderKeywordsNA']
+    header_check_booleans = {key: True for key in header_checks}
+    qc_stage.save_qc_results(header_check_booleans, image)
     # Run header sanity test
     tester = HeaderSanity(FakeElasticsearchContext())
     for key in tester.header_expected_format.keys():
         image.header[key] = 1.0
-    image.header['EXPTIME'] = 0
+    image.header['OBSTYPE'] = 'EXPOSE'
     tester.do_stage([image])
     # Check info from elasticsearch
     results = elasticsearch.Elasticsearch(QCStage.ES_URLS).get_source(
         index=QCStage.ES_INDEX, doc_type=QCStage.ES_DOC_TYPE, id='test')
-    #assert not results['PatternNoise']
+    for header_check in header_checks:
+        assert not results[header_check]
