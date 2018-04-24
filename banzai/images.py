@@ -19,7 +19,10 @@ logger = logs.get_logger(__name__)
 class Image(object):
 
     def __init__(self, pipeline_context, filename=None, data=None, header={},
-                 extension_headers=[], bpm=None):
+                 extension_headers=None, bpm=None):
+
+        if extension_headers is None:
+            extension_headers = []
 
         if filename is not None:
             data, header, bpm, extension_headers = fits_utils.open_image(filename)
