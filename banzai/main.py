@@ -78,7 +78,7 @@ def get_stages_todo(last_stage=None, extra_stages=None):
 
 def get_preview_stages_todo(image_suffix):
     if image_suffix == 'b00.fits':
-        stages = get_stages_todo(last_stage=trim.Trimmer, extra_stages=bias.BiasComparer)
+        stages = get_stages_todo(last_stage=trim.Trimmer, extra_stages=[bias.BiasComparer])
     else:
         stages = get_stages_todo()
     return stages
