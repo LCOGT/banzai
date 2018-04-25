@@ -2,7 +2,7 @@ import os
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 
-from banzai.qc.qc_stage import QCStage
+from banzai.stages import QCStage
 from banzai import logs
 
 
