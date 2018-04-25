@@ -152,6 +152,7 @@ class BiasComparer(ApplyCalibration):
     def group_by_keywords(self):
         return ['ccdsum']
 
+    @property
     def calibration_type(self):
         return 'bias'
 
