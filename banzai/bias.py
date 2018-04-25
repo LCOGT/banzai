@@ -152,6 +152,9 @@ class BiasComparer(ApplyCalibration):
     def group_by_keywords(self):
         return ['ccdsum']
 
+    def calibration_type(self):
+        return 'bias'
+
     def on_missing_master_calibration(self, logging_tags):
         self.logger.warning('No master Bias frame exists. Assuming these images are ok.', logging_tags)
 
