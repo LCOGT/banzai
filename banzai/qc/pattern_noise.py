@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from banzai.qc.qc_stage import QCStage
+from banzai.stages import QCStage
 from banzai import logs
 from banzai.utils.stats import median_absolute_deviation
 
