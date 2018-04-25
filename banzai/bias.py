@@ -188,7 +188,7 @@ class BiasComparer(ApplyCalibration):
             else:
                 qc_results['REJECTED'] = False
 
-            save_qc_results(qc_results, image, self.pipeline_context)
+                self.save_qc_results(qc_results, image)
 
         for image_to_reject in images_to_reject:
             images.remove(image_to_reject)
