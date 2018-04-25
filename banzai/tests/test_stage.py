@@ -6,16 +6,16 @@ import mock
 
 def test_format_qc_results_basic_info():
     image = FakeImage()
-    filename, results = Stage._format_qc_results({}, image)
+    filename, timestamp, results = Stage._format_qc_results({}, image)
     assert results['site'] == image.site
     assert results['instrument'] == image.instrument
     assert results['dayobs'] == image.epoch
-    assert results['@timestamp'] == image.dateobs
+    assert timestamp == image.dateobs
     assert filename in image.filename
 
 
 def test_format_qc_results_new_info():
-    filename, results = Stage._format_qc_results({"key1": "value1",
+    filename, timestamp, results = Stage._format_qc_results({"key1": "value1",
                                                   "key2": "value2"},
                                                  FakeImage())
     assert results["key1"] == "value1"
@@ -23,7 +23,7 @@ def test_format_qc_results_new_info():
 
 
 def test_format_qc_results_numpy_bool():
-    filename, results = Stage._format_qc_results({"normal_bool": True,
+    filename, timestamp, results = Stage._format_qc_results({"normal_bool": True,
                                                   "numpy_bool": np.bool_(True)},
                                                  FakeImage())
     assert type(results["normal_bool"]) == bool
