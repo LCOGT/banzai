@@ -101,7 +101,7 @@ def run_end_of_night_from_console(scripts_to_run):
 
 
 def make_master_bias(pipeline_context):
-    stages_to_do = get_stages_todo(trim.Trimmer, extra_stages=[bias.BiasMaker])
+    stages_to_do = get_stages_todo(trim.Trimmer, extra_stages=[bias.BiasComparer, bias.BiasMaker])
     run(stages_to_do, pipeline_context, image_types=['BIAS'], calibration_maker=True,
         log_message='Making Master BIAS')
 
@@ -380,6 +380,7 @@ def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
         except KeyboardInterrupt:
             logger.info('Shutting down preview pipeline listener.')
 
+preview_eligible_suffixs = ['e00.fits', 's00.fits', 'b00.fits']
 
 class PreviewModeListener(ConsumerMixin):
     def __init__(self, broker_url, pipeline_context):
@@ -401,7 +402,12 @@ class PreviewModeListener(ConsumerMixin):
         path = body.get('path')
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
-        if 'e00.fits' in path or 's00.fits' in path:
+        is_eligible_for_preview = False
+        for suffix in preview_eligible_suffixs:
+            if suffix in path:
+                is_eligible_for_preview = True
+
+        if is_eligible_for_preview:
             try:
                 if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
                                             max_tries=self.pipeline_context.max_preview_tries):
@@ -415,14 +421,9 @@ class PreviewModeListener(ConsumerMixin):
                     # Increment the number of tries for this file
                     dbs.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
 
-                    output_files = run(stages_to_do, self.pipeline_context,
-                                       image_types=['EXPOSE', 'STANDARD'])
-                    if len(output_files) > 0:
-                        dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
-                    else:
-                        logging_tags = {'tags': {'filename': os.path.basename(path)}}
-                        logger.error("Could not produce preview image. {0}".format(path),
-                                     extra=logging_tags)
+                    run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD', 'BIAS'])
+                    dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
+
             except Exception as e:
                 logging_tags = {'tags': {'filename': os.path.basename(path)}}
                 exc_type, exc_value, exc_tb = sys.exc_info()
