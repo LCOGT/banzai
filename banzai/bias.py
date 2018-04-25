@@ -164,12 +164,11 @@ class BiasComparer(ApplyCalibration):
         images_to_reject = []
 
         for image in images:
-            # Estimate the noise in the image
-            noise = np.ones(image.data.shape) * image.readnoise
 
             # If the the fraction of pixels that deviate from the master by a s/n threshold exceeds an acceptable fraction
             bad_pixel_fraction = np.abs(image.data - master_calibration_image.data)
-            bad_pixel_fraction /= noise
+            # Estimate the noise of the image
+            bad_pixel_fraction /= image.readnoise
             bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
             bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
 
