@@ -89,6 +89,7 @@ class PipelineContext(object):
         self.preview_mode = args.preview_mode
         self.filename = args.filename
         self.max_preview_tries = args.max_preview_tries
+        self.es_url = args.es_url
 
 
 def run_end_of_night_from_console(scripts_to_run):
@@ -208,6 +209,8 @@ def reduce_night():
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
+    parser.add_argument('--es-url', dest='es_url', default='http://elasticsearch.lco.gtn:9200',
+                        help='URL for ElasticSearch index')
 
     args = parser.parse_args()
 
@@ -273,6 +276,9 @@ def parse_end_of_night_command_line_arguments():
 
     parser.add_argument('--filename', dest='filename', default=None,
                         help='Filename of the image to reduce.')
+    parser.add_argument('--es-url', dest='es_url', default='http://elasticsearch.lco.gtn:9200',
+                        help='URL for ElasticSearch index')
+
     args = parser.parse_args()
 
     args.preview_mode = False
@@ -330,6 +336,9 @@ def run_preview_pipeline():
                         help='Name of the queue to listen to from the fits exchange.')
     parser.add_argument('--max-preview-tries', dest='max_preview_tries', default=5,
                         help='Maximum number of tries to produce a preview image.')
+    parser.add_argument('--es-url', dest='es_url', default='http://elasticsearch.lco.gtn:9200',
+                        help='URL for ElasticSearch index')
+
     args = parser.parse_args()
     args.preview_mode = True
     args.raw_path = None

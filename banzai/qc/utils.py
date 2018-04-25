@@ -1,6 +1,6 @@
 import elasticsearch
 
-def save_qc_results(qc_results, image, es_url='http://elasticsearch.lco.gtn:9200'):
+def save_qc_results(qc_results, image, pipeline_context):
     """
     Save the Quality Control results to ElasticSearch
 
@@ -21,6 +21,6 @@ def save_qc_results(qc_results, image, es_url='http://elasticsearch.lco.gtn:9200
     results_to_save = {'site': image.site, 'instrument': image.instrument, 'dayobs': image.epoch}
     for key, value in qc_results.items():
         results_to_save[key] = value
-    es = elasticsearch.Elasticsearch(es_url)
+    es = elasticsearch.Elasticsearch(pipeline_context.es_url)
     filename = image.filename.replace('.fits', '').replace('.fz', '')
     es.update(index='banzai_qc', doc_type='qc', id=filename, body={'doc': results_to_save, 'doc_as_upsert': True})
