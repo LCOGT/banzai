@@ -35,7 +35,7 @@ env:
         - ASTROPY_VERSION=stable
         - MAIN_CMD='python setup.py'
         - SETUP_CMD='test'
-        - PIP_DEPENDENCIES='astropy>=3.0 sqlalchemy logutils numpy cython mysqlclient lcogt_logging sep kombu requests mock pytest>=3.5 elasticsearch'
+        - PIP_DEPENDENCIES='astropy>=3.0 sqlalchemy logutils numpy cython mysql-connector-python lcogt_logging sep kombu requests mock pytest>=3.5 elasticsearch'
         - EVENT_TYPE='pull_request push'
 
 
