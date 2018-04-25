@@ -8,7 +8,6 @@ from banzai.images import Image
 from banzai import logs
 from banzai.stages import CalibrationMaker, ApplyCalibration, Stage
 from banzai.utils import stats, fits_utils
-from banzai.qc.utils import save_qc_results
 
 
 __author__ = 'cmccully'
