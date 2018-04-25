@@ -98,7 +98,7 @@ class Stage(object):
         results_to_save = {'site': image.site,
                            'instrument': image.instrument,
                            'dayobs': image.epoch,
-                           'timestamp': image.dateobs}
+                           '@timestamp': image.dateobs}
         for key, value in qc_results.items():
             # Elasticsearch does not like numpy.bool_ types
             if type(value) == np.bool_:
