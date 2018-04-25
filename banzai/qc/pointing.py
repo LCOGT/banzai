@@ -2,11 +2,12 @@ import os
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 
-from banzai.qc.qc_stage import QCStage
+from banzai.stages import Stage
 from banzai import logs
 
 
-class PointingTest(QCStage):
+
+class PointingTest(Stage):
     """
     A test to determine  whether or not the poiting error on the frame
     (as determined by a WCS solve) is within tolerance.

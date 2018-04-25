@@ -1,11 +1,11 @@
 import numpy as np
 import os
 
-from banzai.qc.qc_stage import QCStage
+from banzai.stages import Stage
 from banzai import logs
 
 
-class ThousandsTest(QCStage):
+class ThousandsTest(Stage):
     """
     Reject any images that have 20% or more of their pixels exactly equal to 1000.
 

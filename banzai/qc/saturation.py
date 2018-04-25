@@ -1,10 +1,10 @@
 import os
 
-from banzai.qc.qc_stage import QCStage
+from banzai.stages import Stage
 from banzai import logs
 
 
-class SaturationTest(QCStage):
+class SaturationTest(Stage):
     """
     Reject any images that have 5% or more of their pixels saturated.
 

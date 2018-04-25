@@ -82,6 +82,7 @@ class PipelineContext(object):
         self.raw_path = args.raw_path
         self.post_to_archive = args.post_to_archive
         self.post_to_elasticsearch = args.post_to_elasticsearch
+        self.elasticsearch_url = args.elasticsearch_url
         self.fpack = args.fpack
         self.rlevel = args.rlevel
         self.db_address = args.db_address
@@ -202,6 +203,8 @@ def reduce_night():
                         default=False)
     parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
                         default=False)
+    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
+                        default='http://elasticsearch.lco.gtn:9200')
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
 
@@ -267,6 +270,8 @@ def parse_end_of_night_command_line_arguments():
                         default=False)
     parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
                         default=False)
+    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
+                        default='http://elasticsearch.lco.gtn:9200')
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
@@ -319,6 +324,8 @@ def run_preview_pipeline():
                         default=False)
     parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
                         default=False)
+    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
+                        default='http://elasticsearch.lco.gtn:9200')
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')

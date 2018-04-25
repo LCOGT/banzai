@@ -1,12 +1,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os
 import itertools
-
-from sqlalchemy.sql import func
+import numpy as np
+import elasticsearch
 
 from banzai import dbs
-from banzai.utils import date_utils
 from banzai import logs
 from banzai.images import Image
 from banzai.utils import image_utils
@@ -20,6 +18,9 @@ __author__ = 'cmccully'
 
 class Stage(object):
     __metaclass__ = abc.ABCMeta
+
+    ES_INDEX = "banzai_qc"
+    ES_DOC_TYPE = "qc"
 
     @property
     def stage_name(self):
@@ -59,6 +60,52 @@ class Stage(object):
     @abc.abstractmethod
     def do_stage(self, images):
         pass
+
+    def save_qc_results(self, qc_results, image, **kwargs):
+        """
+        Save the Quality Control results to ElasticSearch
+
+        Parameters
+        ----------
+        qc_results : dict
+                     Dictionary of key value pairs to be saved to ElasticSearch
+        image : banzai.images.Image
+                Image that should be linked
+
+        Notes
+        -----
+        File name, site, instrument, dayobs and timestamp are always saved in the database.
+        """
+
+        es_output = {}
+        elasticsearch_url = getattr(self.pipeline_context, 'elasticsearch_url', "no url set")
+        if getattr(self.pipeline_context, 'post_to_elasticsearch', False):
+            filename, results_to_save = self._format_qc_results(qc_results, image)
+            es = elasticsearch.Elasticsearch(elasticsearch_url)
+            try:
+                es_output = self._push_to_elasticsearch(es, filename, results_to_save, **kwargs)
+            except Exception as e:
+                self.logger.error('Cannot update elasticsearch index to URL \"{0}\": {1}'.format(elasticsearch_url, e))
+        return es_output
+
+    def _push_to_elasticsearch(self, es, filename, results_to_save, **kwargs):
+        return es.update(index=self.ES_INDEX, doc_type=self.ES_DOC_TYPE, id=filename,
+                         body={'doc': results_to_save, 'doc_as_upsert': True},
+                         retry_on_conflict=5, **kwargs)
+
+    @staticmethod
+    def _format_qc_results(qc_results, image):
+        results_to_save = {'site': image.site,
+                           'instrument': image.instrument,
+                           'dayobs': image.epoch,
+                           'timestamp': image.dateobs}
+        for key, value in qc_results.items():
+            # Elasticsearch does not like numpy.bool_ types
+            if type(value) == np.bool_:
+                value = bool(value)
+            results_to_save[key] = value
+        filename = image.filename.replace('.fits', '').replace('.fz', '')
+        return filename, results_to_save
 
 
 class CalibrationMaker(Stage):
@@ -148,3 +195,4 @@ class ApplyCalibration(Stage):
     def get_calibration_filename(self, image):
         return dbs.get_master_calibration_image(image, self.calibration_type, self.group_by_keywords,
                                                 db_address=self.pipeline_context.db_address)
+
