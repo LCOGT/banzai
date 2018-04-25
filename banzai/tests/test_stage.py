@@ -10,7 +10,7 @@ def test_format_qc_results_basic_info():
     assert results['site'] == image.site
     assert results['instrument'] == image.instrument
     assert results['dayobs'] == image.epoch
-    assert results['timestamp'] == image.dateobs
+    assert results['@timestamp'] == image.dateobs
     assert filename in image.filename
 
 
