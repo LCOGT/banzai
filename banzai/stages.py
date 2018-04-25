@@ -34,7 +34,6 @@ class Stage(object):
     def __init__(self, pipeline_context):
         self.logger = logs.get_logger(self.stage_name)
         self.pipeline_context = pipeline_context
-        self.qc_results = {}
 
     def get_grouping(self, image):
         grouping_criteria = [image.site, image.instrument, image.epoch]
@@ -78,18 +77,15 @@ class Stage(object):
         File name, site, instrument, dayobs and timestamp are always saved in the database.
         """
 
-        post_to_elasticsearch = getattr(self.pipeline_context, 'post_to_elasticsearch', False)
-        elasticsearch_url = getattr(self.pipeline_context, 'elasticsearch_url', "no URL set")
         es_output = {}
-        if post_to_elasticsearch:
+        elasticsearch_url = getattr(self.pipeline_context, 'elasticsearch_url', "no url set")
+        if getattr(self.pipeline_context, 'post_to_elasticsearch', False):
             filename, results_to_save = self._format_qc_results(qc_results, image)
             es = elasticsearch.Elasticsearch(elasticsearch_url)
             try:
                 es_output = self._push_to_elasticsearch(es, filename, results_to_save, **kwargs)
-            except ConnectionError:
-                self.logger.error('Cannot connect to elasticsearch DB')
             except Exception as e:
-                self.logger.error('Cannot update elasticsearch index: {0}'.format(e))
+                self.logger.error('Cannot update elasticsearch index to URL \"{0}\": {1}'.format(elasticsearch_url, e))
         return es_output
 
     def _push_to_elasticsearch(self, es, filename, results_to_save, **kwargs):
