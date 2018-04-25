@@ -47,7 +47,7 @@ def test_raises_an_exection_if_ny_are_different(mock_cal, mock_images):
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
-@mock.patch('banzai.bias.save_qc_results')
+@mock.patch('banzai.stages.Stage.save_qc_results')
 def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_cal, mock_images):
     mock_cal.return_value = None
     mock_images.return_value = FakeImage()
@@ -58,7 +58,7 @@ def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_ca
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
-@mock.patch('banzai.bias.save_qc_results')
+@mock.patch('banzai.stages.Stage.save_qc_results')
 def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image):
     mock_cal.return_value = 'test.fits'
     master_readnoise = 3.0
@@ -81,7 +81,7 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image):
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
-@mock.patch('banzai.bias.save_qc_results')
+@mock.patch('banzai.stages.Stage.save_qc_results')
 def test_does_reject_bad_images(mock_save_qc, mock_cal, mock_image):
     mock_cal.return_value = 'test.fits'
     master_readnoise = 3.0
