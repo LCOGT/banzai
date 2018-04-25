@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import itertools
-import elasticsearch
 import numpy as np
+import elasticsearch
 
 from banzai import dbs
 from banzai import logs
@@ -19,6 +19,9 @@ __author__ = 'cmccully'
 class Stage(object):
     __metaclass__ = abc.ABCMeta
 
+    ES_INDEX = "banzai_qc"
+    ES_DOC_TYPE = "qc"
+
     @property
     def stage_name(self):
         return '.'.join([__name__, self.__class__.__name__])
@@ -31,6 +34,7 @@ class Stage(object):
     def __init__(self, pipeline_context):
         self.logger = logs.get_logger(self.stage_name)
         self.pipeline_context = pipeline_context
+        self.qc_results = {}
 
     def get_grouping(self, image):
         grouping_criteria = [image.site, image.instrument, image.epoch]
@@ -57,6 +61,55 @@ class Stage(object):
     @abc.abstractmethod
     def do_stage(self, images):
         pass
+
+    def save_qc_results(self, qc_results, image, **kwargs):
+        """
+        Save the Quality Control results to ElasticSearch
+
+        Parameters
+        ----------
+        qc_results : dict
+                     Dictionary of key value pairs to be saved to ElasticSearch
+        image : banzai.images.Image
+                Image that should be linked
+
+        Notes
+        -----
+        File name, site, instrument, dayobs and timestamp are always saved in the database.
+        """
+
+        post_to_elasticsearch = getattr(self.pipeline_context, 'post_to_elasticsearch', False)
+        elasticsearch_url = getattr(self.pipeline_context, 'elasticsearch_url', "no URL set")
+        es_output = {}
+        if post_to_elasticsearch:
+            filename, results_to_save = self._format_qc_results(qc_results, image)
+            es = elasticsearch.Elasticsearch(elasticsearch_url)
+            try:
+                es_output = self._push_to_elasticsearch(es, filename, results_to_save, **kwargs)
+            except ConnectionError:
+                self.logger.error('Cannot connect to elasticsearch DB')
+            except Exception as e:
+                self.logger.error('Cannot update elasticsearch index: {0}'.format(e))
+        return es_output
+
+    def _push_to_elasticsearch(self, es, filename, results_to_save, **kwargs):
+        return es.update(index=self.ES_INDEX, doc_type=self.ES_DOC_TYPE, id=filename,
+                         body={'doc': results_to_save, 'doc_as_upsert': True},
+                         retry_on_conflict=5, **kwargs)
+
+    @staticmethod
+    def _format_qc_results(qc_results, image):
+        results_to_save = {'site': image.site,
+                           'instrument': image.instrument,
+                           'dayobs': image.epoch,
+                           'timestamp': image.dateobs}
+        for key, value in qc_results.items():
+            # Elasticsearch does not like numpy.bool_ types
+            if type(value) == np.bool_:
+                value = bool(value)
+            results_to_save[key] = value
+        filename = image.filename.replace('.fits', '').replace('.fz', '')
+        return filename, results_to_save
 
 
 class CalibrationMaker(Stage):
@@ -144,67 +197,3 @@ class ApplyCalibration(Stage):
         return dbs.get_master_calibration_image(image, self.calibration_type, self.group_by_keywords,
                                                 db_address=self.pipeline_context.db_address)
 
-
-class QCStage(Stage):
-
-    ES_INDEX = "banzai_qc"
-    ES_DOC_TYPE = "qc"
-
-    def __init__(self, pipeline_context):
-        super(QCStage, self).__init__(pipeline_context)
-        self.post_to_elasticsearch = getattr(self.pipeline_context, 'post_to_elasticsearch', False)
-        self.elasticsearch_url = getattr(self.pipeline_context, 'elasticsearch_url', "no URL set")
-
-    @property
-    @abc.abstractmethod
-    def group_by_keywords(self):
-        return None
-
-    def do_stage(self, images):
-        pass
-
-    def save_qc_results(self, qc_results, image, **kwargs):
-        """
-        Save the Quality Control results to ElasticSearch
-
-        Parameters
-        ----------
-        qc_results : dict
-                     Dictionary of key value pairs to be saved to ElasticSearch
-        image : banzai.images.Image
-                Image that should be linked
-
-        Notes
-        -----
-        File name, site, instrument, dayobs and timestamp are always saved in the database.
-        """
-        es_output = {}
-        if self.post_to_elasticsearch:
-            filename, results_to_save = self._format_qc_results(qc_results, image)
-            es = elasticsearch.Elasticsearch(self.elasticsearch_url)
-            try:
-                es_output = self._push_to_elasticsearch(es, filename, results_to_save, **kwargs)
-            except ConnectionError:
-                self.logger.error('Cannot connect to elasticsearch DB')
-            except Exception as e:
-                self.logger.error('Cannot update elasticsearch index: {0}'.format(e))
-        return es_output
-
-    def _push_to_elasticsearch(self, es, filename, results_to_save, **kwargs):
-        return es.update(index=self.ES_INDEX, doc_type=self.ES_DOC_TYPE, id=filename,
-                         body={'doc': results_to_save, 'doc_as_upsert': True},
-                         retry_on_conflict=5, **kwargs)
-
-    @staticmethod
-    def _format_qc_results(qc_results, image):
-        results_to_save = {'site': image.site,
-                           'instrument': image.instrument,
-                           'dayobs': image.epoch,
-                           'timestamp': image.dateobs}
-        for key, value in qc_results.items():
-            # Elasticsearch does not like numpy.bool_ types
-            if type(value) == np.bool_:
-                value = bool(value)
-            results_to_save[key] = value
-        filename = image.filename.replace('.fits', '').replace('.fz', '')
-        return filename, results_to_save
