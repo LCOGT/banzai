@@ -1,12 +1,13 @@
 import os
 import numpy as np
 
-from banzai.stages import QCStage
+from banzai.stages import Stage
 from banzai import logs
 from banzai.utils.stats import median_absolute_deviation
 
 
-class PatternNoiseDetector(QCStage):
+
+class PatternNoiseDetector(Stage):
     # Signal to Noise threshold to raise an alert
     SNR_THRESHOLD = 15.0
     # Number of pixels that need to be above the S/N threshold to raise an alert

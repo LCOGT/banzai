@@ -3,11 +3,11 @@ This module performs basic sanity checks that the main image header keywords are
 format and validates their values.
 @author:ebachelet
 """
-from banzai.stages import QCStage
+from banzai.stages import Stage
 from banzai import logs
 
 
-class HeaderSanity(QCStage):
+class HeaderSanity(Stage):
     """
       Stage to validate important header keywords.
     """
@@ -79,7 +79,7 @@ class HeaderSanity(QCStage):
                 self.logger.error(sentence, extra=logging_tags)
         any_keywords_missing = True if len(missing_keywords) else False
         self.save_qc_results({"HeaderKeywordsMissing": any_keywords_missing,
-                              "header_keywords_mising": missing_keywords}, image)
+                               "header_keywords_mising": missing_keywords}, image)
 
     def check_header_format(self, keyword, image):
         """ Logs an error if the keyword is not the expected type
