@@ -165,7 +165,7 @@ class BiasComparer(ApplyCalibration):
         for image in images:
 
             # If the the fraction of pixels that deviate from the master by a s/n threshold exceeds an acceptable fraction
-            bad_pixel_fraction = np.abs(image.data - master_calibration_image.data)
+            bad_pixel_fraction = np.abs(image.data - float(master_calibration_image.header['BIASLVL']) - master_calibration_image.data)
             # Estimate the noise of the image
             bad_pixel_fraction /= image.readnoise
             bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD

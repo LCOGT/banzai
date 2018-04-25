@@ -76,6 +76,14 @@ def get_stages_todo(last_stage=None, extra_stages=None):
     return stages_todo
 
 
+def get_preview_stages_todo(image_suffix):
+    if image_suffix == 'b00.fits':
+        stages = get_stages_todo(last_stage=trim.Trimmer, extra_stages=bias.BiasComparer)
+    else:
+        stages = get_stages_todo()
+    return stages
+
+
 class PipelineContext(object):
     def __init__(self, args):
         self.processed_path = args.processed_path
@@ -413,12 +421,13 @@ class PreviewModeListener(ConsumerMixin):
         for suffix in preview_eligible_suffixs:
             if suffix in path:
                 is_eligible_for_preview = True
+                image_suffix = suffix
 
         if is_eligible_for_preview:
             try:
                 if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
                                             max_tries=self.pipeline_context.max_preview_tries):
-                    stages_to_do = get_stages_todo()
+                    stages_to_do = get_preview_stages_todo(image_suffix)
 
                     logging_tags = {'tags': {'filename': os.path.basename(path)}}
                     logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)
