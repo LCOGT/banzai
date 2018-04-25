@@ -1,7 +1,7 @@
 import numpy as np
 import os
 
-from banzai.qc.qc_stage import QCStage
+from banzai.stages import QCStage
 from banzai import logs
 
 
