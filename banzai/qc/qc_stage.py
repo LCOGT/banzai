@@ -1,5 +1,6 @@
 from banzai.stages import Stage
 import elasticsearch
+from abc import abstractmethod
 
 
 class QCStage(Stage):
@@ -15,9 +16,11 @@ class QCStage(Stage):
         super(QCStage, self).__init__(pipeline_context)
 
     @property
+    @abstractmethod
     def group_by_keywords(self):
         return None
 
+    @abstractmethod
     def do_stage(self, images):
         pass
 

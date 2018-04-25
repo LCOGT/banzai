@@ -8,6 +8,7 @@ from banzai.images import Image
 from banzai import logs
 from banzai.stages import CalibrationMaker, ApplyCalibration, Stage
 from banzai.utils import stats, fits_utils
+from banzai.qc.utils import save_qc_results
 
 
 __author__ = 'cmccully'
@@ -137,6 +138,60 @@ class OverscanSubtractor(Stage):
                 logs.add_tag(logging_tags, 'OVERSCAN', overscan_level)
                 self.logger.info('Subtracting overscan', extra=logging_tags)
 
+        return images
+
+
+class BiasComparer(ApplyCalibration):
+    # In a 16 megapixel image, this should flag 0 or 1 pixels statistically, much much less than 5% of the image
+    SIGNAL_TO_NOISE_THRESHOLD = 6.0
+    ACCEPTABLE_PIXEL_FRACTION = 0.05
+
+    def __init__(self, pipeline_context):
+        super(BiasComparer, self).__init__(pipeline_context)
+
+    @property
+    def group_by_keywords(self):
+        return ['ccdsum']
+
+    def on_missing_master_calibration(self, logging_tags):
+        self.logger.warning('No master Bias frame exists. Assuming these images are ok.', logging_tags)
+
+    def apply_master_calibration(self, images, master_calibration_image, logging_tags):
+        # Short circuit
+        if master_calibration_image.data is None:
+            return images
+
+        images_to_reject = []
+
+        for image in images:
+            # Estimate the noise in the image
+            noise = np.ones(image.data.shape) * image.readnoise
+
+            # If the the fraction of pixels that deviate from the master by a s/n threshold exceeds an acceptable fraction
+            bad_pixel_fraction = np.abs(image.data - master_calibration_image.data)
+            bad_pixel_fraction /= noise
+            bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
+            bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
+
+            qc_results = {'BIAS_CAL_DIFF_FRAC': bad_pixel_fraction, 'SN_THRESHOLD': self.SIGNAL_TO_NOISE_THRESHOLD,
+                          'ACCEPTABLE_PIXEL_FRACTION': self.ACCEPTABLE_PIXEL_FRACTION}
+            for qc_check, qc_result in qc_results.items():
+                logs.add_tag(logging_tags, qc_check, qc_result)
+
+            if bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION:
+                # Reject the image and log an error
+                images_to_reject.append(image)
+                qc_results['REJECTED'] = True
+                logs.add_tag(logging_tags, 'REJECTED', True)
+                self.logger.error('Rejecting bias image because it deviates too much from the previous master',
+                                  extra=logging_tags)
+            else:
+                qc_results['REJECTED'] = False
+
+            save_qc_results(qc_results, image, self.pipeline_context)
+
+        for image_to_reject in images_to_reject:
+            images.remove(image_to_reject)
         return images
 
 

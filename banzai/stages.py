@@ -120,6 +120,11 @@ class ApplyCalibration(Stage):
     def calibration_type(self):
         pass
 
+    def on_missing_master_calibration(self, logging_tags):
+        self.logger.error('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name),
+                          extra=logging_tags)
+        raise MasterCalibrationDoesNotExist
+
     def do_stage(self, images):
         if len(images) == 0:
             # Abort!
@@ -130,9 +135,7 @@ class ApplyCalibration(Stage):
             master_calibration_filename = self.get_calibration_filename(images[0])
 
             if master_calibration_filename is None:
-                self.logger.error('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name),
-                                  extra=logging_tags)
-                raise MasterCalibrationDoesNotExist
+                self.on_missing_master_calibration(logging_tags)
 
             master_calibration_image = Image(self.pipeline_context,
                                              filename=master_calibration_filename)

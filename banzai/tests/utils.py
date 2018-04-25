@@ -23,6 +23,7 @@ class FakeImage(object):
         self.caltype = ''
         self.bpm = np.zeros((ny, nx), dtype=np.uint8)
         self.request_number = '0000331403'
+        self.readnoise = 11.0
 
     def get_calibration_filename(self):
         return '/tmp/{0}_{1}_{2}_bin{3}.fits'.format(self.caltype, self.instrument,
