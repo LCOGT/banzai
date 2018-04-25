@@ -3,7 +3,7 @@ This module performs basic sanity checks that the main image header keywords are
 format and validates their values.
 @author:ebachelet
 """
-from banzai.qc.qc_stage import QCStage
+from banzai.stages import QCStage
 from banzai import logs
 
 
