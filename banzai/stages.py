@@ -80,32 +80,32 @@ class Stage(object):
         es_output = {}
         elasticsearch_url = getattr(self.pipeline_context, 'elasticsearch_url', "no url set")
         if getattr(self.pipeline_context, 'post_to_elasticsearch', False):
-            filename, timestamp, results_to_save = self._format_qc_results(qc_results, image)
+            filename, results_to_save = self._format_qc_results(qc_results, image)
             es = elasticsearch.Elasticsearch(elasticsearch_url)
             try:
-                es_output = self._push_to_elasticsearch(es, filename, timestamp, results_to_save, **kwargs)
+                es_output = self._push_to_elasticsearch(es, filename, results_to_save, **kwargs)
             except Exception as e:
                 self.logger.error('Cannot update elasticsearch index to URL \"{0}\": {1}'.format(elasticsearch_url, e))
         return es_output
 
-    def _push_to_elasticsearch(self, es, filename, timestamp, results_to_save, **kwargs):
+    def _push_to_elasticsearch(self, es, filename, results_to_save, **kwargs):
         return es.update(index=self.ES_INDEX, doc_type=self.ES_DOC_TYPE, id=filename,
                          body={'doc': results_to_save, 'doc_as_upsert': True},
-                         retry_on_conflict=5, timestamp=timestamp, **kwargs)
+                         retry_on_conflict=5, timestamp=results_to_save['@timestamp'], **kwargs)
 
     @staticmethod
     def _format_qc_results(qc_results, image):
         results_to_save = {'site': image.site,
                            'instrument': image.instrument,
-                           'dayobs': image.epoch}
+                           'dayobs': image.epoch,
+                           '@timestamp': image.dateobs}
         for key, value in qc_results.items():
             # Elasticsearch does not like numpy.bool_ types
             if type(value) == np.bool_:
                 value = bool(value)
             results_to_save[key] = value
         filename = image.filename.replace('.fits', '').replace('.fz', '')
-        timestamp = image.dateobs
-        return filename, timestamp, results_to_save
+        return filename, results_to_save
 
 
 class CalibrationMaker(Stage):
