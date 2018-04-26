@@ -78,9 +78,7 @@ def get_stages_todo(last_stage=None, extra_stages=None):
 
 def get_preview_stages_todo(image_suffix):
     if image_suffix == 'b00.fits':
-        logger.info('Got to correct preview stages to do')
         stages = get_stages_todo(last_stage=trim.Trimmer, extra_stages=[bias.BiasComparer])
-        logger.info(len(stages))
     else:
         stages = get_stages_todo()
     return stages
@@ -429,7 +427,6 @@ class PreviewModeListener(ConsumerMixin):
             try:
                 if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
                                             max_tries=self.pipeline_context.max_preview_tries):
-                    logger.info(image_suffix)
                     stages_to_do = get_preview_stages_todo(image_suffix)
 
                     logging_tags = {'tags': {'filename': os.path.basename(path)}}
