@@ -98,7 +98,8 @@ class PipelineContext(object):
         self.preview_mode = args.preview_mode
         self.filename = args.filename
         self.max_preview_tries = args.max_preview_tries
-        self.es_url = args.es_url
+        self.elasticsearch_doc_type = args.elasticsearch_doc_type
+        self.elasticsearch_qc_index = args.elasticsearch_qc_index
 
 
 def run_end_of_night_from_console(scripts_to_run):
@@ -153,7 +154,9 @@ def reduce_experimental_frames_console():
     run_end_of_night_from_console([reduce_experimental_frames])
 
 
-def reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD']):
+def reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=None):
+    if image_types is None:
+        image_types = ['EXPOSE', 'STANDARD']
     image_list = image_utils.make_image_list(pipeline_context)
     original_filename = pipeline_context.filename
     for image in image_list:
@@ -220,7 +223,11 @@ def reduce_night():
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
-    parser.add_argument('--es-url', dest='es_url', default='http://elasticsearch.lco.gtn:9200',
+    parser.add_argument('--es-url', dest='elasticsearch_url', default='http://elasticsearch.lco.gtn:9200',
+                        help='URL for ElasticSearch index')
+    parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
+                        help='URL for ElasticSearch index')
+    parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
                         help='URL for ElasticSearch index')
 
     args = parser.parse_args()
@@ -289,7 +296,11 @@ def parse_end_of_night_command_line_arguments():
 
     parser.add_argument('--filename', dest='filename', default=None,
                         help='Filename of the image to reduce.')
-    parser.add_argument('--es-url', dest='es_url', default='http://elasticsearch.lco.gtn:9200',
+    parser.add_argument('--es-url', dest='elasticsearch_url', default='http://elasticsearch.lco.gtn:9200',
+                        help='URL for ElasticSearch index')
+    parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
+                        help='URL for ElasticSearch index')
+    parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
                         help='URL for ElasticSearch index')
 
     args = parser.parse_args()
@@ -351,7 +362,11 @@ def run_preview_pipeline():
                         help='Name of the queue to listen to from the fits exchange.')
     parser.add_argument('--max-preview-tries', dest='max_preview_tries', default=5,
                         help='Maximum number of tries to produce a preview image.')
-    parser.add_argument('--es-url', dest='es_url', default='http://elasticsearch.lco.gtn:9200',
+    parser.add_argument('--es-url', dest='elasticsearch_url', default='http://elasticsearch.lco.gtn:9200',
+                        help='URL for ElasticSearch index')
+    parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
+                        help='URL for ElasticSearch index')
+    parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
                         help='URL for ElasticSearch index')
 
     args = parser.parse_args()
@@ -395,7 +410,9 @@ def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
         except KeyboardInterrupt:
             logger.info('Shutting down preview pipeline listener.')
 
+
 preview_eligible_suffixs = ['e00.fits', 's00.fits', 'b00.fits']
+
 
 class PreviewModeListener(ConsumerMixin):
     def __init__(self, broker_url, pipeline_context):

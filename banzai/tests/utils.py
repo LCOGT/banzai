@@ -3,6 +3,7 @@ import pytest
 from banzai.utils import image_utils
 import numpy as np
 from datetime import datetime
+from banzai.stages import Stage
 
 
 class FakeImage(object):
@@ -40,6 +41,12 @@ class FakeImage(object):
 class FakeContext(object):
     def __init__(self):
         self.processed_path = '/tmp'
+
+class FakeStage(Stage):
+    def do_stage(self, images):
+        return images
+    def group_by_keywords(self):
+        return None
 
 
 def throws_inhomogeneous_set_exception(stagetype, context, keyword, value):

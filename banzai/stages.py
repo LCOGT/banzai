@@ -1,13 +1,13 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import itertools
-import numpy as np
 import elasticsearch
 
 from banzai import dbs
 from banzai import logs
 from banzai.images import Image
 from banzai.utils import image_utils
+from banzai.qc.utils import format_qc_results
 
 import abc
 
@@ -16,11 +16,11 @@ logger = logs.get_logger(__name__)
 __author__ = 'cmccully'
 
 
-class Stage(object):
-    __metaclass__ = abc.ABCMeta
+class Stage(abc.ABC):
 
-    ES_INDEX = "banzai_qc"
-    ES_DOC_TYPE = "qc"
+    def __init__(self, pipeline_context):
+        self.logger = logs.get_logger(self.stage_name)
+        self.pipeline_context = pipeline_context
 
     @property
     def stage_name(self):
@@ -29,11 +29,7 @@ class Stage(object):
     @property
     @abc.abstractmethod
     def group_by_keywords(self):
-        pass
-
-    def __init__(self, pipeline_context):
-        self.logger = logs.get_logger(self.stage_name)
-        self.pipeline_context = pipeline_context
+        return []
 
     def get_grouping(self, image):
         grouping_criteria = [image.site, image.instrument, image.epoch]
@@ -41,7 +37,7 @@ class Stage(object):
             grouping_criteria += [image.header[keyword] for keyword in self.group_by_keywords]
         return grouping_criteria
 
-    def run_stage(self, image_set, image_config):
+    def run_stage(self, image_set):
         image_set = list(image_set)
         tags = logs.image_config_to_tags(image_set[0], self.group_by_keywords)
         self.logger.info('Running {0}'.format(self.stage_name), extra=tags)
@@ -50,16 +46,16 @@ class Stage(object):
     def run(self, images):
         images.sort(key=self.get_grouping)
         processed_images = []
-        for image_config, image_set in itertools.groupby(images, self.get_grouping):
+        for _, image_set in itertools.groupby(images, self.get_grouping):
             try:
-                processed_images += self.run_stage(image_set, image_config)
+                processed_images += self.run_stage(image_set)
             except MasterCalibrationDoesNotExist as e:
                 continue
         return processed_images
 
     @abc.abstractmethod
     def do_stage(self, images):
-        pass
+        return images
 
     def save_qc_results(self, qc_results, image, **kwargs):
         """
@@ -78,39 +74,21 @@ class Stage(object):
         """
 
         es_output = {}
-        elasticsearch_url = getattr(self.pipeline_context, 'elasticsearch_url', "no url set")
         if getattr(self.pipeline_context, 'post_to_elasticsearch', False):
-            filename, results_to_save = self._format_qc_results(qc_results, image)
-            es = elasticsearch.Elasticsearch(elasticsearch_url)
+            filename, results_to_save = format_qc_results(qc_results, image)
+            es = elasticsearch.Elasticsearch(self.pipeline_context.elasticsearch_url)
             try:
-                es_output = self._push_to_elasticsearch(es, filename, results_to_save, **kwargs)
+                es_output = es.update(index=self.pipeline_context.elasticsearch_qc_index,
+                                      doc_type=self.pipeline_context.elasticsearch_doc_type,
+                                      id=filename, body={'doc': results_to_save, 'doc_as_upsert': True},
+                                      retry_on_conflict=5, timestamp=results_to_save['@timestamp'], **kwargs)
             except Exception as e:
-                self.logger.error('Cannot update elasticsearch index to URL \"{0}\": {1}'.format(elasticsearch_url, e))
+                error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
+                self.logger.error(error_message.format(url=self.pipeline_context.elasticsearch_url, exception=e))
         return es_output
-
-    def _push_to_elasticsearch(self, es, filename, results_to_save, **kwargs):
-        return es.update(index=self.ES_INDEX, doc_type=self.ES_DOC_TYPE, id=filename,
-                         body={'doc': results_to_save, 'doc_as_upsert': True},
-                         retry_on_conflict=5, timestamp=results_to_save['@timestamp'], **kwargs)
-
-    @staticmethod
-    def _format_qc_results(qc_results, image):
-        results_to_save = {'site': image.site,
-                           'instrument': image.instrument,
-                           'dayobs': image.epoch,
-                           '@timestamp': image.dateobs}
-        for key, value in qc_results.items():
-            # Elasticsearch does not like numpy.bool_ types
-            if type(value) == np.bool_:
-                value = bool(value)
-            results_to_save[key] = value
-        filename = image.filename.replace('.fits', '').replace('.fz', '')
-        return filename, results_to_save
 
 
 class CalibrationMaker(Stage):
-    __metaclass__ = abc.ABCMeta
-
     def __init__(self, pipeline_context):
         super(CalibrationMaker, self).__init__(pipeline_context)
 
@@ -126,7 +104,7 @@ class CalibrationMaker(Stage):
     @property
     @abc.abstractmethod
     def min_images(self):
-        pass
+        return 5
 
     def do_stage(self, images):
         if len(images) < self.min_images:
@@ -157,8 +135,6 @@ class MasterCalibrationDoesNotExist(Exception):
 
 
 class ApplyCalibration(Stage):
-    __metaclass__ = abc.ABCMeta
-
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
 
@@ -195,4 +171,3 @@ class ApplyCalibration(Stage):
     def get_calibration_filename(self, image):
         return dbs.get_master_calibration_image(image, self.calibration_type, self.group_by_keywords,
                                                 db_address=self.pipeline_context.db_address)
-
