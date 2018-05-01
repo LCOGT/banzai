@@ -10,6 +10,9 @@ pipeline {
 		GIT_DESCRIPTION = gitDescription()
 		DOCKER_IMG = dockerImageName("${LCO_DOCK_REG}", "${PROJ_NAME}", "${GIT_DESCRIPTION}")
 	}
+	options {
+		timeout(time: 1, unit: 'HOURS')
+	}
 	stages {
 		stage('Build image') {
 			steps {
@@ -26,11 +29,11 @@ pipeline {
 			}
 		}
 		stage('Test') {
-		    steps {
-		        script {
-                    sh 'docker run --rm -w=/lco/banzai/ --user=root "${DOCKER_IMG}" python setup.py test'
-		        }
-		    }
+			steps {
+				script {
+					sh 'docker run --rm -w=/lco/banzai/ --user=root "${DOCKER_IMG}" python setup.py test'
+				}
+			}
 		}
 	}
 }
