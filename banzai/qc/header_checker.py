@@ -216,4 +216,3 @@ class HeaderSanity(Stage):
             self.save_qc_results({"HeaderExptimeZero": exptime_zero}, image)
         except:
             pass
-
