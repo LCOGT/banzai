@@ -175,8 +175,8 @@ class BiasComparer(ApplyCalibration):
             bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
             bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
 
-            qc_results = {'BIAS_MASTER_DIFF_FRAC': bad_pixel_fraction, 'SN_THRESHOLD': self.SIGNAL_TO_NOISE_THRESHOLD,
-                          'ACCEPTABLE_PIXEL_FRACTION': self.ACCEPTABLE_PIXEL_FRACTION}
+            qc_results = {'BIAS_MASTER_DIFF_FRAC': bad_pixel_fraction, 'BIAS_SN_THRESHOLD': self.SIGNAL_TO_NOISE_THRESHOLD,
+                          'BIAS_ACCEPTABLE_PIXEL_FRACTION': self.ACCEPTABLE_PIXEL_FRACTION}
             for qc_check, qc_result in qc_results.items():
                 logs.add_tag(logging_tags, qc_check, qc_result)
 

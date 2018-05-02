@@ -79,6 +79,8 @@ def get_stages_todo(last_stage=None, extra_stages=None):
 def get_preview_stages_todo(image_suffix):
     if image_suffix == 'b00.fits':
         stages = get_stages_todo(last_stage=trim.Trimmer, extra_stages=[bias.BiasComparer])
+    elif image_suffix == 'd00.fits':
+        stages = get_stages_todo(last_stage=bias.BiasSubtractor, extra_stages=[dark.DarkComparer])
     else:
         stages = get_stages_todo()
     return stages
@@ -214,21 +216,18 @@ def reduce_night():
                         default=False)
     parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
                         default=False)
-    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
-                        default='http://elasticsearch.lco.gtn:9200')
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
-
     parser.add_argument('--rlevel', dest='rlevel', default=91, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
-    parser.add_argument('--es-url', dest='elasticsearch_url', default='http://elasticsearch.lco.gtn:9200',
-                        help='URL for ElasticSearch index')
+    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
+                        default='http://elasticsearch.lco.gtn:9200')
     parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
-                        help='URL for ElasticSearch index')
+                        help='ElasticSearch index to use for QC results')
     parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
-                        help='URL for ElasticSearch index')
+                        help='Elasticsearch document type for QC records')
 
     args = parser.parse_args()
 
@@ -285,23 +284,20 @@ def parse_end_of_night_command_line_arguments():
                         default=False)
     parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
                         default=False)
-    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
-                        default='http://elasticsearch.lco.gtn:9200')
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
     parser.add_argument('--rlevel', dest='rlevel', default=91, help='Reduction level')
-
     parser.add_argument('--filename', dest='filename', default=None,
                         help='Filename of the image to reduce.')
-    parser.add_argument('--es-url', dest='elasticsearch_url', default='http://elasticsearch.lco.gtn:9200',
-                        help='URL for ElasticSearch index')
+    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
+                        default='http://elasticsearch.lco.gtn:9200')
     parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
-                        help='URL for ElasticSearch index')
+                        help='ElasticSearch index to use for QC results')
     parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
-                        help='URL for ElasticSearch index')
+                        help='Elasticsearch document type for QC records')
 
     args = parser.parse_args()
 
@@ -343,18 +339,14 @@ def run_preview_pipeline():
                         default=False)
     parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
                         default=False)
-    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
-                        default='http://elasticsearch.lco.gtn:9200')
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
     parser.add_argument('--rlevel', dest='rlevel', default=11, help='Reduction level')
-
     parser.add_argument('--n-processes', dest='n_processes', default=12,
                         help='Number of listener processes to spawn.', type=int)
-
     parser.add_argument('--broker-url', dest='broker_url',
                         default='amqp://guest:guest@rabbitmq.lco.gtn:5672/',
                         help='URL for the broker service.')
@@ -362,12 +354,12 @@ def run_preview_pipeline():
                         help='Name of the queue to listen to from the fits exchange.')
     parser.add_argument('--max-preview-tries', dest='max_preview_tries', default=5,
                         help='Maximum number of tries to produce a preview image.')
-    parser.add_argument('--es-url', dest='elasticsearch_url', default='http://elasticsearch.lco.gtn:9200',
-                        help='URL for ElasticSearch index')
+    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
+                        default='http://elasticsearch.lco.gtn:9200')
     parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
-                        help='URL for ElasticSearch index')
+                        help='ElasticSearch index to use for QC results')
     parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
-                        help='URL for ElasticSearch index')
+                        help='Elasticsearch document type for QC records')
 
     args = parser.parse_args()
     args.preview_mode = True
@@ -411,7 +403,7 @@ def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
             logger.info('Shutting down preview pipeline listener.')
 
 
-preview_eligible_suffixs = ['e00.fits', 's00.fits', 'b00.fits']
+preview_eligible_suffixs = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits']
 
 
 class PreviewModeListener(ConsumerMixin):
