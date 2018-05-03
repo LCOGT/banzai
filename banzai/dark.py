@@ -125,4 +125,3 @@ class DarkComparer(CalibrationComparer):
         noise = (image.readnoise ** 2.0 + np.abs(image.data)) ** 0.5
         noise /= image.exptime
         return noise
-
