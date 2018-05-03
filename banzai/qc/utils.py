@@ -5,6 +5,9 @@ def format_qc_results(qc_results, image):
     results_to_save = {'site': image.site,
                        'instrument': image.instrument,
                        'dayobs': image.epoch,
+                       'request_number': image.request_number,
+                       'block_id': image.block_id,
+                       'molecule_id': image.molecule_id,
                        '@timestamp': image.dateobs}
     for key, value in qc_results.items():
         # Elasticsearch does not like numpy.bool_ types

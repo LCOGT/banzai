@@ -43,6 +43,8 @@ class Image(object):
         self.epoch = str(header.get('DAY-OBS'))
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
+        self.block_id = header.get('BLKUID')
+        self.molecule_id = header.get('MOLUID')
 
         if len(self.extension_headers) > 0 and 'GAIN' in self.extension_headers[0]:
                 self.gain = [h['GAIN'] for h in extension_headers]
