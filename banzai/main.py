@@ -81,6 +81,9 @@ def get_preview_stages_todo(image_suffix):
         stages = get_stages_todo(last_stage=trim.Trimmer, extra_stages=[bias.BiasComparer])
     elif image_suffix == 'd00.fits':
         stages = get_stages_todo(last_stage=bias.BiasSubtractor, extra_stages=[dark.DarkComparer])
+    elif image_suffix == 'f00.fits':
+        stages = get_stages_todo(last_stage=dark.DarkSubtractor,
+                                 extra_stages=[flats.FlatNormalizer, flats.FlatComparer])
     else:
         stages = get_stages_todo()
     return stages
@@ -403,7 +406,7 @@ def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
             logger.info('Shutting down preview pipeline listener.')
 
 
-preview_eligible_suffixs = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits']
+preview_eligible_suffixs = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
 
 
 class PreviewModeListener(ConsumerMixin):
