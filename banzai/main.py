@@ -78,9 +78,11 @@ def get_stages_todo(last_stage=None, extra_stages=None):
 
 def get_preview_stages_todo(image_suffix):
     if image_suffix == 'b00.fits':
-        stages = get_stages_todo(last_stage=trim.Trimmer, extra_stages=[bias.BiasComparer])
+        stages = get_stages_todo(last_stage=trim.Trimmer,
+                                 extra_stages=[bias.BiasMasterLevelSubtractor, bias.BiasComparer])
     elif image_suffix == 'd00.fits':
-        stages = get_stages_todo(last_stage=bias.BiasSubtractor, extra_stages=[dark.DarkComparer])
+        stages = get_stages_todo(last_stage=bias.BiasSubtractor,
+                                 extra_stages=[dark.DarkNormalizer, dark.DarkComparer])
     elif image_suffix == 'f00.fits':
         stages = get_stages_todo(last_stage=dark.DarkSubtractor,
                                  extra_stages=[flats.FlatNormalizer, flats.FlatComparer])
@@ -126,7 +128,7 @@ def make_master_bias_console():
 
 
 def make_master_dark(pipeline_context):
-    stages_to_do = get_stages_todo(bias.BiasSubtractor, extra_stages=[dark.DarkMaker])
+    stages_to_do = get_stages_todo(bias.BiasSubtractor, extra_stages=[dark.DarkNormalizer, dark.DarkMaker])
     run(stages_to_do, pipeline_context, image_types=['DARK'], calibration_maker=True,
         log_message='Making Master Dark')
 

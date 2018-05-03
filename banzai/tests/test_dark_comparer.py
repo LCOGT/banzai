@@ -96,6 +96,7 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image, set_ra
     for image in images:
         image.data = np.random.normal(0.0, image.readnoise, size=(ny, nx))
         image.data += np.random.poisson(dark_pattern * dark_exptime)
+        image.data /= image.exptime
 
     images = comparer.do_stage(images)
 
@@ -133,6 +134,7 @@ def test_does_reject_bad_images(mock_save_qc, mock_cal, mock_image, set_random_s
     for image in images:
         image.data = np.random.normal(dark_level, image.readnoise, size=(ny, nx))
         image.data += np.random.poisson(dark_pattern * dark_exptime)
+        image.data /= image.exptime
 
     for i in [2, 4]:
         # Make 20% of the image 10 times as bright

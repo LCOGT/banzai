@@ -10,6 +10,7 @@ from banzai.utils import image_utils
 from banzai.qc.utils import format_qc_results
 
 import abc
+import numpy as np
 
 logger = logs.get_logger(__name__)
 
@@ -171,3 +172,61 @@ class ApplyCalibration(Stage):
     def get_calibration_filename(self, image):
         return dbs.get_master_calibration_image(image, self.calibration_type, self.group_by_keywords,
                                                 db_address=self.pipeline_context.db_address)
+
+
+class CalibrationComparer(ApplyCalibration):
+    # In a 16 megapixel image, this should flag 0 or 1 pixels statistically, much much less than 5% of the image
+    SIGNAL_TO_NOISE_THRESHOLD = 6.0
+    ACCEPTABLE_PIXEL_FRACTION = 0.05
+
+    def __init__(self, pipeline_context):
+        super(ApplyCalibration, self).__init__(pipeline_context)
+
+    def on_missing_master_calibration(self, logging_tags):
+        msg = 'No master {caltype} frame exists. Assuming these images are ok.'
+        self.logger.warning(msg.format(caltype=self.calibration_type), logging_tags)
+
+    def apply_master_calibration(self, images, master_calibration_image, logging_tags):
+        # Short circuit
+        if master_calibration_image.data is None:
+            return images
+
+        images_to_reject = []
+
+        for image in images:
+            # We assume the images have already been normalized before this stage is run.
+            bad_pixel_fraction = np.abs(image.data - master_calibration_image.data)
+            # Estimate the noise of the image
+            noise = self.noise_model(image)
+            bad_pixel_fraction /= noise
+            bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
+            bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
+
+            diff_fraction_column = '{caltype}_MASTER_DIFF_FRAC'.format(caltype=self.calibration_type.upper())
+            sn_threshold_column = '{caltype}_SN_THRESHOLD'.format(caltype=self.calibration_type.upper())
+            pixel_fraction_column = '{caltype}_ACCEPTABLE_PIXEL_FRACTION'.format(caltype=self.calibration_type.upper())
+            qc_results = {diff_fraction_column: bad_pixel_fraction,
+                          sn_threshold_column: self.SIGNAL_TO_NOISE_THRESHOLD,
+                          pixel_fraction_column: self.ACCEPTABLE_PIXEL_FRACTION}
+            for qc_check, qc_result in qc_results.items():
+                logs.add_tag(logging_tags, qc_check, qc_result)
+
+            if bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION:
+                # Reject the image and log an error
+                images_to_reject.append(image)
+                qc_results['REJECTED'] = True
+                logs.add_tag(logging_tags, 'REJECTED', True)
+                self.logger.error('Rejecting flat image because it deviates too much from the previous master',
+                                  extra=logging_tags)
+            else:
+                qc_results['REJECTED'] = False
+
+            self.save_qc_results(qc_results, image)
+
+        for image_to_reject in images_to_reject:
+            images.remove(image_to_reject)
+        return images
+
+    @abc.abstractmethod
+    def noise_model(self, image):
+        return np.zeros(image.data.size)
