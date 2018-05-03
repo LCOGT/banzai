@@ -2,34 +2,40 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from banzai.flats import FlatNormalizer
 from banzai.tests.utils import FakeImage
 import numpy as np
-np.random.seed(927834752)
+import pytest
 
-def test_no_input_images():
+
+@pytest.fixture(scope='module')
+def set_random_seed():
+    np.random.seed(9723492)
+
+
+def test_no_input_images(set_random_seed):
     normalizer = FlatNormalizer(None)
     images = normalizer.do_stage([])
     assert len(images) == 0
 
 
-def test_group_by_keywords():
+def test_group_by_keywords(set_random_seed):
     normalizer = FlatNormalizer(None)
     assert normalizer.group_by_keywords is None
 
 
-def test_header_has_flatlevel():
+def test_header_has_flatlevel(set_random_seed):
     normalizer = FlatNormalizer(None)
     images = normalizer.do_stage([FakeImage(image_multiplier=2.0) for _ in range(6)])
     for image in images:
         assert image.header['FLATLVL'] == 2.0
 
 
-def test_header_flatlevel_is_5():
+def test_header_flatlevel_is_5(set_random_seed):
     normalizer = FlatNormalizer(None)
     images = normalizer.do_stage([FakeImage(image_multiplier=5.0) for _ in range(6)])
     for image in images:
         assert image.header['FLATLVL'] == 5.0
 
 
-def test_flat_normalization_is_reasonable():
+def test_flat_normalization_is_reasonable(set_random_seed):
     flat_variation = 0.05
     input_level = 10000.0
     nx = 101

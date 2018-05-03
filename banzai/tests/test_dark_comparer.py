@@ -2,10 +2,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from banzai.dark import DarkComparer
 from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception
 import mock
-
+import pytest
 import numpy as np
 
-np.random.seed(6234585)
+
+@pytest.fixture(scope='module')
+def set_random_seed():
+    np.random.seed(6234585)
 
 
 class FakeDarkImage(FakeImage):
@@ -66,7 +69,7 @@ def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_ca
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
-def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image):
+def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image, set_random_seed):
     mock_cal.return_value = 'test.fits'
     master_dark_fraction = 0.05
     nx = 101
@@ -102,7 +105,7 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image):
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
-def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image):
+def test_does_reject_bad_images(mock_save_qc, mock_cal, mock_image, set_random_seed):
     mock_cal.return_value = 'test.fits'
     master_dark_fraction = 0.05
     nx = 101

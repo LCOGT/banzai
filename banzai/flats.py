@@ -114,3 +114,63 @@ class FlatDivider(ApplyCalibration):
             image.header['L1STATFL'] = (1, 'Status flag for flat field correction')
 
         return images
+
+
+class FlatComparer(ApplyCalibration):
+    # In a 16 megapixel image, this should flag 0 or 1 pixels statistically, much much less than 5% of the image
+    SIGNAL_TO_NOISE_THRESHOLD = 6.0
+    ACCEPTABLE_PIXEL_FRACTION = 0.05
+
+    def __init__(self, pipeline_context):
+        super(FlatComparer, self).__init__(pipeline_context)
+
+    @property
+    def group_by_keywords(self):
+        return ['ccdsum', 'filter']
+
+    @property
+    def calibration_type(self):
+        return 'flat'
+
+    def on_missing_master_calibration(self, logging_tags):
+        self.logger.warning('No master Dark frame exists. Assuming these images are ok.', logging_tags)
+
+    def apply_master_calibration(self, images, master_calibration_image, logging_tags):
+        # Short circuit
+        if master_calibration_image.data is None:
+            return images
+
+        images_to_reject = []
+
+        for image in images:
+            # We assume the images have already been normalized before this stage is run.
+            bad_pixel_fraction = np.abs(image.data - master_calibration_image.data)
+            # Estimate the noise of the image
+            flat_normalization = float(image.header['FLATLVL'])
+            noise = (image.readnoise ** 2.0 + image.data * flat_normalization) ** 0.5
+            noise /= flat_normalization
+            bad_pixel_fraction /= noise
+            bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
+            bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
+
+            qc_results = {'FLAT_MASTER_DIFF_FRAC': bad_pixel_fraction,
+                          'FLAT_SN_THRESHOLD': self.SIGNAL_TO_NOISE_THRESHOLD,
+                          'FLAT_ACCEPTABLE_PIXEL_FRACTION': self.ACCEPTABLE_PIXEL_FRACTION}
+            for qc_check, qc_result in qc_results.items():
+                logs.add_tag(logging_tags, qc_check, qc_result)
+
+            if bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION:
+                # Reject the image and log an error
+                images_to_reject.append(image)
+                qc_results['REJECTED'] = True
+                logs.add_tag(logging_tags, 'REJECTED', True)
+                self.logger.error('Rejecting flat image because it deviates too much from the previous master',
+                                  extra=logging_tags)
+            else:
+                qc_results['REJECTED'] = False
+
+            self.save_qc_results(qc_results, image)
+
+        for image_to_reject in images_to_reject:
+            images.remove(image_to_reject)
+        return images
