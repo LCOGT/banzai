@@ -6,6 +6,7 @@ from banzai.stages import Stage
 from banzai import logs
 
 
+
 class PointingTest(Stage):
     """
     A test to determine  whether or not the poiting error on the frame
@@ -52,10 +53,18 @@ class PointingTest(Stage):
 
             logs.add_tag(self.logging_tags, 'PNTOFST', angular_separation)
 
-            if abs(angular_separation) > self.SEVERE_THRESHOLD:
-                self.logger.error('Pointing offset exceeds threshold', extra=self.logging_tags)
-            elif abs(angular_separation) > self.WARNING_THRESHOLD:
-                self.logger.warning('Pointing offset exceeds threshhold', extra=self.logging_tags)
+            pointing_severe = abs(angular_separation) > self.SEVERE_THRESHOLD
+            pointing_warning = abs(angular_separation) > self.WARNING_THRESHOLD
+            if pointing_severe:
+                self.logger.error('Pointing offset exceeds threshold',
+                                  extra=self.logging_tags)
+            elif pointing_warning:
+                self.logger.warning('Pointing offset exceeds threshhold',
+                                    extra=self.logging_tags)
+            self.save_qc_results({'PointingSevere': pointing_severe,
+                                  'PointingWarning': pointing_warning,
+                                  'pointing_offset': angular_separation},
+                                 image)
 
             image.header['PNTOFST'] = (
                 angular_separation, '[arcsec] offset of requested and solved center'

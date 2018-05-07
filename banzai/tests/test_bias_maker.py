@@ -62,22 +62,22 @@ def test_header_cal_type_bias(mock_image):
 
 
 @mock.patch('banzai.bias.Image')
-def test_raises_an_exection_if_ccdsums_are_different(mock_images):
+def test_raises_an_exception_if_ccdsums_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.bias.Image')
-def test_raises_an_exection_if_epochs_are_different(mock_images):
+def test_raises_an_exception_if_epochs_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'epoch', '20160102')
 
 
 @mock.patch('banzai.bias.Image')
-def test_raises_an_exection_if_nx_are_different(mock_images):
+def test_raises_an_exception_if_nx_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.bias.Image')
-def test_raises_an_exection_if_ny_are_different(mock_images):
+def test_raises_an_exception_if_ny_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ny', 107)
 
 

@@ -1,7 +1,8 @@
-from banzai.stages import Stage
-from banzai import logs
 import numpy as np
 import os
+
+from banzai.stages import Stage
+from banzai import logs
 
 
 class ThousandsTest(Stage):
@@ -16,7 +17,7 @@ class ThousandsTest(Stage):
     """
     # Empirically we have decided that if 20% of the image exactly equals 1000
     # something bad probably happened, so we reject the image
-    threshold = 0.2
+    THOUSANDS_THRESHOLD = 0.2
 
     def __init__(self, pipeline_context):
         super(ThousandsTest, self).__init__(pipeline_context)
@@ -33,12 +34,15 @@ class ThousandsTest(Stage):
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             logs.add_tag(logging_tags, 'FRAC1000', fraction_1000s)
-
-            if fraction_1000s > self.threshold:
+            logs.add_tag(logging_tags, 'threshold', self.THOUSANDS_THRESHOLD)
+            has_1000s_error = fraction_1000s > self.THOUSANDS_THRESHOLD
+            if has_1000s_error:
                 self.logger.error('Image is mostly 1000s. Rejecting image', extra=logging_tags)
                 images_to_remove.append(image)
             else:
                 self.logger.info('Measuring fraction of 1000s.', extra=logging_tags)
+            self.save_qc_results({'Error1000s': has_1000s_error,
+                                  'fraction_1000s': fraction_1000s}, image)
         for image in images_to_remove:
             images.remove(image)
 

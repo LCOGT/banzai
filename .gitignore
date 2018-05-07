@@ -6,6 +6,7 @@
 __pycache__
 a.out
 .cache
+.pytest_cache
 .eggs
 *.fits
 *.cat

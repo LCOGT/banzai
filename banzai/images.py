@@ -18,8 +18,13 @@ logger = logs.get_logger(__name__)
 
 class Image(object):
 
-    def __init__(self, pipeline_context, filename=None, data=None, header={},
-                 extension_headers=[], bpm=None):
+    def __init__(self, pipeline_context, filename=None, data=None, header=None,
+                 extension_headers=None, bpm=None):
+        if header is None:
+            header = {}
+
+        if extension_headers is None:
+            extension_headers = []
 
         if filename is not None:
             data, header, bpm, extension_headers = fits_utils.open_image(filename)
@@ -40,6 +45,8 @@ class Image(object):
         self.epoch = str(header.get('DAY-OBS'))
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
+        self.block_id = header.get('BLKUID')
+        self.molecule_id = header.get('MOLUID')
 
         if len(self.extension_headers) > 0 and 'GAIN' in self.extension_headers[0]:
                 self.gain = [h['GAIN'] for h in extension_headers]

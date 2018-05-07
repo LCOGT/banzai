@@ -1,3 +1,11 @@
+0.8.2 (2018-05-07)
+------------------
+- Add comparison stages for calibration frames
+    - Master calibration frames now go through the preview pipeline
+    - Each new calibration is compared to the most recent master frame
+      which should alert us if the camera is having issues 
+- Refactored the Stage class to include quality control helpers
+
 0.8.1 (2018-04-24)
 ------------------
 - Upgraded to newest version of the astropy package template

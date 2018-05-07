@@ -6,9 +6,26 @@ import os.path
 from banzai.utils import stats, fits_utils
 from banzai import logs
 from banzai.images import Image
-from banzai.stages import CalibrationMaker, ApplyCalibration
+from banzai.stages import CalibrationMaker, ApplyCalibration, CalibrationComparer, Stage
 
 __author__ = 'cmccully'
+
+
+class DarkNormalizer(Stage):
+    def __init__(self, pipeline_context):
+        super(DarkNormalizer, self).__init__(pipeline_context)
+
+    @property
+    def group_by_keywords(self):
+        return None
+
+    def do_stage(self, images):
+        for image in images:
+            image.data /= image.exptime
+            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
+            self.logger.info('Normalizing dark by exposure time', extra=logging_tags)
+        return images
 
 
 class DarkMaker(CalibrationMaker):
@@ -90,3 +107,21 @@ class DarkSubtractor(ApplyCalibration):
             image.header['L1IDDARK'] = (master_dark_filename, 'ID of dark frame used')
             image.header['L1STATDA'] = (1, 'Status flag for dark frame correction')
         return images
+
+
+class DarkComparer(CalibrationComparer):
+    def __init__(self, pipeline_context):
+        super(DarkComparer, self).__init__(pipeline_context)
+
+    @property
+    def group_by_keywords(self):
+        return ['ccdsum']
+
+    @property
+    def calibration_type(self):
+        return 'dark'
+
+    def noise_model(self, image):
+        noise = (image.readnoise ** 2.0 + np.abs(image.data)) ** 0.5
+        noise /= image.exptime
+        return noise

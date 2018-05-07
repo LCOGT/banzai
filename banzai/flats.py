@@ -4,17 +4,40 @@ import numpy as np
 import os.path
 
 from banzai.utils import stats, fits_utils
-from banzai.stages import CalibrationMaker, ApplyCalibration
+from banzai.stages import CalibrationMaker, ApplyCalibration, Stage, CalibrationComparer
 from banzai.images import Image
 from banzai import logs
 
 __author__ = 'cmccully'
 
 
-class FlatMaker(CalibrationMaker):
-
+class FlatNormalizer(Stage):
     def __init__(self, pipeline_context):
+        super(FlatNormalizer, self).__init__(pipeline_context)
 
+    @property
+    def group_by_keywords(self):
+        return None
+
+    def do_stage(self, images):
+        for image in images:
+            quarter_nx = image.nx // 4
+            quarter_ny = image.ny // 4
+            # Get the sigma clipped mean of the central 25% of the image
+            flat_normalization = stats.sigma_clipped_mean(image.data[quarter_ny: -quarter_ny,
+                                                                     quarter_nx: -quarter_nx], 3.5)
+            image.data /= flat_normalization
+            image.header['FLATLVL'] = flat_normalization
+            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
+            logs.add_tag(logging_tags, 'flat_normalization', flat_normalization)
+            self.logger.info('Calculate flat normalization', extra=logging_tags)
+
+        return images
+
+
+class FlatMaker(CalibrationMaker):
+    def __init__(self, pipeline_context):
         super(FlatMaker, self).__init__(pipeline_context)
 
     @property
@@ -33,26 +56,14 @@ class FlatMaker(CalibrationMaker):
         flat_data = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         flat_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
-        quarter_nx = images[0].nx // 4
-        quarter_ny = images[0].ny // 4
-
         master_flat_filename = self.get_calibration_filename(images[0])
         logs.add_tag(logging_tags, 'master_flat', os.path.basename(master_flat_filename))
         for i, image in enumerate(images):
 
-            # Get the sigma clipped mean of the central 25% of the image
-            flat_normalization = stats.sigma_clipped_mean(image.data[quarter_ny: -quarter_ny,
-                                                                     quarter_nx:-quarter_nx], 3.5)
             flat_data[:, :, i] = image.data[:, :]
-            flat_data[:, :, i] /= flat_normalization
             flat_mask[:, :, i] = image.bpm[:, :]
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'flat_normalization', flat_normalization)
-            self.logger.debug('Calculating flat normalization', extra=logging_tags)
 
-        logs.pop_tag(logging_tags, 'flat_normalization')
-        master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2, mask=flat_mask,
-                                               fill_value=1.0, inplace=True)
+        master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2, mask=flat_mask, fill_value=1.0, inplace=True)
 
         master_bpm = np.array(master_flat == 1.0, dtype=np.uint8)
 
@@ -103,3 +114,22 @@ class FlatDivider(ApplyCalibration):
             image.header['L1STATFL'] = (1, 'Status flag for flat field correction')
 
         return images
+
+
+class FlatComparer(CalibrationComparer):
+    def __init__(self, pipeline_context):
+        super(FlatComparer, self).__init__(pipeline_context)
+
+    @property
+    def group_by_keywords(self):
+        return ['ccdsum', 'filter']
+
+    @property
+    def calibration_type(self):
+        return 'flat'
+
+    def noise_model(self, image):
+        flat_normalization = float(image.header['FLATLVL'])
+        noise = (image.readnoise ** 2.0 + image.data * flat_normalization) ** 0.5
+        noise /= flat_normalization
+        return noise

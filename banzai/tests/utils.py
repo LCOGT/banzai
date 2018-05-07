@@ -3,6 +3,7 @@ import pytest
 from banzai.utils import image_utils
 import numpy as np
 from datetime import datetime
+from banzai.stages import Stage
 
 
 class FakeImage(object):
@@ -23,6 +24,10 @@ class FakeImage(object):
         self.caltype = ''
         self.bpm = np.zeros((ny, nx), dtype=np.uint8)
         self.request_number = '0000331403'
+        self.readnoise = 11.0
+        self.block_id = '254478983'
+        self.molecule_id = '544562351'
+        self.exptime = 30.0
 
     def get_calibration_filename(self):
         return '/tmp/{0}_{1}_{2}_bin{3}.fits'.format(self.caltype, self.instrument,
@@ -39,6 +44,12 @@ class FakeImage(object):
 class FakeContext(object):
     def __init__(self):
         self.processed_path = '/tmp'
+
+class FakeStage(Stage):
+    def do_stage(self, images):
+        return images
+    def group_by_keywords(self):
+        return None
 
 
 def throws_inhomogeneous_set_exception(stagetype, context, keyword, value):

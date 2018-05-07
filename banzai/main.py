@@ -28,8 +28,7 @@ from banzai.utils import image_utils, date_utils
 
 logger = logs.get_logger(__name__)
 
-ordered_stages = [qc.HeaderSanity,
-                  qc.ThousandsTest,
+ordered_stages = [qc.ThousandsTest,
                   qc.SaturationTest,
                   qc.PatternNoiseDetector,
                   bias.OverscanSubtractor,
@@ -76,11 +75,28 @@ def get_stages_todo(last_stage=None, extra_stages=None):
     return stages_todo
 
 
+def get_preview_stages_todo(image_suffix):
+    if image_suffix == 'b00.fits':
+        stages = get_stages_todo(last_stage=trim.Trimmer,
+                                 extra_stages=[bias.BiasMasterLevelSubtractor, bias.BiasComparer])
+    elif image_suffix == 'd00.fits':
+        stages = get_stages_todo(last_stage=bias.BiasSubtractor,
+                                 extra_stages=[dark.DarkNormalizer, dark.DarkComparer])
+    elif image_suffix == 'f00.fits':
+        stages = get_stages_todo(last_stage=dark.DarkSubtractor,
+                                 extra_stages=[flats.FlatNormalizer, flats.FlatComparer])
+    else:
+        stages = get_stages_todo()
+    return stages
+
+
 class PipelineContext(object):
     def __init__(self, args):
         self.processed_path = args.processed_path
         self.raw_path = args.raw_path
         self.post_to_archive = args.post_to_archive
+        self.post_to_elasticsearch = args.post_to_elasticsearch
+        self.elasticsearch_url = args.elasticsearch_url
         self.fpack = args.fpack
         self.rlevel = args.rlevel
         self.db_address = args.db_address
@@ -88,6 +104,8 @@ class PipelineContext(object):
         self.preview_mode = args.preview_mode
         self.filename = args.filename
         self.max_preview_tries = args.max_preview_tries
+        self.elasticsearch_doc_type = args.elasticsearch_doc_type
+        self.elasticsearch_qc_index = args.elasticsearch_qc_index
 
 
 def run_end_of_night_from_console(scripts_to_run):
@@ -99,7 +117,7 @@ def run_end_of_night_from_console(scripts_to_run):
 
 
 def make_master_bias(pipeline_context):
-    stages_to_do = get_stages_todo(trim.Trimmer, extra_stages=[bias.BiasMaker])
+    stages_to_do = get_stages_todo(trim.Trimmer, extra_stages=[bias.BiasComparer, bias.BiasMaker])
     run(stages_to_do, pipeline_context, image_types=['BIAS'], calibration_maker=True,
         log_message='Making Master BIAS')
 
@@ -109,7 +127,7 @@ def make_master_bias_console():
 
 
 def make_master_dark(pipeline_context):
-    stages_to_do = get_stages_todo(bias.BiasSubtractor, extra_stages=[dark.DarkMaker])
+    stages_to_do = get_stages_todo(bias.BiasSubtractor, extra_stages=[dark.DarkNormalizer, dark.DarkMaker])
     run(stages_to_do, pipeline_context, image_types=['DARK'], calibration_maker=True,
         log_message='Making Master Dark')
 
@@ -119,7 +137,7 @@ def make_master_dark_console():
 
 
 def make_master_flat(pipeline_context):
-    stages_to_do = get_stages_todo(dark.DarkSubtractor, extra_stages=[flats.FlatMaker])
+    stages_to_do = get_stages_todo(dark.DarkSubtractor, extra_stages=[flats.FlatNormalizer, flats.FlatMaker])
     run(stages_to_do, pipeline_context, image_types=['SKYFLAT'], calibration_maker=True,
         log_message='Making Master Flat')
 
@@ -142,7 +160,9 @@ def reduce_experimental_frames_console():
     run_end_of_night_from_console([reduce_experimental_frames])
 
 
-def reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=['EXPOSE', 'STANDARD']):
+def reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=None):
+    if image_types is None:
+        image_types = ['EXPOSE', 'STANDARD']
     image_list = image_utils.make_image_list(pipeline_context)
     original_filename = pipeline_context.filename
     for image in image_list:
@@ -198,13 +218,20 @@ def reduce_night():
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
                         default=False)
+    parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
+                        default=False)
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
-
     parser.add_argument('--rlevel', dest='rlevel', default=91, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
+    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
+                        default='http://elasticsearch.lco.gtn:9200')
+    parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
+                        help='ElasticSearch index to use for QC results')
+    parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
+                        help='Elasticsearch document type for QC records')
 
     args = parser.parse_args()
 
@@ -259,15 +286,23 @@ def parse_end_of_night_command_line_arguments():
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
                         default=False)
+    parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
+                        default=False)
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
     parser.add_argument('--rlevel', dest='rlevel', default=91, help='Reduction level')
-
     parser.add_argument('--filename', dest='filename', default=None,
                         help='Filename of the image to reduce.')
+    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
+                        default='http://elasticsearch.lco.gtn:9200')
+    parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
+                        help='ElasticSearch index to use for QC results')
+    parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
+                        help='Elasticsearch document type for QC records')
+
     args = parser.parse_args()
 
     args.preview_mode = False
@@ -306,16 +341,16 @@ def run_preview_pipeline():
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
                         default=False)
+    parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
+                        default=False)
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
     parser.add_argument('--rlevel', dest='rlevel', default=11, help='Reduction level')
-
     parser.add_argument('--n-processes', dest='n_processes', default=12,
                         help='Number of listener processes to spawn.', type=int)
-
     parser.add_argument('--broker-url', dest='broker_url',
                         default='amqp://guest:guest@rabbitmq.lco.gtn:5672/',
                         help='URL for the broker service.')
@@ -323,6 +358,13 @@ def run_preview_pipeline():
                         help='Name of the queue to listen to from the fits exchange.')
     parser.add_argument('--max-preview-tries', dest='max_preview_tries', default=5,
                         help='Maximum number of tries to produce a preview image.')
+    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
+                        default='http://elasticsearch.lco.gtn:9200')
+    parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
+                        help='ElasticSearch index to use for QC results')
+    parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
+                        help='Elasticsearch document type for QC records')
+
     args = parser.parse_args()
     args.preview_mode = True
     args.raw_path = None
@@ -365,6 +407,9 @@ def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
             logger.info('Shutting down preview pipeline listener.')
 
 
+preview_eligible_suffixs = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
+
+
 class PreviewModeListener(ConsumerMixin):
     def __init__(self, broker_url, pipeline_context):
         self.broker_url = broker_url
@@ -385,11 +430,17 @@ class PreviewModeListener(ConsumerMixin):
         path = body.get('path')
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
-        if 'e00.fits' in path or 's00.fits' in path:
+        is_eligible_for_preview = False
+        for suffix in preview_eligible_suffixs:
+            if suffix in path:
+                is_eligible_for_preview = True
+                image_suffix = suffix
+
+        if is_eligible_for_preview:
             try:
                 if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
                                             max_tries=self.pipeline_context.max_preview_tries):
-                    stages_to_do = get_stages_todo()
+                    stages_to_do = get_preview_stages_todo(image_suffix)
 
                     logging_tags = {'tags': {'filename': os.path.basename(path)}}
                     logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)
@@ -399,14 +450,9 @@ class PreviewModeListener(ConsumerMixin):
                     # Increment the number of tries for this file
                     dbs.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
 
-                    output_files = run(stages_to_do, self.pipeline_context,
-                                       image_types=['EXPOSE', 'STANDARD'])
-                    if len(output_files) > 0:
-                        dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
-                    else:
-                        logging_tags = {'tags': {'filename': os.path.basename(path)}}
-                        logger.error("Could not produce preview image. {0}".format(path),
-                                     extra=logging_tags)
+                    run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD', 'BIAS'])
+                    dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
+
             except Exception as e:
                 logging_tags = {'tags': {'filename': os.path.basename(path)}}
                 exc_type, exc_value, exc_tb = sys.exc_info()

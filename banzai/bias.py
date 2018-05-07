@@ -6,7 +6,7 @@ import numpy as np
 
 from banzai.images import Image
 from banzai import logs
-from banzai.stages import CalibrationMaker, ApplyCalibration, Stage
+from banzai.stages import CalibrationMaker, ApplyCalibration, Stage, CalibrationComparer
 from banzai.utils import stats, fits_utils
 
 
@@ -138,6 +138,53 @@ class OverscanSubtractor(Stage):
                 self.logger.info('Subtracting overscan', extra=logging_tags)
 
         return images
+
+
+class BiasMasterLevelSubtractor(ApplyCalibration):
+    def __init__(self, pipeline_context):
+        super(BiasMasterLevelSubtractor, self).__init__(pipeline_context)
+
+    @property
+    def group_by_keywords(self):
+        return ['ccdsum']
+
+    def calibration_type(self):
+        return 'bias'
+
+    def on_missing_master_calibration(self, logging_tags):
+        msg = 'No master {caltype} frame exists. Assuming these images are ok.'
+        self.logger.warning(msg.format(caltype=self.calibration_type), logging_tags)
+
+    def apply_master_calibration(self, images, master_calibration_image, logging_tags):
+        # Short circuit
+        if master_calibration_image.data is None:
+            return images
+
+        for image in images:
+            master_bias_level = float(master_calibration_image.header['BIASLVL'])
+            image.data -= master_bias_level
+            image.header['MBIASLVL'] = master_bias_level, 'Bias Level from previous master that was removed'
+            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
+            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
+            logs.add_tag(logging_tags, 'master_bias_level', master_bias_level)
+            self.logger.info('Subtracting master bias level', extra=logging_tags)
+        return images
+
+
+class BiasComparer(CalibrationComparer):
+    def __init__(self, pipeline_context):
+        super(BiasComparer, self).__init__(pipeline_context)
+
+    @property
+    def group_by_keywords(self):
+        return ['ccdsum']
+
+    @property
+    def calibration_type(self):
+        return 'bias'
+
+    def noise_model(self, image):
+        return image.readnoise
 
 
 def _subtract_overscan_3d(image, i):

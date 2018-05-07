@@ -2,10 +2,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from banzai.utils import stats
 import numpy as np
 from numpy import ma
-np.random.seed(10031312)
+import pytest
 
 
-def test_median_axis_none_mask_none():
+@pytest.fixture(scope='module')
+def set_random_seed():
+    np.random.seed(10031312)
+
+
+def test_median_axis_none_mask_none(set_random_seed):
     for i in range(25):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
@@ -16,7 +21,7 @@ def test_median_axis_none_mask_none():
         assert np.float32(expected) == actual
 
 
-def test_median_2d_axis_none_mask_none():
+def test_median_2d_axis_none_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(1, 300)
@@ -28,7 +33,7 @@ def test_median_2d_axis_none_mask_none():
         assert np.float32(expected) == actual
 
 
-def test_median_3d_axis_none_mask_none():
+def test_median_3d_axis_none_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(1, 50)
@@ -41,7 +46,7 @@ def test_median_3d_axis_none_mask_none():
         assert np.float32(expected) == actual
 
 
-def test_median_2d_axis_0_mask_none():
+def test_median_2d_axis_0_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(1, 300)
@@ -53,7 +58,7 @@ def test_median_2d_axis_0_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-6)
 
 
-def test_median_2d_axis_1_mask_none():
+def test_median_2d_axis_1_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(5, 300)
@@ -65,7 +70,7 @@ def test_median_2d_axis_1_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-6)
 
 
-def test_median_3d_axis_0_mask_none():
+def test_median_3d_axis_0_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(5, 50)
         size2 = np.random.randint(1, 50)
@@ -78,7 +83,7 @@ def test_median_3d_axis_0_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-6)
 
 
-def test_median_3d_axis_1_mask_none():
+def test_median_3d_axis_1_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(5, 50)
@@ -91,7 +96,7 @@ def test_median_3d_axis_1_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-6)
 
 
-def test_median_3d_axis_2_mask_none():
+def test_median_3d_axis_2_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(1, 50)
@@ -104,7 +109,7 @@ def test_median_3d_axis_2_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-6)
 
 
-def test_median_axis_none_mask():
+def test_median_axis_none_mask(set_random_seed):
     for i in range(25):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
@@ -117,7 +122,7 @@ def test_median_axis_none_mask():
         assert np.float32(expected) == actual
 
 
-def test_median_2d_axis_none_mask():
+def test_median_2d_axis_none_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(1, 300)
@@ -131,7 +136,7 @@ def test_median_2d_axis_none_mask():
         assert np.float32(expected) == actual
 
 
-def test_median_3d_axis_none_mask():
+def test_median_3d_axis_none_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(1, 50)
@@ -146,7 +151,7 @@ def test_median_3d_axis_none_mask():
         assert np.float32(expected) == actual
 
 
-def test_median_2d_axis_0_mask():
+def test_median_2d_axis_0_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(5, 300)
         size2 = np.random.randint(1, 300)
@@ -160,7 +165,7 @@ def test_median_2d_axis_0_mask():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-6)
 
 
-def test_median_2d_axis_1_mask():
+def test_median_2d_axis_1_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(5, 300)
@@ -174,7 +179,7 @@ def test_median_2d_axis_1_mask():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-6)
 
 
-def test_median_3d_axis_0_mask():
+def test_median_3d_axis_0_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(5, 50)
         size2 = np.random.randint(1, 50)
@@ -189,7 +194,7 @@ def test_median_3d_axis_0_mask():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-6)
 
 
-def test_median_3d_axis_1_mask():
+def test_median_3d_axis_1_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(5, 50)
@@ -204,7 +209,7 @@ def test_median_3d_axis_1_mask():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-6)
 
 
-def test_median_3d_axis_2_mask():
+def test_median_3d_axis_2_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(1, 50)
@@ -219,7 +224,7 @@ def test_median_3d_axis_2_mask():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-6)
 
 
-def test_absolute_deviation_axis_none_mask_none():
+def test_absolute_deviation_axis_none_mask_none(set_random_seed):
     for i in range(250):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
@@ -230,7 +235,7 @@ def test_absolute_deviation_axis_none_mask_none():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_absolute_deviation_2d_axis_none_mask_none():
+def test_absolute_deviation_2d_axis_none_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(1, 300)
@@ -242,7 +247,7 @@ def test_absolute_deviation_2d_axis_none_mask_none():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_absolute_deviation_3d_axis_none_mask_none():
+def test_absolute_deviation_3d_axis_none_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(1, 50)
@@ -255,7 +260,7 @@ def test_absolute_deviation_3d_axis_none_mask_none():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_absolute_deviation_2d_axis_0_mask_none():
+def test_absolute_deviation_2d_axis_0_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(5, 300)
         size2 = np.random.randint(1, 300)
@@ -267,7 +272,7 @@ def test_absolute_deviation_2d_axis_0_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
-def test_absolute_deviation_2d_axis_1_mask_none():
+def test_absolute_deviation_2d_axis_1_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(5, 300)
@@ -279,7 +284,7 @@ def test_absolute_deviation_2d_axis_1_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
-def test_absolute_deviation_3d_axis_0_mask_none():
+def test_absolute_deviation_3d_axis_0_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(5, 50)
         size2 = np.random.randint(1, 50)
@@ -292,7 +297,7 @@ def test_absolute_deviation_3d_axis_0_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
-def test_absolute_deviation_3d_axis_1_mask_none():
+def test_absolute_deviation_3d_axis_1_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(5, 50)
@@ -305,7 +310,7 @@ def test_absolute_deviation_3d_axis_1_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
-def test_absolute_deviation_3d_axis_2_mask_none():
+def test_absolute_deviation_3d_axis_2_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(5, 50)
@@ -318,7 +323,7 @@ def test_absolute_deviation_3d_axis_2_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=5e-4)
 
 
-def test_absolute_deviation_axis_none_mask():
+def test_absolute_deviation_axis_none_mask(set_random_seed):
     for i in range(25):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
@@ -332,7 +337,7 @@ def test_absolute_deviation_axis_none_mask():
         np.testing.assert_allclose(actual[~mask], np.float32(expected)[~mask], atol=1e-4)
 
 
-def test_absolute_deviation_2d_axis_none_mask():
+def test_absolute_deviation_2d_axis_none_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(1, 300)
@@ -347,7 +352,7 @@ def test_absolute_deviation_2d_axis_none_mask():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_absolute_deviation_3d_axis_none_mask():
+def test_absolute_deviation_3d_axis_none_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(1, 50)
@@ -363,7 +368,7 @@ def test_absolute_deviation_3d_axis_none_mask():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-8)
 
 
-def test_absolute_deviation_2d_axis_0_mask():
+def test_absolute_deviation_2d_axis_0_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(5, 300)
         size2 = np.random.randint(1, 300)
@@ -378,7 +383,7 @@ def test_absolute_deviation_2d_axis_0_mask():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_absolute_deviation_2d_axis_1_mask():
+def test_absolute_deviation_2d_axis_1_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(5, 300)
@@ -393,7 +398,7 @@ def test_absolute_deviation_2d_axis_1_mask():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_absolute_deviation_3d_axis_0_mask():
+def test_absolute_deviation_3d_axis_0_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(5, 50)
         size2 = np.random.randint(1, 50)
@@ -409,7 +414,7 @@ def test_absolute_deviation_3d_axis_0_mask():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-9)
 
 
-def test_absolute_deviation_3d_axis_1_mask():
+def test_absolute_deviation_3d_axis_1_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(5, 50)
@@ -425,7 +430,7 @@ def test_absolute_deviation_3d_axis_1_mask():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-9)
 
 
-def test_absolute_deviation_3d_axis_2_mask():
+def test_absolute_deviation_3d_axis_2_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(1, 50)
@@ -441,7 +446,7 @@ def test_absolute_deviation_3d_axis_2_mask():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-9)
 
 
-def test_mad_axis_none_mask_none():
+def test_mad_axis_none_mask_none(set_random_seed):
     for i in range(25):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
@@ -452,7 +457,7 @@ def test_mad_axis_none_mask_none():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_mad_2d_axis_none_mask_none():
+def test_mad_2d_axis_none_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(1, 300)
@@ -464,7 +469,7 @@ def test_mad_2d_axis_none_mask_none():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_mad_3d_axis_none_mask_none():
+def test_mad_3d_axis_none_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(1, 50)
@@ -477,7 +482,7 @@ def test_mad_3d_axis_none_mask_none():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_mad_2d_axis_0_mask_none():
+def test_mad_2d_axis_0_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(5, 300)
         size2 = np.random.randint(1, 300)
@@ -489,7 +494,7 @@ def test_mad_2d_axis_0_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
-def test_mad_2d_axis_1_mask_none():
+def test_mad_2d_axis_1_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(5, 300)
@@ -501,7 +506,7 @@ def test_mad_2d_axis_1_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
-def test_mad_3d_axis_0_mask_none():
+def test_mad_3d_axis_0_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(5, 50)
         size2 = np.random.randint(1, 50)
@@ -514,7 +519,7 @@ def test_mad_3d_axis_0_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
-def test_mad_3d_axis_1_mask_none():
+def test_mad_3d_axis_1_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(5, 50)
@@ -527,7 +532,7 @@ def test_mad_3d_axis_1_mask_none():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-4)
 
 
-def test_mad_3d_axis_2_mask_none():
+def test_mad_3d_axis_2_mask_none(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(10, 50)
         size2 = np.random.randint(10, 50)
@@ -543,7 +548,7 @@ def test_mad_3d_axis_2_mask_none():
         np.testing.assert_allclose(actual, expected, rtol=1e-5)
 
 
-def test_mad_axis_none_mask():
+def test_mad_axis_none_mask(set_random_seed):
     for i in range(25):
         size = np.random.randint(1, 10000)
         mean = np.random.uniform(-1000, 1000)
@@ -557,7 +562,7 @@ def test_mad_axis_none_mask():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_mad_2d_axis_none_mask():
+def test_mad_2d_axis_none_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(1, 300)
@@ -572,7 +577,7 @@ def test_mad_2d_axis_none_mask():
         np.testing.assert_allclose(actual, expected, atol=1e-4)
 
 
-def test_mad_3d_axis_none_mask():
+def test_mad_3d_axis_none_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(1, 50)
@@ -588,7 +593,7 @@ def test_mad_3d_axis_none_mask():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-8)
 
 
-def test_mad_2d_axis_0_mask():
+def test_mad_2d_axis_0_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(5, 300)
         size2 = np.random.randint(1, 300)
@@ -603,7 +608,7 @@ def test_mad_2d_axis_0_mask():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_mad_2d_axis_1_mask():
+def test_mad_2d_axis_1_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 300)
         size2 = np.random.randint(5, 300)
@@ -618,7 +623,7 @@ def test_mad_2d_axis_1_mask():
         np.testing.assert_allclose(actual, np.float32(expected), atol=1e-4)
 
 
-def test_mad_3d_axis_0_mask():
+def test_mad_3d_axis_0_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(5, 50)
         size2 = np.random.randint(1, 50)
@@ -634,7 +639,7 @@ def test_mad_3d_axis_0_mask():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-9)
 
 
-def test_mad_3d_axis_1_mask():
+def test_mad_3d_axis_1_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(5, 50)
@@ -650,7 +655,7 @@ def test_mad_3d_axis_1_mask():
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-9)
 
 
-def test_mad_3d_axis_2_mask():
+def test_mad_3d_axis_2_mask(set_random_seed):
     for i in range(5):
         size1 = np.random.randint(1, 50)
         size2 = np.random.randint(1, 50)

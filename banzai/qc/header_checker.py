@@ -12,6 +12,11 @@ class HeaderSanity(Stage):
       Stage to validate important header keywords.
     """
 
+    RA_MIN = 0.0
+    RA_MAX = 360.0
+    DEC_MIN = -90.0
+    DEC_MAX = 90.0
+
     def __init__(self, pipeline_context):
         super(HeaderSanity, self).__init__(pipeline_context)
 
@@ -41,18 +46,19 @@ class HeaderSanity(Stage):
        """
         for image in images:
 
-            for keyword in self.header_expected_format.keys():
-                self.check_header_keyword_present(keyword, image)
-                self.check_header_format(keyword, image)
-                self.check_header_na(keyword, image)
-
+            self.check_header_keyword_present(self.header_expected_format.keys(), image)
+            # Remove for now, until we can re-evaluate what exactly the
+            # expected formats should be. There could be multiple expected
+            # formats per keyword.
+            # self.check_header_format(keyword, image)
+            self.check_header_na(self.header_expected_format.keys(), image)
             self.check_ra_range(image)
             self.check_dec_range(image)
             self.check_exptime_value(image)
 
         return images
 
-    def check_header_keyword_present(self, keyword, image):
+    def check_header_keyword_present(self, keywords, image):
         """ Logs an error if the keyword is not in the image header.
 
         Parameters
@@ -63,14 +69,17 @@ class HeaderSanity(Stage):
                 a  banzais.image.Image object.
 
         """
-        header = image.header
 
         logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-
-        if keyword not in header:
-            sentence = 'The header key ' + keyword + ' is not in image header!'
-
-            self.logger.error(sentence, extra=logging_tags)
+        missing_keywords = []
+        for keyword in keywords:
+            if keyword not in image.header:
+                sentence = 'The header key ' + keyword + ' is not in image header!'
+                missing_keywords.append(keyword)
+                self.logger.error(sentence, extra=logging_tags)
+        any_keywords_missing = True if len(missing_keywords) else False
+        self.save_qc_results({"HeaderKeywordsMissing": any_keywords_missing,
+                               "header_keywords_mising": missing_keywords}, image)
 
     def check_header_format(self, keyword, image):
         """ Logs an error if the keyword is not the expected type
@@ -96,7 +105,7 @@ class HeaderSanity(Stage):
 
             self.logger.error(sentence, extra=logging_tags)
 
-    def check_header_na(self, keyword, image):
+    def check_header_na(self, keywords, image):
         """ Logs an error if the keyword is 'N/A' instead of the
             expected type in the image header.
 
@@ -108,16 +117,21 @@ class HeaderSanity(Stage):
                 a  banzais.image.Image object.
 
         """
-
-        header_value = image.header[keyword]
-
         logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-
-        if isinstance(header_value, str):
-
-            if 'N/A' in header_value:
-                sentence = 'The header key ' + keyword + ' got the unexpected value : N/A'
-                self.logger.error(sentence, extra=logging_tags)
+        na_keywords = []
+        for keyword in keywords:
+            try:
+                header_value = image.header[keyword]
+                if isinstance(header_value, str):
+                    if 'N/A' in header_value:
+                        sentence = 'The header key ' + keyword + ' got the unexpected value : N/A'
+                        self.logger.error(sentence, extra=logging_tags)
+                        na_keywords.append(keyword)
+            except:
+                pass
+        any_keywords_na = True if len(na_keywords) else False
+        self.save_qc_results({"HeaderKeywordsNA": any_keywords_na,
+                              "header_keywords_NA": na_keywords}, image)
 
     def check_ra_range(self, image):
         """ Logs an error if the keyword right_ascension is not inside
@@ -130,14 +144,17 @@ class HeaderSanity(Stage):
 
         """
         ra_value = image.header['CRVAL1']
-
         logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-
-        if isinstance(ra_value, float):
-
-            if (ra_value > 360) | (ra_value < 0):
+        try:
+            bad_ra_value = (ra_value > self.RA_MAX) | (ra_value < self.RA_MIN)
+            if bad_ra_value:
                 sentence = 'The header CRVAL1 key got the unexpected value : ' + str(ra_value)
                 self.logger.error(sentence, extra=logging_tags)
+            self.save_qc_results({"HeaderBadRAValue": bad_ra_value}, image)
+            self.save_qc_results({"header_ra_value": ra_value}, image)
+        except:
+            pass
+
 
     def check_dec_range(self, image):
         """Logs an error if the keyword declination is not inside
@@ -151,12 +168,16 @@ class HeaderSanity(Stage):
         """
 
         dec_value = image.header['CRVAL2']
-
         logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-
-        if (dec_value > 90) | (dec_value < -90):
-            sentence = 'The header CRVAL2 key got the unexpected value : ' + str(dec_value)
-            self.logger.error(sentence, extra=logging_tags)
+        try:
+            bad_dec_value = (dec_value > self.DEC_MAX) | (dec_value < self.DEC_MIN)
+            if bad_dec_value:
+                sentence = 'The header CRVAL2 key got the unexpected value : ' + str(dec_value)
+                self.logger.error(sentence, extra=logging_tags)
+            self.save_qc_results({"HeaderBadDecValue": bad_dec_value}, image)
+            self.save_qc_results({"header_dec_value": dec_value}, image)
+        except:
+            pass
 
     def check_exptime_value(self, image):
         """Logs an error if :
@@ -170,17 +191,28 @@ class HeaderSanity(Stage):
 
         """
 
-        exptime_value = image.header['EXPTIME']
-
         logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
 
-        if exptime_value < 0.0:
-            sentence = 'The header EXPTIME key got the unexpected value : negative value'
-            self.logger.error(sentence, extra=logging_tags)
+        try:
+            exptime_value = image.header['EXPTIME']
+            self.save_qc_results({"header_exptime": exptime_value}, image)
+        except:
             return
 
-        obstype = image.header['OBSTYPE']
-        if (exptime_value == 0.0) & (obstype == 'EXPOSE'):
-            sentence = 'The header EXPTIME key got the unexpected value : 0.0'
-            self.logger.error(sentence, extra=logging_tags)
-            return
+        try:
+            exptime_negative = exptime_value < 0.0
+            if exptime_negative:
+                sentence = 'The header EXPTIME key got the unexpected value : negative value'
+                self.logger.error(sentence, extra=logging_tags)
+            self.save_qc_results({"HeaderExptimeNegative": exptime_negative}, image)
+        except:
+            pass
+
+        try:
+            exptime_zero = (exptime_value == 0.0) & (image.header['OBSTYPE'] == 'EXPOSE')
+            if exptime_zero:
+                sentence = 'The header EXPTIME key got the unexpected value : 0.0'
+                self.logger.error(sentence, extra=logging_tags)
+            self.save_qc_results({"HeaderExptimeZero": exptime_zero}, image)
+        except:
+            pass

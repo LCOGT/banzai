@@ -1,7 +1,7 @@
+import os
+
 from banzai.stages import Stage
 from banzai import logs
-
-import os
 
 
 class SaturationTest(Stage):
@@ -13,7 +13,7 @@ class SaturationTest(Stage):
     Typically this means that something went wrong and can lead to bad master flat fields, etc.
     """
     # Empirically we have decided to use a 5% threshold to reject the image
-    threshold = 0.05
+    SATURATION_THRESHOLD = 0.05
 
     def __init__(self, pipeline_context):
         super(SaturationTest, self).__init__(pipeline_context)
@@ -33,13 +33,18 @@ class SaturationTest(Stage):
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             logs.add_tag(logging_tags, 'SATFRAC', saturation_fraction)
+            logs.add_tag(logging_tags, 'threshold', self.SATURATION_THRESHOLD)
             self.logger.info('Measured saturation fraction.', extra=logging_tags)
-            if saturation_fraction >= self.threshold:
+            saturated = saturation_fraction >= self.SATURATION_THRESHOLD
+            if saturated:
                 self.logger.error('SATFRAC exceeds threshold.', extra=logging_tags)
                 images_to_remove.append(image)
             else:
-                image.header['SATFRAC'] = (saturation_fraction, "Fraction of Pixels that are Saturated")
+                image.header['SATFRAC'] = (saturation_fraction,
+                                           "Fraction of Pixels that are Saturated")
 
+            self.save_qc_results({'Saturated': saturated,
+                                 'saturation_fraction': saturation_fraction}, image)
         for image in images_to_remove:
             images.remove(image)
 
