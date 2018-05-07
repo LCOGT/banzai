@@ -1,3 +1,7 @@
+0.9.1 (2018-05-07)
+------------------
+- Minor bugfix
+
 0.9.0 (2018-05-07)
 ------------------
 - Add comparison stages for calibration frames
