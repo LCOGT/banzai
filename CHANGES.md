@@ -1,4 +1,4 @@
-0.8.2 (2018-05-07)
+0.9.0 (2018-05-07)
 ------------------
 - Add comparison stages for calibration frames
     - Master calibration frames now go through the preview pipeline
