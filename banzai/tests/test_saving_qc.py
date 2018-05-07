@@ -1,7 +1,7 @@
 import numpy as np
 from banzai.tests.utils import FakeImage, FakeContext, FakeStage
 import mock
-from banzai.qc.utils import format_qc_results
+from banzai.utils.qc import format_qc_results
 
 
 def test_format_qc_results_basic_info():

@@ -7,7 +7,7 @@ from banzai import dbs
 from banzai import logs
 from banzai.images import Image
 from banzai.utils import image_utils
-from banzai.qc.utils import format_qc_results
+from banzai.utils.qc import format_qc_results
 
 import abc
 import numpy as np
