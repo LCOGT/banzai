@@ -57,26 +57,26 @@ def test_header_biaslevel_is_2(mock_cal, mock_image):
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exection_if_ccdsums_are_different(mock_cal, mock_images):
+def test_raises_an_exception_if_ccdsums_are_different(mock_cal, mock_images):
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exection_if_epochs_are_different(mock_cal, mock_images):
+def test_raises_an_exception_if_epochs_are_different(mock_cal, mock_images):
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'epoch', '20160102')
 
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exection_if_nx_are_different(mock_cal, mock_images):
+def test_raises_an_exception_if_nx_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'nx', 105)
 
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exection_if_ny_are_different(mock_cal, mock_images):
+def test_raises_an_exception_if_ny_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'ny', 107)
 
