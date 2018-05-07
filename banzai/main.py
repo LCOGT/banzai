@@ -28,8 +28,7 @@ from banzai.utils import image_utils, date_utils
 
 logger = logs.get_logger(__name__)
 
-ordered_stages = [qc.HeaderSanity,
-                  qc.ThousandsTest,
+ordered_stages = [qc.ThousandsTest,
                   qc.SaturationTest,
                   qc.PatternNoiseDetector,
                   bias.OverscanSubtractor,
