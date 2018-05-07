@@ -18,8 +18,10 @@ logger = logs.get_logger(__name__)
 
 class Image(object):
 
-    def __init__(self, pipeline_context, filename=None, data=None, header={},
+    def __init__(self, pipeline_context, filename=None, data=None, header=None,
                  extension_headers=None, bpm=None):
+        if header is None:
+            header = {}
 
         if extension_headers is None:
             extension_headers = []
