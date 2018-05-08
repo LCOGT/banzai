@@ -36,13 +36,16 @@ class ThousandsTest(Stage):
             logs.add_tag(logging_tags, 'FRAC1000', fraction_1000s)
             logs.add_tag(logging_tags, 'threshold', self.THOUSANDS_THRESHOLD)
             has_1000s_error = fraction_1000s > self.THOUSANDS_THRESHOLD
+            qc_results = {'sinistro_thousands.failed': has_1000s_error,
+                          'sinistro_thousands.fraction': fraction_1000s,
+                          'sinistro_thousands.threshold': self.THOUSANDS_THRESHOLD}
             if has_1000s_error:
                 self.logger.error('Image is mostly 1000s. Rejecting image', extra=logging_tags)
+                qc_results['rejected'] = True
                 images_to_remove.append(image)
             else:
                 self.logger.info('Measuring fraction of 1000s.', extra=logging_tags)
-            self.save_qc_results({'Error1000s': has_1000s_error,
-                                  'fraction_1000s': fraction_1000s}, image)
+            self.save_qc_results(qc_results, image)
         for image in images_to_remove:
             images.remove(image)
 

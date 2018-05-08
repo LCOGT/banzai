@@ -6,7 +6,6 @@ from banzai import logs
 from banzai.utils.stats import median_absolute_deviation
 
 
-
 class PatternNoiseDetector(Stage):
     # Signal to Noise threshold to raise an alert
     SNR_THRESHOLD = 15.0
@@ -39,7 +38,9 @@ class PatternNoiseDetector(Stage):
                 images_to_remove.append(image)
             else:
                 self.logger.info('No pattern noise found.', extra=logging_tags)
-            self.save_qc_results({'PatternNoise': pattern_noise_is_bad}, image)
+            self.save_qc_results({'pattern_noise.failed': pattern_noise_is_bad,
+                                  'pattern_noise.snr_threshold': self.SNR_THRESHOLD,
+                                  'pattern_noise.pixel_threshold': self.PIXEL_THRESHOLD}, image)
         for image in images_to_remove:
             images.remove(image)
         return images
