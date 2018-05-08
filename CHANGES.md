@@ -1,3 +1,7 @@
+0.9.2 (2018-05-08)
+------------------
+- Standardized elasticsearch field names
+
 0.9.1 (2018-05-07)
 ------------------
 - Minor bugfix
