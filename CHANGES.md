@@ -1,3 +1,7 @@
+0.9.5 (2018-06-11)
+------------------
+- Fixed header checker
+
 0.9.4 (2018-05-17)
 ------------------
 - Fixed a bug that would stop preview frames from being retried if they failed even once.
