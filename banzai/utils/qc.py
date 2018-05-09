@@ -8,7 +8,7 @@ def format_qc_results(qc_results, image):
                        'request_number': image.request_number,
                        'block_id': image.block_id,
                        'molecule_id': image.molecule_id,
-                       'obstype': image.obstype.lower(),
+                       'obstype': image.obstype,
                        '@timestamp': image.dateobs}
     for key, value in qc_results.items():
         # Elasticsearch does not like numpy.bool_ types
