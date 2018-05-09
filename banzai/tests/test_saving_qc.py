@@ -11,7 +11,7 @@ def test_format_qc_results_basic_info():
     assert results['instrument'] == image.instrument
     assert results['dayobs'] == image.epoch
     assert results['@timestamp'] == image.dateobs
-    assert results['obstype'].upper() == image.obstype
+    assert results['obstype'] == image.obstype
     assert filename in image.filename
 
 
