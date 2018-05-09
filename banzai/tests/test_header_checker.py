@@ -29,29 +29,29 @@ def test_all_keywords_missing():
     tester = header_checker.HeaderSanity(None)
     tester.logger.error = mock.MagicMock()
     bad_keywords = tester.check_keywords_missing_or_na(FakeHeaderImage())
-    assert set(bad_keywords) == set(tester.header_keywords_list)
+    assert set(bad_keywords) == set(tester.expected_header_keywords)
 
 
 def test_all_keywords_na():
     tester = header_checker.HeaderSanity(None)
-    image = FakeHeaderImage({keyword: "N/A" for keyword in tester.header_keywords_list})
+    image = FakeHeaderImage({keyword: "N/A" for keyword in tester.expected_header_keywords})
     bad_keywords = tester.check_keywords_missing_or_na(image)
-    assert set(bad_keywords) == set(tester.header_keywords_list)
+    assert set(bad_keywords) == set(tester.expected_header_keywords)
 
 
 def test_all_keywords_okay():
     tester = header_checker.HeaderSanity(None)
-    image = FakeHeaderImage({keyword: "test" for keyword in tester.header_keywords_list})
+    image = FakeHeaderImage({keyword: "test" for keyword in tester.expected_header_keywords})
     bad_keywords = tester.check_keywords_missing_or_na(image)
     assert set(bad_keywords) == set([])
 
 
 def test_one_keyword_missing_and_one_na():
     tester = header_checker.HeaderSanity(None)
-    image = FakeHeaderImage({keyword: "test" for keyword in tester.header_keywords_list[1:]})
-    image.header[tester.header_keywords_list[1]] = 'N/A'
+    image = FakeHeaderImage({keyword: "test" for keyword in tester.expected_header_keywords[1:]})
+    image.header[tester.expected_header_keywords[1]] = 'N/A'
     bad_keywords = tester.check_keywords_missing_or_na(image)
-    assert set(bad_keywords) == set(tester.header_keywords_list[0:2])
+    assert set(bad_keywords) == set(tester.expected_header_keywords[0:2])
 
 
 def test_ra_outside_range():
