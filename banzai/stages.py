@@ -226,4 +226,4 @@ class CalibrationComparer(ApplyCalibration):
 
     @abc.abstractmethod
     def noise_model(self, image):
-        return np.zeros(image.data.size)
+        return np.ones(image.data.size)
