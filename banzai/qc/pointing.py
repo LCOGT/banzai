@@ -61,9 +61,11 @@ class PointingTest(Stage):
             elif pointing_warning:
                 self.logger.warning('Pointing offset exceeds threshhold',
                                     extra=self.logging_tags)
-            self.save_qc_results({'PointingSevere': pointing_severe,
-                                  'PointingWarning': pointing_warning,
-                                  'pointing_offset': angular_separation},
+            self.save_qc_results({'pointing.failed': pointing_severe,
+                                  'pointing.failed_threshold': self.SEVERE_THRESHOLD,
+                                  'pointing.warning': pointing_warning,
+                                  'pointing.warning_threshold': self.WARNING_THRESHOLD,
+                                  'pointing.offset': angular_separation},
                                  image)
 
             image.header['PNTOFST'] = (

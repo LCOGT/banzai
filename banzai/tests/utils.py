@@ -28,6 +28,7 @@ class FakeImage(object):
         self.block_id = '254478983'
         self.molecule_id = '544562351'
         self.exptime = 30.0
+        self.obstype = 'TEST'
 
     def get_calibration_filename(self):
         return '/tmp/{0}_{1}_{2}_bin{3}.fits'.format(self.caltype, self.instrument,

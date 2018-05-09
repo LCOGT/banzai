@@ -35,16 +35,18 @@ class SaturationTest(Stage):
             logs.add_tag(logging_tags, 'SATFRAC', saturation_fraction)
             logs.add_tag(logging_tags, 'threshold', self.SATURATION_THRESHOLD)
             self.logger.info('Measured saturation fraction.', extra=logging_tags)
-            saturated = saturation_fraction >= self.SATURATION_THRESHOLD
-            if saturated:
+            is_saturated = saturation_fraction >= self.SATURATION_THRESHOLD
+            qc_results = {'saturated.failed': is_saturated,
+                          'saturated.fraction': saturation_fraction,
+                          'saturated.threshold': self.SATURATION_THRESHOLD}
+            if is_saturated:
                 self.logger.error('SATFRAC exceeds threshold.', extra=logging_tags)
+                qc_results['rejected'] = True
                 images_to_remove.append(image)
             else:
                 image.header['SATFRAC'] = (saturation_fraction,
                                            "Fraction of Pixels that are Saturated")
-
-            self.save_qc_results({'Saturated': saturated,
-                                 'saturation_fraction': saturation_fraction}, image)
+            self.save_qc_results(qc_results, image)
         for image in images_to_remove:
             images.remove(image)
 

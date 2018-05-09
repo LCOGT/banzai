@@ -78,8 +78,10 @@ class HeaderSanity(Stage):
                 missing_keywords.append(keyword)
                 self.logger.error(sentence, extra=logging_tags)
         any_keywords_missing = True if len(missing_keywords) else False
-        self.save_qc_results({"HeaderKeywordsMissing": any_keywords_missing,
-                               "header_keywords_mising": missing_keywords}, image)
+        qc_results = {"header.keywords.missing.failed": any_keywords_missing}
+        if any_keywords_missing:
+            qc_results["header.keywords.missing.names"] = missing_keywords
+        self.save_qc_results(qc_results, image)
 
     def check_header_format(self, keyword, image):
         """ Logs an error if the keyword is not the expected type
@@ -130,8 +132,10 @@ class HeaderSanity(Stage):
             except:
                 pass
         any_keywords_na = True if len(na_keywords) else False
-        self.save_qc_results({"HeaderKeywordsNA": any_keywords_na,
-                              "header_keywords_NA": na_keywords}, image)
+        qc_results = {"header.keywords.na.failed": any_keywords_na}
+        if any_keywords_na:
+            qc_results["header.keywords.na.names"] = na_keywords
+        self.save_qc_results(qc_results, image)
 
     def check_ra_range(self, image):
         """ Logs an error if the keyword right_ascension is not inside
@@ -150,11 +154,10 @@ class HeaderSanity(Stage):
             if bad_ra_value:
                 sentence = 'The header CRVAL1 key got the unexpected value : ' + str(ra_value)
                 self.logger.error(sentence, extra=logging_tags)
-            self.save_qc_results({"HeaderBadRAValue": bad_ra_value}, image)
-            self.save_qc_results({"header_ra_value": ra_value}, image)
+            self.save_qc_results({"header.ra.failed": bad_ra_value,
+                                  "header.ra.value": ra_value}, image)
         except:
             pass
-
 
     def check_dec_range(self, image):
         """Logs an error if the keyword declination is not inside
@@ -174,8 +177,8 @@ class HeaderSanity(Stage):
             if bad_dec_value:
                 sentence = 'The header CRVAL2 key got the unexpected value : ' + str(dec_value)
                 self.logger.error(sentence, extra=logging_tags)
-            self.save_qc_results({"HeaderBadDecValue": bad_dec_value}, image)
-            self.save_qc_results({"header_dec_value": dec_value}, image)
+            self.save_qc_results({"header.dec.failed": bad_dec_value,
+                                  "header.dec.value": dec_value}, image)
         except:
             pass
 
@@ -195,7 +198,7 @@ class HeaderSanity(Stage):
 
         try:
             exptime_value = image.header['EXPTIME']
-            self.save_qc_results({"header_exptime": exptime_value}, image)
+            qc_results = {"header.exptime.value": exptime_value}
         except:
             return
 
@@ -204,7 +207,7 @@ class HeaderSanity(Stage):
             if exptime_negative:
                 sentence = 'The header EXPTIME key got the unexpected value : negative value'
                 self.logger.error(sentence, extra=logging_tags)
-            self.save_qc_results({"HeaderExptimeNegative": exptime_negative}, image)
+            qc_results["header.exptime.negative.failed"] = exptime_negative
         except:
             pass
 
@@ -213,6 +216,7 @@ class HeaderSanity(Stage):
             if exptime_zero:
                 sentence = 'The header EXPTIME key got the unexpected value : 0.0'
                 self.logger.error(sentence, extra=logging_tags)
-            self.save_qc_results({"HeaderExptimeZero": exptime_zero}, image)
+            qc_results["header.exptime.zero.failed"] = exptime_zero
         except:
             pass
+        self.save_qc_results(qc_results, image)
