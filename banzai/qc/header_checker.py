@@ -20,11 +20,11 @@ class HeaderSanity(Stage):
     def __init__(self, pipeline_context):
         super(HeaderSanity, self).__init__(pipeline_context)
 
-        self.header_keywords_list = ['RA', 'DEC', 'CAT-RA', 'CAT-DEC',
-                                     'OFST-RA', 'OFST-DEC', 'TPT-RA',
-                                     'TPT-DEC', 'PM-RA', 'PM-DEC',
-                                     'CRVAL1', 'CRVAL2', 'CRPIX1',
-                                     'CRPIX2', 'EXPTIME']
+        self.expected_header_keywords = ['RA', 'DEC', 'CAT-RA', 'CAT-DEC',
+                                         'OFST-RA', 'OFST-DEC', 'TPT-RA',
+                                         'TPT-DEC', 'PM-RA', 'PM-DEC',
+                                         'CRVAL1', 'CRVAL2', 'CRPIX1',
+                                         'CRPIX2', 'EXPTIME']
 
     @property
     def group_by_keywords(self):
@@ -52,8 +52,7 @@ class HeaderSanity(Stage):
         return images
 
     def check_keywords_missing_or_na(self, image):
-        """ Logs an error if the keyword right_ascension is not inside
-            the expected range (0<ra<360 degrees) in the image header.
+        """ Logs an error if the keyword is missing or 'N/A'.
 
         Parameters
         ----------
@@ -69,17 +68,17 @@ class HeaderSanity(Stage):
         qc_results = {}
         missing_keywords = []
         na_keywords = []
-        for keyword in self.header_keywords_list:
+        for keyword in self.expected_header_keywords:
             if keyword not in image.header:
-                sentence = 'The header key ' + keyword + ' is not in image header!'
+                sentence = 'The header key {0} is not in image header!'.format(keyword)
                 self.logger.error(sentence, extra=logging_tags)
                 missing_keywords.append(keyword)
             elif image.header[keyword] == 'N/A':
-                sentence = 'The header key ' + keyword + ' got the unexpected value : N/A'
+                sentence = 'The header key {0} got the unexpected value : N/A'.format(keyword)
                 self.logger.error(sentence, extra=logging_tags)
                 na_keywords.append(keyword)
-        are_keywords_missing = True if len(missing_keywords) else False
-        are_keywords_na = True if len(na_keywords) else False
+        are_keywords_missing = len(missing_keywords) > 0
+        are_keywords_na = len(na_keywords) > 0
         qc_results["header.keywords.missing.failed"] = are_keywords_missing
         qc_results["header.keywords.na.failed"] = are_keywords_na
         if are_keywords_missing:
@@ -108,7 +107,7 @@ class HeaderSanity(Stage):
             ra_value = image.header['CRVAL1']
             is_bad_ra_value = (ra_value > self.RA_MAX) | (ra_value < self.RA_MIN)
             if is_bad_ra_value:
-                sentence = 'The header CRVAL1 key got the unexpected value : ' + str(ra_value)
+                sentence = 'The header CRVAL1 key got the unexpected value : {0}'.format(ra_value)
                 self.logger.error(sentence, extra=logging_tags)
             self.save_qc_results({"header.ra.failed": is_bad_ra_value,
                                   "header.ra.value": ra_value}, image)
@@ -132,15 +131,13 @@ class HeaderSanity(Stage):
             dec_value = image.header['CRVAL2']
             is_bad_dec_value = (dec_value > self.DEC_MAX) | (dec_value < self.DEC_MIN)
             if is_bad_dec_value:
-                sentence = 'The header CRVAL2 key got the unexpected value : ' + str(dec_value)
+                sentence = 'The header CRVAL2 key got the unexpected value : {0}'.format(dec_value)
                 self.logger.error(sentence, extra=logging_tags)
             self.save_qc_results({"header.dec.failed": is_bad_dec_value,
                                   "header.dec.value": dec_value}, image)
 
     def check_exptime_value(self, image, bad_keywords=None):
-        """Logs an error if :
-        -1) the keyword exptime is not higher than 0.0
-        -2) the keyword exptime is equal to 0.0 and 'OBSTYPE' keyword is 'EXPOSE'
+        """Logs an error if OBSTYPE is not BIAS and EXPTIME <= 0
 
         Parameters
         ----------
@@ -158,7 +155,8 @@ class HeaderSanity(Stage):
             if image.header['OBSTYPE'] != 'BIAS':
                 is_exptime_null = exptime_value <= 0.0
                 if is_exptime_null:
-                    sentence = 'The header EXPTIME key got the unexpected value : null or negative value'
+                    sentence = 'The header EXPTIME key got the unexpected value {0}:' \
+                               'null or negative value'.format(exptime_value)
                     self.logger.error(sentence, extra=logging_tags)
                 qc_results["header.exptime.failed"] = is_exptime_null
             self.save_qc_results(qc_results, image)
