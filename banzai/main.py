@@ -117,7 +117,7 @@ def run_end_of_night_from_console(scripts_to_run):
 
 
 def make_master_bias(pipeline_context):
-    stages_to_do = get_stages_todo(trim.Trimmer, extra_stages=[bias.BiasComparer, bias.BiasMaker])
+    stages_to_do = get_stages_todo(trim.Trimmer, extra_stages=[bias.BiasMaker])
     run(stages_to_do, pipeline_context, image_types=['BIAS'], calibration_maker=True,
         log_message='Making Master BIAS')
 
