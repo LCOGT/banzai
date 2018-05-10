@@ -1,6 +1,7 @@
 0.9.3 (2018-05-10)
 ------------------
-- Hotfix
+- Hotfix (temporary until pattern noise and calibration comparer parameters are
+  tuned to avoid false positives)
     - No longer removes images that fail pattern noise test
     - Bias comparer no longer run in master bias creator 
 
