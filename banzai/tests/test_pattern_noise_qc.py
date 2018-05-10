@@ -3,6 +3,7 @@ import numpy as np
 from banzai.qc import pattern_noise
 from banzai.tests.utils import FakeImage, gaussian2d
 import pytest
+import mock
 
 
 @pytest.fixture(scope='module')
@@ -52,8 +53,9 @@ def test_pattern_noise_on_2d_image(set_random_seed):
     image.data = data
 
     detector = pattern_noise.PatternNoiseDetector(None)
-
-    assert detector.do_stage([image]) == []
+    detector.logger.error = mock.MagicMock()
+    detector.do_stage([image])
+    assert detector.logger.error.called
 
 
 def test_pattern_noise_on_3d_image(set_random_seed):
@@ -64,8 +66,9 @@ def test_pattern_noise_on_3d_image(set_random_seed):
     image.data = data
 
     detector = pattern_noise.PatternNoiseDetector(None)
-
-    assert detector.do_stage([image]) == []
+    detector.logger.error = mock.MagicMock()
+    detector.do_stage([image])
+    assert detector.logger.error.called
 
 
 def test_pattern_noise_in_only_one_quadrant(set_random_seed):
@@ -77,5 +80,6 @@ def test_pattern_noise_in_only_one_quadrant(set_random_seed):
     image.data = data
 
     detector = pattern_noise.PatternNoiseDetector(None)
-
-    assert detector.do_stage([image]) == []
+    detector.logger.error = mock.MagicMock()
+    detector.do_stage([image])
+    assert detector.logger.error.called
