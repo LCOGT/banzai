@@ -45,6 +45,8 @@ class HeaderSanity(Stage):
 
        """
         for image in images:
+            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
+            self.logger.info("Checking header sanity.", extra=logging_tags)
             bad_keywords = self.check_keywords_missing_or_na(image)
             self.check_ra_range(image, bad_keywords)
             self.check_dec_range(image, bad_keywords)
