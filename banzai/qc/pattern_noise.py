@@ -20,7 +20,6 @@ class PatternNoiseDetector(Stage):
         return None
 
     def do_stage(self, images):
-        images_to_remove = []
         for image in images:
             # If the data is a cube, then run on each extension individually
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
@@ -35,14 +34,11 @@ class PatternNoiseDetector(Stage):
                 pattern_noise_is_bad = check_for_pattern_noise(image.data, self.SNR_THRESHOLD, self.FREQ_BINS_THRESHOLD)
             if pattern_noise_is_bad:
                 self.logger.error('Image found to have pattern noise.', extra=logging_tags)
-                images_to_remove.append(image)
             else:
                 self.logger.info('No pattern noise found.', extra=logging_tags)
             self.save_qc_results({'pattern_noise.failed': pattern_noise_is_bad,
                                   'pattern_noise.snr_threshold': self.SNR_THRESHOLD,
                                   'pattern_noise.freq_bins_threshold': self.FREQ_BINS_THRESHOLD}, image)
-        for image in images_to_remove:
-            images.remove(image)
         return images
 
 
