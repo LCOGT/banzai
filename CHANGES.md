@@ -1,3 +1,9 @@
+0.9.3 (2018-05-10)
+------------------
+- Hotfix
+    - No longer removes images that fail pattern noise test
+    - Bias comparer no longer run in master bias creator 
+
 0.9.2 (2018-05-08)
 ------------------
 - Standardized elasticsearch field names
