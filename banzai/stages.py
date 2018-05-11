@@ -160,10 +160,11 @@ class ApplyCalibration(Stage):
 
             if master_calibration_filename is None:
                 self.on_missing_master_calibration(logging_tags)
-
-            master_calibration_image = Image(self.pipeline_context,
-                                             filename=master_calibration_filename)
-            return self.apply_master_calibration(images, master_calibration_image, logging_tags)
+                return images
+            else:
+                master_calibration_image = Image(self.pipeline_context,
+                                                 filename=master_calibration_filename)
+                return self.apply_master_calibration(images, master_calibration_image, logging_tags)
 
     @abc.abstractmethod
     def apply_master_calibration(self, images, master_calibration_image, logging_tags):
@@ -182,15 +183,7 @@ class CalibrationComparer(ApplyCalibration):
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
 
-    def on_missing_master_calibration(self, logging_tags):
-        msg = 'No master {caltype} frame exists. Assuming these images are ok.'
-        self.logger.warning(msg.format(caltype=self.calibration_type), logging_tags)
-
     def apply_master_calibration(self, images, master_calibration_image, logging_tags):
-        # Short circuit
-        if master_calibration_image.data is None:
-            return images
-
         images_to_reject = []
 
         for image in images:
