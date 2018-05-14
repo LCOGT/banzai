@@ -356,7 +356,7 @@ def need_to_make_preview(path, db_address=_DEFAULT_DB, max_tries=5):
         if not telescope.schedulable:
             return False
     except TelescopeMissingException:
-        logger.error('Telescope/Camera not in database for {f}'.format(path))
+        logger.error('Telescope/Camera not in database for {f}'.format(f=path))
         return False
 
     # Get the preview image in db. If it doesn't exist add it.
@@ -365,9 +365,18 @@ def need_to_make_preview(path, db_address=_DEFAULT_DB, max_tries=5):
     need_to_process = False
     # Check the md5.
     checksum = file_utils.get_md5(path)
-    if preview_image.checksum != checksum and (preview_image.tries <= max_tries and not preview_image.success):
+
+    # Reset the number of tries if the file has changed on disk
+    if preview_image.checksum != checksum:
         need_to_process = True
         preview_image.checksum = checksum
+        preview_image.tries = 0
+        preview_image.success = 0
+        commit_preview_image(preview_image, db_address)
+
+    # Check if we need to try again
+    elif preview_image.tries <= max_tries and not preview_image.success:
+        need_to_process = True
         commit_preview_image(preview_image, db_address)
 
     return need_to_process
