@@ -160,11 +160,10 @@ class ApplyCalibration(Stage):
 
             if master_calibration_filename is None:
                 self.on_missing_master_calibration(logging_tags)
-            else:
-                master_calibration_image = Image(self.pipeline_context,
+
+            master_calibration_image = Image(self.pipeline_context,
                                              filename=master_calibration_filename)
-                images = self.apply_master_calibration(images, master_calibration_image, logging_tags)
-            return images
+            return self.apply_master_calibration(images, master_calibration_image, logging_tags)
 
     @abc.abstractmethod
     def apply_master_calibration(self, images, master_calibration_image, logging_tags):
@@ -227,4 +226,4 @@ class CalibrationComparer(ApplyCalibration):
 
     @abc.abstractmethod
     def noise_model(self, image):
-        return np.zeros(image.data.size)
+        return np.ones(image.data.size)
