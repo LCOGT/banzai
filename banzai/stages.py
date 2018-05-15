@@ -208,7 +208,8 @@ class CalibrationComparer(ApplyCalibration):
                 images_to_reject.append(image)
                 qc_results['rejected'] = True
                 logs.add_tag(logging_tags, 'REJECTED', True)
-                self.logger.error('Rejecting flat image because it deviates too much from the previous master',
+                msg = 'Rejecting {0} image because it deviates too much from the previous master'
+                self.logger.error(msg.format(self.calibration_type),
                                   extra=logging_tags)
 
             self.save_qc_results(qc_results, image)
