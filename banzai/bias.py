@@ -39,8 +39,7 @@ class BiasMaker(CalibrationMaker):
         master_bias_filename = self.get_calibration_filename(image_config)
         logs.add_tag(logging_tags, 'master_bias', os.path.basename(master_bias_filename))
         for i, image in enumerate(images):
-            bias_level_array[i] = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
-
+            bias_level_array[i] = _get_bias_level(image)
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             logs.add_tag(logging_tags, 'BIASLVL', float(bias_level_array[i]))
             self.logger.debug('Calculating bias level', extra=logging_tags)
@@ -216,3 +215,8 @@ def _subtract_overscan_2d(image):
     image.header['OVERSCAN'] = (overscan_level, 'Overscan value that was subtracted')
     image.data -= overscan_level
     return overscan_level
+
+
+def _get_bias_level(image):
+    return stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
+
