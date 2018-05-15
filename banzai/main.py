@@ -37,7 +37,6 @@ ordered_stages = [qc.ThousandsTest,
                   mosaic.MosaicCreator,
                   bpm.BPMUpdater,
                   trim.Trimmer,
-                  bias.BiasMasterLevelSubtractor,
                   bias.BiasSubtractor,
                   dark.DarkSubtractor,
                   flats.FlatDivider,
@@ -78,8 +77,8 @@ def get_stages_todo(last_stage=None, extra_stages=None):
 
 def get_preview_stages_todo(image_suffix):
     if image_suffix == 'b00.fits':
-        stages = get_stages_todo(last_stage=bias.BiasMasterLevelSubtractor,
-                                 extra_stages=[bias.BiasComparer])
+        stages = get_stages_todo(last_stage=trim.Trimmer,
+                                 extra_stages=[bias.BiasMasterLevelSubtractor, bias.BiasComparer])
     elif image_suffix == 'd00.fits':
         stages = get_stages_todo(last_stage=bias.BiasSubtractor,
                                  extra_stages=[dark.DarkNormalizer, dark.DarkComparer])

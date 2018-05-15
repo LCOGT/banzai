@@ -96,6 +96,7 @@ class BiasSubtractor(ApplyCalibration):
         for image in images:
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
 
+            image.subtract(master_bias_level)
             image.subtract(master_bias_data)
 
             image.bpm |= master_calibration_image.bpm

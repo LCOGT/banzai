@@ -96,12 +96,13 @@ def test_raises_exception_if_no_master_calibration(mock_cal, mock_images):
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_bias_subtraction_is_reasonable(mock_cal, mock_image):
     mock_cal.return_value = 'test.fits'
+    input_bias = 1000.0
     input_readnoise = 9.0
     input_level = 2000.0
     nx = 101
     ny = 103
 
-    fake_master_bias = FakeBiasImage(bias_level=input_level)
+    fake_master_bias = FakeBiasImage(bias_level=input_bias)
     fake_master_bias.data = np.random.normal(0.0, input_readnoise, size=(ny, nx))
     mock_image.return_value = fake_master_bias
 
@@ -111,4 +112,5 @@ def test_bias_subtraction_is_reasonable(mock_cal, mock_image):
     images = subtractor.do_stage(images)
 
     for image in images:
-        np.testing.assert_allclose(input_level-fake_master_bias.data, image.data,  1e-5)
+        assert np.abs(image.header['BIASLVL'][0] - input_bias) < 1.0
+        assert np.abs(np.mean(image.data) - input_level + input_bias) < 1.0
