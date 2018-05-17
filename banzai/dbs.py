@@ -371,11 +371,11 @@ def need_to_make_preview(path, db_address=_DEFAULT_DB, max_tries=5):
         need_to_process = True
         preview_image.checksum = checksum
         preview_image.tries = 0
-        preview_image.success = 0
+        preview_image.success = False
         commit_preview_image(preview_image, db_address)
 
     # Check if we need to try again
-    elif preview_image.tries <= max_tries and not preview_image.success:
+    elif preview_image.tries < max_tries and not preview_image.success:
         need_to_process = True
         commit_preview_image(preview_image, db_address)
 
