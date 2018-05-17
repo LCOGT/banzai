@@ -56,7 +56,6 @@ class DarkMaker(CalibrationMaker):
             self.logger.debug('Combining dark', extra=logging_tags)
 
             dark_data[:, :, i] = image.data[:, :]
-            dark_data[:, :, i] /= image.exptime
             dark_mask[:, :, i] = image.bpm[:, :]
 
         master_dark = stats.sigma_clipped_mean(dark_data, 3.0, axis=2, mask=dark_mask, inplace=True)
