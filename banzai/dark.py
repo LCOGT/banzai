@@ -65,7 +65,6 @@ class DarkMaker(CalibrationMaker):
         del dark_mask
 
         master_bpm = np.array(master_dark == 0.0, dtype=np.uint8)
-        master_dark[master_bpm] = 0.0
 
         # Save the master dark image with all of the combined images in the header
         master_dark_header = fits_utils.create_master_calibration_header(images)
