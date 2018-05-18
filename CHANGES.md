@@ -2,6 +2,7 @@
 ------------------
 - Fixed a bug that would stop preview frames from being retried if they failed even once.
 - Hotfix to remove double division by exposure time when creating master darks
+- Fixed bug that prevented calibration comparison being run on skyflats
 
 0.9.3 (2018-05-10)
 ------------------
