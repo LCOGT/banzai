@@ -56,7 +56,6 @@ class DarkMaker(CalibrationMaker):
             self.logger.debug('Combining dark', extra=logging_tags)
 
             dark_data[:, :, i] = image.data[:, :]
-            dark_data[:, :, i] /= image.exptime
             dark_mask[:, :, i] = image.bpm[:, :]
 
         master_dark = stats.sigma_clipped_mean(dark_data, 3.0, axis=2, mask=dark_mask, inplace=True)
@@ -66,7 +65,6 @@ class DarkMaker(CalibrationMaker):
         del dark_mask
 
         master_bpm = np.array(master_dark == 0.0, dtype=np.uint8)
-        master_dark[master_bpm] = 0.0
 
         # Save the master dark image with all of the combined images in the header
         master_dark_header = fits_utils.create_master_calibration_header(images)

@@ -201,6 +201,6 @@ setup(name=PACKAGENAME,
       zip_safe=False,
       use_2to3=False,
       entry_points=entry_points,
-     python_requires='>=' + __minimum_python_version__,
+      python_requires='>=' + __minimum_python_version__,
       **package_info
 )
