@@ -450,7 +450,7 @@ class PreviewModeListener(ConsumerMixin):
                     # Increment the number of tries for this file
                     dbs.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
 
-                    run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'FLAT'])
+                    run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT'])
                     dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
             except Exception as e:

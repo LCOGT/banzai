@@ -42,6 +42,11 @@ class Image(object):
 
         self.site = header.get('SITEID')
         self.instrument = header.get('INSTRUME')
+        if self.site is not None and self.instrument is not None:
+            self.telescope_id = dbs.get_telescope_id(self.site, self.instrument,
+                                                     db_address=pipeline_context.db_address)
+        else:
+            self.telescope_id = None
         self.epoch = str(header.get('DAY-OBS'))
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
@@ -55,8 +60,6 @@ class Image(object):
 
         self.ccdsum = header.get('CCDSUM')
         self.filter = header.get('FILTER')
-        self.telescope_id = dbs.get_telescope_id(self.site, self.instrument,
-                                                 db_address=pipeline_context.db_address)
 
         self.obstype = header.get('OBSTYPE')
         self.exptime = float(header.get('EXPTIME'))
