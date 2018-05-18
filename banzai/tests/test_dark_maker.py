@@ -60,13 +60,6 @@ def test_raises_an_exception_if_ny_are_different(mock_images):
     throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'ny', 107)
 
 
-def create_fake_image(context, data=None, header=None):
-    new_fake_image = FakeImage(nx=data.shape[1], ny=data.shape[0])
-    new_fake_image.data = data
-    new_fake_image.header = header
-    return new_fake_image
-
-
 @mock.patch('banzai.dark.Image')
 def test_makes_a_sensible_master_dark(mock_images):
     nimages = 20
@@ -83,4 +76,3 @@ def test_makes_a_sensible_master_dark(mock_images):
     master_dark = kwargs['data']
 
     assert (master_dark == expected_master_dark).all()
-
