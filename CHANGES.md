@@ -1,10 +1,7 @@
-0.9.5 (2018-05-17)
-------------------
-- Hotfix to remove double division by exposure time when creating master darks
-
 0.9.4 (2018-05-17)
 ------------------
 - Fixed a bug that would stop preview frames from being retried if they failed even once.
+- Hotfix to remove double division by exposure time when creating master darks
 
 0.9.3 (2018-05-10)
 ------------------
