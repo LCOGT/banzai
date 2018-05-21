@@ -62,11 +62,11 @@ class Image(object):
         self.filter = header.get('FILTER')
 
         self.obstype = header.get('OBSTYPE')
-        self.exptime = float(header.get('EXPTIME'))
-        self.dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
-        self.readnoise = float(header.get('RDNOISE'))
+        self.exptime = float(header.get('EXPTIME', 0.0))
+        self.dateobs = date_utils.parse_date_obs(header.get('DATE-OBS', '1900-01-01T00:00:00.00000'))
+        self.readnoise = float(header.get('RDNOISE', 0.0))
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
-        self.pixel_scale = float(header.get('PIXSCALE'))
+        self.pixel_scale = float(header.get('PIXSCALE', 0.0))
         self.catalog = None
 
     def subtract(self, value):
