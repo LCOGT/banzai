@@ -7,6 +7,10 @@ This repo contains the data reduction package for LCOGT.
     :target: http://www.astropy.org
     :alt: Powered by Astropy Badge
 
+Please cite the following DOI if you are using processed LCOGT data.
+.. image:: https://zenodo.org/badge/26836413.svg
+   :target: https://zenodo.org/badge/latestdoi/26836413
+
 Status reports for developers
 -----------------------------
 
