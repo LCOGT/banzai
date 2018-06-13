@@ -9,9 +9,8 @@ and produce science quality data products.
 
 Stages
 ------
-BANZAI is comprised of different stages that each correspond to a single reduction step, which are chained together
-to process images. The individual stages are described below, in the order that they are executed. We have omitted
-the quality control stages, which are described in a separate section.
+BANZAI is comprised of different stages, each corresponding to a single reduction step, which are chained together
+to process images. The individual stages are described below, in the order that they are executed.
 
 
 Overscan
@@ -38,7 +37,7 @@ All pixels in the frame are multiplied by the gain, using the ``GAIN`` header ke
 Mosaic
 ======
 Again, only the Sinistro frames currently read out with multiple amplifiers so mosaicing the amplifiers
-is only required for Sinsitros. This is currently done by the preprocessor.
+is only required for Sinsitros.
 
 
 Trim
@@ -91,9 +90,10 @@ produces approximately the same results as ``FLUX_AUTO`` from SExtractor.
 We set the source detection limit at 3 times the global rms of the image. ``MINAREA`` is set to 5,
 the default. This should minimize false detections, but may miss the faintest sources.
 
-The catalog is returned as the 'CAT' as fits binary table extension of the final science image. The catalog
-has the following columns: the position in pixel coordinates, (X, Y), the flux (Flux), the error in the flux
-(Fluxerr), the semi-major and semi-minor axes (a, b), and the position angle (theta).
+The catalog is returned as the ``CAT`` as fits binary table extension of the final science image. The catalog
+has the following columns: the position in pixel coordinates, (``X``, ``Y``), the flux (``Flux``),
+the error in the flux (``Fluxerr``), the semi-major and semi-minor axes (``a``, ``b``),
+and the position angle (``theta``).
 
 
 Astrometry
@@ -187,11 +187,6 @@ has dimensions that are half of the full image).
 The flat-field frames are then stacked using a sigma clipped mean, similar to the master bias and
 dark frames. We again choose to reject 3 rstd outliers.
 
-Currently, there are two main failure modes of individual flat-field images: saturation and shutter
-failures. Currently, frames with either of these issues are not rejected outright (however, in future
-versions, they likely will be). However, this is not an issue because we do robust sigma clipping.
-Any pixels affected by these failure modes will be rejected automatically.
-
 
 Quality Control
 ---------------
@@ -199,19 +194,19 @@ Quality Control
 
 Header Sanity
 =============
-The header sanity checker first checks if any principal FITS header keywords are either missing or set to 'N/A'.
+The header sanity test first checks if any principal FITS header keywords are either missing or set to ``'N/A'``.
 The following keywords are checked:
 ``RA``, ``DEC``, ``CAT-RA``, ``CAT-DEC``,
 ``OFST-RA``, ``OFST-DEC``, ``TPT-RA``,
 ``TPT-DEC``, ``PM-RA``, ``PM-DEC``,
 ``CRVAL1``, ``CRVAL2``, ``CRPIX1``,
-``CRPIX2``, ``EXPTIME``.
+``CRPIX2``, and ``EXPTIME``.
 
 This routine then verifies that the RA value (``CRVAL1``) is between 0 and 360
 and that the declination value (``CRVAL2``) is between -90 and 90.
 
 Finally, the header checker ensures that exposure time value (``EXPTIME``) is greater than 0.
-Note that this final check is not performed on bias frames, which can sometimes have negative
+Note that this final test is not performed on bias frames, which can sometimes have negative
 exposure time values.
 
 
@@ -234,8 +229,8 @@ Pattern Noise Detector
 Occasionally some cameras have been found to exhibit highly structured electrical pattern noise. Although it
 is not a common occurrence, it is still desirable to detect the issue as soon as possible.
 
-This algorithm computes a power array by taking the fourier transform of the full image, then collapsing
-the absolute values along the vertical axis. The SNR is then computed as:
+This algorithm computes a power array by taking the fourier transform of the full image, then taking the median of
+the absolute values along the vertical axis. Next, the SNR is computed as:
 
 SNR = [power - median(power)] / MAD(power)
 
@@ -244,7 +239,7 @@ The frame is considered to have pattern noise if more than 5 pixels are above an
 Pointing Test
 =============
 This test computes the offset between the requested RA and declination from the header
-(given by either``OFST-RA`` and ``OFST-DEC``, or ``CAT-RA`` and ``CAT-DEC``)
+(given by either ``OFST-RA`` and ``OFST-DEC``, or ``CAT-RA`` and ``CAT-DEC``)
 with the actual RA and declination of the observation (``CRVAL1`` and ``CRVAL2``).
 The test is considered failed if the offset is above 300", and a warning is provided if it is above 30".
 
@@ -252,7 +247,7 @@ The test is considered failed if the offset is above 300", and a warning is prov
 Master Calibration Comparison
 =============================
 
-When a calibration frame is processed by BANZAI, it can be compared to the closest (temporally)
+When a calibration frame is processed by BANZAI, it can be compared to the temporally nearest
 previous master to check
 for significant variations, which can serve as an alert for e.g. major issues with the camera.
 Since this check also discards frames found to deviate significantly,
@@ -267,20 +262,20 @@ SNR = (individual_frame - master_frame) / noise
 where the noise also depends on the type of calibration.
 The individual frame fails the comparison test if more than 5% of pixels have an SNR greater than 6.
 
-The individual frame preprocessing steps and noise parameter for the different calibration types is listed below:
+The individual frame preprocessing steps and noise parameters for the different calibration types are listed below:
 
-- bias
+- bias:
 
   - preprocessing: bias level subtraction
-  - noise = RN (read noise, rom header keyword ``RDNOISE``)
+  - noise = RN (read noise, from header keyword ``RDNOISE``)
 
-- dark
+- dark:
 
   - preprocessing: bias subtraction, normalization by exposure time
   - noise = sqrt( RN\^2 + PN\^2) / exptime, where PN is the poisson noise, computed using the
     square root of the image counts prior to normalization
 
-- skyflat
+- skyflat:
 
   - preprocessing: bias and dark subtraction, normalization by the sigma clipped mean of image
   - noise = sqrt( RN\^2 + PN\^2) / normalization
