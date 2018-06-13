@@ -151,7 +151,7 @@ noise per pixel to read noise (RN) / 8. Thus, only a few counts of noise are bei
 This is much less than the ~10 electron read noise, meaning that this does not increase the noise in the science
 frames in any significant way.
 
-kj
+
 Master Dark Creation
 ====================
 For all instruments, we take full-frame dark exposures every afternoon and morning. Like the bias frames,
@@ -249,20 +249,41 @@ with the actual RA and declination of the observation (``CRVAL1`` and ``CRVAL2``
 The test is considered failed if the offset is above 300", and a warning is provided if it is above 30".
 
 
-Master Bias Comparison
-======================
+Master Calibration Comparison
+=============================
 
+When a calibration frame is processed by BANZAI, it can be compared to the closest (temporally)
+previous master to check
+for significant variations, which can serve as an alert for e.g. major issues with the camera.
+Since this check also discards frames found to deviate significantly,
+it prevents the creation of bad master frames that can cause
+problems as they are propagated through the pipeline and used for the reduction of science data.
 
+The algorithm works as follows.  After some preprocessing that depends on the calibration type,
+the SNR at each pixel is computed as:
 
-Master Dark Comparison
-======================
+SNR = (individual_frame - master_frame) / noise
 
+where the noise also depends on the type of calibration.
+The individual frame fails the comparison test if more than 5% of pixels have an SNR greater than 6.
 
-Master Flat Comparison
-======================
+The individual frame preprocessing steps and noise parameter for the different calibration types is listed below:
 
+- bias
 
+  - preprocessing: bias level subtraction
+  - noise = RN (read noise, rom header keyword ``RDNOISE``)
 
+- dark
+
+  - preprocessing: bias subtraction, normalization by exposure time
+  - noise = sqrt( RN\^2 + PN\^2) / exptime, where PN is the poisson noise, computed using the
+    square root of the image counts prior to normalization
+
+- skyflat
+
+  - preprocessing: bias and dark subtraction, normalization by the sigma clipped mean of image
+  - noise = sqrt( RN\^2 + PN\^2) / normalization
 
 
 Other Considerations
