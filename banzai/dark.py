@@ -120,6 +120,7 @@ class DarkComparer(CalibrationComparer):
         return 'dark'
 
     def noise_model(self, image):
-        noise = (image.readnoise ** 2.0 + np.abs(image.data)) ** 0.5
+        noise = (image.readnoise ** 2.0 + np.abs(image.data * image.exptime)) ** 0.5
         noise /= image.exptime
         return noise
+
