@@ -54,7 +54,12 @@ class HeaderSanity(Stage):
         return images
 
     def check_keywords_missing_or_na(self, image):
-        """ Logs an error if the keyword is missing or 'N/A'.
+        """ Logs an error if the keyword is missing or 'N/A' 
+            (the default placeholder value).
+            Some header keywords for bias and dark frames
+            (e.g., 'OFST-RA') are excpted to be non-valued, 
+            but the 'N/A' placeholder values should be 
+            overwritten by 'NaN'. 
 
         Parameters
         ----------
