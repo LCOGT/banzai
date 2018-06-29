@@ -1,6 +1,7 @@
 0.9.5 (2018-06-11)
 ------------------
 - Fixed header checker
+- Fixed typo in master dark comparison equation
 
 0.9.4 (2018-05-17)
 ------------------
