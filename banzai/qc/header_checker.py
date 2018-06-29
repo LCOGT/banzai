@@ -9,7 +9,7 @@ from banzai import logs
 
 class HeaderSanity(Stage):
     """
-      Stage to validate important header keywords.
+    Stage to validate important header keywords.
     """
 
     RA_MIN = 0.0
@@ -31,7 +31,8 @@ class HeaderSanity(Stage):
         return None
 
     def do_stage(self, images):
-        """ Run stage to validate header.
+        """
+        Run stage to validate header.
 
         Parameters
         ----------
@@ -54,12 +55,8 @@ class HeaderSanity(Stage):
         return images
 
     def check_keywords_missing_or_na(self, image):
-        """ Logs an error if the keyword is missing or 'N/A' 
-            (the default placeholder value).
-            Some header keywords for bias and dark frames
-            (e.g., 'OFST-RA') are excpted to be non-valued, 
-            but the 'N/A' placeholder values should be 
-            overwritten by 'NaN'. 
+        """
+        Logs an error if the keyword is missing or 'N/A' (the default placeholder value).
 
         Parameters
         ----------
@@ -70,6 +67,12 @@ class HeaderSanity(Stage):
         -------
         bad_keywords: list
                 a list of any keywords that are missing or NA
+
+        Notes
+        -----
+        Some header keywords for bias and dark frames (e.g., 'OFST-RA') are excpted to be non-valued,
+        but the 'N/A' placeholder values should be overwritten by 'NaN'.
+
         """
         logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
         qc_results = {}
@@ -96,8 +99,9 @@ class HeaderSanity(Stage):
         return missing_keywords + na_keywords
 
     def check_ra_range(self, image, bad_keywords=None):
-        """ Logs an error if the keyword right_ascension is not inside
-            the expected range (0<ra<360 degrees) in the image header.
+        """
+        Logs an error if the keyword right_ascension is not inside
+        the expected range (0<ra<360 degrees) in the image header.
 
         Parameters
         ----------
@@ -120,8 +124,9 @@ class HeaderSanity(Stage):
                                   "header.ra.value": ra_value}, image)
 
     def check_dec_range(self, image, bad_keywords=None):
-        """Logs an error if the keyword declination is not inside
-            the expected range (-90<dec<90 degrees) in the image header.
+        """
+        Logs an error if the keyword declination is not inside
+        the expected range (-90<dec<90 degrees) in the image header.
 
         Parameters
         ----------
@@ -144,7 +149,8 @@ class HeaderSanity(Stage):
                                   "header.dec.value": dec_value}, image)
 
     def check_exptime_value(self, image, bad_keywords=None):
-        """Logs an error if OBSTYPE is not BIAS and EXPTIME <= 0
+        """
+        Logs an error if OBSTYPE is not BIAS and EXPTIME <= 0
 
         Parameters
         ----------
