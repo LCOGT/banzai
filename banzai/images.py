@@ -131,6 +131,23 @@ class Image(object):
     def add_history(self, msg):
         self.header.add_history(msg)
 
+    def data_is_3d(self):
+        return len(self.data.shape) > 2
+
+    def get_n_amps(self):
+        if self.data_is_3d:
+            return self.data.shape[0]
+        else:
+            return 1
+
+    def get_inner_image_section(self, edge_fraction_denominator=4):
+        if self.data_is_3d:
+            logger.error("Cannot get inner section of a 3D image")
+            return self.data
+        else:
+            inner_nx = self.nx // edge_fraction_denominator
+            inner_ny = self.ny // edge_fraction_denominator
+            return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
 
 def read_images(image_list, pipeline_context):
     images = []
