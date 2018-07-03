@@ -141,7 +141,7 @@ def get_bpm(image, pipeline_context):
 def bpm_has_valid_size(bpm, image):
 
     # If 3d, check and make sure the number of extensions is the same
-    if len(image.data.shape) > 2:
+    if image.data_is_3d():
         y_slices, x_slices = fits_utils.parse_region_keyword(image.extension_headers[0]['DATASEC'])
         is_valid = image.data.shape[0] == bpm.shape[0]
     else:
