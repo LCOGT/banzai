@@ -4,11 +4,12 @@ from banzai.utils import image_utils
 import numpy as np
 from datetime import datetime
 from banzai.stages import Stage
+from banzai.images import Image
 
 
-class FakeImage(object):
+class FakeImage(Image):
     def __init__(self, nx=101, ny=103, image_multiplier=1.0,
-                 ccdsum='2 2', epoch='20160101',):
+                 ccdsum='2 2', epoch='20160101', n_amps=1):
         self.nx = nx
         self.ny = ny
         self.telescope_id = -1
@@ -17,6 +18,8 @@ class FakeImage(object):
         self.ccdsum = ccdsum
         self.epoch = epoch
         self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
+        if n_amps > 1:
+            self.data = np.stack(n_amps*[self.data])
         self.filename = 'test.fits'
         self.filter = 'U'
         self.dateobs = datetime(2016, 1, 1)
@@ -40,7 +43,6 @@ class FakeImage(object):
 
     def add_history(self, msg):
         pass
-
 
 class FakeContext(object):
     def __init__(self):
