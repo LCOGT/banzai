@@ -132,22 +132,39 @@ class Image(object):
         self.header.add_history(msg)
 
     def data_is_3d(self):
-        return len(self.data.shape) > 2
+        try:
+            data_is_3d = len(self.data.shape) > 2
+        except AttributeError:
+            logger.error("Trying to measure dimensions of data without a shape attribute",
+                          extra={'tags': {'filename': self.filename}})
+            data_is_3d = False
+        return data_is_3d
 
     def get_n_amps(self):
-        if self.data_is_3d:
-            return self.data.shape[0]
+        if self.data_is_3d():
+            n_amps = self.data.shape[0]
         else:
-            return 1
+            n_amps = 1
+        return n_amps
 
     def get_inner_image_section(self, edge_fraction_denominator=4):
-        if self.data_is_3d:
-            logger.error("Cannot get inner section of a 3D image")
-            return self.data
+        if self.data_is_3d():
+            logger.error("Cannot get inner section of a 3D image",
+                         extra={'tags': {'filename': self.filename}})
+            inner_section = self.data
         else:
-            inner_nx = self.nx // edge_fraction_denominator
-            inner_ny = self.ny // edge_fraction_denominator
-            return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
+            # Note that (-a//b) != -(a//b) if a is odd
+            try:
+                inner_nx = self.nx // edge_fraction_denominator
+                inner_ny = self.ny // edge_fraction_denominator
+                inner_section = self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
+            # In case any of the above parameters are None
+            except TypeError:
+                logger.error("Cannot get inner section for nx={nx}, ny={ny}, data type={data_type}".format(
+                    nx=self.nx, ny=self.ny, data_type=type(self.data)),
+                    extra={'tags': {'filename': self.filename}})
+                inner_section = self.data
+        return inner_section
 
 def read_images(image_list, pipeline_context):
     images = []
