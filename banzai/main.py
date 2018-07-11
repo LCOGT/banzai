@@ -31,7 +31,6 @@ logger = logs.get_logger(__name__)
 ordered_stages = [qc.HeaderSanity,
                   qc.ThousandsTest,
                   qc.SaturationTest,
-                  qc.PatternNoiseDetector,
                   bias.OverscanSubtractor,
                   crosstalk.CrosstalkCorrector,
                   gain.GainNormalizer,
@@ -41,6 +40,7 @@ ordered_stages = [qc.HeaderSanity,
                   bias.BiasSubtractor,
                   dark.DarkSubtractor,
                   flats.FlatDivider,
+                  qc.PatternNoiseDetector,
                   photometry.SourceDetector,
                   astrometry.WCSSolver,
                   pointing.PointingTest]
@@ -85,7 +85,7 @@ def get_preview_stages_todo(image_suffix):
                                  extra_stages=[dark.DarkNormalizer, dark.DarkComparer])
     elif image_suffix == 'f00.fits':
         stages = get_stages_todo(last_stage=dark.DarkSubtractor,
-                                 extra_stages=[flats.FlatNormalizer, flats.FlatComparer])
+                                 extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer])
     else:
         stages = get_stages_todo()
     return stages
@@ -138,7 +138,9 @@ def make_master_dark_console():
 
 
 def make_master_flat(pipeline_context):
-    stages_to_do = get_stages_todo(dark.DarkSubtractor, extra_stages=[flats.FlatNormalizer, flats.FlatMaker])
+    stages_to_do = get_stages_todo(dark.DarkSubtractor, extra_stages=[flats.FlatNormalizer,
+                                                                      qc.PatternNoiseDetector,
+                                                                      flats.FlatMaker, ])
     run(stages_to_do, pipeline_context, image_types=['SKYFLAT'], calibration_maker=True,
         log_message='Making Master Flat')
 
