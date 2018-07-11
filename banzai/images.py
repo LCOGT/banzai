@@ -147,16 +147,15 @@ class Image(object):
             n_amps = 1
         return n_amps
 
-    def get_inner_image_section(self, edge_fraction_denominator=4):
+    def get_inner_image_section(self, fractional_edge_width=0.25):
         if self.data_is_3d():
             logger.error("Cannot get inner section of a 3D image",
                          extra={'tags': {'filename': self.filename}})
             inner_section = self.data
         else:
-            # Note that (-a//b) != -(a//b) if a is odd
             try:
-                inner_nx = self.nx // edge_fraction_denominator
-                inner_ny = self.ny // edge_fraction_denominator
+                inner_nx = round(self.nx * fractional_edge_width)
+                inner_ny = round(self.ny * fractional_edge_width)
                 inner_section = self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
             # In case any of the above parameters are None
             except TypeError:

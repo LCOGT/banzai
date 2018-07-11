@@ -1,8 +1,12 @@
 from banzai.images import Image
 from banzai.tests.utils import FakeContext, FakeImage
 import numpy as np
+import pytest
 
-rs = np.random.RandomState(0)
+
+@pytest.fixture(scope='module')
+def set_random_seed():
+    np.random.seed(10031312)
 
 def test_null_filename():
     test_image = Image(FakeContext, filename=None)
@@ -32,10 +36,10 @@ def test_get_n_amps_2d():
 
 def test_get_inner_quarter_default():
     test_image = FakeImage()
-    test_image.data = rs.randint(0, 1000, size=test_image.data.shape)
+    test_image.data = np.random.randint(0, 1000, size=test_image.data.shape)
     # get inner quarter manually
-    inner_nx = test_image.nx//4
-    inner_ny = test_image.ny//4
+    inner_nx = round(test_image.nx * 0.25)
+    inner_ny = round(test_image.ny * 0.25)
     inner_quarter = test_image.data[inner_ny:-inner_ny, inner_nx:-inner_nx]
     np.testing.assert_array_equal(test_image.get_inner_image_section(), inner_quarter)
 
