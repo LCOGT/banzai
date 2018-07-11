@@ -25,13 +25,14 @@ from the average value from the bias frames.
 Crosstalk
 =========
 Currently, only Sinistro images are read out using multiple amplifiers. The Sinistro frames do have significant
-crosstalk between amplifiers, but this is currently removed by the preprocessor. The crosstalk is removed using
+crosstalk between amplifiers, which is removed using
 linear coefficients that relate each quadrant to every other quadrant.
 
 
 Gain
 ====
-All pixels in the frame are multiplied by the gain, using the ``GAIN`` header keyword.
+All pixels in the frame are multiplied by the gain, using the ``GAIN`` header keyword. Thus, the science
+frames output by BANZAI are all in units of electrons.
 
 
 Mosaic
@@ -68,7 +69,8 @@ instrument, the data will not be reduced and an exception will be raised.
 
 Flat Field Correction
 =====================
-Master flat field images (normalized to unity) are divided out of every science frame. The most recent
+Master flat field images (normalized to unity using the inner quarter of the image)
+are divided out of every science frame. The most recent
 master flat-field image for the given telescope, filter, and binning is used. If no flat field exists,
 the data will not be reduced and an exception will be raised.
 
@@ -128,7 +130,7 @@ produce robust results. We have adopted a slightly different method. We use the 
 estimate the scatter of the distribution (traditionally characterized by the standard deviation). The mad is related to the
 std by
 
-\sigma = 1.4826 * mad
+:math:`\sigma\approx 1.4826 \times` mad
 
 We have termed this the "robust standard deviation" (rstd). Using the robust standard deviation, we mask pixels reliably and
 take a mean of the remaining pixels as usual.
@@ -194,8 +196,8 @@ Quality Control
 
 Header Sanity
 =============
-The header sanity test first checks if any principal FITS header keywords are either missing or set to ``'N/A'``.
-The following keywords are checked:
+The header sanity test first checks if any of the following principal FITS
+header keywords are either missing or set to ``'N/A'``:
 ``RA``, ``DEC``, ``CAT-RA``, ``CAT-DEC``,
 ``OFST-RA``, ``OFST-DEC``, ``TPT-RA``,
 ``TPT-DEC``, ``PM-RA``, ``PM-DEC``,
@@ -226,7 +228,7 @@ This test measures the fraction of saturated pixels in each Sininstro frame, and
 
 Pattern Noise Detector
 ======================
-Occasionally some cameras have been found to exhibit highly structured electrical pattern noise. Although it
+Occasionally, if a camera is failing, it may exhibit highly structured electrical pattern noise. Although this
 is not a common occurrence, it is still desirable to detect the issue as soon as possible.
 
 This algorithm computes a power array by taking the fourier transform of the full image, then taking the median of
@@ -234,7 +236,7 @@ the absolute values along the vertical axis. Next, the SNR is computed as:
 
 SNR = [power - median(power)] / MAD(power)
 
-The frame is considered to have pattern noise if more than 5 pixels are above an SNR of 15.
+The frame is considered to have pattern noise if more than 5 bins are above an SNR of 15.
 
 Pointing Test
 =============
@@ -288,11 +290,10 @@ Other Considerations
 Sinistro Cameras
 ================
 While the Spectral and SBIG cameras produce single extension fits files, the Sinistro frames produce
-four amplifier outputs.
-The top amplifiers (3 and 4) have more light sensitive pixels than the bottom amplifiers (1 and 2). All of the parallel
-overscan rows are discarded. One edge row is discarded for the amplifiers that have an extra light sensitive row.
-The final frame size is 4096x4096.
-Currently only 1x1 binning is supported for Sinsitros.
+four amplifier outputs. In some historic data, there is a missing row in the center. This is because
+the top amplifiers (3 and 4) have more light sensitive pixels than the bottom amplifiers (1 and 2).
+While all of the parallel overscan rows are discarded, one edge row is discarded for the amplifiers
+that have an extra light sensitive row.
 
 
 Future Work
