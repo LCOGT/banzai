@@ -92,16 +92,11 @@ produces approximately the same results as ``FLUX_AUTO`` from SExtractor.
 We set the source detection limit at 3 times the global rms of the image. ``MINAREA`` is set to 5,
 the default. This should minimize false detections, but may miss the faintest sources.
 
-The catalog is returned as the ``CAT`` as fits binary table extension of the final science image. The catalog
-has the following columns: the position in pixel coordinates, (``X``, ``Y``), the flux (``Flux``),
-the error in the flux (``Fluxerr``), the semi-major and semi-minor axes (``a``, ``b``),
-and the position angle (``theta``).
-
 
 Astrometry
 ==========
-The WCS is found by using Astrometry.net (Lang et al. 2009, arXiv:0910.2233). We use the catalog from
-the source detection (the previous step) as input.
+The WCS is found by using Astrometry.net (Lang et al. 2012, ascl:1208.001, http://astrometry.net).
+We use the catalog from the source detection (the previous step) as input.
 
 We adopt a code tolerance of 0.003 (a factor of 3 smaller than the default), but increase the centroid
 uncertainty to be 20 pixels. The large centroid uncertainty allows the algorithm to find quads even
@@ -113,9 +108,6 @@ astrometry solution.
 Currently no non-linear distortion is included in the WCS (the current WCS solution only has a center,
 a pixel scale, and a rotation). At worst (in the image corners), the offset between
 coordinates with non-linear distortion terms included and those without are ~5 arcseconds.
-
-Eventually, astrometry.net may be replaced with a purely Python alternative
-(e.g. AliPy; http://obswww.unige.ch/~tewes/alipy/).
 
 
 Master Calibration Frames
