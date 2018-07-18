@@ -136,6 +136,8 @@ def read_images(image_list, pipeline_context):
                 else:
                     image.bpm = bpm
                     images.append(image)
+            else:
+                images.append(image)
         except Exception as e:
             logger.error('Error loading {0}'.format(filename))
             logger.error(e)
