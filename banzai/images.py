@@ -144,15 +144,15 @@ class Image(object):
     def get_inner_image_section(self, inner_edge_width=0.25):
         """
         Extract the inner section of the image with dimensions:
-        ny * inner_edge_width * 2.0 x nx * inner_edge_width * 2.0 
+        ny * inner_edge_width * 2.0 x nx * inner_edge_width * 2.0
 
         Parameters
         ----------
 
-        inner_edge_with: float
-                         Size of inner edge as fraction of total image size
-        
-        Returns 
+        inner_edge_width: float
+                          Size of inner edge as fraction of total image size
+
+        Returns
         -------
         inner_section: array
                        Inner section of image
@@ -160,11 +160,12 @@ class Image(object):
         if self.data_is_3d():
             logger.error("Cannot get inner section of a 3D image",
                          extra={'tags': {'filename': self.filename}})
-            raise ValueError 
+            raise ValueError
 
         inner_nx = round(self.nx * inner_edge_width)
         inner_ny = round(self.ny * inner_edge_width)
         return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
+
 
 def read_images(image_list, pipeline_context):
     images = []

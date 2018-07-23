@@ -48,4 +48,3 @@ def test_get_inner_image_section_3d():
     test_image = FakeImage(n_amps=4)
     with pytest.raises(ValueError):
         test_image.get_inner_image_section()
-
