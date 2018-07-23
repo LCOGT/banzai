@@ -46,10 +46,6 @@ def test_get_inner_quarter_default():
 
 def test_get_inner_image_section_3d():
     test_image = FakeImage(n_amps=4)
-    np.testing.assert_array_equal(test_image.get_inner_image_section(), test_image.data)
+    with pytest.raises(ValueError):
+        test_image.get_inner_image_section()
 
-
-def test_get_inner_image_section_no_data():
-    test_image = FakeImage()
-    test_image.data = None
-    assert test_image.get_inner_image_section() is None
