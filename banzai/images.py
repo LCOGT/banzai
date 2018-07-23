@@ -132,13 +132,7 @@ class Image(object):
         self.header.add_history(msg)
 
     def data_is_3d(self):
-        try:
-            data_is_3d = len(self.data.shape) > 2
-        except AttributeError:
-            logger.error("Trying to measure dimensions of data without a shape attribute",
-                          extra={'tags': {'filename': self.filename}})
-            data_is_3d = False
-        return data_is_3d
+        return len(self.data.shape) > 2
 
     def get_n_amps(self):
         if self.data_is_3d():
@@ -166,19 +160,11 @@ class Image(object):
         if self.data_is_3d():
             logger.error("Cannot get inner section of a 3D image",
                          extra={'tags': {'filename': self.filename}})
-            inner_section = self.data
-        else:
-            try:
-                inner_nx = round(self.nx * inner_edge_width)
-                inner_ny = round(self.ny * inner_edge_width)
-                inner_section = self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
-            # In case any of the above parameters are None
-            except TypeError:
-                logger.error("Cannot get inner section for nx={nx}, ny={ny}, data type={data_type}".format(
-                    nx=self.nx, ny=self.ny, data_type=type(self.data)),
-                    extra={'tags': {'filename': self.filename}})
-                inner_section = self.data
-        return inner_section
+            raise ValueError 
+
+        inner_nx = round(self.nx * inner_edge_width)
+        inner_ny = round(self.ny * inner_edge_width)
+        return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
 
 def read_images(image_list, pipeline_context):
     images = []
