@@ -21,11 +21,8 @@ class FlatNormalizer(Stage):
 
     def do_stage(self, images):
         for image in images:
-            quarter_nx = image.nx // 4
-            quarter_ny = image.ny // 4
             # Get the sigma clipped mean of the central 25% of the image
-            flat_normalization = stats.sigma_clipped_mean(image.data[quarter_ny: -quarter_ny,
-                                                                     quarter_nx: -quarter_nx], 3.5)
+            flat_normalization = stats.sigma_clipped_mean(image.get_inner_image_section(), 3.5)
             image.data /= flat_normalization
             image.header['FLATLVL'] = flat_normalization
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)

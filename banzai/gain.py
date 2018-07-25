@@ -26,9 +26,8 @@ class GainNormalizer(Stage):
                 self.logger.error('Gain missing. Rejecting image.', extra=logging_tags)
                 images_to_remove.append(image)
             else:
-                if len(image.data.shape) > 2:
-                    n_amps = image.data.shape[0]
-                    for i in range(n_amps):
+                if image.data_is_3d():
+                    for i in range(image.get_n_amps()):
                         image.data[i] *= gain[i]
                     image.header['SATURATE'] *= min(gain)
                     image.header['MAXLIN'] *= min(gain)

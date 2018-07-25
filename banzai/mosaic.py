@@ -16,16 +16,15 @@ class MosaicCreator(Stage):
 
     def do_stage(self, images):
         for image in images:
-            if len(image.data.shape) > 2:
+            if image.data_is_3d():
 
                 logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
                 logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
 
-                n_amps = image.data.shape[0]
-                nx, ny = get_mosaic_size(image, n_amps)
+                nx, ny = get_mosaic_size(image, image.get_n_amps())
                 mosaiced_data = np.zeros((ny, nx), dtype=np.float32)
                 mosaiced_bpm = np.zeros((ny, nx), dtype=np.uint8)
-                for i in range(n_amps):
+                for i in range(image.get_n_amps()):
                     datasec = image.extension_headers[i]['DATASEC']
                     amp_slice = fits_utils.parse_region_keyword(datasec)
                     logs.add_tag(logging_tags, 'DATASEC{0}'.format(i + 1), datasec)

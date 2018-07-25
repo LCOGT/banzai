@@ -1,3 +1,8 @@
+0.9.6 (2018-07-23)
+------------------
+- Added functions to check whether image is 3d, and to extract central portion of image 
+- Updated Read the Docs
+
 0.9.5 (2018-06-11)
 ------------------
 - Fixed header checker

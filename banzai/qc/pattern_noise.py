@@ -26,8 +26,7 @@ class PatternNoiseDetector(Stage):
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             logs.add_tag(logging_tags, 'snr_threshold', self.SNR_THRESHOLD)
             logs.add_tag(logging_tags, 'freq_bins_threshold', self.FREQ_BINS_THRESHOLD)
-            data_is_3d = len(image.data.shape) > 2
-            if data_is_3d:
+            if image.data_is_3d():
                 pattern_noise_is_bad = any([check_for_pattern_noise(data, self.SNR_THRESHOLD, self.FREQ_BINS_THRESHOLD)
                                             for data in image.data])
             else:

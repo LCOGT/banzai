@@ -127,8 +127,8 @@ class OverscanSubtractor(Stage):
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
 
             # Subtract the overscan if it exists
-            if len(image.data.shape) > 2:
-                for i in range(image.data.shape[0]):
+            if image.data_is_3d():
+                for i in range(image.get_n_amps()):
                     overscan_level = _subtract_overscan_3d(image, i)
                     logs.add_tag(logging_tags, 'OVERSCN{0}'.format(i + 1), overscan_level)
                     self.logger.info('Subtracting overscan', extra=logging_tags)
