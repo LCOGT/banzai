@@ -26,14 +26,14 @@ def test_pattern_noise_detects_noise_when_it_should(set_random_seed):
     data = 100.0 * np.sin(np.arange(1000000) / 0.1) + 1000.0 + np.random.normal(0.0, 10.0, size=1000000)
     data = data.reshape(1000, 1000)
     detector = pattern_noise.PatternNoiseDetector(None)
-    assert detector.check_for_pattern_noise(data, 10, 5)
+    assert detector.check_for_pattern_noise(data)
 
 
 def test_pattern_noise_does_not_detect_white_noise(set_random_seed):
     data = 1000 + np.random.normal(0.0, 10.0, size=1000000)
     data = data.reshape(1000, 1000)
     detector = pattern_noise.PatternNoiseDetector(None)
-    assert detector.check_for_pattern_noise(data, 10, 5) == False
+    assert detector.check_for_pattern_noise(data) == False
 
 
 def test_pattern_noise_does_not_detect_stars(set_random_seed):
@@ -45,7 +45,7 @@ def test_pattern_noise_does_not_detect_stars(set_random_seed):
         brightness = np.random.uniform(low=1000., high=5000.)
         data += gaussian2d(data.shape, x, y, brightness, 3.5)
     detector = pattern_noise.PatternNoiseDetector(None)
-    assert detector.check_for_pattern_noise(data, 10, 5) == False
+    assert detector.check_for_pattern_noise(data) == False
 
 
 def test_pattern_noise_on_2d_image(set_random_seed):
