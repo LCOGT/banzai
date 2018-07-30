@@ -282,7 +282,7 @@ def populate_bpm_table(directory, db_address=_DEFAULT_DB):
             logger.error('Telescope is missing from database', extra={'tags': {'site': header['SITEID'],
                                                                                'instrument': header['INSTRUME']}})
             continue
-            
+
         bpm_attributes = {'telescope_id': telescope.id, 'filepath': os.path.abspath(directory),
                           'filename': os.path.basename(bpm_filename), 'ccdsum': ccdsum,
                           'creation_date': creation_date}
