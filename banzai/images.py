@@ -40,13 +40,11 @@ class Image(object):
 
         self.request_number = header.get('REQNUM')
 
-        self.site = header.get('SITEID')
-        self.instrument = header.get('INSTRUME')
-        if self.site is not None and self.instrument is not None:
-            self.telescope_id = dbs.get_telescope_id(self.site, self.instrument,
-                                                     db_address=pipeline_context.db_address)
-        else:
-            self.telescope_id = None
+        self.telescope = dbs.get_telescope(self.header)
+        if self.telescope is not None:
+            self.site = self.telescope.site
+            self.instrument = self.telescope.instrument
+
         self.epoch = str(header.get('DAY-OBS'))
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
