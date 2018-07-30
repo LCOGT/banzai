@@ -312,19 +312,24 @@ def get_telescope_id(header, db_address=_DEFAULT_DB):
     return telescope_id
 
 
-def query_for_telescope(db_session, site, instrument):
+def query_for_telescope(db_address, site, instrument):
+    # Short circuit
+    if site is None or instrument is None:
+        return None
+    db_session = get_session(db_address=db_address)
     criteria = (Telescope.site == site) & (Telescope.instrument == instrument)
-    return db_session.query(Telescope).filter(criteria).first()
+    telescope = db_session.query(Telescope).filter(criteria).first()
+    db_session.close()
+    return telescope
 
 
 def get_telescope(header, db_address=_DEFAULT_DB):
-    db_session = get_session(db_address=db_address)
-    telescope = query_for_telescope(db_session, header['SITEID'], header['INSTRUME'])
+    site = header.get('SITEID')
+    instrument = header.get('INSTRUME')
+    telescope = query_for_telescope(db_address, site, instrument)
     if telescope is None:
-        telescope = query_for_telescope(db_session, header['SITEID'], header['TELESCOPE'])
-    db_session.close()
+        telescope = query_for_telescope(db_address, site, header.get('TELESCOPE'))
     if telescope is None:
-        site, instrument = header['SITEID'], header['INSTRUME']
         err_msg = '{site}/{instrument} is not in the database.'.format(site=site, instrument=instrument)
         logger.error(err_msg, extra={'tags': {'site': site, 'instrument': instrument}})
     return telescope

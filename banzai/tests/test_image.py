@@ -8,6 +8,7 @@ import pytest
 def set_random_seed():
     np.random.seed(10031312)
 
+
 def test_null_filename():
     test_image = Image(FakeContext, filename=None)
     assert test_image.data is None
