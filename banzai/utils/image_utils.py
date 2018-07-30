@@ -16,6 +16,10 @@ from datetime import timedelta
 logger = logs.get_logger(__name__)
 
 
+class MissingBPMError(Exception):
+    pass
+
+
 def select_images(image_list, image_types):
     images = []
     for filename in image_list:
@@ -106,36 +110,44 @@ def save_images(pipeline_context, images, master_calibration=False):
     return output_files
 
 
-def get_bpm(image, pipeline_context):
+def load_bpm(image, pipeline_context):
     bpm_filename = dbs.get_bpm(image.telescope_id, image.ccdsum,
                                db_address=pipeline_context.db_address)
-    if bpm_filename is None:
-        bpm = None
-        image.header['L1IDMASK'] = ('', 'Id. of mask file used')
+    if pipeline_context.bpm_required and bpm_filename is None:
+        raise MissingBPMError('No Bad Pixel Mask file exists for this image.')
+    elif bpm_filename is None:
+        load_default_bpm(image)
     else:
-        bpm_hdu = fits_utils.open_fits_file(bpm_filename)
-        bpm_extensions = fits_utils.get_extensions_by_name(bpm_hdu, 'BPM')
-        if len(bpm_extensions) > 1:
-            extension_shape = bpm_extensions[0].data.shape
-            bpm_shape = (len(bpm_extensions), extension_shape[0], extension_shape[1])
-            bpm = np.zeros(bpm_shape, dtype=np.uint8)
-            for i, extension in enumerate(bpm_extensions):
-                bpm[i, :, :] = extension.data[:, :]
-        elif len(bpm_extensions) == 1:
-            bpm = np.array(bpm_extensions[0].data, dtype=np.uint8)
-        else:
-            bpm = np.array(bpm_hdu[0].data, dtype=np.uint8)
-        if not bpm_has_valid_size(bpm, image):
-            tags = logs.image_config_to_tags(image, None)
-            logs.add_tag(tags, 'filename', image.filename)
-            logger.error('BPM shape mismatch', extra=tags)
-            err_msg = 'BPM shape mismatch for {filename} ' \
-                      '{site}/{instrument}'.format(filename=image.filename, site=image.site,
-                                                   instrument=image.instrument)
-            raise ValueError(err_msg)
-        image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
+        load_bpm_file(bpm_filename, image)
 
-    return bpm
+
+def load_default_bpm(image):
+    if image.data is None:
+        image.bpm = None
+    else:
+        image.bpm = np.zeros(image.data.shape, dtype=np.uint8)
+    image.header['L1IDMASK'] = ('', 'Id. of mask file used')
+
+
+def load_bpm_file(bpm_filename, image):
+    bpm_hdu = fits_utils.open_fits_file(bpm_filename)
+    bpm_extensions = fits_utils.get_extensions_by_name(bpm_hdu, 'BPM')
+    if len(bpm_extensions) > 1:
+        extension_shape = bpm_extensions[0].data.shape
+        bpm_shape = (len(bpm_extensions), extension_shape[0], extension_shape[1])
+        image.bpm = np.zeros(bpm_shape, dtype=np.uint8)
+        for i, extension in enumerate(bpm_extensions):
+            image.bpm[i, :, :] = extension.data[:, :]
+    elif len(bpm_extensions) == 1:
+        image.bpm = np.array(bpm_extensions[0].data, dtype=np.uint8)
+    else:
+        image.bpm = np.array(bpm_hdu[0].data, dtype=np.uint8)
+    if not bpm_has_valid_size(image.bpm, image):
+        tags = logs.image_config_to_tags(image, None)
+        logs.add_tag(tags, 'filename', image.filename)
+        logger.error('BPM shape mismatch', extra=tags)
+        raise ValueError('BPM shape mismatch')
+    image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
 
 
 def bpm_has_valid_size(bpm, image):

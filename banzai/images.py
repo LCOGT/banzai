@@ -172,17 +172,15 @@ def read_images(image_list, pipeline_context):
     for filename in image_list:
         try:
             image = Image(pipeline_context, filename=filename)
+            if image.telescope_id is None:
+                error_message = 'Telescope is not in the database: {site}/{instrument}'
+                error_message = error_message.format(site=image.site, instrument=image.instrument)
+                raise dbs.TelescopeMissingException(error_message)
             munge(image, pipeline_context)
             if image.bpm is None:
-                bpm = image_utils.get_bpm(image, pipeline_context)
-                if bpm is None:
-                    logger.error('No BPM file exists for this image.',
-                                 extra={'tags': {'filename': image.filename}})
-                else:
-                    image.bpm = bpm
-                    images.append(image)
+                image_utils.load_bpm(image, pipeline_context)
+            images.append(image)
         except Exception as e:
-            logger.error('Error loading {0}'.format(filename))
-            logger.error(e)
+            logger.error('Error loading image: {error}'.format(error=e), extra={'tags': {'filename': filename}})
             continue
     return images
