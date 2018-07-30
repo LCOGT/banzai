@@ -1,3 +1,9 @@
+0.9.7 (2018-07-30)
+------------------
+- Refactored exceptions for missing bad pixel masks
+- Added fallback check to search the TELESCOP keyword in the configdb (necessary for NRES)
+- Added override to the bad pixel mask requirement
+
 0.9.6 (2018-07-23)
 ------------------
 - Added functions to check whether image is 3d, and to extract central portion of image 
