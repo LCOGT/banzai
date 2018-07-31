@@ -297,22 +297,7 @@ class TelescopeMissingException(Exception):
     pass
 
 
-def get_telescope_id(header, db_address=_DEFAULT_DB):
-    db_session = get_session(db_address=db_address)
-    criteria = (Telescope.site == site) & (Telescope.instrument == instrument)
-    telescope = db_session.query(Telescope).filter(criteria).first()
-    db_session.close()
-    if telescope is None:
-        err_msg = '{site}/{instrument} is not in the database.'.format(site=site,
-                                                                       instrument=instrument)
-        logger.error(err_msg, extra={'tags': {'site': site, 'instrument': instrument}})
-        telescope_id = None
-    else:
-        telescope_id = telescope.id
-    return telescope_id
-
-
-def query_for_telescope(db_address, site, instrument):
+def _query_for_telescope(db_address, site, instrument):
     # Short circuit
     if site is None or instrument is None:
         return None
@@ -326,9 +311,9 @@ def query_for_telescope(db_address, site, instrument):
 def get_telescope(header, db_address=_DEFAULT_DB):
     site = header.get('SITEID')
     instrument = header.get('INSTRUME')
-    telescope = query_for_telescope(db_address, site, instrument)
-    if telescope is None:
-        telescope = query_for_telescope(db_address, site, header.get('TELESCOPE'))
+    telescope_for_instrument = _query_for_telescope(db_address, site, instrument)
+    telescope = telescope_for_instrument if telescope_for_instrument is not None \
+        else _query_for_telescope(db_address, site, header.get('TELESCOP'))
     if telescope is None:
         err_msg = '{site}/{instrument} is not in the database.'.format(site=site, instrument=instrument)
         logger.error(err_msg, extra={'tags': {'site': site, 'instrument': instrument}})

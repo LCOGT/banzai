@@ -113,15 +113,15 @@ def save_images(pipeline_context, images, master_calibration=False):
 def load_bpm(image, pipeline_context):
     bpm_filename = dbs.get_bpm(image.telescope_id, image.ccdsum,
                                db_address=pipeline_context.db_address)
-    if pipeline_context.bpm_required and bpm_filename is None:
-        raise MissingBPMError('No Bad Pixel Mask file exists for this image.')
+    if pipeline_context.no_bpm:
+        load_empty_bpm(image)
     elif bpm_filename is None:
-        load_default_bpm(image)
+        raise MissingBPMError('No Bad Pixel Mask file exists for this image.')
     else:
         load_bpm_file(bpm_filename, image)
 
 
-def load_default_bpm(image):
+def load_empty_bpm(image):
     if image.data is None:
         image.bpm = None
     else:

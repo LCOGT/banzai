@@ -44,6 +44,9 @@ class Image(object):
         if self.telescope is not None:
             self.site = self.telescope.site
             self.instrument = self.telescope.instrument
+        else:
+            self.site = header.get('SITEID')
+            self.instrument = header.get('INSTRUME')
 
         self.epoch = str(header.get('DAY-OBS'))
         self.nx = header.get('NAXIS1')
@@ -170,7 +173,7 @@ def read_images(image_list, pipeline_context):
     for filename in image_list:
         try:
             image = Image(pipeline_context, filename=filename)
-            if image.telescope_id is None:
+            if image.telescope is None:
                 error_message = 'Telescope is not in the database: {site}/{instrument}'
                 error_message = error_message.format(site=image.site, instrument=image.instrument)
                 raise dbs.TelescopeMissingException(error_message)

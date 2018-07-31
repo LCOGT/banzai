@@ -107,7 +107,7 @@ class PipelineContext(object):
         self.max_preview_tries = args.max_preview_tries
         self.elasticsearch_doc_type = args.elasticsearch_doc_type
         self.elasticsearch_qc_index = args.elasticsearch_qc_index
-        self.bpm_required = args.bpm_required
+        self.no_bpm = args.no_bpm
 
 
 def run_end_of_night_from_console(scripts_to_run):
@@ -234,8 +234,8 @@ def reduce_night():
                         help='ElasticSearch index to use for QC results')
     parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
                         help='Elasticsearch document type for QC records')
-    parser.add_argument('--bpm-not-required', dest='bpm_required', default=True, action='store_false',
-                        help='Do not require a bad pixel to be present to reduce data (Default BPM contains all zeros)')
+    parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
+                        help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
 
     args = parser.parse_args()
 
@@ -306,8 +306,8 @@ def parse_end_of_night_command_line_arguments():
                         help='ElasticSearch index to use for QC results')
     parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
                         help='Elasticsearch document type for QC records')
-    parser.add_argument('--bpm-not-required', dest='bpm_required', default=True, action='store_false',
-                        help='Do not require a bad pixel to be present to reduce data (Default BPM contains all zeros)')
+    parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
+                        help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
     args = parser.parse_args()
 
     args.preview_mode = False
@@ -369,8 +369,8 @@ def run_preview_pipeline():
                         help='ElasticSearch index to use for QC results')
     parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
                         help='Elasticsearch document type for QC records')
-    parser.add_argument('--bpm-not-required', dest='bpm_required', default=True, action='store_false',
-                        help='Do not require a bad pixel to be present to reduce data (Default BPM contains all zeros)')
+    parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
+                        help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
 
     args = parser.parse_args()
     args.preview_mode = True
