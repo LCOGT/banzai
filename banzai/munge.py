@@ -37,6 +37,11 @@ def munge(image, pipeline_context):
                                         '[ADU] Saturation level used')
     if not image_has_valid_saturate_value(image):
         raise ValueError('Saturate value not valid {f}'.format(f=image.filename))
+    
+    if image.header.get('CRPIX1') is None:
+        image.header['CRPIX1'] = 0
+    if image.header.get('CRPIX2') is None:
+        image.header['CRPIX2'] = 0
 
 
 def sinistro_mode_is_supported(image):

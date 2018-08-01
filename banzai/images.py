@@ -49,7 +49,7 @@ class Image(object):
                 self.telescope_id = dbs.get_telescope_id(self.site, header.get('TELESCOP'),
                                                          db_address=pipeline_context.db_address)
                 self.instrument = header.get('TELESCOP')
-                
+
         self.epoch = str(header.get('DAY-OBS'))
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
