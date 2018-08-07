@@ -86,3 +86,56 @@ def test_pattern_noise_in_only_one_quadrant(set_random_seed):
     detector.logger.error = mock.MagicMock()
     detector.do_stage([image])
     assert detector.logger.error.called
+
+
+def test_trim_edges():
+    assert pattern_noise.trim_image_edges(np.zeros((100, 100)), fractional_edge_width=0.25).shape == (50, 50)
+    assert pattern_noise.trim_image_edges(np.zeros((100, 100)), fractional_edge_width=0.10).shape == (80, 80)
+    assert pattern_noise.trim_image_edges(np.zeros((100, 120)), fractional_edge_width=0.25).shape == (44, 64)
+
+
+def test_get_2d_power_band():
+    data = np.random.normal(0.0, 10.0, size=(100, 100))
+    fft = abs(np.fft.rfft2(data))[37:62]
+    power_band = pattern_noise.get_2d_power_band(data, fractional_band_width=0.25)
+    assert power_band.shape == (25, 51)
+    np.testing.assert_allclose(power_band, fft)
+
+
+def test_compute_snr():
+    data = np.random.normal(1000.0, 20.0, size=(200, 100))
+    snr = pattern_noise.compute_snr(data)
+    assert len(snr) == data.shape[1]-1
+    assert all(snr < 5)
+
+
+def test_get_odd_integer():
+    assert pattern_noise.get_odd_integer(1.5) == 3
+    assert pattern_noise.get_odd_integer(2) == 3
+    assert pattern_noise.get_odd_integer(2.5) == 3
+
+
+def test_convolve_snr_with_wavelet():
+    snr = (np.sin(np.arange(100) / 5.) + 1) * 2 + np.random.normal(0, 1, 100)
+    snr[48:52] = 100
+    snr_convolved = pattern_noise.convolve_snr_with_wavelet(snr, nwavelets=25)
+    peaks = np.argmax(snr_convolved, axis=1)
+    assert snr_convolved.shape == (25, 100)
+    assert all(peaks > 48) and all(peaks < 52)
+
+
+def test_get_peak_parameters_of_single_peak():
+    snr_convolved = np.zeros((25, 100))
+    snr_convolved[:, 50] = np.arange(25) + 6
+    peak_maxima, std_maxima = pattern_noise.get_peak_parameters(snr_convolved)
+    assert all(peak_maxima > 5)
+    assert std_maxima == 0
+
+
+def test_get_peak_parameters_of_two_peaks():
+    snr_convolved = np.zeros((25, 100))
+    snr_convolved[:, 25] = np.arange(25)[::-1] + 6
+    snr_convolved[:, 75] = np.arange(25) + 6
+    peak_maxima, std_maxima = pattern_noise.get_peak_parameters(snr_convolved)
+    assert all(peak_maxima > 5)
+    assert std_maxima > 1
