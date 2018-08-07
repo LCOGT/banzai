@@ -115,8 +115,8 @@ def get_2d_power_band(data, fractional_band_width=0.25):
 
     # Extract horizontal band, as corners of 2D FFT can vary significantly between images
     ny = full_power_2d.shape[0]
-    y1 = round(ny * (0.5 - fractional_band_width/2))
-    y2 = round(ny * (0.5 + fractional_band_width/2))
+    y1 = int(ny * (0.5 - fractional_band_width/2))
+    y2 = int(ny * (0.5 + fractional_band_width/2))
 
     return full_power_2d[y1:y2]
 
