@@ -36,6 +36,13 @@ def test_pattern_noise_does_not_detect_white_noise(set_random_seed):
     assert detector.check_for_pattern_noise(data) == False
 
 
+def test_pattern_noise_on_garbage_image():
+    data = np.zeros((1000, 1000))
+    data[:, :] = np.nan
+    detector = pattern_noise.PatternNoiseDetector(None)
+    assert detector.check_for_pattern_noise(data) == False
+
+
 def test_pattern_noise_does_not_detect_stars(set_random_seed):
     data = 1000 + np.random.normal(0.0, 10.0, size=1000000)
     data = data.reshape(1000, 1000)
@@ -61,40 +68,13 @@ def test_pattern_noise_on_2d_image(set_random_seed):
     assert detector.logger.error.called
 
 
-def test_pattern_noise_on_3d_image(set_random_seed):
-    data = 100.0 * np.sin(np.arange(1000000 * 4) / 0.1) + 1000.0 + np.random.normal(0.0, 10.0, size=1000000 * 4)
-    data = data.reshape(4, 1000, 1000)
-
-    image = FakeImage()
-    image.data = data
-
-    detector = pattern_noise.PatternNoiseDetector(None)
-    detector.logger.error = mock.MagicMock()
-    detector.do_stage([image])
-    assert detector.logger.error.called
-
-
-def test_pattern_noise_in_only_one_quadrant(set_random_seed):
-    data = np.random.normal(0.0, 10.0, size=1000000 * 4) + 1000.0
-    data = data.reshape(4, 1000, 1000)
-    data[3] += 100.0 * np.sin(np.arange(1e6) / 0.1).reshape(1000, 1000)
-
-    image = FakeImage()
-    image.data = data
-
-    detector = pattern_noise.PatternNoiseDetector(None)
-    detector.logger.error = mock.MagicMock()
-    detector.do_stage([image])
-    assert detector.logger.error.called
-
-
 def test_trim_edges():
     assert pattern_noise.trim_image_edges(np.zeros((100, 100)), fractional_edge_width=0.25).shape == (50, 50)
     assert pattern_noise.trim_image_edges(np.zeros((100, 100)), fractional_edge_width=0.10).shape == (80, 80)
     assert pattern_noise.trim_image_edges(np.zeros((100, 120)), fractional_edge_width=0.25).shape == (44, 64)
 
 
-def test_get_2d_power_band():
+def test_get_2d_power_band(set_random_seed):
     data = np.random.normal(0.0, 10.0, size=(100, 100))
     fft = abs(np.fft.rfft2(data))[37:62]
     power_band = pattern_noise.get_2d_power_band(data, fractional_band_width=0.25)
@@ -102,8 +82,8 @@ def test_get_2d_power_band():
     np.testing.assert_allclose(power_band, fft)
 
 
-def test_compute_snr():
-    data = np.random.normal(1000.0, 20.0, size=(200, 100))
+def test_compute_snr(set_random_seed):
+    data = np.random.normal(1000.0, 20.0, size=(500, 100))
     snr = pattern_noise.compute_snr(data)
     assert len(snr) == data.shape[1]-1
     assert all(snr < 5)
@@ -115,7 +95,7 @@ def test_get_odd_integer():
     assert pattern_noise.get_odd_integer(2.5) == 3
 
 
-def test_convolve_snr_with_wavelet():
+def test_convolve_snr_with_wavelet(set_random_seed):
     snr = (np.sin(np.arange(100) / 5.) + 1) * 2 + np.random.normal(0, 1, 100)
     snr[48:52] = 100
     snr_convolved = pattern_noise.convolve_snr_with_wavelet(snr, nwavelets=25)
