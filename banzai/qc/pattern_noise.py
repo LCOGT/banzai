@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from scipy.signal import cwt, ricker
+import scipy.signal
 from scipy.ndimage.filters import median_filter
 
 from banzai.stages import Stage
@@ -11,7 +11,7 @@ class PatternNoiseDetector(Stage):
     # Signal to Noise threshold to raise an alert
     SNR_THRESHOLD = 10.0
     # The maximum allowed standard deviation of the peak centres
-    STD_THRESHOLD = 1.0
+    PEAK_POSITION_STD_THRESHOLD = 1.0
 
     def __init__(self, pipeline_context):
         super(PatternNoiseDetector, self).__init__(pipeline_context)
@@ -25,13 +25,9 @@ class PatternNoiseDetector(Stage):
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             logs.add_tag(logging_tags, 'snr_threshold', self.SNR_THRESHOLD)
-            logs.add_tag(logging_tags, 'std_threshold', self.STD_THRESHOLD)
+            logs.add_tag(logging_tags, 'std_threshold', self.PEAK_POSITION_STD_THRESHOLD)
 
-            # If the data is a cube, then run on each extension individually
-            if image.data_is_3d():
-                pattern_noise_is_bad = any([self.check_for_pattern_noise(data) for data in image.data])
-            else:
-                pattern_noise_is_bad = self.check_for_pattern_noise(image.data)
+            pattern_noise_is_bad = self.check_for_pattern_noise(image.data)
 
             if pattern_noise_is_bad:
                 self.logger.error('Image found to have pattern noise.', extra=logging_tags)
@@ -39,7 +35,7 @@ class PatternNoiseDetector(Stage):
                 self.logger.info('No pattern noise found.', extra=logging_tags)
             self.save_qc_results({'pattern_noise.failed': pattern_noise_is_bad,
                                   'pattern_noise.snr_threshold': self.SNR_THRESHOLD,
-                                  'pattern_noise.std_threshold': self.STD_THRESHOLD,
+                                  'pattern_noise.std_threshold': self.PEAK_POSITION_STD_THRESHOLD,
                                   }, image)
         return images
 
@@ -70,7 +66,7 @@ class PatternNoiseDetector(Stage):
         peak_maxima, std_maxima = get_peak_parameters(convolved_snr)
 
         # Check that all peaks are above threshold and that the peak center standard deviation is small.
-        has_pattern_noise = (peak_maxima > self.SNR_THRESHOLD).all() and std_maxima < self.STD_THRESHOLD
+        has_pattern_noise = (peak_maxima > self.SNR_THRESHOLD).all() and std_maxima < self.PEAK_POSITION_STD_THRESHOLD
         return has_pattern_noise
 
 
@@ -152,7 +148,7 @@ def compute_snr(power_2d, fractional_window_size=0.05):
 
 def get_odd_integer(x):
     """
-    Return the closest odd integer given a float
+    Return the ceiling odd integer given a float
 
     Parameters
     ----------
@@ -195,7 +191,7 @@ def convolve_snr_with_wavelet(snr,
     widths = np.linspace(len(snr) * fractional_wavelet_width_min,
                          len(snr) * fractional_wavelet_width_max,
                          nwavelets)
-    return cwt(snr, ricker, widths)
+    return scipy.signal.cwt(snr, scipy.signal.ricker, widths)
 
 
 def get_peak_parameters(convolved_snr):
