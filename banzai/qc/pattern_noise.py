@@ -47,10 +47,6 @@ class PatternNoiseDetector(Stage):
         ----------
         data : numpy array
                Image data to test for pattern noise
-        band_width : float
-                The fractional width of the central band to extract from the FFT
-        snr_clip_fraction: float
-                The fraction of pixels to clip from each SNR edge
 
         Returns
         -------
@@ -65,7 +61,8 @@ class PatternNoiseDetector(Stage):
         convolved_snr = convolve_snr_with_wavelet(snr)
         peak_maxima, std_maxima = get_peak_parameters(convolved_snr)
 
-        # Check that all peaks are above threshold and that the peak center standard deviation is small.
+        # Check that every peak obtained from the different wavelet width convolutions is above the threshold,
+        # and that the standard deviation of the peak centers is small.
         has_pattern_noise = (peak_maxima > self.SNR_THRESHOLD).all() and std_maxima < self.PEAK_POSITION_STD_THRESHOLD
         return has_pattern_noise
 
