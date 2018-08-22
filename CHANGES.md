@@ -1,3 +1,7 @@
+0.9.7 (2018-08-22)
+------------------
+- Modified pattern noise QC check to reduce false positives 
+
 0.9.6 (2018-07-23)
 ------------------
 - Added functions to check whether image is 3d, and to extract central portion of image 
