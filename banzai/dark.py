@@ -119,6 +119,10 @@ class DarkComparer(CalibrationComparer):
     def calibration_type(self):
         return 'dark'
 
+    @property
+    def reject_images(self):
+        return True
+
     def noise_model(self, image):
         noise = (image.readnoise ** 2.0 + np.abs(image.data * image.exptime)) ** 0.5
         noise /= image.exptime

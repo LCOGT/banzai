@@ -184,6 +184,10 @@ class BiasComparer(CalibrationComparer):
     def calibration_type(self):
         return 'bias'
 
+    @property
+    def reject_images(self):
+        return True
+
     def noise_model(self, image):
         return image.readnoise
 

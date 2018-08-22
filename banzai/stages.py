@@ -179,6 +179,11 @@ class CalibrationComparer(ApplyCalibration):
     SIGNAL_TO_NOISE_THRESHOLD = 6.0
     ACCEPTABLE_PIXEL_FRACTION = 0.05
 
+    @property
+    @abc.abstractmethod
+    def reject_images(self):
+        pass
+
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
 
@@ -220,8 +225,9 @@ class CalibrationComparer(ApplyCalibration):
 
             self.save_qc_results(qc_results, image)
 
-        for image_to_reject in images_to_reject:
-            images.remove(image_to_reject)
+        if self.reject_images and not self.pipeline_context.preview_mode:
+            for image_to_reject in images_to_reject:
+                images.remove(image_to_reject)
         return images
 
     @abc.abstractmethod

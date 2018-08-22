@@ -125,6 +125,10 @@ class FlatComparer(CalibrationComparer):
     def calibration_type(self):
         return 'skyflat'
 
+    @property
+    def reject_images(self):
+        return False
+
     def noise_model(self, image):
         flat_normalization = float(image.header['FLATLVL'])
         noise = (image.readnoise ** 2.0 + image.data * flat_normalization) ** 0.5
