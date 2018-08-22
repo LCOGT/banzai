@@ -40,6 +40,9 @@ class BiasMaker(CalibrationMaker):
         logs.add_tag(logging_tags, 'master_bias', os.path.basename(master_bias_filename))
         for i, image in enumerate(images):
             bias_level_array[i] = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
+            # Add back in the level that was subtracted to do the master bias comparison.
+            bias_level_array[i] += image.header['MBIASLVL']
+            image.header.pop('MBIASLVL')
 
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             logs.add_tag(logging_tags, 'BIASLVL', float(bias_level_array[i]))

@@ -141,8 +141,8 @@ def make_master_dark_console():
 
 def make_master_flat(pipeline_context):
     stages_to_do = get_stages_todo(dark.DarkSubtractor, extra_stages=[flats.FlatNormalizer,
-                                                                      flats.FlatComparer,
                                                                       qc.PatternNoiseDetector,
+                                                                      flats.FlatComparer,
                                                                       flats.FlatMaker, ])
     run(stages_to_do, pipeline_context, image_types=['SKYFLAT'], calibration_maker=True,
         log_message='Making Master Flat')
