@@ -206,25 +206,28 @@ class CalibrationComparer(ApplyCalibration):
             bad_pixel_fraction /= noise
             bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
             bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
+            frame_is_bad = bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION
 
             qc_results = {"master_comparison.fraction": bad_pixel_fraction,
                           "master_comparison.snr_threshold": self.SIGNAL_TO_NOISE_THRESHOLD,
-                          "master_comparison.pixel_threshold": self.ACCEPTABLE_PIXEL_FRACTION}
+                          "master_comparison.pixel_threshold": self.ACCEPTABLE_PIXEL_FRACTION,
+                          "master_comparison.failed": frame_is_bad,
+                          "master_comparison.last_good_master_filename": master_calibration_image.filename}
+
             for qc_check, qc_result in qc_results.items():
                 logs.add_tag(logging_tags, qc_check, qc_result)
-            logs.add_tags(logging_tags, 'filename', image.filename)
-            logs.add_tags(logging_tags, 'master_comparison_filename', master_calibration_image.filename)
+            logs.add_tag(logging_tags, 'filename', image.filename)
+            logs.add_tag(logging_tags, 'master_comparison_filename', master_calibration_image.filename)
+            self.logger.info("Performing comparison to last good master {caltype} frame".format(
+                caltype=self.calibration_type), extra=logging_tags)
 
-            frame_is_bad = bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION
-            qc_results["master_comparison.failed"] = frame_is_bad
             if frame_is_bad:
                 # Reject the image and log an error
                 images_to_reject.append(image)
                 qc_results['rejected'] = True
                 logs.add_tag(logging_tags, 'REJECTED', True)
                 msg = 'Rejecting {caltype} image because it deviates too much from the previous master'
-                self.logger.error(msg.format(caltype=self.calibration_type),
-                                  extra=logging_tags)
+                self.logger.error(msg.format(caltype=self.calibration_type), extra=logging_tags)
 
             self.save_qc_results(qc_results, image)
 
