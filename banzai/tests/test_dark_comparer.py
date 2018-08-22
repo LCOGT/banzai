@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 from banzai.dark import DarkComparer
-from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception
+from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception, FakeContext
 import mock
 import pytest
 import numpy as np
@@ -31,27 +31,27 @@ def test_group_by_keywords():
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_ccdsums_are_different(mock_cal, mock_images):
-    throws_inhomogeneous_set_exception(DarkComparer, None, 'ccdsum', '1 1')
+    throws_inhomogeneous_set_exception(DarkComparer, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_epochs_are_different(mock_cal, mock_images):
-    throws_inhomogeneous_set_exception(DarkComparer, None, 'epoch', '20160102')
+    throws_inhomogeneous_set_exception(DarkComparer, FakeContext(), 'epoch', '20160102')
 
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_nx_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
-    throws_inhomogeneous_set_exception(DarkComparer, None, 'nx', 105)
+    throws_inhomogeneous_set_exception(DarkComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_ny_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
-    throws_inhomogeneous_set_exception(DarkComparer, None, 'ny', 107)
+    throws_inhomogeneous_set_exception(DarkComparer, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.stages.Image')
@@ -61,7 +61,7 @@ def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_ca
     mock_cal.return_value = None
     mock_images.return_value = FakeDarkImage(30.0)
 
-    comparer = DarkComparer(None)
+    comparer = DarkComparer(FakeContext())
     images = comparer.do_stage([FakeDarkImage(30.0) for x in range(6)])
     assert len(images) == 6
 
@@ -91,7 +91,7 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image, set_ra
     fake_master_dark.data += dark_pattern + master_dark_noise / dark_exptime / 10.0
     mock_image.return_value = fake_master_dark
 
-    comparer = DarkComparer(None)
+    comparer = DarkComparer(FakeContext())
     images = [FakeDarkImage(exptime=dark_exptime) for _ in range(6)]
     for image in images:
         image.data = np.random.normal(0.0, image.readnoise, size=(ny, nx))
@@ -129,7 +129,7 @@ def test_does_reject_bad_images(mock_save_qc, mock_cal, mock_image, set_random_s
     fake_master_dark.data += dark_pattern + master_dark_noise / dark_exptime / 10.0
     mock_image.return_value = fake_master_dark
 
-    comparer = DarkComparer(None)
+    comparer = DarkComparer(FakeContext())
     images = [FakeDarkImage(exptime=dark_exptime) for _ in range(6)]
     for image in images:
         image.data = np.random.normal(dark_level, image.readnoise, size=(ny, nx))
