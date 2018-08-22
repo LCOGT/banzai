@@ -212,6 +212,8 @@ class CalibrationComparer(ApplyCalibration):
                           "master_comparison.pixel_threshold": self.ACCEPTABLE_PIXEL_FRACTION}
             for qc_check, qc_result in qc_results.items():
                 logs.add_tag(logging_tags, qc_check, qc_result)
+            logs.add_tags(logging_tags, 'filename', image.filename)
+            logs.add_tags(logging_tags, 'master_comparison_filename', master_calibration_image.filename)
 
             frame_is_bad = bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION
             qc_results["master_comparison.failed"] = frame_is_bad
@@ -220,7 +222,8 @@ class CalibrationComparer(ApplyCalibration):
                 images_to_reject.append(image)
                 qc_results['rejected'] = True
                 logs.add_tag(logging_tags, 'REJECTED', True)
-                self.logger.error('Rejecting flat image because it deviates too much from the previous master',
+                msg = 'Rejecting {caltype} image because it deviates too much from the previous master'
+                self.logger.error(msg.format(caltype=self.calibration_type),
                                   extra=logging_tags)
 
             self.save_qc_results(qc_results, image)
