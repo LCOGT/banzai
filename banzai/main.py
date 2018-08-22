@@ -118,7 +118,8 @@ def run_end_of_night_from_console(scripts_to_run):
 
 
 def make_master_bias(pipeline_context):
-    stages_to_do = get_stages_todo(trim.Trimmer, extra_stages=[bias.BiasMaker])
+    stages_to_do = get_stages_todo(trim.Trimmer, extra_stages=[bias.BiasMasterLevelSubtractor,
+                                                               bias.BiasComparer, bias.BiasMaker])
     run(stages_to_do, pipeline_context, image_types=['BIAS'], calibration_maker=True,
         log_message='Making Master BIAS')
 
@@ -128,7 +129,8 @@ def make_master_bias_console():
 
 
 def make_master_dark(pipeline_context):
-    stages_to_do = get_stages_todo(bias.BiasSubtractor, extra_stages=[dark.DarkNormalizer, dark.DarkMaker])
+    stages_to_do = get_stages_todo(bias.BiasSubtractor, extra_stages=[dark.DarkNormalizer, dark.DarkComparer,
+                                                                      dark.DarkMaker])
     run(stages_to_do, pipeline_context, image_types=['DARK'], calibration_maker=True,
         log_message='Making Master Dark')
 
@@ -139,6 +141,7 @@ def make_master_dark_console():
 
 def make_master_flat(pipeline_context):
     stages_to_do = get_stages_todo(dark.DarkSubtractor, extra_stages=[flats.FlatNormalizer,
+                                                                      flats.FlatComparer,
                                                                       qc.PatternNoiseDetector,
                                                                       flats.FlatMaker, ])
     run(stages_to_do, pipeline_context, image_types=['SKYFLAT'], calibration_maker=True,
