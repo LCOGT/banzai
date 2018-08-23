@@ -217,9 +217,8 @@ class CalibrationComparer(ApplyCalibration):
                 logs.add_tag(logging_tags, qc_check, qc_result)
             logs.add_tag(logging_tags, 'filename', image.filename)
             logs.add_tag(logging_tags, 'master_comparison_filename', master_calibration_image.filename)
-
-            self.logger.info("Performing comparison to last good master {caltype} frame".format(
-                caltype=self.calibration_type), extra=logging_tags)
+            msg = "Performing comparison to last good master {caltype} frame"
+            self.logger.info(msg.format(caltype=self.calibration_type), extra=logging_tags)
 
             # This needs to be added after the qc_results dictionary is used for the logging tags because
             # they can't handle booleans
