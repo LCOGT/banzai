@@ -34,21 +34,12 @@ class BiasMaker(CalibrationMaker):
 
         bias_data = np.zeros((image_config.ny, image_config.nx, len(images)), dtype=np.float32)
         bias_mask = np.zeros((image_config.ny, image_config.nx, len(images)), dtype=np.uint8)
-        bias_level_array = np.zeros(len(images), dtype=np.float32)
 
         master_bias_filename = self.get_calibration_filename(image_config)
-        logs.add_tag(logging_tags, 'master_bias', os.path.basename(master_bias_filename))
         for i, image in enumerate(images):
-            bias_level_array[i] = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
-
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'BIASLVL', float(bias_level_array[i]))
-            self.logger.debug('Calculating bias level', extra=logging_tags)
             # Subtract the bias level for each image
-            bias_data[:, :, i] = image.data[:, :] - bias_level_array[i]
+            bias_data[:, :, i] = image.data[:, :]
             bias_mask[:, :, i] = image.bpm[:, :]
-
-        mean_bias_level = stats.sigma_clipped_mean(bias_level_array, 3.0)
 
         master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2, mask=bias_mask, inplace=True)
 
@@ -59,14 +50,13 @@ class BiasMaker(CalibrationMaker):
 
         header = fits_utils.create_master_calibration_header(images)
 
-        header['BIASLVL'] = (mean_bias_level, 'Mean bias level of master bias')
+        header['BIASLVL'] = (np.mean([image.header['BIASLVL'] for image in images]), 'Mean bias level of master bias')
         master_bias_image = Image(self.pipeline_context, data=master_bias, header=header)
         master_bias_image.filename = master_bias_filename
         master_bias_image.bpm = master_bpm
 
-        logs.pop_tag(logging_tags, 'master_bias')
         logs.add_tag(logging_tags, 'filename', os.path.basename(master_bias_image.filename))
-        logs.add_tag(logging_tags, 'BIASLVL', mean_bias_level)
+        logs.add_tag(logging_tags, 'BIASLVL', header['BIASLVL'])
         self.logger.debug('Average bias level in ADU', extra=logging_tags)
 
         return [master_bias_image]
@@ -140,35 +130,25 @@ class OverscanSubtractor(Stage):
         return images
 
 
-class BiasMasterLevelSubtractor(ApplyCalibration):
+class BiasMasterLevelSubtractor(Stage):
     def __init__(self, pipeline_context):
         super(BiasMasterLevelSubtractor, self).__init__(pipeline_context)
 
     @property
     def group_by_keywords(self):
-        return ['ccdsum']
+        return None
 
-    @property
-    def calibration_type(self):
-        return 'bias'
-
-    def on_missing_master_calibration(self, logging_tags):
-        msg = 'No master {caltype} frame exists. Assuming these images are ok.'
-        self.logger.warning(msg.format(caltype=self.calibration_type), logging_tags)
-
-    def apply_master_calibration(self, images, master_calibration_image, logging_tags):
-        # Short circuit
-        if master_calibration_image.data is None:
-            return images
+    def do_stage(self, images):
 
         for image in images:
-            master_bias_level = float(master_calibration_image.header['BIASLVL'])
-            image.data -= master_bias_level
-            image.header['MBIASLVL'] = master_bias_level, 'Bias Level from previous master that was removed'
+            bias_level = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'master_bias_level', master_bias_level)
-            self.logger.info('Subtracting master bias level', extra=logging_tags)
+            logs.add_tag(logging_tags, 'BIASLVL', float(bias_level))
+            self.logger.debug('Subtracting bias level', extra=logging_tags)
+            image.data -= bias_level
+            image.header['BIASLVL'] = bias_level, 'Bias Level that was removed'
+
         return images
 
 
@@ -183,6 +163,10 @@ class BiasComparer(CalibrationComparer):
     @property
     def calibration_type(self):
         return 'bias'
+
+    @property
+    def reject_images(self):
+        return True
 
     def noise_model(self, image):
         return image.readnoise

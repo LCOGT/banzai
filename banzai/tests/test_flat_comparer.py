@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 from banzai.flats import FlatComparer
-from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception
+from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception, FakeContext
 import mock
 import numpy as np
 import pytest
@@ -24,34 +24,34 @@ def test_no_input_images(set_random_seed):
 
 
 def test_group_by_keywords(set_random_seed):
-    comparer = FlatComparer(None)
+    comparer = FlatComparer(FakeContext())
     assert comparer.group_by_keywords == ['ccdsum', 'filter']
 
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_ccdsums_are_different(mock_cal, mock_images, set_random_seed):
-    throws_inhomogeneous_set_exception(FlatComparer, None, 'ccdsum', '1 1')
+    throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_epochs_are_different(mock_cal, mock_images, set_random_seed):
-    throws_inhomogeneous_set_exception(FlatComparer, None, 'epoch', '20160102')
+    throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'epoch', '20160102')
 
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_nx_are_different(mock_cal, mock_images, set_random_seed):
     mock_cal.return_value = 'test.fits'
-    throws_inhomogeneous_set_exception(FlatComparer, None, 'nx', 105)
+    throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_ny_are_different(mock_cal, mock_images, set_random_seed):
     mock_cal.return_value = 'test.fits'
-    throws_inhomogeneous_set_exception(FlatComparer, None, 'ny', 107)
+    throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.stages.Image')
@@ -80,7 +80,7 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image, set_ra
     fake_master_flat.data = np.random.normal(1.0, master_flat_variation, size=(ny, nx))
     mock_image.return_value = fake_master_flat
 
-    comparer = FlatComparer(None)
+    comparer = FlatComparer(FakeContext())
     images = [FakeFlatImage(flat_level=flat_level) for _ in range(6)]
     for image in images:
         image.data = np.random.poisson(flat_level * fake_master_flat.data).astype(float)
@@ -90,6 +90,13 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image, set_ra
     images = comparer.do_stage(images)
 
     assert len(images) == 6
+
+
+# Turn on image rejection for Flats. In the long term, this can be removed.
+class FakeFlatComparer(FlatComparer):
+    @property
+    def reject_images(self):
+        return True
 
 
 @mock.patch('banzai.stages.Image')
@@ -107,7 +114,7 @@ def test_does_reject_bad_images(mock_save_qc, mock_cal, mock_image, set_random_s
     fake_master_flat.data = np.random.normal(1.0, master_flat_variation, size=(ny, nx))
     mock_image.return_value = fake_master_flat
 
-    comparer = FlatComparer(None)
+    comparer = FakeFlatComparer(FakeContext())
     images = [FakeFlatImage(flat_level) for _ in range(6)]
     for image in images:
         image.data = np.random.poisson(flat_level * fake_master_flat.data).astype(float)
