@@ -61,6 +61,18 @@ def test_raises_an_exception_if_ny_are_different(mock_images):
 
 
 @mock.patch('banzai.bias.Image')
+def test_bias_level_is_average_of_inputs(mock_images):
+    nimages = 20
+
+    images = [FakeBiasImage(bias_level=i) for i in range(nimages)]
+
+    maker = BiasMaker(FakeContext())
+    output_images = maker.do_stage(images)
+
+    np.testing.assert_allclose(output_images[0].header['BIASLVL'], np.mean(np.arange(nimages)))
+
+
+@mock.patch('banzai.bias.Image')
 def test_makes_a_sensible_master_bias(mock_images):
     nimages = 20
     expected_readnoise = 15.0
