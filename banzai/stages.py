@@ -212,7 +212,7 @@ class CalibrationComparer(ApplyCalibration):
                           "master_comparison.snr_threshold": self.SIGNAL_TO_NOISE_THRESHOLD,
                           "master_comparison.pixel_threshold": self.ACCEPTABLE_PIXEL_FRACTION,
                           "master_comparison.failed": frame_is_bad,
-                          "master_comparison.last_good_master_filename": master_calibration_image.filename}
+                          "master_comparison.comparison_master_filename": master_calibration_image.filename}
 
             for qc_check, qc_result in qc_results.items():
                 logs.add_tag(logging_tags, qc_check, qc_result)
