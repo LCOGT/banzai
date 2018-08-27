@@ -58,6 +58,7 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
     assert len(calibrations_in_db) == number_of_stacks_that_should_have_been_created
 
 
+@pytest.mark.e2e
 @pytest.fixture(scope='module')
 def init():
     create_db('.', db_address=os.environ['DB_ADDRESS'])
@@ -65,6 +66,7 @@ def init():
         populate_bpm_table(os.path.join(data_root, instrument, 'bpm'), db_address=os.environ['DB_ADDRESS'])
 
 
+@pytest.mark.e2e
 @pytest.mark.master_bias
 class TestMasterBiasCreation:
     @pytest.fixture(autouse=True)
@@ -73,9 +75,10 @@ class TestMasterBiasCreation:
 
     def test_if_stacked_bias_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*b00.fits*', 'bias')
-        run_check_if_stacked_calibrations_are_in_db('BIAS')
+        run_check_if_stacked_calibrations_are_in_db('*b00.fits*', 'BIAS')
 
 
+@pytest.mark.e2e
 @pytest.mark.master_dark
 class TestMasterDarkCreation:
     @pytest.fixture(autouse=True)
@@ -84,9 +87,10 @@ class TestMasterDarkCreation:
 
     def test_if_stacked_dark_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*d00.fits*', 'dark')
-        run_check_if_stacked_calibrations_are_in_db('DARK')
+        run_check_if_stacked_calibrations_are_in_db('*d00.fits*', 'DARK')
 
 
+@pytest.mark.e2e
 @pytest.mark.master_flat
 class TestMasterFlatCreation:
     @pytest.fixture(autouse=True)
@@ -95,9 +99,10 @@ class TestMasterFlatCreation:
 
     def test_if_stacked_flat_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*f00.fits*', 'flat')
-        run_check_if_stacked_calibrations_are_in_db('FLAT')
+        run_check_if_stacked_calibrations_are_in_db('*f00.fits*', 'SKYFLAT')
 
 
+@pytest.mark.e2e
 @pytest.mark.science_files
 class TestScienceFileCreation:
     @pytest.fixture(autouse=True)

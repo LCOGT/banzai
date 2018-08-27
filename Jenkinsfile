@@ -31,7 +31,8 @@ pipeline {
 		stage('Unit Tests') {
 			steps {
 				script {
-					sh 'docker run --rm -w=/lco/banzai/ --user=root "${DOCKER_IMG}" python setup.py test'
+					sh 'docker run --rm -w=/lco/banzai/ --user=root "${DOCKER_IMG}" pytest --durations=0 ' +
+					'-m "not e2e" /lco/banzai'
 				}
 			}
 		}
@@ -67,7 +68,7 @@ pipeline {
 				script {
 					sshagent(credentials: ['jenkins-rancher-ssh']) {
 						executeOnRancher('pytest --durations=0 --junitxml=/archive/engineering/pytest-master-bias.xml ' +
-								'-m master_bias /lco/banzai',
+								'-m master_bias -m e2e /lco/banzai',
 								CONTAINER_HOST, CONTAINER_ID, ARCHIVE_UID)
 					}
 				}
@@ -94,7 +95,7 @@ pipeline {
 				script {
 					sshagent(credentials: ['jenkins-rancher-ssh']) {
 						executeOnRancher('pytest --durations=0 --junitxml=/archive/engineering/pytest-master-dark.xml ' +
-								'-m master_dark /lco/banzai',
+								'-m master_dark -m e2e /lco/banzai',
 								CONTAINER_HOST, CONTAINER_ID, ARCHIVE_UID)
 					}
 				}
@@ -121,7 +122,7 @@ pipeline {
 				script {
 					sshagent(credentials: ['jenkins-rancher-ssh']) {
 						executeOnRancher('pytest --durations=0 --junitxml=/archive/engineering/pytest-master-flat.xml ' +
-								'-m master_flat /lco/banzai/',
+								'-m master_flat -m e2e /lco/banzai/',
 								CONTAINER_HOST, CONTAINER_ID, ARCHIVE_UID)
 					}
 				}
@@ -148,7 +149,7 @@ pipeline {
 				script {
 					sshagent(credentials: ['jenkins-rancher-ssh']) {
 						executeOnRancher('pytest --durations=0 --junitxml=/archive/engineering/pytest-science-files.xml ' +
-								'-m science_files /lco/banzai/',
+								'-m science_files -m e2e /lco/banzai/',
 								CONTAINER_HOST, CONTAINER_ID, ARCHIVE_UID)
 					}
 				}
