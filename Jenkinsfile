@@ -9,6 +9,9 @@ pipeline {
 		PROJ_NAME = projName("${JOB_NAME}")
 		GIT_DESCRIPTION = gitDescription()
 		DOCKER_IMG = dockerImageName("${LCO_DOCK_REG}", "${PROJ_NAME}", "${GIT_DESCRIPTION}")
+		RANCHERDEV_CREDS = credentials('rancher-cli-dev')
+		SSH_CREDS = credentials('jenkins-rancher-ssh-userpass')
+		ARCHIVE_UID = credentials('archive-userid')
 	}
 	options {
 		timeout(time: 1, unit: 'HOURS')
