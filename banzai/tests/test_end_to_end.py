@@ -1,8 +1,10 @@
 import pytest
 import os
 from glob import glob
+from banzai.dbs import populate_bpm_table, create_db, get_session, CalibrationImage
+from banzai.utils import fits_utils
 
-data_root = '/archive/engineering'
+data_root = os.path.join('archive', 'engineering')
 
 sites = [os.path.basename(site_path) for site_path in glob(os.path.join(data_root, '*'))]
 instruments = [os.path.join(site, os.path.basename(instrument_path)) for site in sites
@@ -20,25 +22,47 @@ def run_banzai(entry_point):
         os.system(command)
 
 
-def test_if_stacked_calibrations_were_created(raw_filenames, calibration_type):
+def get_expected_number_of_calibrations(raw_filenames, calibration_type):
     number_of_stacks_that_should_have_been_created = 0
-    created_stacked_calibrations = []
     for day_obs in days_obs:
-        if len(glob(os.path.join(os.environ['NRES_DATA_ROOT'], day_obs, 'raw', raw_filenames))) > 0:
-            number_of_stacks_that_should_have_been_created += 1
-        created_stacked_calibrations += glob(os.path.join(os.environ['NRES_DATA_ROOT'], day_obs, 'specproc',
+        raw_filenames_for_this_dayobs = glob(os.path.join(data_root, day_obs, 'raw', raw_filenames))
+        if calibration_type == 'SKYFLAT':
+            # Group by filter
+            observed_filters = []
+            for raw_filename in raw_filenames_for_this_dayobs:
+                skyflat_hdu = fits_utils.open_fits_file(raw_filename)
+                observed_filters.append(skyflat_hdu[0].header['FILTER'])
+            observed_filters = set(observed_filters)
+            number_of_stacks_that_should_have_been_created += len(observed_filters)
+        else:
+            # Just one calibration per night
+            if len(raw_filenames_for_this_dayobs) > 0:
+                number_of_stacks_that_should_have_been_created += 1
+    return number_of_stacks_that_should_have_been_created
+
+
+def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_type):
+    created_stacked_calibrations = []
+    number_of_stacks_that_should_have_been_created = get_expected_number_of_calibrations(raw_filenames, calibration_type)
+    for day_obs in days_obs:
+        created_stacked_calibrations += glob(os.path.join(data_root, day_obs, 'specproc',
                                                           calibration_type.lower() + '*.fits*'))
     assert len(created_stacked_calibrations) == number_of_stacks_that_should_have_been_created
 
 
-def test_if_stacked_calibrations_are_in_db(calibration_type):
-    pass
+def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type):
+    number_of_stacks_that_should_have_been_created = get_expected_number_of_calibrations(raw_filenames, calibration_type)
+    db_session = get_session(os.environ['DB_ADDRESS'])
+    calibrations_in_db = db_session.Query(CalibrationImage).filter(CalibrationImage.type == calibration_type).all()
+    db_session.close()
+    assert len(calibrations_in_db) == number_of_stacks_that_should_have_been_created
 
 
 @pytest.fixture(scope='module')
 def init():
-    create_db(os.environ['DB_URL'])
-    populated_bpm()
+    create_db('.', db_address=os.environ['DB_ADDRESS'])
+    for instrument in instruments:
+        populate_bpm_table(os.path.join(data_root, instrument, 'bpm'), db_address=os.environ['DB_ADDRESS'])
 
 
 @pytest.mark.master_bias
@@ -48,8 +72,8 @@ class TestMasterBiasCreation:
         run_banzai('banzai_bias_maker')
 
     def test_if_stacked_bias_frame_was_created(self):
-        test_if_stacked_calibrations_were_created('*b00.fits*', 'bias')
-        test_if_stacked_calibrations_are_in_db('BIAS')
+        run_check_if_stacked_calibrations_were_created('*b00.fits*', 'bias')
+        run_check_if_stacked_calibrations_are_in_db('BIAS')
 
 
 @pytest.mark.master_dark
@@ -59,8 +83,8 @@ class TestMasterDarkCreation:
         run_banzai('banzai_dark_maker')
 
     def test_if_stacked_dark_frame_was_created(self):
-        test_if_stacked_calibrations_were_created('*d00.fits*', 'dark')
-        test_if_stacked_calibrations_are_in_db('DARK')
+        run_check_if_stacked_calibrations_were_created('*d00.fits*', 'dark')
+        run_check_if_stacked_calibrations_are_in_db('DARK')
 
 
 @pytest.mark.master_flat
@@ -70,8 +94,8 @@ class TestMasterFlatCreation:
         run_banzai('banzai_flat_maker')
 
     def test_if_stacked_flat_frame_was_created(self):
-        test_if_stacked_calibrations_were_created('*w00.fits*', 'flat')
-        test_if_stacked_calibrations_are_in_db('FLAT')
+        run_check_if_stacked_calibrations_were_created('*f00.fits*', 'flat')
+        run_check_if_stacked_calibrations_are_in_db('FLAT')
 
 
 @pytest.mark.science_files
