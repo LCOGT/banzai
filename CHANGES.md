@@ -1,3 +1,10 @@
+0.9.7 (2018-08-22)
+------------------
+- Modified pattern noise QC check to reduce false positives 
+- Enabled rejection of bias and dark frames when creating masters
+- Pinned pytest due to recursion depth issue
+- Bias level subtractor now subtracts the mean of the images rather than the value from previous masters.
+
 0.9.6 (2018-07-23)
 ------------------
 - Added functions to check whether image is 3d, and to extract central portion of image 

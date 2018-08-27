@@ -179,6 +179,11 @@ class CalibrationComparer(ApplyCalibration):
     SIGNAL_TO_NOISE_THRESHOLD = 6.0
     ACCEPTABLE_PIXEL_FRACTION = 0.05
 
+    @property
+    @abc.abstractmethod
+    def reject_images(self):
+        pass
+
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
 
@@ -201,27 +206,36 @@ class CalibrationComparer(ApplyCalibration):
             bad_pixel_fraction /= noise
             bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
             bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
+            frame_is_bad = bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION
 
             qc_results = {"master_comparison.fraction": bad_pixel_fraction,
                           "master_comparison.snr_threshold": self.SIGNAL_TO_NOISE_THRESHOLD,
-                          "master_comparison.pixel_threshold": self.ACCEPTABLE_PIXEL_FRACTION}
+                          "master_comparison.pixel_threshold": self.ACCEPTABLE_PIXEL_FRACTION,
+                          "master_comparison.comparison_master_filename": master_calibration_image.filename}
+
             for qc_check, qc_result in qc_results.items():
                 logs.add_tag(logging_tags, qc_check, qc_result)
+            logs.add_tag(logging_tags, 'filename', image.filename)
+            logs.add_tag(logging_tags, 'master_comparison_filename', master_calibration_image.filename)
+            msg = "Performing comparison to last good master {caltype} frame"
+            self.logger.info(msg.format(caltype=self.calibration_type), extra=logging_tags)
 
-            frame_is_bad = bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION
+            # This needs to be added after the qc_results dictionary is used for the logging tags because
+            # they can't handle booleans
             qc_results["master_comparison.failed"] = frame_is_bad
             if frame_is_bad:
                 # Reject the image and log an error
                 images_to_reject.append(image)
                 qc_results['rejected'] = True
                 logs.add_tag(logging_tags, 'REJECTED', True)
-                self.logger.error('Rejecting flat image because it deviates too much from the previous master',
-                                  extra=logging_tags)
+                msg = 'Rejecting {caltype} image because it deviates too much from the previous master'
+                self.logger.error(msg.format(caltype=self.calibration_type), extra=logging_tags)
 
             self.save_qc_results(qc_results, image)
 
-        for image_to_reject in images_to_reject:
-            images.remove(image_to_reject)
+        if self.reject_images and not self.pipeline_context.preview_mode:
+            for image_to_reject in images_to_reject:
+                images.remove(image_to_reject)
         return images
 
     @abc.abstractmethod
