@@ -35,6 +35,7 @@ services:
     - AstrometryCatalogs
     labels:
       io.rancher.container.pull_image: always
+      io.rancher.sidekicks: BANZAIipelineE2EData,AstrometryCatalogs
     logging:
       options:
         max-size: '100m'
@@ -42,5 +43,5 @@ services:
 volumes:
   banzaie2e:
     driver: local
-  astromtery:
+  astrometry:
     driver: local
