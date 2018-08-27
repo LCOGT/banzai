@@ -31,8 +31,7 @@ pipeline {
 		stage('Unit Tests') {
 			steps {
 				script {
-					sh 'docker run --rm -w=/lco/banzai/ --user=root "${DOCKER_IMG}" pytest --durations=0 ' +
-					'-m "not e2e" /lco/banzai'
+					sh 'docker run --rm -w=/lco/banzai/ --user=root "${DOCKER_IMG}" python setup.py test -a "-m \'not e2e\'"'
 				}
 			}
 		}
