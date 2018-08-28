@@ -14,7 +14,7 @@ pipeline {
 		ARCHIVE_UID = credentials('archive-userid')
 	}
 	options {
-		timeout(time: 1, unit: 'HOURS')
+		timeout(time: 8, unit: 'HOURS')
 	}
 	stages {
 		stage('Build image') {

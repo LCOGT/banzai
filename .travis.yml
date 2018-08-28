@@ -73,11 +73,11 @@ matrix:
     include:
         # Try MacOS X
         - os: osx
-          env: SETUP_CMD='test -a "-m \'not e2e\'"'
+          env: SETUP_CMD="test -a \"-m 'not e2e'\" --coverage"
 
         # Do a coverage test.
         - os: linux
-          env: SETUP_CMD='test -a "-m \'not e2e\'" --coverage'
+          env: SETUP_CMD="test -a \"-m 'not e2e'\" --coverage"
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
@@ -144,4 +144,4 @@ script:
 after_success:
     # If coveralls.io is set up for this package, uncomment the line below.
     # The coveragerc file may be customized as needed for your package.
-    - if [[ $SETUP_CMD == 'test -a "-m \'not e2e\'" --coverage' ]]; then coveralls --rcfile='banzai/tests/coveragerc'; fi
+    - if [[ $SETUP_CMD == "test -a \"-m 'not e2e'\" --coverage" ]]; then coveralls --rcfile='banzai/tests/coveragerc'; fi
