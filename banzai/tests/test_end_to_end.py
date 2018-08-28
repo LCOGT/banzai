@@ -5,14 +5,14 @@ from banzai.dbs import populate_bpm_table, create_db, get_session, CalibrationIm
 from banzai.utils import fits_utils
 import argparse
 
-data_root = os.path.join('archive', 'engineering')
+data_root = os.path.join(os.sep, 'archive', 'engineering')
 
-sites = [os.path.basename(site_path) for site_path in glob(os.path.join(data_root, '*'))]
+sites = [os.path.basename(site_path) for site_path in glob(os.path.join(data_root, '???'))]
 instruments = [os.path.join(site, os.path.basename(instrument_path)) for site in sites
                for instrument_path in glob(os.path.join(os.path.join(data_root, site, '*')))]
 
 days_obs = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrument in instruments
-            for dayobs_path in glob(os.path.join(data_root, instrument, '*'))]
+            for dayobs_path in glob(os.path.join(data_root, instrument, '201*'))]
 
 
 def run_end_to_end_tests():
@@ -59,6 +59,7 @@ def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_ty
     for day_obs in days_obs:
         created_stacked_calibrations += glob(os.path.join(data_root, day_obs, 'specproc',
                                                           calibration_type.lower() + '*.fits*'))
+    assert number_of_stacks_that_should_have_been_created > 0
     assert len(created_stacked_calibrations) == number_of_stacks_that_should_have_been_created
 
 
@@ -67,6 +68,7 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
     db_session = get_session(os.environ['DB_ADDRESS'])
     calibrations_in_db = db_session.query(CalibrationImage).filter(CalibrationImage.type == calibration_type).all()
     db_session.close()
+    assert number_of_stacks_that_should_have_been_created > 0
     assert len(calibrations_in_db) == number_of_stacks_that_should_have_been_created
 
 
@@ -129,5 +131,6 @@ class TestScienceFileCreation:
                                for filename in glob(os.path.join(data_root, day_obs, 'raw', '*e00*'))]
             created_files += [os.path.basename(filename) for filename in glob(os.path.join(data_root, day_obs,
                                                                                            'processed', '*e90*'))]
+        assert len(expected_files) > 0
         for expected_file in expected_files:
             assert expected_file in created_files
