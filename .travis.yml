@@ -140,10 +140,10 @@ install:
     # other dependencies.
 
 script:
-   - if [[ $RUN_TESTS == 1 ]]; then SETUP_ARRAY=(test -a '-m "not e2e"'); else SETUP_ARRAY=(); fi
+   - if [[ "$RUN_TESTS" == 1 ]]; then SETUP_ARRAY=(test -a '-m "not e2e"'); else SETUP_ARRAY=(); fi
    - $MAIN_CMD "${SETUP_ARRAY[@]}" $SETUP_CMD
 
 after_success:
     # If coveralls.io is set up for this package, uncomment the line below.
     # The coveragerc file may be customized as needed for your package.
-    - if [[ $SETUP_CMD == '--coverage' ]]; then coveralls --rcfile='banzai/tests/coveragerc'; fi
+    - if [[ "$SETUP_CMD" == '--coverage' ]]; then coveralls --rcfile='banzai/tests/coveragerc'; fi

@@ -6,7 +6,7 @@ pipeline {
 	agent any
 	environment {
 		dockerImage = null
-		PROJ_NAME = projName("${JOB_NAME}")
+		PROJ_NAME = projName()
 		GIT_DESCRIPTION = gitDescribe()
 		DOCKER_IMG = dockerImageName("${LCO_DOCK_REG}", "${PROJ_NAME}", "${GIT_DESCRIPTION}")
 		RANCHERDEV_CREDS = credentials('rancher-cli-dev')
