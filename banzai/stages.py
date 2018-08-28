@@ -50,8 +50,8 @@ class Stage(abc.ABC):
         for _, image_set in itertools.groupby(images, self.get_grouping):
             try:
                 processed_images += self.run_stage(image_set)
-            except MasterCalibrationDoesNotExist as e:
-                continue
+            except Exception as e:
+                logger.error(e)
         return processed_images
 
     @abc.abstractmethod
