@@ -40,7 +40,7 @@ class Image(object):
 
         self.request_number = header.get('REQNUM')
 
-        self.telescope = dbs.get_telescope(self.header)
+        self.telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
         if self.telescope is not None:
             self.site = self.telescope.site
             self.instrument = self.telescope.instrument

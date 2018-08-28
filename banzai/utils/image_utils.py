@@ -111,7 +111,7 @@ def save_images(pipeline_context, images, master_calibration=False):
 
 
 def load_bpm(image, pipeline_context):
-    bpm_filename = dbs.get_bpm(image.telescope_id, image.ccdsum,
+    bpm_filename = dbs.get_bpm(image.telescope.id, image.ccdsum,
                                db_address=pipeline_context.db_address)
     if pipeline_context.no_bpm:
         load_empty_bpm(image)
