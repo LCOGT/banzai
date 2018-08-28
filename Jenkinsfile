@@ -7,7 +7,7 @@ pipeline {
 	environment {
 		dockerImage = null
 		PROJ_NAME = projName("${JOB_NAME}")
-		GIT_DESCRIPTION = gitDescription()
+		GIT_DESCRIPTION = gitDescribe()
 		DOCKER_IMG = dockerImageName("${LCO_DOCK_REG}", "${PROJ_NAME}", "${GIT_DESCRIPTION}")
 		RANCHERDEV_CREDS = credentials('rancher-cli-dev')
 		SSH_CREDS = credentials('jenkins-rancher-ssh-userpass')
