@@ -44,9 +44,12 @@ class FakeImage(Image):
     def add_history(self, msg):
         pass
 
+
 class FakeContext(object):
-    def __init__(self):
+    def __init__(self, preview_mode=False):
         self.processed_path = '/tmp'
+        self.preview_mode = preview_mode
+
 
 class FakeStage(Stage):
     def do_stage(self, images):
