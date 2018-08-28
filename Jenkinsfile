@@ -123,7 +123,7 @@ pipeline {
 			steps {
 				script {
 					sshagent(credentials: ['jenkins-rancher-ssh']) {
-						executeOnRancher(''cd /lco/banzai && python setup.py test -a "--durations=0 ' +
+						executeOnRancher('cd /lco/banzai && python setup.py test -a "--durations=0 ' +
 						        '--junitxml=/archive/engineering/pytest-master-flat.xml -m master_flat"',
 								CONTAINER_HOST, CONTAINER_ID, ARCHIVE_UID)
 					}
@@ -150,7 +150,7 @@ pipeline {
 			steps {
 				script {
 					sshagent(credentials: ['jenkins-rancher-ssh']) {
-						executeOnRancher(''cd /lco/banzai && python setup.py test -a "--durations=0 ' +
+						executeOnRancher('cd /lco/banzai && python setup.py test -a "--durations=0 ' +
 						        '--junitxml=/archive/engineering/pytest-science-files.xml -m science_files"',
 								CONTAINER_HOST, CONTAINER_ID, ARCHIVE_UID)
 					}
