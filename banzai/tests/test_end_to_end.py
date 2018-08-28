@@ -57,7 +57,7 @@ def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_ty
     created_stacked_calibrations = []
     number_of_stacks_that_should_have_been_created = get_expected_number_of_calibrations(raw_filenames, calibration_type)
     for day_obs in days_obs:
-        created_stacked_calibrations += glob(os.path.join(data_root, day_obs, 'specproc',
+        created_stacked_calibrations += glob(os.path.join(data_root, day_obs, 'processed',
                                                           calibration_type.lower() + '*.fits*'))
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(created_stacked_calibrations) == number_of_stacks_that_should_have_been_created
@@ -130,7 +130,7 @@ class TestScienceFileCreation:
             expected_files += [os.path.basename(filename).replace('e00', 'e91')
                                for filename in glob(os.path.join(data_root, day_obs, 'raw', '*e00*'))]
             created_files += [os.path.basename(filename) for filename in glob(os.path.join(data_root, day_obs,
-                                                                                           'processed', '*e90*'))]
+                                                                                           'processed', '*e91*'))]
         assert len(expected_files) > 0
         for expected_file in expected_files:
             assert expected_file in created_files
