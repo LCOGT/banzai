@@ -1,6 +1,6 @@
 version: '2'
 services:
-  BANZAIipelineE2EData:
+  BANZAIpipelineE2EData:
     image: docker.lco.global/banzai-e2e-data:1.0.0
     entrypoint:
     - /bin/true
@@ -38,7 +38,7 @@ services:
     - AstrometryCatalogs
     labels:
       io.rancher.container.pull_image: always
-      io.rancher.sidekicks: BANZAIipelineE2EData,AstrometryCatalogs
+      io.rancher.sidekicks: BANZAIpipelineE2EData,AstrometryCatalogs
     logging:
       options:
         max-size: '100m'

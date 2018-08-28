@@ -69,9 +69,9 @@ pipeline {
 			steps {
 				script {
 					sshagent(credentials: ['jenkins-rancher-ssh']) {
-						executeOnRancher('pytest --durations=0 --junitxml=/archive/engineering/pytest-master-bias.xml ' +
-								'-m master_bias -m e2e /lco/banzai',
-								CONTAINER_HOST, CONTAINER_ID, ARCHIVE_UID)
+						executeOnRancher('cd /lco/banzai && python setup.py test -a "--durations=0 ' +
+						        '--junitxml=/archive/engineering/pytest-master-bias.xml -m master_bias"',
+						        CONTAINER_HOST, CONTAINER_ID, ARCHIVE_UID)
 					}
 				}
 			}
@@ -96,8 +96,8 @@ pipeline {
 			steps {
 				script {
 					sshagent(credentials: ['jenkins-rancher-ssh']) {
-						executeOnRancher('pytest --durations=0 --junitxml=/archive/engineering/pytest-master-dark.xml ' +
-								'-m master_dark -m e2e /lco/banzai',
+						executeOnRancher('cd /lco/banzai && python setup.py test -a "--durations=0 ' +
+						        '--junitxml=/archive/engineering/pytest-master-dark.xml -m master_dark"',
 								CONTAINER_HOST, CONTAINER_ID, ARCHIVE_UID)
 					}
 				}
@@ -123,8 +123,8 @@ pipeline {
 			steps {
 				script {
 					sshagent(credentials: ['jenkins-rancher-ssh']) {
-						executeOnRancher('pytest --durations=0 --junitxml=/archive/engineering/pytest-master-flat.xml ' +
-								'-m master_flat -m e2e /lco/banzai/',
+						executeOnRancher(''cd /lco/banzai && python setup.py test -a "--durations=0 ' +
+						        '--junitxml=/archive/engineering/pytest-master-flat.xml -m master_flat"',
 								CONTAINER_HOST, CONTAINER_ID, ARCHIVE_UID)
 					}
 				}
@@ -150,8 +150,8 @@ pipeline {
 			steps {
 				script {
 					sshagent(credentials: ['jenkins-rancher-ssh']) {
-						executeOnRancher('pytest --durations=0 --junitxml=/archive/engineering/pytest-science-files.xml ' +
-								'-m science_files -m e2e /lco/banzai/',
+						executeOnRancher(''cd /lco/banzai && python setup.py test -a "--durations=0 ' +
+						        '--junitxml=/archive/engineering/pytest-science-files.xml -m science_files"',
 								CONTAINER_HOST, CONTAINER_ID, ARCHIVE_UID)
 					}
 				}
