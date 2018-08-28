@@ -28,6 +28,8 @@ services:
         max-file: '3'
   BANZAITest:
     image: ${DOCKER_IMG}
+    entrypoint:
+    - tail -f /dev/null
     environment:
       DB_ADDRESS: sqlite:////archive/engineering/test.db
     volumes_from:
