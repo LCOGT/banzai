@@ -34,7 +34,7 @@ services:
     environment:
       DB_ADDRESS: sqlite:////archive/engineering/test.db
     volumes_from:
-    - BANZAIipelineE2EData
+    - BANZAIpipelineE2EData
     - AstrometryCatalogs
     labels:
       io.rancher.container.pull_image: always
