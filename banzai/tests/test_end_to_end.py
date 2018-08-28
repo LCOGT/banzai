@@ -3,6 +3,7 @@ import os
 from glob import glob
 from banzai.dbs import populate_bpm_table, create_db, get_session, CalibrationImage
 from banzai.utils import fits_utils
+import argparse
 
 data_root = os.path.join('archive', 'engineering')
 
@@ -12,6 +13,17 @@ instruments = [os.path.join(site, os.path.basename(instrument_path)) for site in
 
 days_obs = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrument in instruments
             for dayobs_path in glob(os.path.join(data_root, instrument, '*'))]
+
+
+def run_end_to_end_tests():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--marker', dest='marker', help='PyTest marker to run')
+    parser.add_argument('--junit-file', dest='junit_file', help='Path to junit xml file with results')
+    parser.add_argument('--code-path', dest='code_path', help='Path to directory with setup.py')
+    args = parser.parse_args()
+    os.chdir(args.code_path)
+    command = 'python setup.py test -a "--durations=0 --junitxml={junit_file} -m {marker}"'
+    os.system(command.format(junit_file=args.junit_file, marker=args.marker))
 
 
 def run_banzai(entry_point):
@@ -61,7 +73,7 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
 @pytest.mark.e2e
 @pytest.fixture(scope='module')
 def init():
-    create_db('.', db_address=os.environ['DB_ADDRESS'])
+    create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
     for instrument in instruments:
         populate_bpm_table(os.path.join(data_root, instrument, 'bpm'), db_address=os.environ['DB_ADDRESS'])
 
