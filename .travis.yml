@@ -139,7 +139,7 @@ install:
     # other dependencies.
 
 script:
-   - read -a SETUP_ARRAY <<< SETUP_CMD
+   - read -a SETUP_ARRAY <<< $SETUP_CMD
    - export SETUP_ARRAY
    - $MAIN_CMD "${SETUP_ARRAY[@]}"
 
