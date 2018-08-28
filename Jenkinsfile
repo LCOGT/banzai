@@ -95,7 +95,7 @@ pipeline {
 			steps {
 				script {
 					sshagent(credentials: ['jenkins-rancher-ssh']) {
-						executeOnRancher(''banzai_run_end_to_end_tests --marker=master_dark ' +
+						executeOnRancher('banzai_run_end_to_end_tests --marker=master_dark ' +
 						    '--junit-file=/archive/engineering/pytest-master-dark.xml --code-path=/lco/banzai',
 							CONTAINER_HOST, CONTAINER_ID, 'root:root')
 					}
