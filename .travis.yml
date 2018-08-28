@@ -34,7 +34,7 @@ env:
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - MAIN_CMD='python setup.py'
-        - SETUP_CMD='(test -a \'-m "not e2e"\')'
+        - SETUP_CMD="test -a '-m \"not e2e\"' "
         - PIP_DEPENDENCIES='astropy>=3.0 sqlalchemy logutils numpy cython mysql-connector-python lcogt_logging sep kombu requests mock pytest>=3.5 elasticsearch'
         - EVENT_TYPE='pull_request push'
 
@@ -73,11 +73,11 @@ matrix:
     include:
         # Try MacOS X
         - os: osx
-          env: SETUP_CMD='(test -a \'-m "not e2e"\')'
+          env: SETUP_CMD="test -a '-m \"not e2e\"' "
 
         # Do a coverage test.
         - os: linux
-          env: SETUP_CMD='(test -a \'-m "not e2e" --coverage\')'
+          env: SETUP_CMD="test -a '-m \"not e2e\"' --coverage"
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
@@ -139,9 +139,11 @@ install:
     # other dependencies.
 
 script:
-   - $MAIN_CMD "${SETUP_CMD[@]}"
+   - read -a SETUP_ARRAY <<< SETUP_CMD
+   - export SETUP_ARRAY
+   - $MAIN_CMD "${SETUP_ARRAY[@]}"
 
 after_success:
     # If coveralls.io is set up for this package, uncomment the line below.
     # The coveragerc file may be customized as needed for your package.
-    - for item in "${SETUP_CMD[@]}"; do if [[ "--coverage" == "$item" ]]; then coveralls --rcfile='banzai/tests/coveragerc'; fi; done
+    - for item in "${SETUP_ARRAY[@]}"; do if [[ "--coverage" == "$item" ]]; then coveralls --rcfile='banzai/tests/coveragerc'; fi; done
