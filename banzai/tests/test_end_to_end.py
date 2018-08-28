@@ -65,7 +65,7 @@ def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_ty
 def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type):
     number_of_stacks_that_should_have_been_created = get_expected_number_of_calibrations(raw_filenames, calibration_type)
     db_session = get_session(os.environ['DB_ADDRESS'])
-    calibrations_in_db = db_session.Query(CalibrationImage).filter(CalibrationImage.type == calibration_type).all()
+    calibrations_in_db = db_session.query(CalibrationImage).filter(CalibrationImage.type == calibration_type).all()
     db_session.close()
     assert len(calibrations_in_db) == number_of_stacks_that_should_have_been_created
 
