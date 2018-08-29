@@ -1,7 +1,7 @@
 version: '2'
 services:
   BANZAIpipelineE2EData:
-    image: docker.lco.global/banzai-e2e-data:1.0.0
+    image: docker.lco.global/banzai-e2e-data:1.0.1
     entrypoint:
     - /bin/true
     labels:
