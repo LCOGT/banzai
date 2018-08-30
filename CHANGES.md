@@ -1,6 +1,7 @@
 0.9.8 (2018-08-30)
 ------------------
-- Integrated e2e testing (this test must be ignore when running pytest locally)
+- Integrated e2e testing 
+    - This test must be ignored when running pytest locally by using the option "-m 'not e2e'"
 - Modified pattern noise QC check to ignore large-scale pattern features
 
 0.9.7 (2018-08-22)
