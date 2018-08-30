@@ -5,14 +5,14 @@ from banzai.dbs import populate_bpm_table, create_db, get_session, CalibrationIm
 from banzai.utils import fits_utils
 import argparse
 
-data_root = os.path.join(os.sep, 'archive', 'engineering')
+DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
 
-sites = [os.path.basename(site_path) for site_path in glob(os.path.join(data_root, '???'))]
-instruments = [os.path.join(site, os.path.basename(instrument_path)) for site in sites
-               for instrument_path in glob(os.path.join(os.path.join(data_root, site, '*')))]
+SITES = [os.path.basename(site_path) for site_path in glob(os.path.join(DATA_ROOT, '???'))]
+INSTRUMENTS = [os.path.join(site, os.path.basename(instrument_path)) for site in SITES
+               for instrument_path in glob(os.path.join(os.path.join(DATA_ROOT, site, '*')))]
 
-days_obs = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrument in instruments
-            for dayobs_path in glob(os.path.join(data_root, instrument, '201*'))]
+DAYS_OBS = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrument in INSTRUMENTS
+            for dayobs_path in glob(os.path.join(DATA_ROOT, instrument, '201*'))]
 
 
 def run_end_to_end_tests():
@@ -27,8 +27,8 @@ def run_end_to_end_tests():
 
 
 def run_banzai(entry_point):
-    for day_obs in days_obs:
-        raw_path = os.path.join(data_root, day_obs, 'raw')
+    for day_obs in DAYS_OBS:
+        raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         command = '{cmd} --raw-path {raw_path} --fpack --db-address={db_address}'
         command = command.format(cmd=entry_point, raw_path=raw_path, db_address=os.environ['DB_ADDRESS'])
         os.system(command)
@@ -36,8 +36,8 @@ def run_banzai(entry_point):
 
 def get_expected_number_of_calibrations(raw_filenames, calibration_type):
     number_of_stacks_that_should_have_been_created = 0
-    for day_obs in days_obs:
-        raw_filenames_for_this_dayobs = glob(os.path.join(data_root, day_obs, 'raw', raw_filenames))
+    for day_obs in DAYS_OBS:
+        raw_filenames_for_this_dayobs = glob(os.path.join(DATA_ROOT, day_obs, 'raw', raw_filenames))
         if calibration_type.lower() == 'skyflat':
             # Group by filter
             observed_filters = []
@@ -56,8 +56,8 @@ def get_expected_number_of_calibrations(raw_filenames, calibration_type):
 def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_type):
     created_stacked_calibrations = []
     number_of_stacks_that_should_have_been_created = get_expected_number_of_calibrations(raw_filenames, calibration_type)
-    for day_obs in days_obs:
-        created_stacked_calibrations += glob(os.path.join(data_root, day_obs, 'processed',
+    for day_obs in DAYS_OBS:
+        created_stacked_calibrations += glob(os.path.join(DATA_ROOT, day_obs, 'processed',
                                                           calibration_type.lower() + '*.fits*'))
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(created_stacked_calibrations) == number_of_stacks_that_should_have_been_created
@@ -76,8 +76,8 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
 @pytest.fixture(scope='module')
 def init():
     create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
-    for instrument in instruments:
-        populate_bpm_table(os.path.join(data_root, instrument, 'bpm'), db_address=os.environ['DB_ADDRESS'])
+    for instrument in INSTRUMENTS:
+        populate_bpm_table(os.path.join(DATA_ROOT, instrument, 'bpm'), db_address=os.environ['DB_ADDRESS'])
 
 
 @pytest.mark.e2e
@@ -126,10 +126,10 @@ class TestScienceFileCreation:
     def test_if_science_frames_were_created(self):
         expected_files = []
         created_files = []
-        for day_obs in days_obs:
+        for day_obs in DAYS_OBS:
             expected_files += [os.path.basename(filename).replace('e00', 'e91')
-                               for filename in glob(os.path.join(data_root, day_obs, 'raw', '*e00*'))]
-            created_files += [os.path.basename(filename) for filename in glob(os.path.join(data_root, day_obs,
+                               for filename in glob(os.path.join(DATA_ROOT, day_obs, 'raw', '*e00*'))]
+            created_files += [os.path.basename(filename) for filename in glob(os.path.join(DATA_ROOT, day_obs,
                                                                                            'processed', '*e91*'))]
         assert len(expected_files) > 0
         for expected_file in expected_files:
