@@ -273,11 +273,20 @@ def reduce_night():
         for telescope in telescopes:
             pipeline_context.raw_path = os.path.join(args.rawpath_root, args.site, telescope.instrument,
                                                      args.dayobs, 'raw')
+            # Run the reductions on the given dayobs
             try:
-                # Run the reductions on the given dayobs
                 make_master_bias(pipeline_context)
+            except Exception as e:
+                logger.error(e)
+            try:
                 make_master_dark(pipeline_context)
+            except Exception as e:
+                logger.error(e)
+            try:
                 make_master_flat(pipeline_context)
+            except Exception as e:
+                logger.error(e)
+            try:
                 reduce_science_frames(pipeline_context)
             except Exception as e:
                 logger.error(e)
