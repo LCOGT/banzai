@@ -38,7 +38,7 @@ def get_expected_number_of_calibrations(raw_filenames, calibration_type):
     number_of_stacks_that_should_have_been_created = 0
     for day_obs in days_obs:
         raw_filenames_for_this_dayobs = glob(os.path.join(data_root, day_obs, 'raw', raw_filenames))
-        if calibration_type == 'SKYFLAT':
+        if calibration_type.lower() == 'skyflat':
             # Group by filter
             observed_filters = []
             for raw_filename in raw_filenames_for_this_dayobs:
