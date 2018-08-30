@@ -112,7 +112,7 @@ class TestMasterFlatCreation:
         run_banzai('banzai_flat_maker')
 
     def test_if_stacked_flat_frame_was_created(self):
-        run_check_if_stacked_calibrations_were_created('*f00.fits*', 'flat')
+        run_check_if_stacked_calibrations_were_created('*f00.fits*', 'skyflat')
         run_check_if_stacked_calibrations_are_in_db('*f00.fits*', 'SKYFLAT')
 
 
