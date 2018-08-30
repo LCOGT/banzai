@@ -24,6 +24,7 @@ RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
 WORKDIR /lco/banzai
 
 COPY . /lco/banzai
+
 RUN python /lco/banzai/setup.py install
 
 USER archive
