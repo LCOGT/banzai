@@ -25,7 +25,7 @@ class PatternNoiseDetector(Stage):
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             logs.add_tag(logging_tags, 'snr_threshold', self.SNR_THRESHOLD)
-            logs.add_tag(logging_tags, 'std_threshold', self.PEAK_POSITION_STD_THRESHOLD)
+            logs.add_tag(logging_tags, 'peak_position_std_threshold', self.PEAK_POSITION_STD_THRESHOLD)
 
             pattern_noise_is_bad = self.check_for_pattern_noise(image.data)
 
@@ -35,7 +35,7 @@ class PatternNoiseDetector(Stage):
                 self.logger.info('No pattern noise found.', extra=logging_tags)
             self.save_qc_results({'pattern_noise.failed': pattern_noise_is_bad,
                                   'pattern_noise.snr_threshold': self.SNR_THRESHOLD,
-                                  'pattern_noise.std_threshold': self.PEAK_POSITION_STD_THRESHOLD,
+                                  'pattern_noise.peak_position_std_threshold': self.PEAK_POSITION_STD_THRESHOLD,
                                   }, image)
         return images
 
@@ -87,7 +87,7 @@ def trim_image_edges(data, fractional_edge_width=0.025):
     return data[ntrim:-ntrim, ntrim:-ntrim]
 
 
-def get_2d_power_band(data, fractional_band_width=0.25):
+def get_2d_power_band(data, fractional_band_width=0.25, fractional_inner_edge_to_discard=0.025):
     """
     Extract the central region of the 2D Fourier transform
 
@@ -97,6 +97,8 @@ def get_2d_power_band(data, fractional_band_width=0.25):
         The data for computing the Fourier Transform
     fractional_band_width : float
         Vertical band width as a fraction of ny
+    fractional_inner_edge_to_discard : float
+        Amount of inner area (i.e. where large-scale power is detected) to discard as a fraction of nx
 
     Returns
     -------
@@ -107,11 +109,12 @@ def get_2d_power_band(data, fractional_band_width=0.25):
     full_power_2d = abs(np.fft.rfft2(data))
 
     # Extract horizontal band, as corners of 2D FFT can vary significantly between images
-    ny = full_power_2d.shape[0]
+    ny, nx = full_power_2d.shape
     y1 = int(ny * (0.5 - fractional_band_width/2))
     y2 = int(ny * (0.5 + fractional_band_width/2))
+    x1 = int(nx * fractional_inner_edge_to_discard)
 
-    return full_power_2d[y1:y2]
+    return full_power_2d[y1:y2, x1:]
 
 
 def compute_snr(power_2d, fractional_window_size=0.05):

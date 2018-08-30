@@ -75,10 +75,11 @@ def test_trim_edges():
 
 
 def test_get_2d_power_band(set_random_seed):
-    data = np.random.normal(0.0, 10.0, size=(100, 100))
-    fft = abs(np.fft.rfft2(data))[37:62]
-    power_band = pattern_noise.get_2d_power_band(data, fractional_band_width=0.25)
-    assert power_band.shape == (25, 51)
+    data = np.random.normal(0.0, 10.0, size=(100, 400))
+    fft = abs(np.fft.rfft2(data))[37:62, 5:]
+    power_band = pattern_noise.get_2d_power_band(data, fractional_band_width=0.25,
+                                                 fractional_inner_edge_to_discard=0.025)
+    assert power_band.shape == (25, 196)
     np.testing.assert_allclose(power_band, fft)
 
 
