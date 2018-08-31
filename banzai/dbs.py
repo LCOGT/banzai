@@ -343,7 +343,7 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
     add_or_update_record(db_session, CalibrationImage, {'filename': output_filename},
                          {'dayobs': date_utils.epoch_string_to_date(image_config.epoch),
                           'ccdsum': image_config.ccdsum, 'filter_name': image_config.filter,
-                          'telescope_id': image_config.telescope_id, 'type': cal_type.upper(),
+                          'telescope_id': image_config.telescope.id, 'type': cal_type.upper(),
                           'filename': output_filename, 'filepath': os.path.dirname(output_file)})
 
     db_session.commit()
@@ -462,7 +462,7 @@ def get_schedulable_telescopes(site, db_address=_DEFAULT_DB):
 def get_master_calibration_image(image, calibration_type, group_by_keywords,
                                  db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
-    calibration_criteria &= CalibrationImage.telescope_id == image.telescope.id
+    calibration_criteria &= CalibrationImage.telescope.id == image.telescope.id
 
     for criterion in group_by_keywords:
         if criterion == 'filter':
