@@ -12,21 +12,18 @@ class SinistroModeNotSupported(Exception):
 
 
 def munge(image, pipeline_context):
-    telescope = dbs.get_telescope(image.telescope_id,
-                                  db_address=pipeline_context.db_address)
-
-    if 'sinistro' in telescope.camera_type.lower():
+    if 'sinistro' in image.telescope.camera_type.lower():
         if sinistro_mode_is_supported(image):
             munge_sinistro(image)
         else:
             raise SinistroModeNotSupported('Sinistro mode not supported {f}'.format(f=image.filename))
 
     # 1m SBIGS
-    elif '1m0' in telescope.camera_type:
+    elif '1m0' in image.telescope.camera_type:
         image.header['SATURATE'] = (46000.0, '[ADU] Saturation level used')
-    elif '0m4' in telescope.camera_type or '0m8' in telescope.camera_type:
+    elif '0m4' in image.telescope.camera_type or '0m8' in image.telescope.camera_type:
         image.header['SATURATE'] = (56000.0, '[ADU] Saturation level used')
-    elif 'fs02' == telescope.instrument:
+    elif 'fs02' == image.telescope.instrument:
         # These values were given by Joe Tufts on 2016-06-07
         # These should really be measured empirically.
         if image.header['CCDSUM'] == '2 2':

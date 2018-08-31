@@ -270,15 +270,20 @@ def populate_bpm_table(directory, db_address=_DEFAULT_DB):
             extension_number = 1
         else:
             extension_number = 0
-        site = fits.getval(bpm_filename, 'SITEID', extension_number).lower()
-        instrument = fits.getval(bpm_filename, 'INSTRUME', extension_number).lower()
+
+        header = fits.getheader(bpm_filename, extension_number)
         ccdsum = fits.getval(bpm_filename, 'CCDSUM', extension_number)
         creation_date = date_utils.epoch_string_to_date(fits.getval(bpm_filename, 'DAY-OBS',
                                                                     extension_number))
 
-        telescope_id = get_telescope_id(site=site, instrument=instrument, db_address=db_address)
+        telescope = get_telescope(header, db_address=db_address)
 
-        bpm_attributes = {'telescope_id': telescope_id, 'filepath': os.path.abspath(directory),
+        if telescope is None:
+            logger.error('Telescope is missing from database', extra={'tags': {'site': header['SITEID'],
+                                                                               'instrument': header['INSTRUME']}})
+            continue
+
+        bpm_attributes = {'telescope_id': telescope.id, 'filepath': os.path.abspath(directory),
                           'filename': os.path.basename(bpm_filename), 'ccdsum': ccdsum,
                           'creation_date': creation_date}
 
@@ -292,25 +297,26 @@ class TelescopeMissingException(Exception):
     pass
 
 
-def get_telescope_id(site, instrument, db_address=_DEFAULT_DB):
-    # TODO:  This dies if the telescope is not in the telescopes table. Maybe ping the configdb?
+def _query_for_telescope(db_address, site, instrument):
+    # Short circuit
+    if site is None or instrument is None:
+        return None
     db_session = get_session(db_address=db_address)
     criteria = (Telescope.site == site) & (Telescope.instrument == instrument)
     telescope = db_session.query(Telescope).filter(criteria).first()
     db_session.close()
-    if telescope is None:
-        err_msg = '{site}/{instrument} is not in the database.'.format(site=site,
-                                                                       instrument=instrument)
-        raise TelescopeMissingException(err_msg)
-    return telescope.id
+    return telescope
 
 
-def get_telescope(telescope_id, db_address=_DEFAULT_DB):
-    db_session = get_session(db_address=db_address)
-    telescope = db_session.query(Telescope).filter(Telescope.id == telescope_id).first()
-    db_session.close()
+def get_telescope(header, db_address=_DEFAULT_DB):
+    site = header.get('SITEID')
+    instrument = header.get('INSTRUME')
+    telescope_for_instrument = _query_for_telescope(db_address, site, instrument)
+    telescope = telescope_for_instrument if telescope_for_instrument is not None \
+        else _query_for_telescope(db_address, site, header.get('TELESCOP'))
     if telescope is None:
-        raise TelescopeMissingException('Telescope ID {id} is not in the database.'.format(id=telescope_id))
+        err_msg = '{site}/{instrument} is not in the database.'.format(site=site, instrument=instrument)
+        logger.error(err_msg, extra={'tags': {'site': site, 'instrument': instrument}})
     return telescope
 
 
@@ -337,7 +343,7 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
     add_or_update_record(db_session, CalibrationImage, {'filename': output_filename},
                          {'dayobs': date_utils.epoch_string_to_date(image_config.epoch),
                           'ccdsum': image_config.ccdsum, 'filter_name': image_config.filter,
-                          'telescope_id': image_config.telescope_id, 'type': cal_type.upper(),
+                          'telescope_id': image_config.telescope.id, 'type': cal_type.upper(),
                           'filename': output_filename, 'filepath': os.path.dirname(output_file)})
 
     db_session.commit()
@@ -346,8 +352,7 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
 
 def get_telescope_for_file(path, db_address=_DEFAULT_DB):
     data, header, bpm, extension_headers = fits_utils.open_image(path)
-    telescope_id = get_telescope_id(header.get('SITEID'), header.get('INSTRUME'), db_address=db_address)
-    return get_telescope(telescope_id, db_address=db_address)
+    return get_telescope(header, db_address=db_address)
 
 
 def need_to_make_preview(path, db_address=_DEFAULT_DB, max_tries=5):
@@ -457,7 +462,7 @@ def get_schedulable_telescopes(site, db_address=_DEFAULT_DB):
 def get_master_calibration_image(image, calibration_type, group_by_keywords,
                                  db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
-    calibration_criteria &= CalibrationImage.telescope_id == image.telescope_id
+    calibration_criteria &= CalibrationImage.telescope_id == image.telescope.id
 
     for criterion in group_by_keywords:
         if criterion == 'filter':

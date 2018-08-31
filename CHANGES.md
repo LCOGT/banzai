@@ -1,5 +1,8 @@
 0.9.8 (2018-08-30)
 ------------------
+- Refactored exceptions for missing bad pixel masks
+- Added fallback check to search the TELESCOP keyword in the configdb (necessary for NRES)
+- Added override to the bad pixel mask requirement
 - Integrated e2e testing 
     - This test must be ignored when running pytest locally by using the option "-m 'not e2e'"
 - Modified pattern noise QC check to ignore large-scale pattern features

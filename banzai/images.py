@@ -39,14 +39,8 @@ class Image(object):
         self.extension_headers = extension_headers
 
         self.request_number = header.get('REQNUM')
+        self.telescope, self.site, self.instrument = self._init_telescope_info(pipeline_context)
 
-        self.site = header.get('SITEID')
-        self.instrument = header.get('INSTRUME')
-        if self.site is not None and self.instrument is not None:
-            self.telescope_id = dbs.get_telescope_id(self.site, self.instrument,
-                                                     db_address=pipeline_context.db_address)
-        else:
-            self.telescope_id = None
         self.epoch = str(header.get('DAY-OBS'))
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
@@ -68,6 +62,19 @@ class Image(object):
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE', 0.0))
         self.catalog = None
+
+    def _init_telescope_info(self, pipeline_context):
+        if len(self.header) > 0:
+            telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
+            if telescope is not None:
+                site = telescope.site
+                instrument = telescope.instrument
+            else:
+                site = self.header.get('SITEID')
+                instrument = self.header.get('INSTRUME')
+        else:
+            telescope, site, instrument = None, None, None
+        return telescope, site, instrument
 
     def subtract(self, value):
         self.data -= value
@@ -172,17 +179,15 @@ def read_images(image_list, pipeline_context):
     for filename in image_list:
         try:
             image = Image(pipeline_context, filename=filename)
+            if image.telescope is None:
+                error_message = 'Telescope is not in the database: {site}/{instrument}'
+                error_message = error_message.format(site=image.site, instrument=image.instrument)
+                raise dbs.TelescopeMissingException(error_message)
             munge(image, pipeline_context)
             if image.bpm is None:
-                bpm = image_utils.get_bpm(image, pipeline_context)
-                if bpm is None:
-                    logger.error('No BPM file exists for this image.',
-                                 extra={'tags': {'filename': image.filename}})
-                else:
-                    image.bpm = bpm
-                    images.append(image)
+                image_utils.load_bpm(image, pipeline_context)
+            images.append(image)
         except Exception as e:
-            logger.error('Error loading {0}'.format(filename))
-            logger.error(e)
+            logger.error('Error loading image: {error}'.format(error=e), extra={'tags': {'filename': filename}})
             continue
     return images
