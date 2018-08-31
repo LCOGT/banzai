@@ -39,15 +39,7 @@ class Image(object):
         self.extension_headers = extension_headers
 
         self.request_number = header.get('REQNUM')
-
-        if len(self.header) > 0:
-            self.telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
-            if self.telescope is not None:
-                self.site = self.telescope.site
-                self.instrument = self.telescope.instrument
-            else:
-                self.site = header.get('SITEID')
-                self.instrument = header.get('INSTRUME')
+        self.telescope, self.site, self.instrument = self._init_telescope_info(pipeline_context)
 
         self.epoch = str(header.get('DAY-OBS'))
         self.nx = header.get('NAXIS1')
@@ -70,6 +62,17 @@ class Image(object):
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE', 0.0))
         self.catalog = None
+
+    def _init_telescope_info(self, pipeline_context):
+        if len(self.header) > 0:
+            telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
+            if telescope is not None:
+                site = telescope.site
+                instrument = telescope.instrument
+            else:
+                site = self.header.get('SITEID')
+                instrument = self.header.get('INSTRUME')
+        return telescope, site, instrument
 
     def subtract(self, value):
         self.data -= value
