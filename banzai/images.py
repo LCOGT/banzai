@@ -72,6 +72,8 @@ class Image(object):
             else:
                 site = self.header.get('SITEID')
                 instrument = self.header.get('INSTRUME')
+        else:
+            telescope, site, instrument = None, None, None
         return telescope, site, instrument
 
     def subtract(self, value):
