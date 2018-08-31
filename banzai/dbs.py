@@ -462,7 +462,7 @@ def get_schedulable_telescopes(site, db_address=_DEFAULT_DB):
 def get_master_calibration_image(image, calibration_type, group_by_keywords,
                                  db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
-    calibration_criteria &= CalibrationImage.telescope.id == image.telescope.id
+    calibration_criteria &= CalibrationImage.telescope_id == image.telescope.id
 
     for criterion in group_by_keywords:
         if criterion == 'filter':
