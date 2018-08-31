@@ -293,7 +293,6 @@ class TelescopeMissingException(Exception):
 
 
 def get_telescope_id(site, instrument, db_address=_DEFAULT_DB):
-    # TODO:  This dies if the telescope is not in the telescopes table. Maybe ping the configdb?
     db_session = get_session(db_address=db_address)
     criteria = (Telescope.site == site) & (Telescope.instrument == instrument)
     telescope = db_session.query(Telescope).filter(criteria).first()
@@ -301,8 +300,11 @@ def get_telescope_id(site, instrument, db_address=_DEFAULT_DB):
     if telescope is None:
         err_msg = '{site}/{instrument} is not in the database.'.format(site=site,
                                                                        instrument=instrument)
-        raise TelescopeMissingException(err_msg)
-    return telescope.id
+        logger.error(err_msg, extra={'tags': {'site': site, 'instrument': instrument}})
+        telescope_id = None
+    else:
+        telescope_id = telescope.id
+    return telescope_id
 
 
 def get_telescope(telescope_id, db_address=_DEFAULT_DB):

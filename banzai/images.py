@@ -45,8 +45,11 @@ class Image(object):
         if self.site is not None and self.instrument is not None:
             self.telescope_id = dbs.get_telescope_id(self.site, self.instrument,
                                                      db_address=pipeline_context.db_address)
-        else:
-            self.telescope_id = None
+            if self.telescope_id is None and header.get('TELESCOP') is not None:
+                self.telescope_id = dbs.get_telescope_id(self.site, header.get('TELESCOP'),
+                                                         db_address=pipeline_context.db_address)
+                self.instrument = header.get('TELESCOP')
+
         self.epoch = str(header.get('DAY-OBS'))
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
@@ -172,6 +175,8 @@ def read_images(image_list, pipeline_context):
     for filename in image_list:
         try:
             image = Image(pipeline_context, filename=filename)
+            if image.telescope_id is None:
+                raise dbs.TelescopeMissingException
             munge(image, pipeline_context)
             if image.bpm is None:
                 bpm = image_utils.get_bpm(image, pipeline_context)
@@ -181,6 +186,8 @@ def read_images(image_list, pipeline_context):
                 else:
                     image.bpm = bpm
                     images.append(image)
+            else:
+                images.append(image)
         except Exception as e:
             logger.error('Error loading {0}'.format(filename))
             logger.error(e)
