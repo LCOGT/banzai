@@ -21,8 +21,10 @@ def _trim_image(image):
         # Update the NAXIS and CRPIX keywords
         image.header['NAXIS1'] = trimsec[1].stop - trimsec[1].start
         image.header['NAXIS2'] = trimsec[0].stop - trimsec[0].start
-        image.header['CRPIX1'] -= trimsec[1].start
-        image.header['CRPIX2'] -= trimsec[0].start
+        if 'CRPIX1' in image.header:
+            image.header['CRPIX1'] -= trimsec[1].start
+        if 'CRPIX2' in image.header:
+            image.header['CRPIX2'] -= trimsec[0].start
 
         image.header['L1STATTR'] = (1, 'Status flag for overscan trimming')
     else:
