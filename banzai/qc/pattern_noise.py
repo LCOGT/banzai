@@ -9,7 +9,7 @@ from banzai import logs
 
 class PatternNoiseDetector(Stage):
     # Signal to Noise threshold to raise an alert
-    SNR_THRESHOLD = 10.0
+    SNR_THRESHOLD = 20.0
     # The maximum allowed standard deviation of the peak centres
     PEAK_POSITION_STD_THRESHOLD = 1.0
 
@@ -27,7 +27,10 @@ class PatternNoiseDetector(Stage):
             logs.add_tag(logging_tags, 'snr_threshold', self.SNR_THRESHOLD)
             logs.add_tag(logging_tags, 'peak_position_std_threshold', self.PEAK_POSITION_STD_THRESHOLD)
 
-            pattern_noise_is_bad = self.check_for_pattern_noise(image.data)
+            pattern_noise_is_bad, peak_snr_value, peak_position_std = self.check_for_pattern_noise(image.data)
+
+            logs.add_tag(logging_tags, 'peak_snr_value', peak_snr_value)
+            logs.add_tag(logging_tags, 'peak_position_std', peak_position_std)
 
             if pattern_noise_is_bad:
                 self.logger.error('Image found to have pattern noise.', extra=logging_tags)
@@ -36,6 +39,8 @@ class PatternNoiseDetector(Stage):
             self.save_qc_results({'pattern_noise.failed': pattern_noise_is_bad,
                                   'pattern_noise.snr_threshold': self.SNR_THRESHOLD,
                                   'pattern_noise.peak_position_std_threshold': self.PEAK_POSITION_STD_THRESHOLD,
+                                  'patter_noise.peak_snr_value': peak_snr_value,
+                                  'patter_noise.peak_position_std': peak_position_std,
                                   }, image)
         return images
 
@@ -64,7 +69,7 @@ class PatternNoiseDetector(Stage):
         # Check that every peak obtained from the different wavelet width convolutions is above the threshold,
         # and that the standard deviation of the peak centers is small.
         has_pattern_noise = (peak_maxima > self.SNR_THRESHOLD).all() and std_maxima < self.PEAK_POSITION_STD_THRESHOLD
-        return has_pattern_noise
+        return has_pattern_noise, min(peak_maxima), std_maxima
 
 
 def trim_image_edges(data, fractional_edge_width=0.025):
