@@ -20,10 +20,21 @@ class MissingBPMError(Exception):
     pass
 
 
-def select_images(image_list, image_types):
+def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
+    telescope = dbs.get_telescope_for_file(filename, db_address=db_address)
+    passes = True
+    for criterion in criteria:
+        if not criterion.telescope_passes(telescope):
+            passes = False
+    return passes
+
+
+def select_images(image_list, image_types, instrument_criteria, db_address=dbs._DEFAULT_DB):
     images = []
     for filename in image_list:
         try:
+            if not image_passes_criteria(filename, instrument_criteria, db_address=db_address):
+                continue
             obstype = None
             hdu_list = fits.open(filename)
             for hdu in hdu_list:
@@ -36,7 +47,7 @@ def select_images(image_list, image_types):
             if obstype in image_types:
                 images.append(filename)
         except Exception as e:
-            logger.error('Exception getting OBSTYPE: {e}'.format(e=e),
+            logger.error('Exception checking image selection criteria: {e}'.format(e=e),
                          extra={'tags': {'filename': filename}})
     return images
 

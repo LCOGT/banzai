@@ -19,12 +19,16 @@ from kombu import Connection, Queue, Exchange
 from kombu.mixins import ConsumerMixin
 
 import banzai.images
+import banzai.preview
 from banzai import bias, dark, flats, trim, photometry, astrometry, qc
 from banzai import dbs
 from banzai import logs
 from banzai import crosstalk, gain, mosaic, bpm
+from banzai.context import PipelineContext
 from banzai.qc import pointing
 from banzai.utils import image_utils, date_utils
+from banzai.context import TelescopeCriterion
+import operator
 
 logger = logs.get_logger(__name__)
 
@@ -44,6 +48,10 @@ ordered_stages = [qc.HeaderSanity,
                   photometry.SourceDetector,
                   astrometry.WCSSolver,
                   pointing.PointingTest]
+
+IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
+                    TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True),
+                    TelescopeCriterion('schedulable', operator.eq, True)]
 
 
 def get_stages_todo(last_stage=None, extra_stages=None):
@@ -89,25 +97,6 @@ def get_preview_stages_todo(image_suffix):
     else:
         stages = get_stages_todo()
     return stages
-
-
-class PipelineContext(object):
-    def __init__(self, args):
-        self.processed_path = args.processed_path
-        self.raw_path = args.raw_path
-        self.post_to_archive = args.post_to_archive
-        self.post_to_elasticsearch = args.post_to_elasticsearch
-        self.elasticsearch_url = args.elasticsearch_url
-        self.fpack = args.fpack
-        self.rlevel = args.rlevel
-        self.db_address = args.db_address
-        self.log_level = args.log_level
-        self.preview_mode = args.preview_mode
-        self.filename = args.filename
-        self.max_preview_tries = args.max_preview_tries
-        self.elasticsearch_doc_type = args.elasticsearch_doc_type
-        self.elasticsearch_qc_index = args.elasticsearch_qc_index
-        self.no_bpm = args.no_bpm
 
 
 def run_end_of_night_from_console(scripts_to_run):
@@ -249,7 +238,7 @@ def reduce_night():
     args.filename = None
     args.max_preview_tries = 5
 
-    pipeline_context = PipelineContext(args)
+    pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
 
     logs.start_logging(log_level=pipeline_context.log_level)
 
@@ -327,7 +316,7 @@ def parse_end_of_night_command_line_arguments():
     args.preview_mode = False
     args.max_preview_tries = 5
 
-    return PipelineContext(args)
+    return PipelineContext(args, IMAGING_CRITERIA)
 
 
 def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False, log_message=''):
@@ -338,7 +327,9 @@ def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False,
         logger.info(log_message, extra={'tags': {'raw_path': pipeline_context.raw_path}})
 
     image_list = image_utils.make_image_list(pipeline_context)
-    image_list = image_utils.select_images(image_list, image_types)
+    image_list = image_utils.select_images(image_list, image_types,
+                                           pipeline_context.allowed_instrument_criteria,
+                                           db_address=pipeline_context.db_address)
     images = banzai.images.read_images(image_list, pipeline_context)
 
     for stage in stages_to_do:
@@ -390,7 +381,7 @@ def run_preview_pipeline():
     args.preview_mode = True
     args.raw_path = None
     args.filename = None
-    pipeline_context = PipelineContext(args)
+    pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
 
     logs.start_logging(log_level=pipeline_context.log_level)
 
@@ -403,7 +394,7 @@ def run_preview_pipeline():
     logger.info('Starting pipeline preview mode listener')
 
     for i in range(args.n_processes):
-        p = multiprocessing.Process(target=run_indiviudal_listener, args=(args.broker_url,
+        p = multiprocessing.Process(target=run_individual_listener, args=(args.broker_url,
                                                                           args.queue_name,
                                                                           PipelineContext(args)))
         p.start()
@@ -411,7 +402,7 @@ def run_preview_pipeline():
     logs.stop_logging()
 
 
-def run_indiviudal_listener(broker_url, queue_name, pipeline_context):
+def run_individual_listener(broker_url, queue_name, pipeline_context):
 
     fits_exchange = Exchange('fits_files', type='fanout')
     listener = PreviewModeListener(broker_url, pipeline_context)
@@ -459,8 +450,9 @@ class PreviewModeListener(ConsumerMixin):
 
         if is_eligible_for_preview:
             try:
-                if dbs.need_to_make_preview(path, db_address=self.pipeline_context.db_address,
-                                            max_tries=self.pipeline_context.max_preview_tries):
+                if banzai.preview.need_to_make_preview(path, self.pipeline_context.allowed_instrument_criteria,
+                                                       db_address=self.pipeline_context.db_address,
+                                                       max_tries=self.pipeline_context.max_preview_tries):
                     stages_to_do = get_preview_stages_todo(image_suffix)
 
                     logging_tags = {'tags': {'filename': os.path.basename(path)}}
@@ -469,10 +461,10 @@ class PreviewModeListener(ConsumerMixin):
                     self.pipeline_context.raw_path = os.path.dirname(path)
 
                     # Increment the number of tries for this file
-                    dbs.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
+                    banzai.preview.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
 
                     run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT'])
-                    dbs.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
+                    banzai.preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
             except Exception as e:
                 logging_tags = {'tags': {'filename': os.path.basename(path)}}
