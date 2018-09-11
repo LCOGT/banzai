@@ -12,6 +12,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse
 import multiprocessing
 import os
+import sys
+import traceback
+
+from kombu import Exchange, Connection, Queue
+from kombu.mixins import ConsumerMixin
 
 import banzai.images
 from banzai import bias, dark, flats, trim, photometry, astrometry, qc
@@ -19,7 +24,7 @@ from banzai import dbs
 from banzai import logs
 from banzai import crosstalk, gain, mosaic, bpm
 from banzai.context import PipelineContext
-from banzai.preview import run_individual_listener
+from banzai import preview
 from banzai.qc import pointing
 from banzai.utils import image_utils, date_utils
 from banzai.context import TelescopeCriterion
@@ -47,6 +52,8 @@ ORDERED_STAGES = [qc.HeaderSanity,
 IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
                     TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True),
                     TelescopeCriterion('schedulable', operator.eq, True)]
+
+PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
 
 
 def get_stages_todo(last_stage=None, extra_stages=None):
@@ -380,3 +387,73 @@ def run_preview_pipeline():
         p.start()
 
     logs.stop_logging()
+
+
+def run_individual_listener(broker_url, queue_name, pipeline_context):
+
+    fits_exchange = Exchange('fits_files', type='fanout')
+    listener = PreviewModeListener(broker_url, pipeline_context)
+
+    with Connection(listener.broker_url) as connection:
+        listener.connection = connection.clone()
+        listener.queue = Queue(queue_name, fits_exchange)
+        try:
+            listener.run()
+        except listener.connection.connection_errors:
+            listener.connection = connection.clone()
+            listener.ensure_connection(max_retries=10)
+        except KeyboardInterrupt:
+            logger.info('Shutting down preview pipeline listener.')
+
+
+class PreviewModeListener(ConsumerMixin):
+    def __init__(self, broker_url, pipeline_context):
+        self.broker_url = broker_url
+        self.pipeline_context = pipeline_context
+
+    def on_connection_error(self, exc, interval):
+        logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
+        self.connection = self.connection.clone()
+        self.connection.ensure_connection(max_retries=10)
+
+    def get_consumers(self, Consumer, channel):
+        consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
+        # Only fetch one thing off the queue at a time
+        consumer.qos(prefetch_count=1)
+        return [consumer]
+
+    def on_message(self, body, message):
+        path = body.get('path')
+        message.ack()  # acknowledge to the sender we got this message (it can be popped)
+
+        is_eligible_for_preview = False
+        for suffix in PREVIEW_ELIGIBLE_SUFFIXES:
+            if suffix in path:
+                is_eligible_for_preview = True
+                image_suffix = suffix
+
+        if is_eligible_for_preview:
+            try:
+                if preview.need_to_make_preview(path, self.pipeline_context.allowed_instrument_criteria,
+                                                db_address=self.pipeline_context.db_address,
+                                                max_tries=self.pipeline_context.max_preview_tries):
+                    stages_to_do = preview.get_preview_stages_todo(image_suffix)
+
+                    logging_tags = {'tags': {'filename': os.path.basename(path)}}
+                    logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)
+                    self.pipeline_context.filename = os.path.basename(path)
+                    self.pipeline_context.raw_path = os.path.dirname(path)
+
+                    # Increment the number of tries for this file
+                    preview.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
+
+                    run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT'])
+                    preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
+
+            except Exception as e:
+                logging_tags = {'tags': {'filename': os.path.basename(path)}}
+                exc_type, exc_value, exc_tb = sys.exc_info()
+                tb_msg = traceback.format_exception(exc_type, exc_value, exc_tb)
+
+                logger.error("Exception producing preview frame. {0}. {1}".format(path, tb_msg),
+                             extra=logging_tags)
