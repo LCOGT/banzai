@@ -437,7 +437,7 @@ class PreviewModeListener(ConsumerMixin):
                 if preview.need_to_make_preview(path, self.pipeline_context.allowed_instrument_criteria,
                                                 db_address=self.pipeline_context.db_address,
                                                 max_tries=self.pipeline_context.max_preview_tries):
-                    stages_to_do = preview.get_preview_stages_todo(image_suffix)
+                    stages_to_do = get_preview_stages_todo(image_suffix)
 
                     logging_tags = {'tags': {'filename': os.path.basename(path)}}
                     logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)
@@ -457,3 +457,18 @@ class PreviewModeListener(ConsumerMixin):
 
                 logger.error("Exception producing preview frame. {0}. {1}".format(path, tb_msg),
                              extra=logging_tags)
+
+
+def get_preview_stages_todo(image_suffix):
+    if image_suffix == 'b00.fits':
+        stages = get_stages_todo(last_stage=trim.Trimmer,
+                                 extra_stages=[bias.BiasMasterLevelSubtractor, bias.BiasComparer])
+    elif image_suffix == 'd00.fits':
+        stages = get_stages_todo(last_stage=bias.BiasSubtractor,
+                                 extra_stages=[dark.DarkNormalizer, dark.DarkComparer])
+    elif image_suffix == 'f00.fits':
+        stages = get_stages_todo(last_stage=dark.DarkSubtractor,
+                                 extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer])
+    else:
+        stages = get_stages_todo()
+    return stages

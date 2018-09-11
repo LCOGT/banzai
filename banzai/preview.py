@@ -1,5 +1,4 @@
-from banzai import dbs, trim, bias, dark, flats, qc
-from banzai.main import get_stages_todo
+from banzai import dbs
 from banzai.utils import file_utils
 from banzai import logs
 from banzai.utils.image_utils import image_passes_criteria
@@ -75,18 +74,3 @@ def need_to_make_preview(path, criteria, db_address=dbs._DEFAULT_DB, max_tries=5
         dbs.commit_preview_image(preview_image, db_address)
 
     return need_to_process
-
-
-def get_preview_stages_todo(image_suffix):
-    if image_suffix == 'b00.fits':
-        stages = get_stages_todo(last_stage=trim.Trimmer,
-                                 extra_stages=[bias.BiasMasterLevelSubtractor, bias.BiasComparer])
-    elif image_suffix == 'd00.fits':
-        stages = get_stages_todo(last_stage=bias.BiasSubtractor,
-                                 extra_stages=[dark.DarkNormalizer, dark.DarkComparer])
-    elif image_suffix == 'f00.fits':
-        stages = get_stages_todo(last_stage=dark.DarkSubtractor,
-                                 extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer])
-    else:
-        stages = get_stages_todo()
-    return stages
