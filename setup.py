@@ -184,7 +184,7 @@ else:
 # ``setup``, since these are now deprecated. See this link for more details:
 # https://groups.google.com/forum/#!topic/astropy-dev/urYO8ckB2uM
 
-setup(name=PACKAGENAME,
+setup(name=metadata.get('name'),
       version=VERSION,
       description=DESCRIPTION,
       scripts=scripts,
