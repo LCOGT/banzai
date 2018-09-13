@@ -5,7 +5,7 @@ import elasticsearch
 
 from banzai import dbs
 from banzai import logs
-from banzai.images import Image
+from banzai.image import Image
 from banzai.utils import image_utils
 from banzai.utils.qc import format_qc_results
 
@@ -66,7 +66,7 @@ class Stage(abc.ABC):
         ----------
         qc_results : dict
                      Dictionary of key value pairs to be saved to ElasticSearch
-        image : banzai.images.Image
+        image : banzai.image.Image
                 Image that should be linked
 
         Notes

@@ -18,7 +18,7 @@ import traceback
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 
-import banzai.images
+import banzai.image
 from banzai import bias, dark, flats, trim, photometry, astrometry, qc
 from banzai import dbs
 from banzai import logs
@@ -317,7 +317,7 @@ def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False,
     image_list = image_utils.select_images(image_list, image_types,
                                            pipeline_context.allowed_instrument_criteria,
                                            db_address=pipeline_context.db_address)
-    images = banzai.images.read_images(image_list, pipeline_context)
+    images = banzai.image.image.read_images(image_list, pipeline_context)
 
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)

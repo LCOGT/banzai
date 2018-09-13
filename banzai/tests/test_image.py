@@ -1,4 +1,4 @@
-from banzai.images import Image
+from banzai.image import Image
 from banzai.tests.utils import FakeContext, FakeImage
 import numpy as np
 import pytest
@@ -16,12 +16,12 @@ def test_null_filename():
 
 def test_3d_is_3d():
     test_image = FakeImage(n_amps=4)
-    assert test_image.data_is_3d()
+    assert test_image.is_data_3d()
 
 
 def test_2d_is_not_3d():
     test_image = FakeImage()
-    assert not test_image.data_is_3d()
+    assert not test_image.is_data_3d()
 
 
 def test_get_n_amps_3d():

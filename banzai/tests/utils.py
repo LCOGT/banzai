@@ -4,7 +4,7 @@ from banzai.utils import image_utils
 import numpy as np
 from datetime import datetime
 from banzai.stages import Stage
-from banzai.images import Image
+from banzai.image import Image
 
 
 class FakeImage(Image):

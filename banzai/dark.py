@@ -5,7 +5,7 @@ import os.path
 
 from banzai.utils import stats, fits_utils
 from banzai import logs
-from banzai.images import Image
+from banzai.image import Image
 from banzai.stages import CalibrationMaker, ApplyCalibration, CalibrationComparer, Stage
 
 __author__ = 'cmccully'

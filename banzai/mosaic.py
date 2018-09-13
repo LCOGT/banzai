@@ -16,7 +16,7 @@ class MosaicCreator(Stage):
 
     def do_stage(self, images):
         for image in images:
-            if image.data_is_3d():
+            if image.is_data_3d():
 
                 logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
                 logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))

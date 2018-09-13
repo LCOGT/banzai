@@ -42,7 +42,7 @@ def sinistro_mode_is_supported(image):
 
     Parameters
     ----------
-    image: banzai.images.Image
+    image: banzai.image.Image
            Sinistro image to check
 
     Returns
@@ -122,7 +122,7 @@ def image_has_valid_saturate_value(image):
 
     Parameters
     ----------
-    image: banzai.images.Image
+    image: banzai.image.Image
 
     Returns
     -------

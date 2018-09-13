@@ -4,7 +4,7 @@ import os.path
 
 import numpy as np
 
-from banzai.images import Image
+from banzai.image import Image
 from banzai import logs
 from banzai.stages import CalibrationMaker, ApplyCalibration, Stage, CalibrationComparer
 from banzai.utils import stats, fits_utils
@@ -117,7 +117,7 @@ class OverscanSubtractor(Stage):
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
 
             # Subtract the overscan if it exists
-            if image.data_is_3d():
+            if image.is_data_3d():
                 for i in range(image.get_n_amps()):
                     overscan_level = _subtract_overscan_3d(image, i)
                     logs.add_tag(logging_tags, 'OVERSCN{0}'.format(i + 1), overscan_level)

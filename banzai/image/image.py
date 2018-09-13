@@ -7,7 +7,7 @@ import tempfile
 import shutil
 
 from banzai import dbs
-from banzai.utils import date_utils
+from banzai.image.header import Header
 from banzai.utils import fits_utils
 from banzai.utils import image_utils
 from banzai import logs
@@ -18,60 +18,42 @@ logger = logs.get_logger(__name__)
 
 class Image(object):
 
-    def __init__(self, pipeline_context, filename=None, data=None, header=None,
-                 extension_headers=None, bpm=None):
-        if header is None:
-            header = {}
-
+    def __init__(self, pipeline_context, filename: str = None, data=None, header: Header = None,
+                 extension_headers: list = None, bpm=None):
         if extension_headers is None:
             extension_headers = []
 
         if filename is not None:
             data, header, bpm, extension_headers = fits_utils.open_image(filename)
-            if '.fz' == filename[-3:]:
-                filename = filename[:-3]
+            filename = os.path.splitext(filename)[0]
+
             self.filename = os.path.basename(filename)
 
         self.data = data
-        self.header = header
+        self.header = Header(header)
         self.bpm = bpm
-
         self.extension_headers = extension_headers
-
-        self.request_number = header.get('REQNUM')
+        self.gain = self._set_gain(extension_headers, header)
         self.telescope, self.site, self.instrument = self._init_telescope_info(pipeline_context)
-
-        self.epoch = str(header.get('DAY-OBS'))
-        self.nx = header.get('NAXIS1')
-        self.ny = header.get('NAXIS2')
-        self.block_id = header.get('BLKUID')
-        self.molecule_id = header.get('MOLUID')
-
-        if len(self.extension_headers) > 0 and 'GAIN' in self.extension_headers[0]:
-                self.gain = [h['GAIN'] for h in extension_headers]
-        else:
-            self.gain = eval(str(header.get('GAIN')))
-
-        self.ccdsum = header.get('CCDSUM')
-        self.filter = header.get('FILTER')
-
-        self.obstype = header.get('OBSTYPE')
-        self.exptime = float(header.get('EXPTIME', 0.0))
-        self.dateobs = date_utils.parse_date_obs(header.get('DATE-OBS', '1900-01-01T00:00:00.00000'))
-        self.readnoise = float(header.get('RDNOISE', 0.0))
-        self.ra, self.dec = fits_utils.parse_ra_dec(header)
-        self.pixel_scale = float(header.get('PIXSCALE', 0.0))
         self.catalog = None
 
-    def _init_telescope_info(self, pipeline_context):
-        if len(self.header) > 0:
-            telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
+    def _set_gain(self, extension_headers, header):
+        if len(extension_headers) > 0 and 'GAIN' in extension_headers[0]:
+            gain = [h['GAIN'] for h in extension_headers]
+        else:
+            gain = header.gain
+
+        return gain
+
+    def _init_telescope_info(self, pipeline_context, header):
+        if header is not None:
+            telescope = dbs.get_telescope(header, db_address=pipeline_context.db_address)
             if telescope is not None:
                 site = telescope.site
                 instrument = telescope.instrument
             else:
-                site = self.header.get('SITEID')
-                instrument = self.header.get('INSTRUME')
+                site = header.site
+                instrument = header.instrument
         else:
             telescope, site, instrument = None, None, None
         return telescope, site, instrument
@@ -138,11 +120,11 @@ class Image(object):
     def add_history(self, msg):
         self.header.add_history(msg)
 
-    def data_is_3d(self):
+    def is_data_3d(self) -> bool:
         return len(self.data.shape) > 2
 
     def get_n_amps(self):
-        if self.data_is_3d():
+        if self.is_data_3d():
             n_amps = self.data.shape[0]
         else:
             n_amps = 1
@@ -164,7 +146,7 @@ class Image(object):
         inner_section: array
                        Inner section of image
         """
-        if self.data_is_3d():
+        if self.is_data_3d():
             logger.error("Cannot get inner section of a 3D image",
                          extra={'tags': {'filename': self.filename}})
             raise ValueError
