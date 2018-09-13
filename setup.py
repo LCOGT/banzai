@@ -47,6 +47,7 @@ conf = ConfigParser()
 conf.read(['setup.cfg'])
 metadata = dict(conf.items('metadata'))
 
+NAME = metadata.get('name', 'packagename')
 PACKAGENAME = metadata.get('package_name', 'packagename')
 DESCRIPTION = metadata.get('description', 'packagename')
 AUTHOR = metadata.get('author', 'Astropy Developers')
@@ -184,7 +185,7 @@ else:
 # ``setup``, since these are now deprecated. See this link for more details:
 # https://groups.google.com/forum/#!topic/astropy-dev/urYO8ckB2uM
 
-setup(name=PACKAGENAME,
+setup(name=NAME,
       version=VERSION,
       description=DESCRIPTION,
       scripts=scripts,
