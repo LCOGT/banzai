@@ -1,3 +1,7 @@
+0.9.10 (2018-09-13)
+-------------------
+-  Changed how the filters for camera classes are plumbed
+
 0.9.9 (2018-09-11)
 ------------------
 - Added filters to only reduce imaging files. These can be overridden for the FLOYDS and NRES pipelines.
