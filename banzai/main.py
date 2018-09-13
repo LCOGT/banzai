@@ -86,8 +86,8 @@ def get_stages_todo(last_stage=None, extra_stages=None):
     return stages_todo
 
 
-def run_end_of_night_from_console(scripts_to_run):
-    pipeline_context = parse_end_of_night_command_line_arguments()
+def run_end_of_night_from_console(scripts_to_run, selection_criteria):
+    pipeline_context = parse_end_of_night_command_line_arguments(selection_criteria)
     logs.start_logging(log_level=pipeline_context.log_level)
     for script in scripts_to_run:
         script(pipeline_context)
@@ -102,7 +102,7 @@ def make_master_bias(pipeline_context):
 
 
 def make_master_bias_console():
-    run_end_of_night_from_console([make_master_bias])
+    run_end_of_night_from_console([make_master_bias], IMAGING_CRITERIA)
 
 
 def make_master_dark(pipeline_context):
@@ -113,7 +113,7 @@ def make_master_dark(pipeline_context):
 
 
 def make_master_dark_console():
-    run_end_of_night_from_console([make_master_dark])
+    run_end_of_night_from_console([make_master_dark], IMAGING_CRITERIA)
 
 
 def make_master_flat(pipeline_context):
@@ -126,7 +126,7 @@ def make_master_flat(pipeline_context):
 
 
 def make_master_flat_console():
-    run_end_of_night_from_console([make_master_flat])
+    run_end_of_night_from_console([make_master_flat], IMAGING_CRITERIA)
 
 
 def reduce_science_frames(pipeline_context):
@@ -140,7 +140,7 @@ def reduce_experimental_frames(pipeline_context):
 
 
 def reduce_experimental_frames_console():
-    run_end_of_night_from_console([reduce_experimental_frames])
+    run_end_of_night_from_console([reduce_experimental_frames], IMAGING_CRITERIA)
 
 
 def reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=None):
@@ -159,7 +159,7 @@ def reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=None):
 
 
 def reduce_science_frames_console():
-    run_end_of_night_from_console([reduce_science_frames])
+    run_end_of_night_from_console([reduce_science_frames], IMAGING_CRITERIA)
 
 
 def reduce_trailed_frames(pipeline_context):
@@ -168,7 +168,7 @@ def reduce_trailed_frames(pipeline_context):
 
 
 def reduce_trailed_frames_console():
-    run_end_of_night_from_console([reduce_trailed_frames])
+    run_end_of_night_from_console([reduce_trailed_frames], IMAGING_CRITERIA)
 
 
 def preprocess_sinistro_frames(pipeline_context):
@@ -179,11 +179,11 @@ def preprocess_sinistro_frames(pipeline_context):
 
 
 def preprocess_sinistro_frames_console():
-    run_end_of_night_from_console([preprocess_sinistro_frames])
+    run_end_of_night_from_console([preprocess_sinistro_frames], IMAGING_CRITERIA)
 
 
 def create_master_calibrations():
-    run_end_of_night_from_console([make_master_bias, make_master_dark, make_master_flat])
+    run_end_of_night_from_console([make_master_bias, make_master_dark, make_master_flat], IMAGING_CRITERIA)
 
 
 def reduce_night():
@@ -269,7 +269,7 @@ def reduce_night():
     logs.stop_logging()
 
 
-def parse_end_of_night_command_line_arguments():
+def parse_end_of_night_command_line_arguments(selection_criteria):
     parser = argparse.ArgumentParser(
         description='Make master calibration frames from LCOGT imaging data.')
     parser.add_argument("--raw-path", dest='raw_path', default='/archive/engineering',
@@ -303,7 +303,7 @@ def parse_end_of_night_command_line_arguments():
     args.preview_mode = False
     args.max_preview_tries = 5
 
-    return PipelineContext(args, IMAGING_CRITERIA)
+    return PipelineContext(args, selection_criteria)
 
 
 def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False, log_message=''):
@@ -450,7 +450,7 @@ class PreviewModeListener(ConsumerMixin):
                     run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT'])
                     preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
-            except Exception as e:
+            except Exception:
                 logging_tags = {'tags': {'filename': os.path.basename(path)}}
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 tb_msg = traceback.format_exception(exc_type, exc_value, exc_tb)
