@@ -34,7 +34,7 @@ class Image(object):
             self.filename = os.path.basename(filename)
 
         self.data = data
-        self.astropy_data_tables = data_tables
+        self.astropy_data_tables = astropy_data_tables
         self.header = header
         self.bpm = bpm
 
