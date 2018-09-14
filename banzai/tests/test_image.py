@@ -61,5 +61,6 @@ def test_image_creates_and_loads_astropy_tables_correctly():
     hdu_list = []
     hdu_list = test_image.add_astropy_data_tables_to_hdu_list_to_be_saved(hdu_list)
     fits_hdu_list = fits.HDUList(hdu_list)
-    test_table_recreated = Table(fits_hdu_list['test_table'].data, meta={'name': 'test_table'})
+    test_table_recreated = test_image.regenerate_astropy_data_table_from_fits_table_hdu(fits_hdu_list,
+                                                                                    table_extension_name='test_table')
     assert (test_table_recreated == test_table).all()
