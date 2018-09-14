@@ -98,29 +98,25 @@ class Image(object):
             bpm_hdu = fits.ImageHDU(self.bpm.astype(np.uint8))
             bpm_hdu.name = 'BPM'
             hdu_list.append(bpm_hdu)
-        if self.astropy_data_tables is not None:
-            for astropy_data_table in self.astropy_data_tables:
-                extension_name = astropy_data_table.meta['name']
-                table_hdu = fits.BinTableHDU(astropy_data_table, name=extension_name)
-                hdu_list.append(table_hdu)
+        hdu_list = self.add_astropy_data_tables_to_hdu_list_to_be_saved(hdu_list)
 
-        hdu_list = fits.HDUList(hdu_list)
+        fits_hdu_list = fits.HDUList(hdu_list)
         try:
-            hdu_list.verify(option='exception')
+            fits_hdu_list.verify(option='exception')
         except fits.VerifyError as fits_error:
             logging_tags = logs.image_config_to_tags(self, None)
             logs.add_tag(logging_tags, 'filename', os.path.basename(self.filename))
             logger.warn('Error in FITS Verification. {0}. Attempting fix.'.format(fits_error),
                         extra=logging_tags)
             try:
-                hdu_list.verify(option='silentfix+exception')
+                fits_hdu_list.verify(option='silentfix+exception')
             except fits.VerifyError as fix_attempt_error:
                 logger.error('Could not repair FITS header. {0}'.format(fix_attempt_error),
                              extra=logging_tags)
 
         with tempfile.TemporaryDirectory() as temp_directory:
             base_filename = os.path.basename(filename)
-            hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True,
+            fits_hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True,
                              output_verify='fix+warn')
             if fpack:
                 filename += '.fz'
@@ -136,6 +132,14 @@ class Image(object):
         fits_rec_table = hdu_list[table_extension_name].data
         astropy_table = Table(fits_rec_table, meta={'name': table_extension_name})
         return astropy_table
+
+    def add_astropy_data_tables_to_hdu_list_to_be_saved(self, hdu_list):
+        if self.astropy_data_tables is not None:
+            for astropy_data_table in self.astropy_data_tables:
+                extension_name = astropy_data_table.meta['name']
+                table_hdu = fits.BinTableHDU(astropy_data_table, name=extension_name)
+                hdu_list.append(table_hdu)
+        return hdu_list
 
     def update_shape(self, nx, ny):
         self.nx = nx

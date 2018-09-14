@@ -2,6 +2,8 @@ from banzai.images import Image
 from banzai.tests.utils import FakeContext, FakeImage
 import numpy as np
 import pytest
+from astropy.table import Table
+from astropy.io import fits
 
 
 @pytest.fixture(scope='module')
@@ -49,3 +51,15 @@ def test_get_inner_image_section_3d():
     test_image = FakeImage(n_amps=4)
     with pytest.raises(ValueError):
         test_image.get_inner_image_section()
+
+
+def test_image_creates_and_loads_astropy_tables_correctly():
+    test_image = Image(FakeContext, filename=None)
+    a = np.arange(3)
+    test_table = Table([a, a], names=('1', '2'), meta={'name': 'test_table'})
+    test_image.astropy_data_tables = [test_table]
+    hdu_list = []
+    hdu_list = test_image.add_astropy_data_tables_to_hdu_list_to_be_saved(hdu_list)
+    fits_hdu_list = fits.HDUList(hdu_list)
+    test_table_recreated = Table(fits_hdu_list['test_table'].data, meta={'name': 'test_table'})
+    assert (test_table_recreated == test_table).all()
