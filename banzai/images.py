@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 from astropy.io import fits
+from astropy.table import Table
 import tempfile
 import shutil
 
@@ -18,8 +19,8 @@ logger = logs.get_logger(__name__)
 
 class Image(object):
 
-    def __init__(self, pipeline_context, filename=None, data=None, header=None,
-                 extension_headers=None, bpm=None):
+    def __init__(self, pipeline_context, filename=None, data=None, astropy_data_tables=None,
+                 header=None, extension_headers=None, bpm=None):
         if header is None:
             header = {}
 
@@ -33,6 +34,7 @@ class Image(object):
             self.filename = os.path.basename(filename)
 
         self.data = data
+        self.astropy_data_tables = data_tables
         self.header = header
         self.bpm = bpm
 
@@ -96,6 +98,11 @@ class Image(object):
             bpm_hdu = fits.ImageHDU(self.bpm.astype(np.uint8))
             bpm_hdu.name = 'BPM'
             hdu_list.append(bpm_hdu)
+        if self.astropy_data_tables is not None:
+            for astropy_data_table in self.astropy_data_tables:
+                extension_name = astropy_data_table.meta['name']
+                table_hdu = fits.BinTableHDU(astropy_data_table, name=extension_name)
+                hdu_list.append(table_hdu)
 
         hdu_list = fits.HDUList(hdu_list)
         try:
@@ -124,6 +131,11 @@ class Image(object):
                 base_filename += '.fz'
                 self.filename += '.fz'
             shutil.move(os.path.join(temp_directory, base_filename), filename)
+
+    def regenerate_astropy_data_table_from_fits_table_hdu(self, hdu_list, table_extension_name):
+        fits_rec_table = hdu_list[table_extension_name].data
+        astropy_table = Table(fits_rec_table, meta={'name': table_extension_name})
+        return astropy_table
 
     def update_shape(self, nx, ny):
         self.nx = nx
