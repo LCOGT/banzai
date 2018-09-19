@@ -120,7 +120,7 @@ class SourceDetector(Stage):
                 bkgflux, fluxerr, flag = sep.sum_ellipse(bkg.back(), sources['x'], sources['y'],
                                                          sources['a'], sources['b'], np.pi / 2.0,
                                                          2.5 * sources['kronrad'], subpix=1)
-                #masksum, fluxerr, flag = sep.sum_ellipse(mask, sources['x'], sources['y'],
+                # masksum, fluxerr, flag = sep.sum_ellipse(mask, sources['x'], sources['y'],
                 #                                         sources['a'], sources['b'], np.pi / 2.0,
                 #                                         2.5 * kronrad, subpix=1)
 
