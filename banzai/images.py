@@ -29,6 +29,9 @@ class DataTable(object):
     def __getitem__(self, item):
         return self._data_table[item]
 
+    def __setitem__(self, key, value):
+        self._data_table[key] = value
+
 
 class Image(object):
 
