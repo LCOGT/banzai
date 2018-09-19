@@ -17,6 +17,19 @@ from banzai.munge import munge
 logger = logs.get_logger(__name__)
 
 
+class DataTable(object):
+    """
+    Object for storing astropy (or another table type) tables with an additional .name attribute which
+    determines the tables' extension name when it is saved as a fits file.
+    """
+    def __init__(self, _data_table, name):
+        self.name = name
+        self._data_table = _data_table
+
+    def __getitem__(self, item):
+        return self._data_table[item]
+
+
 class Image(object):
 
     def __init__(self, pipeline_context, filename=None, data=None, data_tables={},
@@ -121,12 +134,13 @@ class Image(object):
             shutil.move(os.path.join(temp_directory, base_filename), filename)
 
     def add_data_tables_to_hdu_list(self, hdu_list):
+        """
+        :param hdu_list: a list of hdu objects.
+        :return: a list of hdu objects with a FitsBinTableHDU added
+        """
         for key in self.data_tables:
-            table_hdu = fits_utils.table_to_fits(self.data_tables.get(key))
-            if key == 'catalog':
-                table_hdu.name = 'CAT'
-            else:
-                table_hdu.name = key
+            table_hdu = fits_utils.table_to_fits(self.data_tables[key]._data_table)
+            table_hdu.name = self.data_tables[key].name
             hdu_list.append(table_hdu)
         return hdu_list
 

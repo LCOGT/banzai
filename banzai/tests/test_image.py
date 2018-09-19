@@ -1,4 +1,4 @@
-from banzai.images import Image, regenerate_data_table_from_fits_hdu_list
+from banzai.images import Image, DataTable, regenerate_data_table_from_fits_hdu_list
 from banzai.tests.utils import FakeContext, FakeImage
 import numpy as np
 import pytest
@@ -58,9 +58,9 @@ def test_image_creates_and_loads_tables_correctly():
     table_name = 'test'
     a = np.arange(3)
     test_table = Table([a, a], names=('1', '2'), meta={'name': table_name})
-    test_image.data_tables[table_name] = test_table
     test_table['1'].description = 'test_description'
     test_table['1'].unit = 'pixel'
+    test_image.data_tables[table_name] = DataTable(_data_table=test_table, name=table_name)
     hdu_list = []
     hdu_list = test_image.add_data_tables_to_hdu_list(hdu_list)
     fits_hdu_list = fits.HDUList(hdu_list)
