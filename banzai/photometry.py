@@ -137,8 +137,8 @@ class SourceDetector(Stage):
                 sources['ywin'] += 1.0
 
                 sources['theta'] = np.degrees(sources['theta'])
-
-                image.catalog = sources['x', 'y', 'xwin', 'ywin', 'xpeak', 'ypeak',
+                
+                catalog = sources['x', 'y', 'xwin', 'ywin', 'xpeak', 'ypeak',
                                         'flux', 'fluxerr', 'peak', 'fluxaper1', 'fluxerr1',
                                         'fluxaper2', 'fluxerr2', 'fluxaper3', 'fluxerr3',
                                         'fluxaper4', 'fluxerr4', 'fluxaper5', 'fluxerr5',
@@ -148,59 +148,59 @@ class SourceDetector(Stage):
                                         'x2', 'y2', 'xy', 'flag']
 
                 # Add the units and description to the catalogs
-                image.catalog['x'].unit = 'pixel'
-                image.catalog['x'].description = 'X coordinate of the object'
-                image.catalog['y'].unit = 'pixel'
-                image.catalog['y'].description = 'Y coordinate of the object'
-                image.catalog['xwin'].unit = 'pixel'
-                image.catalog['xwin'].description = 'Windowed X coordinate of the object'
-                image.catalog['ywin'].unit = 'pixel'
-                image.catalog['ywin'].description = 'Windowed Y coordinate of the object'
-                image.catalog['xpeak'].unit = 'pixel'
-                image.catalog['xpeak'].description = 'X coordinate of the peak'
-                image.catalog['ypeak'].unit = 'pixel'
-                image.catalog['ypeak'].description = 'Windowed Y coordinate of the peak'
-                image.catalog['flux'].unit = 'counts'
-                image.catalog['flux'].description = 'Flux within a Kron-like elliptical aperture'
-                image.catalog['fluxerr'].unit = 'counts'
-                image.catalog['fluxerr'].description = 'Error on the flux within Kron aperture'
-                image.catalog['peak'].unit = 'counts'
-                image.catalog['peak'].description = 'Peak flux (flux at xpeak, ypeak)'
+                catalog['x'].unit = 'pixel'
+                catalog['x'].description = 'X coordinate of the object'
+                catalog['y'].unit = 'pixel'
+                catalog['y'].description = 'Y coordinate of the object'
+                catalog['xwin'].unit = 'pixel'
+                catalog['xwin'].description = 'Windowed X coordinate of the object'
+                catalog['ywin'].unit = 'pixel'
+                catalog['ywin'].description = 'Windowed Y coordinate of the object'
+                catalog['xpeak'].unit = 'pixel'
+                catalog['xpeak'].description = 'X coordinate of the peak'
+                catalog['ypeak'].unit = 'pixel'
+                catalog['ypeak'].description = 'Windowed Y coordinate of the peak'
+                catalog['flux'].unit = 'counts'
+                catalog['flux'].description = 'Flux within a Kron-like elliptical aperture'
+                catalog['fluxerr'].unit = 'counts'
+                catalog['fluxerr'].description = 'Error on the flux within Kron aperture'
+                catalog['peak'].unit = 'counts'
+                catalog['peak'].description = 'Peak flux (flux at xpeak, ypeak)'
                 for diameter in [1, 2, 3, 4, 5, 6]:
-                    image.catalog['fluxaper{0}'.format(diameter)].unit = 'counts'
-                    image.catalog['fluxaper{0}'.format(diameter)].description = 'Flux from fixed circular aperture: {0}" diameter'.format(diameter)
-                    image.catalog['fluxerr{0}'.format(diameter)].unit = 'counts'
-                    image.catalog['fluxerr{0}'.format(diameter)].description = 'Error on Flux from circular aperture: {0}"'.format(diameter)
+                    catalog['fluxaper{0}'.format(diameter)].unit = 'counts'
+                    catalog['fluxaper{0}'.format(diameter)].description = 'Flux from fixed circular aperture: {0}" diameter'.format(diameter)
+                    catalog['fluxerr{0}'.format(diameter)].unit = 'counts'
+                    catalog['fluxerr{0}'.format(diameter)].description = 'Error on Flux from circular aperture: {0}"'.format(diameter)
 
-                image.catalog['background'].unit = 'counts'
-                image.catalog['background'].description = 'Average background value in the aperture'
-                image.catalog['fwhm'].unit = 'pixel'
-                image.catalog['fwhm'].description = 'FWHM of the object'
-                image.catalog['a'].unit = 'pixel'
-                image.catalog['a'].description = 'Semi-major axis of the object'
-                image.catalog['b'].unit = 'pixel'
-                image.catalog['b'].description = 'Semi-minor axis of the object'
-                image.catalog['theta'].unit = 'degrees'
-                image.catalog['theta'].description = 'Position angle of the object'
-                image.catalog['kronrad'].unit = 'pixel'
-                image.catalog['kronrad'].description = 'Kron radius used for extraction'
-                image.catalog['ellipticity'].description = 'Ellipticity'
-                image.catalog['fluxrad25'].unit = 'pixel'
-                image.catalog['fluxrad25'].description = 'Radius containing 25% of the flux'
-                image.catalog['fluxrad50'].unit = 'pixel'
-                image.catalog['fluxrad50'].description = 'Radius containing 50% of the flux'
-                image.catalog['fluxrad75'].unit = 'pixel'
-                image.catalog['fluxrad75'].description = 'Radius containing 75% of the flux'
-                image.catalog['x2'].unit = 'pixel^2'
-                image.catalog['x2'].description = 'Variance on X coordinate of the object'
-                image.catalog['y2'].unit = 'pixel^2'
-                image.catalog['y2'].description = 'Variance on Y coordinate of the object'
-                image.catalog['xy'].unit = 'pixel^2'
-                image.catalog['xy'].description = 'XY covariance of the object'
-                image.catalog['flag'].description = 'Bit mask of extraction/photometry flags'
+                catalog['background'].unit = 'counts'
+                catalog['background'].description = 'Average background value in the aperture'
+                catalog['fwhm'].unit = 'pixel'
+                catalog['fwhm'].description = 'FWHM of the object'
+                catalog['a'].unit = 'pixel'
+                catalog['a'].description = 'Semi-major axis of the object'
+                catalog['b'].unit = 'pixel'
+                catalog['b'].description = 'Semi-minor axis of the object'
+                catalog['theta'].unit = 'degrees'
+                catalog['theta'].description = 'Position angle of the object'
+                catalog['kronrad'].unit = 'pixel'
+                catalog['kronrad'].description = 'Kron radius used for extraction'
+                catalog['ellipticity'].description = 'Ellipticity'
+                catalog['fluxrad25'].unit = 'pixel'
+                catalog['fluxrad25'].description = 'Radius containing 25% of the flux'
+                catalog['fluxrad50'].unit = 'pixel'
+                catalog['fluxrad50'].description = 'Radius containing 50% of the flux'
+                catalog['fluxrad75'].unit = 'pixel'
+                catalog['fluxrad75'].description = 'Radius containing 75% of the flux'
+                catalog['x2'].unit = 'pixel^2'
+                catalog['x2'].description = 'Variance on X coordinate of the object'
+                catalog['y2'].unit = 'pixel^2'
+                catalog['y2'].description = 'Variance on Y coordinate of the object'
+                catalog['xy'].unit = 'pixel^2'
+                catalog['xy'].description = 'XY covariance of the object'
+                catalog['flag'].description = 'Bit mask of extraction/photometry flags'
 
-                image.catalog.sort('flux')
-                image.catalog.reverse()
+                catalog.sort('flux')
+                catalog.reverse()
 
                 logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
                 logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
@@ -222,9 +222,9 @@ class SourceDetector(Stage):
                 logs.add_tag(logging_tags, 'L1SIGMA', float(std_background))
 
                 # Save some image statistics to the header
-                good_objects = image.catalog['flag'] == 0
+                good_objects = catalog['flag'] == 0
 
-                seeing = np.median(image.catalog['fwhm'][good_objects]) * image.pixel_scale
+                seeing = np.median(catalog['fwhm'][good_objects]) * image.pixel_scale
                 image.header['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
                 logs.add_tag(logging_tags, 'L1FWHM', float(seeing))
 
@@ -239,6 +239,8 @@ class SourceDetector(Stage):
                 logs.add_tag(logging_tags, 'L1ELLIPA', float(mean_position_angle))
 
                 self.logger.info('Extracted sources', extra=logging_tags)
+                # adding catalog (a data table) to the appropriate images attribute.
+                image.data_tables['catalog'] = catalog
 
             except Exception as e:
                 logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)

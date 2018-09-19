@@ -19,7 +19,7 @@ logger = logs.get_logger(__name__)
 
 class Image(object):
 
-    def __init__(self, pipeline_context, filename=None, data=None, astropy_data_tables=None,
+    def __init__(self, pipeline_context, filename=None, data=None, data_tables={},
                  header=None, extension_headers=None, bpm=None):
         if header is None:
             header = {}
@@ -34,7 +34,7 @@ class Image(object):
             self.filename = os.path.basename(filename)
 
         self.data = data
-        self.astropy_data_tables = astropy_data_tables
+        self.data_tables = data_tables
         self.header = header
         self.bpm = bpm
 
@@ -63,7 +63,6 @@ class Image(object):
         self.readnoise = float(header.get('RDNOISE', 0.0))
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE', 0.0))
-        self.catalog = None
 
     def _init_telescope_info(self, pipeline_context):
         if len(self.header) > 0:
@@ -90,15 +89,8 @@ class Image(object):
         image_hdu.header['EXTEND'] = True
         image_hdu.name = 'SCI'
         hdu_list = [image_hdu]
-        if self.catalog is not None:
-            table_hdu = fits_utils.table_to_fits(self.catalog)
-            table_hdu.name = 'CAT'
-            hdu_list.append(table_hdu)
-        if self.bpm is not None:
-            bpm_hdu = fits.ImageHDU(self.bpm.astype(np.uint8))
-            bpm_hdu.name = 'BPM'
-            hdu_list.append(bpm_hdu)
-        hdu_list = self.add_astropy_data_tables_to_hdu_list_to_be_saved(hdu_list)
+        hdu_list = self.add_bpm_to_hdu_list(hdu_list)
+        hdu_list = self.add_data_tables_to_hdu_list(hdu_list)
 
         fits_hdu_list = fits.HDUList(hdu_list)
         try:
@@ -128,17 +120,21 @@ class Image(object):
                 self.filename += '.fz'
             shutil.move(os.path.join(temp_directory, base_filename), filename)
 
-    def regenerate_astropy_data_table_from_fits_table_hdu(self, hdu_list, table_extension_name):
-        fits_rec_table = hdu_list[table_extension_name].data
-        astropy_table = Table(fits_rec_table, meta={'name': table_extension_name})
-        return astropy_table
+    def add_data_tables_to_hdu_list(self, hdu_list):
+        for key in self.data_tables:
+            table_hdu = fits_utils.table_to_fits(self.data_tables.get(key))
+            if key == 'catalog':
+                table_hdu.name = 'CAT'
+            else:
+                table_hdu.name = key
+            hdu_list.append(table_hdu)
+        return hdu_list
 
-    def add_astropy_data_tables_to_hdu_list_to_be_saved(self, hdu_list):
-        if self.astropy_data_tables is not None:
-            for astropy_data_table in self.astropy_data_tables:
-                extension_name = astropy_data_table.meta['name']
-                table_hdu = fits.BinTableHDU(astropy_data_table, name=extension_name)
-                hdu_list.append(table_hdu)
+    def add_bpm_to_hdu_list(self, hdu_list):
+        if self.bpm is not None:
+            bpm_hdu = fits.ImageHDU(self.bpm.astype(np.uint8))
+            bpm_hdu.name = 'BPM'
+            hdu_list.append(bpm_hdu)
         return hdu_list
 
     def update_shape(self, nx, ny):
@@ -146,10 +142,10 @@ class Image(object):
         self.ny = ny
 
     def write_catalog(self, filename, nsources=None):
-        if self.catalog is None:
+        if self.data_tables.get('catalog') is None:
             raise image_utils.MissingCatalogException
         else:
-            self.catalog[:nsources].write(filename, format='fits', overwrite=True)
+            self.data_tables.get('catalog')[:nsources].write(filename, format='fits', overwrite=True)
 
     def add_history(self, msg):
         self.header.add_history(msg)
@@ -207,3 +203,9 @@ def read_images(image_list, pipeline_context):
             logger.error('Error loading image: {error}'.format(error=e), extra={'tags': {'filename': filename}})
             continue
     return images
+
+
+def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, input_dictionary={}):
+    astropy_table = Table(hdu_list[table_extension_name].data)
+    input_dictionary[table_extension_name] = astropy_table
+    return input_dictionary

@@ -1,4 +1,4 @@
-from banzai.images import Image
+from banzai.images import Image, regenerate_data_table_from_fits_hdu_list
 from banzai.tests.utils import FakeContext, FakeImage
 import numpy as np
 import pytest
@@ -53,14 +53,17 @@ def test_get_inner_image_section_3d():
         test_image.get_inner_image_section()
 
 
-def test_image_creates_and_loads_astropy_tables_correctly():
+def test_image_creates_and_loads_tables_correctly():
     test_image = Image(FakeContext, filename=None)
+    table_name = 'test'
     a = np.arange(3)
-    test_table = Table([a, a], names=('1', '2'), meta={'name': 'test_table'})
-    test_image.astropy_data_tables = [test_table]
+    test_table = Table([a, a], names=('1', '2'), meta={'name': table_name})
+    test_image.data_tables[table_name] = test_table
+    test_table['1'].description = 'test_description'
+    test_table['1'].unit = 'pixel'
     hdu_list = []
-    hdu_list = test_image.add_astropy_data_tables_to_hdu_list_to_be_saved(hdu_list)
+    hdu_list = test_image.add_data_tables_to_hdu_list(hdu_list)
     fits_hdu_list = fits.HDUList(hdu_list)
-    test_table_recreated = test_image.regenerate_astropy_data_table_from_fits_table_hdu(fits_hdu_list,
-                                                                                    table_extension_name='test_table')
+    test_table_dict = regenerate_data_table_from_fits_hdu_list(fits_hdu_list, table_extension_name=table_name)
+    test_table_recreated = test_table_dict[table_name]
     assert (test_table_recreated == test_table).all()
