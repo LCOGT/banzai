@@ -22,9 +22,9 @@ class DataTable(object):
     Object for storing astropy (or another table type) tables with an additional .name attribute which
     determines the tables' extension name when it is saved as a fits file.
     """
-    def __init__(self, _data_table, name):
+    def __init__(self, data_table, name):
         self.name = name
-        self._data_table = _data_table
+        self._data_table = data_table
 
     def __getitem__(self, item):
         return self._data_table[item]
@@ -162,6 +162,7 @@ class Image(object):
         if self.data_tables.get('catalog') is None:
             raise image_utils.MissingCatalogException
         else:
+            logger.warning('In write_catalog')
             self.data_tables.get('catalog')[:nsources].write(filename, format='fits', overwrite=True)
 
     def add_history(self, msg):

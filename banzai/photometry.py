@@ -241,8 +241,7 @@ class SourceDetector(Stage):
 
                 self.logger.info('Extracted sources', extra=logging_tags)
                 # adding catalog (a data table) to the appropriate images attribute.
-                image.data_tables['catalog'] = DataTable(_data_table=catalog, name='CAT')
-
+                image.data_tables['catalog'] = DataTable(data_table=catalog, name='CAT')
             except Exception as e:
                 logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
                 logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
