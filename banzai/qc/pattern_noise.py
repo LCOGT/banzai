@@ -1,7 +1,8 @@
 import os
 import numpy as np
 from scipy.ndimage.filters import median_filter
-from more_itertools import consecutive_groups
+from itertools import groupby
+from operator import itemgetter
 
 from banzai.stages import Stage
 from banzai.utils.stats import robust_standard_deviation
@@ -89,8 +90,10 @@ class PatternNoiseDetector(Stage):
         """
 
         idx_above_thresh = np.where(snr > self.SNR_THRESHOLD)[0]
-        group_lengths = np.array([len(list(group)) for group in consecutive_groups(idx_above_thresh)])
-        n_grouped_pixels_above_threshold = sum(group_lengths[group_lengths >= self.MIN_ADJACENT_PIXELS])
+        consecutive_group_lengths = np.array([len(list(map(itemgetter(1), g))) for k, g in
+                                              groupby(enumerate(idx_above_thresh), key=lambda x: x[0]-x[1])])
+        n_grouped_pixels_above_threshold = sum(consecutive_group_lengths[consecutive_group_lengths
+                                                                         >= self.MIN_ADJACENT_PIXELS])
         return n_grouped_pixels_above_threshold
 
 
