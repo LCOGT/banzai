@@ -1,17 +1,21 @@
 import os
 import numpy as np
-import scipy.signal
 from scipy.ndimage.filters import median_filter
+from more_itertools import consecutive_groups
 
 from banzai.stages import Stage
+from banzai.utils.stats import robust_standard_deviation
 from banzai import logs
 
 
 class PatternNoiseDetector(Stage):
+
     # Signal to Noise threshold to raise an alert
-    SNR_THRESHOLD = 20.0
-    # The maximum allowed standard deviation of the peak centres
-    PEAK_POSITION_STD_THRESHOLD = 1.0
+    SNR_THRESHOLD = 10.0
+    # The fraction of grouped SNR pixels that need to be above the threshold to raise an alert
+    MIN_FRACTION_PIXELS_ABOVE_THRESHOLD = 0.01
+    # The minimum number of adjacent pixels to form a group
+    MIN_ADJACENT_PIXELS = 3
 
     def __init__(self, pipeline_context):
         super(PatternNoiseDetector, self).__init__(pipeline_context)
@@ -25,12 +29,12 @@ class PatternNoiseDetector(Stage):
             logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
             logs.add_tag(logging_tags, 'snr_threshold', self.SNR_THRESHOLD)
-            logs.add_tag(logging_tags, 'peak_position_std_threshold', self.PEAK_POSITION_STD_THRESHOLD)
+            logs.add_tag(logging_tags, 'min_fraction_pixels_above_threshold', self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD)
+            logs.add_tag(logging_tags, 'min_adjacent_pixels', self.MIN_ADJACENT_PIXELS)
 
-            pattern_noise_is_bad, peak_snr_value, peak_position_std = self.check_for_pattern_noise(image.data)
+            pattern_noise_is_bad, fraction_pixels_above_threshold = self.check_for_pattern_noise(image.data)
 
-            logs.add_tag(logging_tags, 'peak_snr_value', peak_snr_value)
-            logs.add_tag(logging_tags, 'peak_position_std', peak_position_std)
+            logs.add_tag(logging_tags, 'fraction_pixels_above_threshold', fraction_pixels_above_threshold)
 
             if pattern_noise_is_bad:
                 self.logger.error('Image found to have pattern noise.', extra=logging_tags)
@@ -38,9 +42,10 @@ class PatternNoiseDetector(Stage):
                 self.logger.info('No pattern noise found.', extra=logging_tags)
             self.save_qc_results({'pattern_noise.failed': pattern_noise_is_bad,
                                   'pattern_noise.snr_threshold': self.SNR_THRESHOLD,
-                                  'pattern_noise.peak_position_std_threshold': self.PEAK_POSITION_STD_THRESHOLD,
-                                  'patter_noise.peak_snr_value': peak_snr_value,
-                                  'patter_noise.peak_position_std': peak_position_std,
+                                  'pattern_noise.min_fraction_pixels_above_threshold':
+                                      self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD,
+                                  'pattern_noise.min_adjacent_pixels': self.MIN_ADJACENT_PIXELS,
+                                  'patter_noise.fraction_pixels_above_threshold': fraction_pixels_above_threshold
                                   }, image)
         return images
 
@@ -63,13 +68,30 @@ class PatternNoiseDetector(Stage):
         trimmed_data = trim_image_edges(data)
         power_2d = get_2d_power_band(trimmed_data)
         snr = compute_snr(power_2d)
-        convolved_snr = convolve_snr_with_wavelet(snr)
-        peak_maxima, std_maxima = get_peak_parameters(convolved_snr)
+        fraction_pixels_above_threshold = self.get_n_grouped_pixels_above_threshold(snr) / len(snr)
 
-        # Check that every peak obtained from the different wavelet width convolutions is above the threshold,
-        # and that the standard deviation of the peak centers is small.
-        has_pattern_noise = (peak_maxima > self.SNR_THRESHOLD).all() and std_maxima < self.PEAK_POSITION_STD_THRESHOLD
-        return has_pattern_noise, min(peak_maxima), std_maxima
+        has_pattern_noise = fraction_pixels_above_threshold > self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD
+        return has_pattern_noise, fraction_pixels_above_threshold
+
+    def get_n_grouped_pixels_above_threshold(self, snr):
+        """
+        Compute the number of grouped pixels above the alert threshold
+
+        Parameters
+        ----------
+        snr : numpy array
+            The 1D SNR
+        Returns
+        -------
+        n_grouped_pixels_above_threshold : numpy array
+            The number of SNR pixels with values above SNR_THRESHOLD
+            that are in groups of at least MIN_ADJACENT_PIXELS
+        """
+
+        idx_above_thresh = np.where(snr > self.SNR_THRESHOLD)[0]
+        group_lengths = np.array([len(list(group)) for group in consecutive_groups(idx_above_thresh)])
+        n_grouped_pixels_above_threshold = sum(group_lengths[group_lengths >= self.MIN_ADJACENT_PIXELS])
+        return n_grouped_pixels_above_threshold
 
 
 def trim_image_edges(data, fractional_edge_width=0.025):
@@ -145,9 +167,13 @@ def compute_snr(power_2d, fractional_window_size=0.05):
     # Median filter
     window_size = get_odd_integer(fractional_window_size * len(power))
     continuum = median_filter(power, size=window_size)
-    scatter = median_filter(p2p_scatter, size=window_size)
+    pixel_to_pixel_scatter = median_filter(p2p_scatter, size=window_size)
+    snr = (power - continuum) / pixel_to_pixel_scatter
 
-    snr = (power - continuum) / scatter
+    # Also divide out the global scatter for any residual structure that was not removed with the median filter
+    global_scatter = robust_standard_deviation(snr)
+    snr /= global_scatter
+
     return snr
 
 
@@ -166,54 +192,3 @@ def get_odd_integer(x):
         Odd integer of x
     """
     return int(round(round(x) / 2) * 2) + 1
-
-
-def convolve_snr_with_wavelet(snr,
-                              fractional_wavelet_width_min=0.01,
-                              fractional_wavelet_width_max=0.025,
-                              nwavelets=25):
-    """
-    Convolve the 1D SNR with nwavelets Ricker wavelets, with widths ranging from
-    fractional_wavelength_width_min * len(snr) to fractional_wavelength_witdh_max * len(snr).
-
-    Parameters
-    ----------
-    snr : numpy array
-        The 1D SNR array
-    fractional_wavelet_width_min : float
-        The fraction of the SNR length to use as the minimum wavelet width
-    fractional_wavelet_width_max : float
-        The fraction of the SNR length to use as the maximum wavelet width
-    nwavelets : int
-        The number of wavelength widths to convolve with the SNR
-
-    Returns
-    -------
-    snr_convolved : numpy array
-        Array of size nwavelets x len(snr) of snr convolved with different wavelet widths
-    """
-
-    widths = np.linspace(len(snr) * fractional_wavelet_width_min,
-                         len(snr) * fractional_wavelet_width_max,
-                         nwavelets)
-    return scipy.signal.cwt(snr, scipy.signal.ricker, widths)
-
-
-def get_peak_parameters(convolved_snr):
-    """
-
-    Parameters
-    ----------
-    convolved_snr : numpy array
-        The SNR array convolved with the Ricker wavelet of various widths
-
-    Returns
-    -------
-    peak_maxima: array
-        The the maximum peak value for all Ricker wavelet widths
-    std_maxima: float
-        The standard devation of the peak maxima across wavelet widths
-    """
-    peak_maxima = np.max(convolved_snr, axis=1)
-    std_maxima = np.std(np.argmax(convolved_snr, axis=1))
-    return peak_maxima, std_maxima
