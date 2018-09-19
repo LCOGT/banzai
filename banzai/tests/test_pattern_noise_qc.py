@@ -47,13 +47,6 @@ def test_pattern_noise_does_not_detect_white_noise(set_random_seed):
     assert detector.check_for_pattern_noise(data)[0] == False
 
 
-def test_pattern_noise_on_garbage_image():
-    data = np.zeros((1000, 1000))
-    data[:, :] = np.nan
-    detector = pattern_noise.PatternNoiseDetector(None)
-    assert detector.check_for_pattern_noise(data)[0] == False
-
-
 def test_pattern_noise_does_not_detect_stars(set_random_seed):
     data = generate_data()
     for i in range(5):
