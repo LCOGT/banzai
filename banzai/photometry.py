@@ -138,7 +138,7 @@ class SourceDetector(Stage):
                 sources['ywin'] += 1.0
 
                 sources['theta'] = np.degrees(sources['theta'])
-                
+
                 catalog = sources['x', 'y', 'xwin', 'ywin', 'xpeak', 'ypeak',
                                         'flux', 'fluxerr', 'peak', 'fluxaper1', 'fluxerr1',
                                         'fluxaper2', 'fluxerr2', 'fluxaper3', 'fluxerr3',

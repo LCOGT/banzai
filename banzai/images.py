@@ -162,7 +162,6 @@ class Image(object):
         if self.data_tables.get('catalog') is None:
             raise image_utils.MissingCatalogException
         else:
-            logger.warning('In write_catalog')
             self.data_tables.get('catalog')[:nsources].write(filename, format='fits', overwrite=True)
 
     def add_history(self, msg):
@@ -224,6 +223,13 @@ def read_images(image_list, pipeline_context):
 
 
 def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, input_dictionary={}):
+    """
+    :param hdu_list: An Astropy HDUList object
+    :param table_extension_name: the name such that hdu_list[extension_name] = the table
+    :param input_dictionary: the dictionary to which you wish to append the table under the keyword
+            extension name.
+    :return: the input_dictionary with dict[extension_name] = the table as an astropy table
+    """
     astropy_table = Table(hdu_list[table_extension_name].data)
     input_dictionary[table_extension_name] = astropy_table
     return input_dictionary
