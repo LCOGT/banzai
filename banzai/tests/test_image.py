@@ -60,7 +60,7 @@ def test_image_creates_and_loads_tables_correctly():
     test_table = Table([a, a], names=('1', '2'), meta={'name': table_name})
     test_table['1'].description = 'test_description'
     test_table['1'].unit = 'pixel'
-    test_image.data_tables[table_name] = DataTable(_data_table=test_table, name=table_name)
+    test_image.data_tables[table_name] = DataTable(data_table=test_table, name=table_name)
     hdu_list = []
     hdu_list = test_image.add_data_tables_to_hdu_list(hdu_list)
     fits_hdu_list = fits.HDUList(hdu_list)
