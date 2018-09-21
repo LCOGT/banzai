@@ -35,10 +35,13 @@ class DataTable(object):
 
 class Image(object):
 
-    def __init__(self, pipeline_context, filename=None, data=None, data_tables={},
+    def __init__(self, pipeline_context, filename=None, data=None, data_tables=None,
                  header=None, extension_headers=None, bpm=None):
         if header is None:
             header = {}
+
+        if data_tables is None:
+            data_tables = {}
 
         if extension_headers is None:
             extension_headers = []
@@ -105,8 +108,8 @@ class Image(object):
         image_hdu.header['EXTEND'] = True
         image_hdu.name = 'SCI'
         hdu_list = [image_hdu]
-        hdu_list = self.add_bpm_to_hdu_list(hdu_list)
-        hdu_list = self.add_data_tables_to_hdu_list(hdu_list)
+        hdu_list = self._add_data_tables_to_hdu_list(hdu_list)
+        hdu_list = self._add_bpm_to_hdu_list(hdu_list)
 
         fits_hdu_list = fits.HDUList(hdu_list)
         try:
@@ -136,7 +139,7 @@ class Image(object):
                 self.filename += '.fz'
             shutil.move(os.path.join(temp_directory, base_filename), filename)
 
-    def add_data_tables_to_hdu_list(self, hdu_list):
+    def _add_data_tables_to_hdu_list(self, hdu_list):
         """
         :param hdu_list: a list of hdu objects.
         :return: a list of hdu objects with a FitsBinTableHDU added
@@ -147,7 +150,7 @@ class Image(object):
             hdu_list.append(table_hdu)
         return hdu_list
 
-    def add_bpm_to_hdu_list(self, hdu_list):
+    def _add_bpm_to_hdu_list(self, hdu_list):
         if self.bpm is not None:
             bpm_hdu = fits.ImageHDU(self.bpm.astype(np.uint8))
             bpm_hdu.name = 'BPM'
@@ -222,7 +225,7 @@ def read_images(image_list, pipeline_context):
     return images
 
 
-def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, input_dictionary={}):
+def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, input_dictionary=None):
     """
     :param hdu_list: An Astropy HDUList object
     :param table_extension_name: the name such that hdu_list[extension_name] = the table
@@ -230,6 +233,8 @@ def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, inp
             extension name.
     :return: the input_dictionary with dict[extension_name] = the table as an astropy table
     """
+    if input_dictionary is None:
+        input_dictionary = {}
     astropy_table = Table(hdu_list[table_extension_name].data)
     input_dictionary[table_extension_name] = astropy_table
     return input_dictionary
