@@ -14,6 +14,7 @@ pipeline {
 	}
 	options {
 		timeout(time: 8, unit: 'HOURS')
+		lock resource: 'BANZAILock'
 	}
 	stages {
 		stage('Build image') {
