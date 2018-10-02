@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 from astropy.io import fits
+from astropy.table import Table
 import tempfile
 import shutil
 
@@ -16,12 +17,36 @@ from banzai.munge import munge
 logger = logs.get_logger(__name__)
 
 
+class DataTable(object):
+    """
+    Object for storing astropy (or another table type) tables with an additional .name attribute which
+    determines the tables' extension name when it is saved as a fits file.
+    """
+    def __init__(self, data_table, name):
+        self.name = name
+        self._data_table = data_table
+
+    def __getitem__(self, item):
+        return self._data_table[item]
+
+    def __setitem__(self, key, value):
+        self._data_table[key] = value
+
+    def table_to_hdu(self):
+        table_hdu = fits_utils.table_to_fits(self._data_table)
+        table_hdu.name = self.name
+        return table_hdu
+
+
 class Image(object):
 
-    def __init__(self, pipeline_context, filename=None, data=None, header=None,
-                 extension_headers=None, bpm=None):
+    def __init__(self, pipeline_context, filename=None, data=None, data_tables=None,
+                 header=None, extension_headers=None, bpm=None):
         if header is None:
             header = {}
+
+        if data_tables is None:
+            data_tables = {}
 
         if extension_headers is None:
             extension_headers = []
@@ -33,6 +58,7 @@ class Image(object):
             self.filename = os.path.basename(filename)
 
         self.data = data
+        self.data_tables = data_tables
         self.header = header
         self.bpm = bpm
 
@@ -61,7 +87,6 @@ class Image(object):
         self.readnoise = float(header.get('RDNOISE', 0.0))
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE', 0.0))
-        self.catalog = None
 
     def _init_telescope_info(self, pipeline_context):
         if len(self.header) > 0:
@@ -88,32 +113,26 @@ class Image(object):
         image_hdu.header['EXTEND'] = True
         image_hdu.name = 'SCI'
         hdu_list = [image_hdu]
-        if self.catalog is not None:
-            table_hdu = fits_utils.table_to_fits(self.catalog)
-            table_hdu.name = 'CAT'
-            hdu_list.append(table_hdu)
-        if self.bpm is not None:
-            bpm_hdu = fits.ImageHDU(self.bpm.astype(np.uint8))
-            bpm_hdu.name = 'BPM'
-            hdu_list.append(bpm_hdu)
+        hdu_list = self._add_data_tables_to_hdu_list(hdu_list)
+        hdu_list = self._add_bpm_to_hdu_list(hdu_list)
 
-        hdu_list = fits.HDUList(hdu_list)
+        fits_hdu_list = fits.HDUList(hdu_list)
         try:
-            hdu_list.verify(option='exception')
+            fits_hdu_list.verify(option='exception')
         except fits.VerifyError as fits_error:
             logging_tags = logs.image_config_to_tags(self, None)
             logs.add_tag(logging_tags, 'filename', os.path.basename(self.filename))
             logger.warn('Error in FITS Verification. {0}. Attempting fix.'.format(fits_error),
                         extra=logging_tags)
             try:
-                hdu_list.verify(option='silentfix+exception')
+                fits_hdu_list.verify(option='silentfix+exception')
             except fits.VerifyError as fix_attempt_error:
                 logger.error('Could not repair FITS header. {0}'.format(fix_attempt_error),
                              extra=logging_tags)
 
         with tempfile.TemporaryDirectory() as temp_directory:
             base_filename = os.path.basename(filename)
-            hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True,
+            fits_hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True,
                              output_verify='fix+warn')
             if fpack:
                 filename += '.fz'
@@ -125,15 +144,32 @@ class Image(object):
                 self.filename += '.fz'
             shutil.move(os.path.join(temp_directory, base_filename), filename)
 
+    def _add_data_tables_to_hdu_list(self, hdu_list):
+        """
+        :param hdu_list: a list of hdu objects.
+        :return: a list of hdu objects with a FitsBinTableHDU added
+        """
+        for key in self.data_tables:
+            table_hdu = self.data_tables[key].table_to_hdu()
+            hdu_list.append(table_hdu)
+        return hdu_list
+
+    def _add_bpm_to_hdu_list(self, hdu_list):
+        if self.bpm is not None:
+            bpm_hdu = fits.ImageHDU(self.bpm.astype(np.uint8))
+            bpm_hdu.name = 'BPM'
+            hdu_list.append(bpm_hdu)
+        return hdu_list
+
     def update_shape(self, nx, ny):
         self.nx = nx
         self.ny = ny
 
     def write_catalog(self, filename, nsources=None):
-        if self.catalog is None:
+        if self.data_tables.get('catalog') is None:
             raise image_utils.MissingCatalogException
         else:
-            self.catalog[:nsources].write(filename, format='fits', overwrite=True)
+            self.data_tables.get('catalog')[:nsources].write(filename, format='fits', overwrite=True)
 
     def add_history(self, msg):
         self.header.add_history(msg)
@@ -191,3 +227,18 @@ def read_images(image_list, pipeline_context):
             logger.error('Error loading image: {error}'.format(error=e), extra={'tags': {'filename': filename}})
             continue
     return images
+
+
+def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, input_dictionary=None):
+    """
+    :param hdu_list: An Astropy HDUList object
+    :param table_extension_name: the name such that hdu_list[extension_name] = the table
+    :param input_dictionary: the dictionary to which you wish to append the table under the keyword
+            extension name.
+    :return: the input_dictionary with dict[extension_name] = the table as an astropy table
+    """
+    if input_dictionary is None:
+        input_dictionary = {}
+    astropy_table = Table(hdu_list[table_extension_name].data)
+    input_dictionary[table_extension_name] = astropy_table
+    return input_dictionary

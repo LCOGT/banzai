@@ -264,9 +264,9 @@ def fits_formats(dtype):
         format_code = 'E'
     elif np.issubdtype(dtype, np.float64):
         format_code = 'D'
-    elif np.issubdtype(dtype, np.complex32):
-        format_code = 'C'
     elif np.issubdtype(dtype, np.complex64):
+        format_code = 'C'
+    elif np.issubdtype(dtype, np.complex128):
         format_code = 'M'
     elif np.issubdtype(dtype, np.character):
         format_code = 'A'

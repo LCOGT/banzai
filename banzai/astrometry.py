@@ -97,13 +97,13 @@ class WCSSolver(Stage):
 
 def add_ra_dec_to_catalog(image):
     image_wcs = WCS(image.header)
-    ras, decs = image_wcs.all_pix2world(image.catalog['x'], image.catalog['y'], 1)
-    image.catalog['ra'] = ras
-    image.catalog['dec'] = decs
-    image.catalog['ra'].unit = 'degrees'
-    image.catalog['dec'].unit = 'degrees'
-    image.catalog['ra'].description = 'Right Ascension'
-    image.catalog['dec'].description = 'Declination'
+    ras, decs = image_wcs.all_pix2world(image.data_tables['catalog']['x'], image.data_tables['catalog']['y'], 1)
+    image.data_tables['catalog']['ra'] = ras
+    image.data_tables['catalog']['dec'] = decs
+    image.data_tables['catalog']['ra'].unit = 'degrees'
+    image.data_tables['catalog']['dec'].unit = 'degrees'
+    image.data_tables['catalog']['ra'].description = 'Right Ascension'
+    image.data_tables['catalog']['dec'].description = 'Declination'
 
 
 def get_ra_dec_in_sexagesimal(ra, dec):
