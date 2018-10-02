@@ -32,6 +32,11 @@ class DataTable(object):
     def __setitem__(self, key, value):
         self._data_table[key] = value
 
+    def table_to_hdu(self):
+        table_hdu = fits_utils.table_to_fits(self._data_table)
+        table_hdu.name = self.name
+        return table_hdu
+
 
 class Image(object):
 
@@ -145,8 +150,7 @@ class Image(object):
         :return: a list of hdu objects with a FitsBinTableHDU added
         """
         for key in self.data_tables:
-            table_hdu = fits_utils.table_to_fits(self.data_tables[key]._data_table)
-            table_hdu.name = self.data_tables[key].name
+            table_hdu = self.data_tables[key].table_to_hdu()
             hdu_list.append(table_hdu)
         return hdu_list
 
