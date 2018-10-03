@@ -69,7 +69,7 @@ class PatternNoiseDetector(Stage):
         trimmed_data = trim_image_edges(data)
         power_2d = get_2d_power_band(trimmed_data)
         snr = compute_snr(power_2d)
-        fraction_pixels_above_threshold = self.get_n_grouped_pixels_above_threshold(snr) / len(snr)
+        fraction_pixels_above_threshold = self.get_n_grouped_pixels_above_threshold(snr) / float(len(snr))
 
         has_pattern_noise = fraction_pixels_above_threshold > self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD
         return has_pattern_noise, fraction_pixels_above_threshold
@@ -92,8 +92,8 @@ class PatternNoiseDetector(Stage):
         idx_above_thresh = np.where(snr > self.SNR_THRESHOLD)[0]
         consecutive_group_lengths = np.array([len(list(map(itemgetter(1), g))) for k, g in
                                               groupby(enumerate(idx_above_thresh), key=lambda x: x[0]-x[1])])
-        n_grouped_pixels_above_threshold = sum(consecutive_group_lengths[consecutive_group_lengths
-                                                                         >= self.MIN_ADJACENT_PIXELS])
+        pixel_groups = consecutive_group_lengths >= self.MIN_ADJACENT_PIXELS
+        n_grouped_pixels_above_threshold = sum(consecutive_group_lengths[pixel_groups])
         return n_grouped_pixels_above_threshold
 
 
