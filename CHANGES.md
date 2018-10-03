@@ -1,3 +1,7 @@
+0.9.11 (2018-10-02)
+-------------------
+- Added support for more tables to be associated with images (catalogs, etc.)
+
 0.9.10 (2018-09-13)
 -------------------
 -  Changed how the filters for camera classes are plumbed
