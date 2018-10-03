@@ -1,6 +1,10 @@
 0.9.11 (2018-10-02)
 -------------------
 - Added support for more tables to be associated with images (catalogs, etc.)
+- Removed wavelet convolution from pattern noise QC check algorithm
+- Modified photometry unit names to prevent astropy fits standard warnings
+- Added pyyaml pacakge requirement to prevent warnings due to photometry tables 
+  having description columns
 
 0.9.10 (2018-09-13)
 -------------------

@@ -11,6 +11,19 @@ def set_random_seed():
     np.random.seed(200)
 
 
+def generate_data(ny=1000, nx=1000, has_pattern_noise=False):
+    data = 1000.0 + np.random.normal(0.0, 10.0, size=nx*ny).reshape(ny, nx)
+    if has_pattern_noise:
+        pn = np.empty((ny, nx))
+        # Shift the phase on each row to get the vertical line in the FT
+        for iy in range(ny):
+            pn[iy] = np.sin(np.arange(nx)/0.1 + 0.1*iy)
+        # Add Gaussian envelope to give the peak some width
+        pn *= 1000.0 * np.exp(-np.pi * (np.arange(nx)-nx/2)**2 / (2*(nx/5)**2))
+        data += pn
+    return data
+
+
 def test_no_input_images(set_random_seed):
     detector = pattern_noise.PatternNoiseDetector(None)
     images = detector.do_stage([])
@@ -23,44 +36,31 @@ def test_group_by_keywords(set_random_seed):
 
 
 def test_pattern_noise_detects_noise_when_it_should(set_random_seed):
-    data = 100.0 * np.sin(np.arange(1000000) / 0.1) + 1000.0 + np.random.normal(0.0, 10.0, size=1000000)
-    data = data.reshape(1000, 1000)
+    data = generate_data(has_pattern_noise=True)
     detector = pattern_noise.PatternNoiseDetector(None)
-    assert detector.check_for_pattern_noise(data)
+    assert detector.check_for_pattern_noise(data)[0]
 
 
 def test_pattern_noise_does_not_detect_white_noise(set_random_seed):
-    data = 1000 + np.random.normal(0.0, 10.0, size=1000000)
-    data = data.reshape(1000, 1000)
+    data = generate_data()
     detector = pattern_noise.PatternNoiseDetector(None)
-    assert detector.check_for_pattern_noise(data) == False
-
-
-def test_pattern_noise_on_garbage_image():
-    data = np.zeros((1000, 1000))
-    data[:, :] = np.nan
-    detector = pattern_noise.PatternNoiseDetector(None)
-    assert detector.check_for_pattern_noise(data) == False
+    assert detector.check_for_pattern_noise(data)[0] == False
 
 
 def test_pattern_noise_does_not_detect_stars(set_random_seed):
-    data = 1000 + np.random.normal(0.0, 10.0, size=1000000)
-    data = data.reshape(1000, 1000)
+    data = generate_data()
     for i in range(5):
         x = np.random.uniform(low=0.0, high=100)
         y = np.random.uniform(low=0.0, high=100)
         brightness = np.random.uniform(low=1000., high=5000.)
         data += gaussian2d(data.shape, x, y, brightness, 3.5)
     detector = pattern_noise.PatternNoiseDetector(None)
-    assert detector.check_for_pattern_noise(data) == False
+    assert detector.check_for_pattern_noise(data)[0] == False
 
 
 def test_pattern_noise_on_2d_image(set_random_seed):
-    data = 100.0 * np.sin(np.arange(1000000) / 0.1) + 1000.0 + np.random.normal(0.0, 10.0, size=1000000)
-    data = data.reshape(1000, 1000)
-
     image = FakeImage()
-    image.data = data
+    image.data = generate_data(has_pattern_noise=True)
 
     detector = pattern_noise.PatternNoiseDetector(None)
     detector.logger.error = mock.MagicMock()
@@ -94,29 +94,3 @@ def test_get_odd_integer():
     assert pattern_noise.get_odd_integer(1.5) == 3
     assert pattern_noise.get_odd_integer(2) == 3
     assert pattern_noise.get_odd_integer(2.5) == 3
-
-
-def test_convolve_snr_with_wavelet(set_random_seed):
-    snr = (np.sin(np.arange(100) / 5.) + 1) * 2 + np.random.normal(0, 1, 100)
-    snr[48:52] = 100
-    snr_convolved = pattern_noise.convolve_snr_with_wavelet(snr, nwavelets=25)
-    peaks = np.argmax(snr_convolved, axis=1)
-    assert snr_convolved.shape == (25, 100)
-    assert all(peaks > 48) and all(peaks < 52)
-
-
-def test_get_peak_parameters_of_single_peak():
-    snr_convolved = np.zeros((25, 100))
-    snr_convolved[:, 50] = np.arange(25) + 6
-    peak_maxima, std_maxima = pattern_noise.get_peak_parameters(snr_convolved)
-    assert all(peak_maxima > 5)
-    assert std_maxima == 0
-
-
-def test_get_peak_parameters_of_two_peaks():
-    snr_convolved = np.zeros((25, 100))
-    snr_convolved[:, 25] = np.arange(25)[::-1] + 6
-    snr_convolved[:, 75] = np.arange(25) + 6
-    peak_maxima, std_maxima = pattern_noise.get_peak_parameters(snr_convolved)
-    assert all(peak_maxima > 5)
-    assert std_maxima > 1
