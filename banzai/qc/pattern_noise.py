@@ -6,6 +6,7 @@ from itertools import groupby
 from operator import itemgetter
 
 from banzai.stages import Stage
+from banzai.utils.stats import robust_standard_deviation
 
 logger = logging.getLogger(__name__)
 
