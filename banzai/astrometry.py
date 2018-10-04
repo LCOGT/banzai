@@ -1,16 +1,21 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.stages import Stage
-from banzai import logs
-from banzai.utils import image_utils
-import os, subprocess, shlex
-from astropy.io import fits
+__author__ = 'cmccully'
+
+import os
+import subprocess
+import shlex
 import tempfile
+import logging
+
+from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units
 import numpy as np
 
-__author__ = 'cmccully'
+from banzai.stages import Stage
+from banzai.utils import image_utils
+
+logger = logging.getLogger(__name__)
 
 
 class WCSSolver(Stage):
@@ -32,26 +37,20 @@ class WCSSolver(Stage):
     def do_stage(self, images):
 
         for i, image in enumerate(images):
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-
-            # Save the catalog to a temporary file
-            filename = os.path.basename(image.filename)
-            logs.add_tag(logging_tags, 'filename', filename)
 
             # Skip the image if we don't have some kind of initial RA and Dec guess
             if np.isnan(image.ra) or np.isnan(image.dec):
-                self.logger.error('Skipping WCS solution. No initial pointing guess from header.',
-                                  extra=logging_tags)
+                logger.error('Skipping WCS solution. No initial pointing guess from header.', image=image)
                 continue
 
             with tempfile.TemporaryDirectory() as tmpdirname:
+                filename = os.path.basename(image.filename)
                 catalog_name = os.path.join(tmpdirname, filename.replace('.fits', '.cat.fits'))
                 try:
                     image.write_catalog(catalog_name, nsources=40)
                 except image_utils.MissingCatalogException:
                     image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
-                    self.logger.error('No source catalog. Not attempting WCS solution',
-                                      extra=logging_tags)
+                    logger.error('No source catalog. Not attempting WCS solution', image=image)
                     continue
 
                 # Run astrometry.net
@@ -63,9 +62,9 @@ class WCSSolver(Stage):
                 try:
                     console_output = subprocess.check_output(shlex.split(command))
                 except subprocess.CalledProcessError:
-                    self.logger.error('Astrometry.net threw an error.', extra=logging_tags)
+                    logger.error('Astrometry.net threw an error.', image=image)
 
-                self.logger.debug(console_output, extra=logging_tags)
+                logger.debug(console_output, image=image)
 
                 if os.path.exists(wcs_name):
                     # Copy the WCS keywords into original image
@@ -90,8 +89,7 @@ class WCSSolver(Stage):
                 else:
                     image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
 
-            logs.add_tag(logging_tags, 'WCSERR', image.header['WCSERR'])
-            self.logger.info('Attempted WCS Solve', extra=logging_tags)
+            logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.header['WCSERR']})
         return images
 
 

@@ -7,13 +7,13 @@ Author
 
 October 2015
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import argparse
 import multiprocessing
 import os
 import sys
 import traceback
+import logging
+import operator
 
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
@@ -28,9 +28,8 @@ from banzai import preview
 from banzai.qc import pointing
 from banzai.utils import image_utils, date_utils
 from banzai.context import TelescopeCriterion
-import operator
 
-logger = logs.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 ORDERED_STAGES = [qc.HeaderSanity,
                   qc.ThousandsTest,
@@ -153,8 +152,8 @@ def reduce_frames_one_by_one(stages_to_do, pipeline_context, image_types=None):
         try:
             run(stages_to_do, pipeline_context, image_types=image_types)
         except Exception as e:
-            logger.error('{0}'.format(e), extra={'tags': {'filename': pipeline_context.filename,
-                                                          'filepath': pipeline_context.raw_path}})
+            logger.error('{0}'.format(e), extra_tags={'filename': pipeline_context.filename,
+                                                          'filepath': pipeline_context.raw_path})
     pipeline_context.filename = original_filename
 
 
@@ -311,7 +310,7 @@ def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False,
     Main driver script for banzai.
     """
     if len(log_message) > 0:
-        logger.info(log_message, extra={'tags': {'raw_path': pipeline_context.raw_path}})
+        logger.info(log_message, extra_tags={'raw_path': pipeline_context.raw_path})
 
     image_list = image_utils.make_image_list(pipeline_context)
     image_list = image_utils.select_images(image_list, image_types,
@@ -439,8 +438,8 @@ class PreviewModeListener(ConsumerMixin):
                                                 max_tries=self.pipeline_context.max_preview_tries):
                     stages_to_do = get_preview_stages_todo(image_suffix)
 
-                    logging_tags = {'tags': {'filename': os.path.basename(path)}}
-                    logger.info('Running preview reduction on {}'.format(path), extra=logging_tags)
+                    logging_tags = {'filename': os.path.basename(path)}
+                    logger.info('Running preview reduction on {}'.format(path), extra_tags=logging_tags)
                     self.pipeline_context.filename = os.path.basename(path)
                     self.pipeline_context.raw_path = os.path.dirname(path)
 
@@ -451,12 +450,12 @@ class PreviewModeListener(ConsumerMixin):
                     preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
             except Exception:
-                logging_tags = {'tags': {'filename': os.path.basename(path)}}
+                logging_tags = {'filename': os.path.basename(path)}
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 tb_msg = traceback.format_exception(exc_type, exc_value, exc_tb)
 
                 logger.error("Exception producing preview frame. {0}. {1}".format(path, tb_msg),
-                             extra=logging_tags)
+                             extra_tags=logging_tags)
 
 
 def get_preview_stages_todo(image_suffix):

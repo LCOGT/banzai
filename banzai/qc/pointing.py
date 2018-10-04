@@ -1,10 +1,12 @@
 import os
+import logging
+
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 
 from banzai.stages import Stage
-from banzai import logs
 
+logger = logging.getLogger(__name__)
 
 
 class PointingTest(Stage):
@@ -24,14 +26,8 @@ class PointingTest(Stage):
     def group_by_keywords(self):
         return None
 
-    def setup_logging(self, image):
-        self.logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-        logs.add_tag(self.logging_tags, 'filename', os.path.basename(image.filename))
-
     def do_stage(self, images):
         for image in images:
-            self.setup_logging(image)
-
             try:
                 # OFST-RA/DEC is the same as CAT-RA/DEC but includes user requested offset
                 requested_coords = SkyCoord(image.header['OFST-RA'], image.header['OFST-DEC'],
@@ -42,7 +38,7 @@ class PointingTest(Stage):
                     requested_coords = SkyCoord(image.header['CAT-RA'], image.header['CAT-DEC'],
                                                 unit=(u.hour, u.deg), frame='icrs')
                 except:
-                    self.logger.error(e, extra=self.logging_tags)
+                    logger.error(e, image=image)
                     continue
 
             # This only works assuming CRPIX is at the center of the image
@@ -51,16 +47,14 @@ class PointingTest(Stage):
 
             angular_separation = solved_coords.separation(requested_coords).arcsec
 
-            logs.add_tag(self.logging_tags, 'PNTOFST', angular_separation)
+            logging_tags = {'PNTOFST': angular_separation}
 
             pointing_severe = abs(angular_separation) > self.SEVERE_THRESHOLD
             pointing_warning = abs(angular_separation) > self.WARNING_THRESHOLD
             if pointing_severe:
-                self.logger.error('Pointing offset exceeds threshold',
-                                  extra=self.logging_tags)
+                logger.error('Pointing offset exceeds threshold', image=image, extra_tags=logging_tags)
             elif pointing_warning:
-                self.logger.warning('Pointing offset exceeds threshhold',
-                                    extra=self.logging_tags)
+                logger.warning('Pointing offset exceeds threshhold', image=image, extra_tags=logging_tags)
             self.save_qc_results({'pointing.failed': pointing_severe,
                                   'pointing.failed_threshold': self.SEVERE_THRESHOLD,
                                   'pointing.warning': pointing_warning,

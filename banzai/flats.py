@@ -1,14 +1,15 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+__author__ = 'cmccully'
+
+import os.path
+import logging
 
 import numpy as np
-import os.path
 
 from banzai.utils import stats, fits_utils
 from banzai.stages import CalibrationMaker, ApplyCalibration, Stage, CalibrationComparer
 from banzai.images import Image
-from banzai import logs
 
-__author__ = 'cmccully'
+logger = logging.getLogger(__name__)
 
 
 class FlatNormalizer(Stage):
@@ -25,10 +26,8 @@ class FlatNormalizer(Stage):
             flat_normalization = stats.sigma_clipped_mean(image.get_inner_image_section(), 3.5)
             image.data /= flat_normalization
             image.header['FLATLVL'] = flat_normalization
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'flat_normalization', flat_normalization)
-            self.logger.info('Calculate flat normalization', extra=logging_tags)
+            logger.info('Calculate flat normalization', image=image,
+                             extra_tags={'flat_normalization': flat_normalization})
 
         return images
 
@@ -49,12 +48,11 @@ class FlatMaker(CalibrationMaker):
     def min_images(self):
         return 5
 
-    def make_master_calibration_frame(self, images, image_config, logging_tags):
+    def make_master_calibration_frame(self, images, image_config):
         flat_data = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         flat_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
         master_flat_filename = self.get_calibration_filename(images[0])
-        logs.add_tag(logging_tags, 'master_flat', os.path.basename(master_flat_filename))
         for i, image in enumerate(images):
 
             flat_data[:, :, i] = image.data[:, :]
@@ -75,9 +73,7 @@ class FlatMaker(CalibrationMaker):
         master_flat_image.filename = master_flat_filename
         master_flat_image.bpm = master_bpm
 
-        logs.pop_tag(logging_tags, 'master_flat')
-        logs.add_tag(logging_tags, 'filename', os.path.basename(master_flat_image.filename))
-        self.logger.info('Created master flat', extra=logging_tags)
+        logger.info('Created master flat', image=master_flat_image)
 
         return [master_flat_image]
 
@@ -95,15 +91,13 @@ class FlatDivider(ApplyCalibration):
     def calibration_type(self):
         return 'skyflat'
 
-    def apply_master_calibration(self, images, master_calibration_image, logging_tags):
+    def apply_master_calibration(self, images, master_calibration_image):
 
         master_flat_filename = master_calibration_image.filename
         master_flat_data = master_calibration_image.data
-        logs.add_tag(logging_tags, 'master_flat',
-                     os.path.basename(master_calibration_image.filename))
+        logging_tags = {'master_flat': os.path.basename(master_calibration_image.filename)}
         for image in images:
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            self.logger.info('Flattening image', extra=logging_tags)
+            logger.info('Flattening image', image=image, extra_tags=logging_tags)
             image.data /= master_flat_data
             image.bpm |= master_calibration_image.bpm
             master_flat_filename = os.path.basename(master_flat_filename)

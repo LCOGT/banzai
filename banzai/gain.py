@@ -1,7 +1,8 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import logging
+
 from banzai.stages import Stage
-from banzai import logs
-import os
+
+logger = logging.getLogger(__name__)
 
 
 class GainNormalizer(Stage):
@@ -16,14 +17,11 @@ class GainNormalizer(Stage):
         images_to_remove = []
         for image in images:
 
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'gain', image.gain)
-            self.logger.info('Multiplying by gain', extra=logging_tags)
+            logger.info('Multiplying by gain', image=image, extra_tags={'gain': image.gain})
 
             gain = image.gain
             if validate_gain(gain):
-                self.logger.error('Gain missing. Rejecting image.', extra=logging_tags)
+                logger.error('Gain missing. Rejecting image.', image=image)
                 images_to_remove.append(image)
             else:
                 if image.data_is_3d():

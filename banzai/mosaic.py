@@ -1,9 +1,10 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.stages import Stage
-import numpy as np
-from banzai.utils import fits_utils
-from banzai import logs
 import os
+import logging
+import numpy as np
+from banzai.stages import Stage
+from banzai.utils import fits_utils
+
+logger = logging.getLogger(__name__)
 
 
 class MosaicCreator(Stage):
@@ -18,20 +19,19 @@ class MosaicCreator(Stage):
         for image in images:
             if image.data_is_3d():
 
-                logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-                logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-
                 nx, ny = get_mosaic_size(image, image.get_n_amps())
                 mosaiced_data = np.zeros((ny, nx), dtype=np.float32)
                 mosaiced_bpm = np.zeros((ny, nx), dtype=np.uint8)
                 for i in range(image.get_n_amps()):
+
                     datasec = image.extension_headers[i]['DATASEC']
                     amp_slice = fits_utils.parse_region_keyword(datasec)
-                    logs.add_tag(logging_tags, 'DATASEC{0}'.format(i + 1), datasec)
 
                     detsec = image.extension_headers[i]['DETSEC']
                     mosaic_slice = fits_utils.parse_region_keyword(detsec)
-                    logs.add_tag(logging_tags, 'DETSEC{0}'.format(i + 1), detsec)
+
+                    logging_tags = {'DATASEC{0}'.format(i + 1): datasec,
+                                    'DETASEC{0}'.format(i + 1): datasec}
 
                     mosaiced_data[mosaic_slice] = image.data[i][amp_slice]
                     mosaiced_bpm[mosaic_slice] = image.bpm[i][amp_slice]
@@ -42,7 +42,7 @@ class MosaicCreator(Stage):
                 image.bpm[image.data == 0.0] = 1
                 image.update_shape(nx, ny)
                 update_naxis_keywords(image, nx, ny)
-                self.logger.info('Mosaiced image', extra=logging_tags)
+                logger.info('Mosaiced image', image=image, extra_tags=logging_tags)
         return images
 
 

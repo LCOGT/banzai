@@ -1,26 +1,23 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+__author__ = 'cmccully'
 
 import itertools
+import logging
+import abc
+
+import numpy as np
 import elasticsearch
 
 from banzai import dbs
-from banzai import logs
 from banzai.images import Image
 from banzai.utils import image_utils
 from banzai.utils.qc import format_qc_results
 
-import abc
-import numpy as np
-
-logger = logs.get_logger(__name__)
-
-__author__ = 'cmccully'
+logger = logging.getLogger(__name__)
 
 
 class Stage(abc.ABC):
 
     def __init__(self, pipeline_context):
-        self.logger = logs.get_logger(self.stage_name)
         self.pipeline_context = pipeline_context
 
     @property
@@ -40,8 +37,7 @@ class Stage(abc.ABC):
 
     def run_stage(self, image_set):
         image_set = list(image_set)
-        tags = logs.image_config_to_tags(image_set[0], self.group_by_keywords)
-        self.logger.info('Running {0}'.format(self.stage_name), extra=tags)
+        logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
         return self.do_stage(image_set)
 
     def run(self, images):
@@ -85,7 +81,7 @@ class Stage(abc.ABC):
                                       retry_on_conflict=5, timestamp=results_to_save['@timestamp'], **kwargs)
             except Exception as e:
                 error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
-                self.logger.error(error_message.format(url=self.pipeline_context.elasticsearch_url, exception=e))
+                logger.error(error_message.format(url=self.pipeline_context.elasticsearch_url, exception=e))
         return es_output
 
 
@@ -99,7 +95,7 @@ class CalibrationMaker(Stage):
         pass
 
     @abc.abstractmethod
-    def make_master_calibration_frame(self, images, image_config, logging_tags):
+    def make_master_calibration_frame(self, images, image_config):
         pass
 
     @property
@@ -110,13 +106,12 @@ class CalibrationMaker(Stage):
     def do_stage(self, images):
         if len(images) < self.min_images:
             # Do nothing
-            self.logger.warning('Not enough images to combine.')
+            logger.warning('Not enough images to combine.')
             return []
         else:
             image_config = image_utils.check_image_homogeneity(images)
-            logging_tags = logs.image_config_to_tags(image_config, self.group_by_keywords)
 
-            return self.make_master_calibration_frame(images, image_config, logging_tags)
+            return self.make_master_calibration_frame(images, image_config)
 
     def get_calibration_filename(self, image):
         cal_file = '{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
@@ -144,9 +139,8 @@ class ApplyCalibration(Stage):
     def calibration_type(self):
         pass
 
-    def on_missing_master_calibration(self, logging_tags):
-        self.logger.error('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name),
-                          extra=logging_tags)
+    def on_missing_master_calibration(self, image):
+        logger.error('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name), image=image)
         raise MasterCalibrationDoesNotExist
 
     def do_stage(self, images):
@@ -155,18 +149,17 @@ class ApplyCalibration(Stage):
             return []
         else:
             image_config = image_utils.check_image_homogeneity(images)
-            logging_tags = logs.image_config_to_tags(image_config, self.group_by_keywords)
             master_calibration_filename = self.get_calibration_filename(images[0])
 
             if master_calibration_filename is None:
-                self.on_missing_master_calibration(logging_tags)
+                self.on_missing_master_calibration(image_config)
 
             master_calibration_image = Image(self.pipeline_context,
                                              filename=master_calibration_filename)
-            return self.apply_master_calibration(images, master_calibration_image, logging_tags)
+            return self.apply_master_calibration(images, master_calibration_image)
 
     @abc.abstractmethod
-    def apply_master_calibration(self, images, master_calibration_image, logging_tags):
+    def apply_master_calibration(self, images, master_calibration_image):
         pass
 
     def get_calibration_filename(self, image):
@@ -187,11 +180,11 @@ class CalibrationComparer(ApplyCalibration):
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
 
-    def on_missing_master_calibration(self, logging_tags):
+    def on_missing_master_calibration(self, image):
         msg = 'No master {caltype} frame exists. Assuming these images are ok.'
-        self.logger.warning(msg.format(caltype=self.calibration_type), logging_tags)
+        logger.warning(msg.format(caltype=self.calibration_type), image=image)
 
-    def apply_master_calibration(self, images, master_calibration_image, logging_tags):
+    def apply_master_calibration(self, images, master_calibration_image):
         # Short circuit
         if master_calibration_image.data is None:
             return images
@@ -213,12 +206,13 @@ class CalibrationComparer(ApplyCalibration):
                           "master_comparison.pixel_threshold": self.ACCEPTABLE_PIXEL_FRACTION,
                           "master_comparison.comparison_master_filename": master_calibration_image.filename}
 
+            logging_tags = {}
             for qc_check, qc_result in qc_results.items():
-                logs.add_tag(logging_tags, qc_check, qc_result)
-            logs.add_tag(logging_tags, 'filename', image.filename)
-            logs.add_tag(logging_tags, 'master_comparison_filename', master_calibration_image.filename)
+                logging_tags[qc_check] = qc_result
+            logging_tags['filename'] = image.filename
+            logging_tags['master_comparison_filename'] = master_calibration_image.filename
             msg = "Performing comparison to last good master {caltype} frame"
-            self.logger.info(msg.format(caltype=self.calibration_type), extra=logging_tags)
+            logger.info(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
 
             # This needs to be added after the qc_results dictionary is used for the logging tags because
             # they can't handle booleans
@@ -227,9 +221,8 @@ class CalibrationComparer(ApplyCalibration):
                 # Reject the image and log an error
                 images_to_reject.append(image)
                 qc_results['rejected'] = True
-                logs.add_tag(logging_tags, 'REJECTED', True)
                 msg = 'Rejecting {caltype} image because it deviates too much from the previous master'
-                self.logger.error(msg.format(caltype=self.calibration_type), extra=logging_tags)
+                logger.error(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
 
             self.save_qc_results(qc_results, image)
 

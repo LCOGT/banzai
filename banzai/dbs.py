@@ -7,34 +7,30 @@ Author
 
 October 2015
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import os.path
+import logging
+from glob import glob
+import datetime
 
+import numpy as np
+import requests
+from astropy.io import fits
 from sqlalchemy import create_engine, pool, desc
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 
-from glob import glob
-from astropy.io import fits
-import requests
 from banzai.utils import date_utils
-from banzai import logs
 from banzai.utils import fits_utils
 
-import datetime
-import numpy as np
-
+logger = logging.getLogger(__name__)
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
 _DEFAULT_DB = 'mysql://cmccully:password@localhost/test'
 
 Base = declarative_base()
-
-logger = logs.get_logger(__name__)
 
 
 def get_session(db_address=_DEFAULT_DB):
