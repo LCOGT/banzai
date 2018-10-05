@@ -24,14 +24,13 @@ from sqlalchemy.sql.expression import true
 from banzai.utils import date_utils
 from banzai.utils import fits_utils
 
-logger = logging.getLogger(__name__)
-
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
 _DEFAULT_DB = 'mysql://cmccully:password@localhost/test'
 
 Base = declarative_base()
 
+logger = logging.getLogger(__name__)
 
 def get_session(db_address=_DEFAULT_DB):
     """
