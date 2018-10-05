@@ -32,7 +32,8 @@ class PatternNoiseDetector(Stage):
             pattern_noise_is_bad, fraction_pixels_above_threshold = self.check_for_pattern_noise(image.data)
             logging_tags = {'snr_threshold': self.SNR_THRESHOLD,
                             'min_fraction_pixels_above_threshold': self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD,
-                            'min_adjacent_pixels': self.MIN_ADJACENT_PIXELS}
+                            'min_adjacent_pixels': self.MIN_ADJACENT_PIXELS,
+                            'fraction_pixels_above_threshold': fraction_pixels_above_threshold}
             if pattern_noise_is_bad:
                 logger.error('Image found to have pattern noise.', image=image, extra_tags=logging_tags)
             else:
