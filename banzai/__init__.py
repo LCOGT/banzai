@@ -4,6 +4,8 @@
 # should keep this content at the top.
 # ----------------------------------------------------------------------------
 from ._astropy_init import *
+import logging
+from banzai.logs import BanzaiLogger
 # ----------------------------------------------------------------------------
 
 # Uncomment to enforce Python version check during package import.
@@ -18,3 +20,5 @@ from ._astropy_init import *
 if not _ASTROPY_SETUP_:
     from banzai import utils
 __all__ = ['utils']
+
+logging.setLoggerClass(BanzaiLogger)
