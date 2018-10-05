@@ -1,6 +1,7 @@
-import os
 import logging
+
 import numpy as np
+
 from banzai.stages import Stage
 from banzai.utils import fits_utils
 
@@ -18,20 +19,18 @@ class MosaicCreator(Stage):
     def do_stage(self, images):
         for image in images:
             if image.data_is_3d():
-
+                logging_tags = {}
                 nx, ny = get_mosaic_size(image, image.get_n_amps())
                 mosaiced_data = np.zeros((ny, nx), dtype=np.float32)
                 mosaiced_bpm = np.zeros((ny, nx), dtype=np.uint8)
                 for i in range(image.get_n_amps()):
-
                     datasec = image.extension_headers[i]['DATASEC']
                     amp_slice = fits_utils.parse_region_keyword(datasec)
+                    logging_tags['DATASEC{0}'.format(i + 1)] = datasec
 
                     detsec = image.extension_headers[i]['DETSEC']
                     mosaic_slice = fits_utils.parse_region_keyword(detsec)
-
-                    logging_tags = {'DATASEC{0}'.format(i + 1): datasec,
-                                    'DETASEC{0}'.format(i + 1): datasec}
+                    logging_tags['DETASEC{0}'.format(i + 1)] = detsec
 
                     mosaiced_data[mosaic_slice] = image.data[i][amp_slice]
                     mosaiced_bpm[mosaic_slice] = image.bpm[i][amp_slice]
