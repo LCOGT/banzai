@@ -1,9 +1,9 @@
 import logging
-import logutils.queue
 import multiprocessing
 import sys
 import os
 
+import logutils.queue
 from lcogt_logging import LCOGTFormatter
 
 from banzai.utils import date_utils
