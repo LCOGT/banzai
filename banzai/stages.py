@@ -209,7 +209,6 @@ class CalibrationComparer(ApplyCalibration):
             logging_tags = {}
             for qc_check, qc_result in qc_results.items():
                 logging_tags[qc_check] = qc_result
-            logging_tags['filename'] = image.filename
             logging_tags['master_comparison_filename'] = master_calibration_image.filename
             msg = "Performing comparison to last good master {caltype} frame"
             logger.info(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
