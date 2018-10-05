@@ -17,8 +17,8 @@ class CrosstalkCorrector(Stage):
 
     def do_stage(self, images):
         for image in images:
-            logging_tags = {}
             if image.data_is_3d():
+                logging_tags = {}
                 n_amps = image.get_n_amps()
                 crosstalk_matrix = np.identity(n_amps)
                 for j in range(n_amps):
