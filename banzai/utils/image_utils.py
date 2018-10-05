@@ -1,6 +1,7 @@
 import os
 from glob import glob
 import logging
+from datetime import timedelta
 
 from astropy.io import fits
 import numpy as np
@@ -10,7 +11,6 @@ from banzai import dbs
 from banzai.utils import file_utils
 from banzai.utils import fits_utils
 from banzai.utils import date_utils
-from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
