@@ -438,8 +438,8 @@ class PreviewModeListener(ConsumerMixin):
                                                 max_tries=self.pipeline_context.max_preview_tries):
                     stages_to_do = get_preview_stages_todo(image_suffix)
 
-                    logging_tags = {'filename': os.path.basename(path)}
-                    logger.info('Running preview reduction on {}'.format(path), extra_tags=logging_tags)
+                    logger.info('Running preview reduction on {}'.format(path),
+                                extra_tags={'filename': os.path.basename(path)})
                     self.pipeline_context.filename = os.path.basename(path)
                     self.pipeline_context.raw_path = os.path.dirname(path)
 
@@ -450,12 +450,11 @@ class PreviewModeListener(ConsumerMixin):
                     preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
             except Exception:
-                logging_tags = {'filename': os.path.basename(path)}
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 tb_msg = traceback.format_exception(exc_type, exc_value, exc_tb)
 
                 logger.error("Exception producing preview frame. {0}. {1}".format(path, tb_msg),
-                             extra_tags=logging_tags)
+                             extra_tags={'filename': os.path.basename(path)})
 
 
 def get_preview_stages_todo(image_suffix):
