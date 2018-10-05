@@ -71,7 +71,6 @@ class DarkMaker(CalibrationMaker):
         master_dark_image.filename = master_dark_filename
         master_dark_image.bpm = master_bpm
 
-        logging_tags = {'filename': os.path.basename(master_dark_image.filename)}
         logger.info('Created master dark', image=master_dark_image)
         return [master_dark_image]
 
