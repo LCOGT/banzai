@@ -54,9 +54,8 @@ class BiasMaker(CalibrationMaker):
         master_bias_image.filename = master_bias_filename
         master_bias_image.bpm = master_bpm
 
-        logging_tags = {'filename': os.path.basename(master_bias_image.filename),
-                        'BIASLVL': float(header['BIASLVL'])}
-        logger.debug('Average bias level in ADU', extra_tags=logging_tags)
+        logger.debug('Average bias level in ADU', image=master_bias_image,
+                     extra_tags={'BIASLVL': float(header['BIASLVL'])})
 
         return [master_bias_image]
 
@@ -135,9 +134,7 @@ class BiasMasterLevelSubtractor(Stage):
 
         for image in images:
             bias_level = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
-            logging_tags = {'filename': os.path.basename(image.filename),
-                            'BIASLVL': float(bias_level)}
-            logger.debug('Subtracting bias level', image=image, extra_tags=logging_tags)
+            logger.debug('Subtracting bias level', image=image, extra_tags={'BIASLVL': float(bias_level)})
             image.data -= bias_level
             image.header['BIASLVL'] = bias_level, 'Bias Level that was removed'
 
