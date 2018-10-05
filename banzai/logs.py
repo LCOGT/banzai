@@ -17,26 +17,23 @@ class BanzaiLogger(logging.getLoggerClass()):
         super(BanzaiLogger, self).__init__(name, level)
 
     def _log(self, level, msg, *args, **kwargs):
-        kwargs = add_tag_dictionary(kwargs)
+        kwargs = _add_tag_dictionary(kwargs)
         super(BanzaiLogger, self)._log(level, msg, *args, **kwargs)
 
 
-logging.setLoggerClass(BanzaiLogger)
-
-
-def add_tag_dictionary(kwargs):
+def _add_tag_dictionary(kwargs):
     tags = {}
     image = kwargs.pop('image', None)
     extra_tags = kwargs.pop('extra_tags', None)
     if image:
-        tags.update(image_to_tags(image))
+        tags.update(_image_to_tags(image))
     if extra_tags:
         tags.update(extra_tags)
     kwargs['extra'] = {'tags': tags}
     return kwargs
 
 
-def image_to_tags(image_config):
+def _image_to_tags(image_config):
     tags = {'filename': os.path.basename(image_config.filename),
             'site': image_config.site,
             'instrument': image_config.instrument,
@@ -67,8 +64,7 @@ def start_logging(log_level='INFO', filename=None):
         root_handler = logging.StreamHandler(sys.stdout)
     formatter = LCOGTFormatter()
     root_handler.setFormatter(formatter)
-    #root_handler.setLevel(getattr(logging, log_level, None))
-    root_handler.setLevel(10)
+    root_handler.setLevel(getattr(logging, log_level.upper(), None))
     root_logger.addHandler(root_handler)
 
     # Set upt he queue handler
