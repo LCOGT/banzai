@@ -48,8 +48,7 @@ ORDERED_STAGES = [qc.HeaderSanity,
                   pointing.PointingTest]
 
 IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
-                    TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True),
-                    TelescopeCriterion('schedulable', operator.eq, True)]
+                    TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
 
 PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
 
@@ -211,8 +210,6 @@ def reduce_night():
                         help='ElasticSearch index to use for QC results')
     parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
                         help='Elasticsearch document type for QC records')
-    parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
-                        help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
 
     args = parser.parse_args()
 
@@ -289,8 +286,6 @@ def parse_end_of_night_command_line_arguments(selection_criteria):
                         help='ElasticSearch index to use for QC results')
     parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
                         help='Elasticsearch document type for QC records')
-    parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
-                        help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
     args = parser.parse_args()
 
     args.preview_mode = False
@@ -354,8 +349,6 @@ def run_preview_pipeline():
                         help='ElasticSearch index to use for QC results')
     parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
                         help='Elasticsearch document type for QC records')
-    parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
-                        help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
 
     args = parser.parse_args()
     args.preview_mode = True
