@@ -101,6 +101,9 @@ def save_images(pipeline_context, images, master_calibration=False):
             dbs.save_calibration_info(image.obstype, filepath, image,
                                       db_address=pipeline_context.db_address, is_master=master_calibration)
 
+        if image.obstype in CALIBRATION_OBSTYPES:
+            dbs.save_individual_calibration_info(image.obstype, filepath, image,
+                                                 db_address=pipeline_context.db_address)
         if pipeline_context.post_to_archive:
             logger.info('Posting file to the archive', extra_tags={'filename': image_filename})
             try:
