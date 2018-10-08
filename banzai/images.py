@@ -2,6 +2,7 @@ import os
 import logging
 import tempfile
 import shutil
+import operator
 
 import numpy as np
 from astropy.io import fits
@@ -12,6 +13,7 @@ from banzai.utils import date_utils
 from banzai.utils import fits_utils
 from banzai.utils import image_utils
 from banzai.munge import munge
+from banzai.context import TelescopeCriterion
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +89,8 @@ class Image(object):
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE', 0.0))
 
+        self.is_science_level_reduction = self._get_if_science_level_reduction()
+
     def _init_telescope_info(self, pipeline_context):
         if len(self.header) > 0:
             telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
@@ -99,6 +103,11 @@ class Image(object):
         else:
             telescope, site, instrument = None, None, None
         return telescope, site, instrument
+
+    def _get_if_science_level_reduction(self):
+        telescope_is_schedulable = TelescopeCriterion('schedulable',
+                                                      operator.eq, True).telescope_passes(self.telescope)
+        return self.obstype != 'EXPERIMENTAL' and telescope_is_schedulable
 
     def subtract(self, value):
         self.data -= value
