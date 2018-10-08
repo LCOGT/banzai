@@ -105,8 +105,10 @@ class Image(object):
         return telescope, site, instrument
 
     def _get_if_science_level_reduction(self):
-        telescope_is_schedulable = TelescopeCriterion('schedulable',
-                                                      operator.eq, True).telescope_passes(self.telescope)
+        telescope_is_schedulable = False
+        if self.telescope is not None:
+            telescope_is_schedulable = TelescopeCriterion('schedulable',
+                                                          operator.eq, True).telescope_passes(self.telescope)
         return self.obstype != 'EXPERIMENTAL' and telescope_is_schedulable
 
     def subtract(self, value):
