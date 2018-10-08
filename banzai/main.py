@@ -50,7 +50,8 @@ ORDERED_STAGES = [qc.HeaderSanity,
 IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
                     TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
 
-PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
+PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits', 'x00.fits']
+PREVIEW_ELIGIBLE_IMAGE_TYPES = ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT', 'EXPERIMENTAL']
 
 
 def get_stages_todo(last_stage=None, extra_stages=None):
@@ -430,7 +431,7 @@ class PreviewModeListener(ConsumerMixin):
                     # Increment the number of tries for this file
                     preview.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
 
-                    run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT'])
+                    run(stages_to_do, self.pipeline_context, image_types=PREVIEW_ELIGIBLE_IMAGE_TYPES)
                     preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
             except Exception:
