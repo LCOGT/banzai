@@ -17,7 +17,7 @@ import requests
 from astropy.io import fits
 from sqlalchemy import create_engine, pool, desc
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR
+from sqlalchemy import Column, Integer, String, Date, Datetime, ForeignKey, Boolean, CHAR
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 
@@ -67,6 +67,26 @@ class CalibrationImage(Base):
     filename = Column(String(50), unique=True)
     filepath = Column(String(100))
     dayobs = Column(Date, index=True)
+    ccdsum = Column(String(20))
+    filter_name = Column(String(32))
+    telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
+
+
+class CalibrationImageIndividual(Base):
+    """
+    Individual Calibration Image Database Record
+
+    This defines the calimages_individual table. We use this to keep track of the individual calibration frames.
+    Typically these are bias, darks, and flat field frames. These are indexed by timestamp to make it
+    easy to find the closest calibration frame.
+    """
+    __tablename__ = 'calimages_individual'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    type = Column(String(30), index=True)
+    filename = Column(String(50), unique=True)
+    filepath = Column(String(100))
+    dayobs = Column(Date, index=True)
+    timestamp = Column(Datetime, index=True)
     ccdsum = Column(String(20))
     filter_name = Column(String(32))
     telescope_id = Column(Integer, ForeignKey("telescopes.id"), index=True)
@@ -336,12 +356,27 @@ def get_bpm_filename(telescope_id, ccdsum, db_address=_DEFAULT_DB):
 
 def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAULT_DB):
     # Store the information into the calibration table
-    # Check and see if the bias file is already in the database
     db_session = get_session(db_address=db_address)
     output_filename = os.path.basename(output_file)
 
     add_or_update_record(db_session, CalibrationImage, {'filename': output_filename},
                          {'dayobs': date_utils.epoch_string_to_date(image_config.epoch),
+                          'ccdsum': image_config.ccdsum, 'filter_name': image_config.filter,
+                          'telescope_id': image_config.telescope.id, 'type': cal_type.upper(),
+                          'filename': output_filename, 'filepath': os.path.dirname(output_file)})
+
+    db_session.commit()
+    db_session.close()
+
+
+def save_individual_calibration_info(cal_type, output_file, image_config, db_address=_DEFAULT_DB):
+    # Store the information into the indivisual calibration table
+    db_session = get_session(db_address=db_address)
+    output_filename = os.path.basename(output_file)
+
+    add_or_update_record(db_session, CalibrationImageIndividual, {'filename': output_filename},
+                         {'dayobs': date_utils.epoch_string_to_date(image_config.epoch),
+                          'timestamp': date_utils.parse_date_obs(image_config.epoch),
                           'ccdsum': image_config.ccdsum, 'filter_name': image_config.filter,
                           'telescope_id': image_config.telescope.id, 'type': cal_type.upper(),
                           'filename': output_filename, 'filepath': os.path.dirname(output_file)})
