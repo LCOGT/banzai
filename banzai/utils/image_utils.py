@@ -11,6 +11,8 @@ from banzai.utils import file_utils, date_utils
 
 logger = logging.getLogger(__name__)
 
+CALIBRATION_OBSTYPES = ['BIAS', 'DARK', 'SKYFLAT']
+
 
 def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
     telescope = dbs.get_telescope_for_file(filename, db_address=db_address)
@@ -101,6 +103,9 @@ def save_images(pipeline_context, images, master_calibration=False):
             dbs.save_calibration_info(image.obstype, filepath, image,
                                       db_address=pipeline_context.db_address)
 
+        if image.obstype in CALIBRATION_OBSTYPES:
+            dbs.save_individual_calibration_info(image.obstype, filepath, image,
+                                                 db_address=pipeline_context.db_address)
         if pipeline_context.post_to_archive:
             logger.info('Posting {filename} to the archive'.format(filename=image_filename))
             try:
