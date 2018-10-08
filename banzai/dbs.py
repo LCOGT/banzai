@@ -342,7 +342,6 @@ def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
 
 def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAULT_DB, is_master=False):
     # Store the information into the calibration table
-    # Check and see if the bias file is already in the database
     db_session = get_session(db_address=db_address)
     output_filename = os.path.basename(output_file)
 
