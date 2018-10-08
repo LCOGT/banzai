@@ -69,7 +69,7 @@ class Stage(abc.ABC):
         """
 
         es_output = {}
-        if getattr(self.pipeline_context, 'post_to_elasticsearch', False):
+        if getattr(self.pipeline_context, 'post_to_elasticsearch', False) and image.is_science_level_reduction:
             filename, results_to_save = format_qc_results(qc_results, image)
             es = elasticsearch.Elasticsearch(self.pipeline_context.elasticsearch_url)
             try:
@@ -124,10 +124,6 @@ class CalibrationMaker(Stage):
         return cal_file
 
 
-class MasterCalibrationDoesNotExist(Exception):
-    pass
-
-
 class ApplyCalibration(Stage):
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
@@ -137,10 +133,6 @@ class ApplyCalibration(Stage):
     def calibration_type(self):
         pass
 
-    def on_missing_master_calibration(self, image):
-        logger.error('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name), image=image)
-        raise MasterCalibrationDoesNotExist
-
     def do_stage(self, images):
         if len(images) == 0:
             # Abort!
@@ -148,13 +140,18 @@ class ApplyCalibration(Stage):
         else:
             image_config = image_utils.check_image_homogeneity(images)
             master_calibration_filename = self.get_calibration_filename(images[0])
+            qc_result_index = 'pipeline.missing_master_'.format(self.calibration_type)
 
             if master_calibration_filename is None:
-                self.on_missing_master_calibration(image_config)
-
-            master_calibration_image = Image(self.pipeline_context,
-                                             filename=master_calibration_filename)
-            return self.apply_master_calibration(images, master_calibration_image)
+                logger.warning('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name),
+                               image=images[0])
+                self.save_qc_results({qc_result_index: False}, images[0])
+                return images
+            else:
+                self.save_qc_results({qc_result_index: True}, images[0])
+                master_calibration_image = Image(self.pipeline_context,
+                                                 filename=master_calibration_filename)
+                return self.apply_master_calibration(images, master_calibration_image)
 
     @abc.abstractmethod
     def apply_master_calibration(self, images, master_calibration_image):
