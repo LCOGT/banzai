@@ -1,8 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 from banzai.bias import BiasSubtractor
 from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception
-from banzai.stages import MasterCalibrationDoesNotExist
-import pytest
 import mock
 
 import numpy as np
@@ -83,13 +81,13 @@ def test_raises_an_exception_if_ny_are_different(mock_cal, mock_images):
 
 @mock.patch('banzai.stages.Image')
 @mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
-def test_raises_exception_if_no_master_calibration(mock_cal, mock_images):
+def test_continues_if_no_master_calibration(mock_cal, mock_images):
     mock_cal.return_value = None
     mock_images.return_value = FakeBiasImage()
     subtractor = BiasSubtractor(None)
 
-    with pytest.raises(MasterCalibrationDoesNotExist):
-        images = subtractor.do_stage([FakeImage() for x in range(6)])
+    images = subtractor.do_stage([FakeImage() for x in range(6)])
+    assert len(images) == 6
 
 
 @mock.patch('banzai.stages.Image')
