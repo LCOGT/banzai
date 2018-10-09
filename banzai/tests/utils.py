@@ -9,12 +9,14 @@ from banzai.images import Image
 
 class FakeImage(Image):
     def __init__(self, nx=101, ny=103, image_multiplier=1.0,
-                 ccdsum='2 2', epoch='20160101', n_amps=1):
+                 ccdsum='2 2', epoch='20160101', n_amps=1,
+                 telescope_id=-1, site='elp', instrument='kb76'):
         self.nx = nx
         self.ny = ny
-        self.telescope_id = -1
-        self.site = 'elp'
-        self.instrument = 'kb76'
+        self.telescope_id = telescope_id
+        self.telescope = FakeTelescope(telescope_id=telescope_id, site=site, instrument=instrument)
+        self.site = site
+        self.instrument = instrument
         self.ccdsum = ccdsum
         self.epoch = epoch
         self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
@@ -44,6 +46,14 @@ class FakeImage(Image):
 
     def add_history(self, msg):
         pass
+
+
+class FakeTelescope(object):
+    def __init__(self, telescope_id, site, instrument, schedulable=True):
+        self.id = telescope_id
+        self.site = site
+        self.instrument = instrument
+        self.schedulable = schedulable
 
 
 class FakeContext(object):
