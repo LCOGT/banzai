@@ -10,6 +10,7 @@ def format_qc_results(qc_results, image):
                        'molecule_id': image.molecule_id,
                        'obstype': image.obstype,
                        'filter': image.filter,
+                       'telescope.schedulable': bool(image.telescope.schedulable),
                        '@timestamp': image.dateobs}
     for key, value in qc_results.items():
         # Elasticsearch does not like numpy.bool_ types
