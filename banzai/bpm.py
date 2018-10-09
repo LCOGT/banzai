@@ -21,8 +21,8 @@ class BPMUpdater(Stage):
 
     def add_bpm_to_image(self, image):
         # Get the BPM filename
-        bpm_filename = dbs.get_bpm(image.telescope.id, image.ccdsum,
-                                   db_address=self.pipeline_context.db_address)
+        bpm_filename = self.get_bpm_filename(image)
+
         # Check if file is missing
         is_bpm_missing = bpm_filename is None
         self.save_qc_results({'pipeline.bpm.missing': is_bpm_missing}, image)
@@ -47,6 +47,10 @@ class BPMUpdater(Stage):
         image.bpm = bpm
         image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
 
+    def get_bpm_filename(self, image):
+        return dbs.get_bpm_filename(image.telescope.id, image.ccdsum,
+                                    db_address=self.pipeline_context.db_address)
+
 
 def load_bpm(bpm_filename, logger):
     bpm_hdu = fits_utils.open_fits_file(bpm_filename)
@@ -66,16 +70,11 @@ def load_bpm(bpm_filename, logger):
 
 
 def bpm_has_valid_size(bpm, image):
+    is_valid = True
     # If 3d, check and make sure the number of extensions is the same
     if image.data_is_3d():
-        y_slices, x_slices = fits_utils.parse_region_keyword(image.extension_headers[0]['DATASEC'])
-        is_valid = image.data.shape[0] == bpm.shape[0]
+        for i in range(image.get_n_amps()):
+            is_valid &= bpm[i].shape == image.data[i].shape
     else:
-        y_slices, x_slices = fits_utils.parse_region_keyword(image.header['DATASEC'])
-        is_valid = True
-
-    # Check if x and y dimensions are less than the datasec
-    is_valid &= bpm.shape[-1] >= x_slices.stop
-    is_valid &= bpm.shape[-2] >= y_slices.stop
-
+        is_valid &= bpm.shape == image.data.shape
     return is_valid
