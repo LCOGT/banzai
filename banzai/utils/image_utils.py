@@ -9,7 +9,6 @@ import numpy as np
 import banzai
 from banzai import dbs
 from banzai.utils import file_utils
-from banzai.utils import fits_utils
 from banzai.utils import date_utils
 
 logger = logging.getLogger(__name__)
@@ -115,60 +114,12 @@ def save_images(pipeline_context, images, master_calibration=False):
     return output_files
 
 
-def load_bpm(image, pipeline_context):
-    bpm_filename = dbs.get_bpm(image.telescope.id, image.ccdsum,
-                               db_address=pipeline_context.db_address)
-    _load_bpm_file(bpm_filename, image)
-    if bpm_filename is None:
-        _load_empty_bpm(image)
-
-    else:
-        _load_bpm_file(bpm_filename, image)
-
-
-def _load_empty_bpm(image):
-    logger.warning("No BPM for {0}, continuing".format(image.filename))
+def add_empty_bpm(image):
     if image.data is None:
         image.bpm = None
     else:
         image.bpm = np.zeros(image.data.shape, dtype=np.uint8)
     image.header['L1IDMASK'] = ('', 'Id. of mask file used')
-
-
-def _load_bpm_file(bpm_filename, image):
-    bpm_hdu = fits_utils.open_fits_file(bpm_filename)
-    bpm_extensions = fits_utils.get_extensions_by_name(bpm_hdu, 'BPM')
-    image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
-    if len(bpm_extensions) > 1:
-        extension_shape = bpm_extensions[0].data.shape
-        bpm_shape = (len(bpm_extensions), extension_shape[0], extension_shape[1])
-        image.bpm = np.zeros(bpm_shape, dtype=np.uint8)
-        for i, extension in enumerate(bpm_extensions):
-            image.bpm[i, :, :] = extension.data[:, :]
-    elif len(bpm_extensions) == 1:
-        image.bpm = np.array(bpm_extensions[0].data, dtype=np.uint8)
-    else:
-        image.bpm = np.array(bpm_hdu[0].data, dtype=np.uint8)
-    if not bpm_has_valid_size(image.bpm, image):
-        logger.warning('BPM shape mismatch', image=image)
-        _load_empty_bpm(image)
-
-
-def bpm_has_valid_size(bpm, image):
-
-    # If 3d, check and make sure the number of extensions is the same
-    if image.data_is_3d():
-        y_slices, x_slices = fits_utils.parse_region_keyword(image.extension_headers[0]['DATASEC'])
-        is_valid = image.data.shape[0] == bpm.shape[0]
-    else:
-        y_slices, x_slices = fits_utils.parse_region_keyword(image.header['DATASEC'])
-        is_valid = True
-
-    # Check if x and y dimensions are less than the datasec
-    is_valid &= bpm.shape[-1] >= x_slices.stop
-    is_valid &= bpm.shape[-2] >= y_slices.stop
-
-    return is_valid
 
 
 def save_pipeline_metadata(image, pipeline_context):
