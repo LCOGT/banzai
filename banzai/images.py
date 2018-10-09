@@ -2,7 +2,6 @@ import os
 import logging
 import tempfile
 import shutil
-import operator
 
 import numpy as np
 from astropy.io import fits
@@ -13,7 +12,6 @@ from banzai.utils import date_utils
 from banzai.utils import fits_utils
 from banzai.utils import image_utils
 from banzai.munge import munge
-from banzai.context import TelescopeCriterion
 
 logger = logging.getLogger(__name__)
 
