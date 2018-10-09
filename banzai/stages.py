@@ -69,7 +69,7 @@ class Stage(abc.ABC):
         """
 
         es_output = {}
-        if getattr(self.pipeline_context, 'post_to_elasticsearch', False) and image.is_science_level_reduction:
+        if getattr(self.pipeline_context, 'post_to_elasticsearch', False):
             filename, results_to_save = format_qc_results(qc_results, image)
             es = elasticsearch.Elasticsearch(self.pipeline_context.elasticsearch_url)
             try:
@@ -134,6 +134,7 @@ class ApplyCalibration(Stage):
 
     def do_stage(self, images):
         if len(images) == 0:
+            # Abort!
             return images
         image_config = image_utils.check_image_homogeneity(images)
         master_calibration_filename = self.get_calibration_filename(images[0])
@@ -142,6 +143,7 @@ class ApplyCalibration(Stage):
         self.save_qc_results({'pipeline.missing_master_'.format(self.calibration_type):
                               is_master_calibration_missing}, images[0])
         if is_master_calibration_missing:
+            # Short circuit if corresponding master calibration image is not found
             self.logger.warning('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name),
                                 image=images[0])
             return images
