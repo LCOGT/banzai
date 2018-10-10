@@ -131,9 +131,14 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
     image_list = image_utils.make_image_list(raw_path)
-    image_list = image_utils.select_images(image_list, image_types,
-                                           pipeline_context.allowed_instrument_criteria,
-                                           db_address=pipeline_context.db_address)
+    if calibration_maker:
+        image_list = image_utils.select_calibration_images(image_list, image_types,
+                                                           pipeline_context.allowed_instrument_criteria,
+                                                           db_address=pipeline_context.db_address)
+    else:
+        image_list = image_utils.select_images(image_list, image_types,
+                                               pipeline_context.allowed_instrument_criteria,
+                                               db_address=pipeline_context.db_address)
     if calibration_maker:
         try:
             run(stages_to_do, image_list, pipeline_context, calibration_maker=True)
