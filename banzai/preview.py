@@ -2,7 +2,7 @@ import logging
 
 from banzai import dbs
 from banzai.utils import file_utils
-from banzai.utils.image_utils import image_passes_criteria
+from banzai.utils.image_utils import image_passes_instrument_criteria
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def need_to_make_preview(path, criteria, db_address=dbs._DEFAULT_DB, max_tries=5
     schedulable.
     """
     try:
-        if not image_passes_criteria(path, criteria, db_address=db_address):
+        if not image_passes_instrument_criteria(path, criteria, db_address=db_address):
             return False
 
     except dbs.TelescopeMissingException:
