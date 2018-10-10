@@ -7,7 +7,7 @@ from astropy.io import fits
 
 import banzai
 from banzai import dbs
-from banzai.utils import file_utils, date_utils
+from banzai.utils import file_utils, fits_utils, date_utils
 
 logger = logging.getLogger(__name__)
 
@@ -23,22 +23,57 @@ def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
     return passes
 
 
+def _image_is_correct_obstype(filename, image_types):
+    passes = False
+    obstype = None
+    hdu_list = fits.open(filename)
+    for hdu in hdu_list:
+        if 'OBSTYPE' in hdu.header.keys():
+            obstype = hdu.header['OBSTYPE']
+    if obstype is None:
+        logger.error('Unable to get OBSTYPE', extra={'tags': {'filename': filename}})
+        passes = False
+    elif obstype in image_types:
+        passes = True
+    return passes
+
+
+def _get_calibration_image_parameters(filename):
+    telescope = dbs.get_telescope_for_file(filename, db_address=db_address)
+    _, header, _, _ = fits_utils.open_image(filename)
+    image_parameters = {
+        'ccdsum': header['CCDSUM'],
+        'filter': header['FILTER'],
+        'dayobs': header['DAY-OBS'],
+        'obstype': header['OBSTYPE'],
+        'telescope_id': telescope.id}
+    return image_parameters
+
+
+def select_calibration_images(image_list, image_types, instrument_criteria, db_address=dbs._DEFAULT_DB):
+    images = []
+    image_parameters_list = []
+    for filename in image_list:
+        try:
+            if image_passes_criteria(filename, instrument_criteria, db_address=db_address) and \
+               _image_is_correct_obstype(filename, image_types):
+                image_parameters = _get_calibration_image_parameters(filename)
+                if image_parameters not in image_parameters_list:
+                    image_parameters_list.append(image_parameters)
+        except Exception as e:
+            logger.error('Exception checking image selection criteria: {e}'.format(e=e),
+                         extra={'tags': {'filename': filename}})
+    for image_parameters in image_parameters_list:
+        images.append(dbs.get_individual_calibration_images(image_parameters, db_address=db_address))
+    return images
+
+
 def select_images(image_list, image_types, instrument_criteria, db_address=dbs._DEFAULT_DB):
     images = []
     for filename in image_list:
         try:
-            if not image_passes_criteria(filename, instrument_criteria, db_address=db_address):
-                continue
-            obstype = None
-            hdu_list = fits.open(filename)
-            for hdu in hdu_list:
-                if 'OBSTYPE' in hdu.header.keys():
-                    obstype = hdu.header['OBSTYPE']
-
-            if obstype is None:
-                logger.error('Unable to get OBSTYPE', extra_tags={'filename': filename})
-
-            if obstype in image_types:
+            if image_passes_criteria(filename, instrument_criteria, db_address=db_address) and \
+               _image_is_correct_obstype(filename, image_types):
                 images.append(filename)
         except Exception as e:
             logger.error('Exception checking image selection criteria: {e}'.format(e=e),
