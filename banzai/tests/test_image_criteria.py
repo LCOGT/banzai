@@ -34,7 +34,7 @@ def test_image_passes_multiple_criteria_should_fail(mock_telescope):
     mock_telescope.return_value = FakeTelescope(schedulable=False, camera_type='SciCam')
     criteria = [TelescopeCriterion('schedulable', operator.eq, True),
                 TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
-    assert not image_passes_criteria('test.fits', criteria)
+    assert not image_passes_instrument_criteria('test.fits', criteria)
 
 
 @mock.patch('banzai.dbs.get_telescope_for_file')
@@ -42,7 +42,7 @@ def test_image_passes_multiple_criteria_should_pass(mock_telescope):
     mock_telescope.return_value = FakeTelescope(schedulable=True, camera_type='SciCam')
     criteria = [TelescopeCriterion('schedulable', operator.eq, True),
                 TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
-    assert image_passes_criteria('test.fits', criteria)
+    assert image_passes_instrument_criteria('test.fits', criteria)
 
 
 @mock.patch('banzai.dbs.get_telescope_for_file')
@@ -50,7 +50,7 @@ def test_image_passes_multiple_criteria_should_fail_with_exclude(mock_telescope)
     mock_telescope.return_value = FakeTelescope(schedulable=True, camera_type='SciCam-NRES')
     criteria = [TelescopeCriterion('schedulable', operator.eq, True),
                 TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
-    assert not image_passes_criteria('test.fits', criteria)
+    assert not image_passes_instrument_criteria('test.fits', criteria)
 
 
 @mock.patch('banzai.dbs.get_telescope_for_file')
@@ -58,4 +58,4 @@ def test_image_passes_multiple_criteria_should_pass_with_exclude(mock_telescope)
     mock_telescope.return_value = FakeTelescope(schedulable=True, camera_type='SciCam')
     criteria = [TelescopeCriterion('schedulable', operator.eq, True),
                 TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
-    assert image_passes_criteria('test.fits', criteria)
+    assert image_passes_instrument_criteria('test.fits', criteria)
