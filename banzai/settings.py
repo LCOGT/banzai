@@ -95,15 +95,15 @@ class ImagingSettings(Settings):
     }
 
     BIAS_LAST_STAGE = trim.Trimmer
-    BIAS_EXTRA_STAGES = [bias.BiasMasterLevelSubtractor, bias.BiasComparer, bias.BiasMaker]
-    BIAS_EXTRA_STAGES_PREVIEW = [bias.BiasMasterLevelSubtractor, bias.BiasComparer]
+    BIAS_MAKER_STAGE = bias.BiasMaker
+    BIAS_EXTRA_STAGES = [bias.BiasMasterLevelSubtractor, bias.BiasComparer]
 
     DARK_LAST_STAGE = bias.BiasSubtractor
-    DARK_EXTRA_STAGES = [dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker]
-    DARK_EXTRA_STAGES_PREVIEW = [dark.DarkNormalizer, dark.DarkComparer]
+    DARK_MAKER_STAGE = dark.DarkMaker
+    DARK_EXTRA_STAGES = [dark.DarkNormalizer, dark.DarkComparer]
 
     FLAT_LAST_STAGE = dark.DarkSubtractor
-    FLAT_EXTRA_STAGES = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker]
-    FLAT_EXTRA_STAGES_PREVIEW = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer]
+    FLAT_MAKER_STAGE = flats.FlatMaker
+    FLAT_EXTRA_STAGES = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer]
 
     SINISTRO_LAST_STAGE = mosaic.MosaicCreator

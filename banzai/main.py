@@ -146,31 +146,24 @@ def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
     return output_files
 
 
-def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None,
-                      log_message='', calibration_maker=False, ):
+def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None, log_message='',
+                      calibration_maker_stage=None):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     stages_to_do = get_stages_todo(pipeline_context.ORDERED_STAGES, last_stage=last_stage, extra_stages=extra_stages)
-    image_list = image_utils.make_image_list(raw_path)
-    if calibration_maker:
-        image_list = image_utils.select_calibration_images(image_list, image_types,
-                                                           pipeline_context.FRAME_SELECTION_CRITERIA,
-                                                           db_address=pipeline_context.db_address)
-    else:
-        image_list = image_utils.select_images(image_list, image_types,
-                                               pipeline_context.FRAME_SELECTION_CRITERIA,
-                                               db_address=pipeline_context.db_address)
-    if calibration_maker:
-        try:
-            run(stages_to_do, image_list, pipeline_context, calibration_maker=True)
-        except Exception:
-            logger.error(logs.format_exception(), extra_tags={'raw_path': raw_path})
-    else:
-        for image in image_list:
-            try:
-                run(stages_to_do, [image], pipeline_context, calibration_maker=False)
-            except Exception:
-                logger.error(logs.format_exception(), extra_tags={'filename': image})
+    image_path_list = image_utils.make_image_path_list(raw_path)
+    image_path_list = image_utils.select_images(image_path_list, image_types,
+                                                pipeline_context.FRAME_SELECTION_CRITERIA,
+                                                db_address=pipeline_context.db_address)
+    try:
+        run(stages_to_do, image_path_list, pipeline_context)
+        if calibration_maker_stage is not None:
+            image_path_list = image_utils.select_calibration_images(image_path_list, image_types,
+                                                                    pipeline_context.FRAME_SELECTION_CRITERIA,
+                                                                    db_address=pipeline_context.db_address)
+            run([calibration_maker_stage], image_path_list, pipeline_context, calibration_maker=True)
+    except Exception:
+        logger.error(logs.format_exception(), extra_tags={'filename': image_path_list[0]})
 
 
 def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, extra_stages=None, log_message=''):
@@ -205,21 +198,21 @@ def make_master_bias(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
     process_directory(pipeline_context, raw_path, pipeline_context.BIAS_IMAGE_TYPES,
                       last_stage=pipeline_context.BIAS_LAST_STAGE, extra_stages=pipeline_context.BIAS_EXTRA_STAGES,
-                      log_message='Making Master Bias', calibration_maker=True)
+                      calibration_maker_stage=pipeline_context.BIAS_MAKER_STAGE, log_message='Making Master Bias')
 
 
 def make_master_dark(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
     process_directory(pipeline_context, raw_path, pipeline_context.DARK_IMAGE_TYPES,
                       last_stage=pipeline_context.DARK_LAST_STAGE, extra_stages=pipeline_context.DARK_EXTRA_STAGES,
-                      log_message='Making Master Dark', calibration_maker=True)
+                      calibration_maker_stage=pipeline_context.DARK_MAKER_STAGE, log_message='Making Master Dark')
 
 
 def make_master_flat(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
     process_directory(pipeline_context, raw_path, pipeline_context.FLAT_IMAGE_TYPES,
                       last_stage=pipeline_context.FLAT_LAST_STAGE, extra_stages=pipeline_context.FLAT_EXTRA_STAGES,
-                      log_message='Making Master Flat', calibration_maker=True)
+                      calibration_maker_stage=pipeline_context.FLAT_MAKER_STAGE, log_message='Making Master Flat')
 
 
 def reduce_science_frames(pipeline_context=None, raw_path=None):
