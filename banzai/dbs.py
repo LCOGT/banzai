@@ -79,7 +79,6 @@ class Instrument(Base):
 
     This defines the instruments table.
     """
-    __tablename__ = 'instruments'
     id = Column(Integer, primary_key=True, autoincrement=True)
     site = Column(String(10), ForeignKey('sites.id'), index=True)
     camera = Column(String(20), index=True)
@@ -437,18 +436,18 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
 
 def get_individual_calibration_images(image_parameters, db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImageIndividual.type == image_parameters['obstype']
-    calibration_criteria &= CalibrationImage.telescope_id == image_parameters['telescope_id']
-    calibration_criteria &= CalibrationImage.dayobs == image_parameters['dayobs']
-    calibration_criteria &= CalibrationImage.ccdsum == image_parameters['ccdsum']
+    calibration_criteria &= CalibrationImageIndividual.telescope_id == image_parameters['telescope_id']
+    calibration_criteria &= CalibrationImageIndividual.dayobs == image_parameters['dayobs']
+    calibration_criteria &= CalibrationImageIndividual.ccdsum == image_parameters['ccdsum']
     if image_parameters['obstype'] == 'SKYFLAT':
-        calibration_criteria &= CalibrationImage.filter_name == image_parameters['filter']
+        calibration_criteria &= CalibrationImageIndividual.filter_name == image_parameters['filter']
 
     db_session = get_session(db_address=db_address)
 
-    calibration_images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
+    calibration_images = db_session.query(CalibrationImageIndividual).filter(calibration_criteria).all()
 
-    calibration_images = [os.path.join(filepath, filename) for (filepath, filename) in zip(calibration_images.filepath,
-                                                                                     calibration_images.filename)]
+    calibration_images = [os.path.join(calibration_image.filepath, calibration_image.filename) for
+                          calibration_image in calibration_images]
 
     db_session.close()
     return calibration_images
