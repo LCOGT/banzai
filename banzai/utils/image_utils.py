@@ -37,7 +37,7 @@ def _image_is_correct_obstype(filename, image_types):
     return passes
 
 
-def _get_calibration_image_parameters(filename):
+def _get_calibration_image_parameters(filename, db_address):
     telescope = dbs.get_telescope_for_file(filename, db_address=db_address)
     _, header, _, _ = fits_utils.open_image(filename)
     image_parameters = {
@@ -56,14 +56,14 @@ def select_calibration_images(image_list, image_types, instrument_criteria, db_a
         try:
             if image_passes_criteria(filename, instrument_criteria, db_address=db_address) and \
                _image_is_correct_obstype(filename, image_types):
-                image_parameters = _get_calibration_image_parameters(filename)
+                image_parameters = _get_calibration_image_parameters(filename, db_address=db_address)
                 if image_parameters not in image_parameters_list:
                     image_parameters_list.append(image_parameters)
         except Exception as e:
             logger.error('Exception checking image selection criteria: {e}'.format(e=e),
                          extra={'tags': {'filename': filename}})
     for image_parameters in image_parameters_list:
-        images.append(dbs.get_individual_calibration_images(image_parameters, db_address=db_address))
+        images.extend(dbs.get_individual_calibration_images(image_parameters, db_address=db_address))
     return images
 
 
@@ -136,7 +136,7 @@ def save_images(pipeline_context, images, master_calibration=False):
             dbs.save_calibration_info(image.obstype, filepath, image,
                                       db_address=pipeline_context.db_address, is_master=master_calibration)
 
-        if image.obstype in CALIBRATION_OBSTYPES:
+        elif image.obstype in CALIBRATION_OBSTYPES:
             dbs.save_individual_calibration_info(image.obstype, filepath, image,
                                                  db_address=pipeline_context.db_address)
         if pipeline_context.post_to_archive:
