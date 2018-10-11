@@ -81,7 +81,7 @@ def select_images(image_list, image_types, instrument_criteria, db_address=dbs._
     return images
 
 
-def make_image_list(raw_path):
+def make_image_path_list(raw_path):
     if os.path.isdir(raw_path):
         # return the list of file and a dummy image configuration
         fits_files = glob(os.path.join(raw_path, '*.fits'))

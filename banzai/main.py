@@ -125,31 +125,24 @@ def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
     return output_files
 
 
-def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None,
-                      log_message='', calibration_maker=False, ):
+def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None, log_message='',
+                      calibration_maker_stage=None):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
-    image_list = image_utils.make_image_list(raw_path)
-    if calibration_maker:
-        image_list = image_utils.select_calibration_images(image_list, image_types,
-                                                           pipeline_context.allowed_instrument_criteria,
-                                                           db_address=pipeline_context.db_address)
-    else:
-        image_list = image_utils.select_images(image_list, image_types,
-                                               pipeline_context.allowed_instrument_criteria,
-                                               db_address=pipeline_context.db_address)
-    if calibration_maker:
-        try:
-            run(stages_to_do, image_list, pipeline_context, calibration_maker=True)
-        except Exception as e:
-            logger.error(e, extra_tags={'raw_path': raw_path})
-    else:
-        for image in image_list:
-            try:
-                run(stages_to_do, [image], pipeline_context, calibration_maker=False)
-            except Exception as e:
-                logger.error(e, extra_tags={'filename': image})
+    image_path_list = image_utils.make_image_path_list(raw_path)
+    image_path_list = image_utils.select_images(image_path_list, image_types,
+                                                pipeline_context.allowed_instrument_criteria,
+                                                db_address=pipeline_context.db_address)
+    try:
+        run(stages_to_do, image_path_list, pipeline_context)
+        if calibration_maker_stage is not None:
+            image_path_list = image_utils.select_calibration_images(image_path_list, image_types,
+                                                                    pipeline_context.allowed_instrument_criteria,
+                                                                    db_address=pipeline_context.db_address)
+            run([calibration_maker_stage], image_path_list, pipeline_context, calibration_maker=True)
+    except Exception as e:
+        logger.error(e, extra_tags={'raw_path': raw_path})
 
 
 def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, extra_stages=None, log_message=''):
@@ -181,21 +174,25 @@ def make_master_bias(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA,
                                                       settings.IMAGE_CLASS)
     process_directory(pipeline_context, raw_path, settings.BIAS_IMAGE_TYPES, last_stage=settings.BIAS_LAST_STAGE,
-                      extra_stages=settings.BIAS_EXTRA_STAGES, log_message='Making Master Bias', calibration_maker=True)
+                      extra_stages=settings.BIAS_EXTRA_STAGES, calibration_maker_stage=settings.BIAS_MAKER_STAGE,
+                      log_message='Making Master Bias')
 
 
 def make_master_dark(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA,
                                                       settings.IMAGE_CLASS)
     process_directory(pipeline_context, raw_path, settings.DARK_IMAGE_TYPES, last_stage=settings.DARK_LAST_STAGE,
-                      extra_stages=settings.DARK_EXTRA_STAGES, log_message='Making Master Dark', calibration_maker=True)
+                      extra_stages=settings.DARK_EXTRA_STAGES, calibration_maker_stage=settings.DARK_MAKER_STAGE,
+                      log_message='Making Master Dark')
 
 
 def make_master_flat(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA,
                                                       settings.IMAGE_CLASS)
     process_directory(pipeline_context, raw_path, settings.FLAT_IMAGE_TYPES, last_stage=settings.FLAT_LAST_STAGE,
-                      extra_stages=settings.FLAT_EXTRA_STAGES, log_message='Making Master Flat', calibration_maker=True)
+                      extra_stages=settings.FLAT_EXTRA_STAGES, calibration_maker_stage=settings.FLAT_MAKER_STAGE,
+                      log_message='Making Master Flat')
+
 
 
 def reduce_science_frames(pipeline_context=None, raw_path=None):
