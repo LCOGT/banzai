@@ -239,6 +239,8 @@ def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, inp
     """
     if input_dictionary is None:
         input_dictionary = {}
+    print('in regenerate')
+    print(hdu_list[table_extension_name].data)
     astropy_table = Table(hdu_list[table_extension_name].data)
     input_dictionary[table_extension_name] = astropy_table
     return input_dictionary
