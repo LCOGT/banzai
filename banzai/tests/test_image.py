@@ -54,16 +54,24 @@ def test_get_inner_image_section_3d():
 
 
 def test_image_creates_and_loads_tables_correctly():
+    """
+    Tests that add_data_tables_to_hdu_list and regenerate_data_table_from_fits_hdu_list
+    create fits.HDUList objects correctly from astropy tables with single element entries
+    and for astropy tables with columns where each element is a list.
+    """
     test_image = Image(FakeContext, filename=None)
     table_name = 'test'
     a = np.arange(3)
-    test_table = Table([a, a], names=('1', '2'), meta={'name': table_name})
-    test_table['1'].description = 'test_description'
-    test_table['1'].unit = 'pixel'
-    test_image.data_tables[table_name] = DataTable(data_table=test_table, name=table_name)
-    hdu_list = []
-    hdu_list = test_image._add_data_tables_to_hdu_list(hdu_list)
-    fits_hdu_list = fits.HDUList(hdu_list)
-    test_table_dict = regenerate_data_table_from_fits_hdu_list(fits_hdu_list, table_extension_name=table_name)
-    test_table_recreated = test_table_dict[table_name]
-    assert (test_table_recreated == test_table).all()
+    array_1 = [a, a]
+    array_2 = [a, np.vstack((a, a)).T]
+    for test_array in [array_1, array_2]:
+        test_table = Table(test_array, names=('1', '2'), meta={'name': table_name})
+        test_table['1'].description = 'test_description'
+        test_table['1'].unit = 'pixel'
+        test_image.data_tables[table_name] = DataTable(data_table=test_table, name=table_name)
+        hdu_list = []
+        hdu_list = test_image._add_data_tables_to_hdu_list(hdu_list)
+        fits_hdu_list = fits.HDUList(hdu_list)
+        test_table_dict = regenerate_data_table_from_fits_hdu_list(fits_hdu_list, table_extension_name=table_name)
+        test_table_recreated = test_table_dict[table_name]
+        assert (test_table_recreated == test_table).all()
