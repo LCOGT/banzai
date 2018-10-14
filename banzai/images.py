@@ -235,12 +235,15 @@ def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, inp
     :param table_extension_name: the name such that hdu_list[extension_name] = the table
     :param input_dictionary: the dictionary to which you wish to append the table under the keyword
             extension name.
+    NOTE: some astropy tables will have table.Column objects as an element in a column. These
+    need to be broken up into proper lists, which the if hasattr(...) checks for and does.
     :return: the input_dictionary with dict[extension_name] = the table as an astropy table
     """
     if input_dictionary is None:
         input_dictionary = {}
-    print('in regenerate')
-    print(hdu_list[table_extension_name].data)
     astropy_table = Table(hdu_list[table_extension_name].data)
+    for column_name in astropy_table.colnames:
+        if hasattr(astropy_table[column_name], 'data'):
+            astropy_table[column_name] = list(astropy_table[column_name].data)
     input_dictionary[table_extension_name] = astropy_table
     return input_dictionary

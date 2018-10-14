@@ -74,6 +74,4 @@ def test_image_creates_and_loads_tables_correctly():
         fits_hdu_list = fits.HDUList(hdu_list)
         test_table_dict = regenerate_data_table_from_fits_hdu_list(fits_hdu_list, table_extension_name=table_name)
         test_table_recreated = test_table_dict[table_name]
-        print(test_table_recreated)
-        print(test_table)
         assert (test_table_recreated == test_table).all()
