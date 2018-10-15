@@ -18,10 +18,10 @@ import operator
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 
+from banzai import settings
 import banzai.images
 from banzai import bias, dark, flats, trim, photometry, astrometry, qc
 from banzai import dbs
-from banzai import logs
 from banzai import crosstalk, gain, mosaic, bpm
 from banzai.context import PipelineContext
 from banzai import preview
@@ -87,7 +87,6 @@ def get_stages_todo(last_stage=None, extra_stages=None):
 
 def run_end_of_night_from_console(scripts_to_run, selection_criteria):
     pipeline_context = parse_end_of_night_command_line_arguments(selection_criteria)
-    logs.start_logging(log_level=pipeline_context.log_level)
     for script in scripts_to_run:
         script(pipeline_context)
 
@@ -224,8 +223,6 @@ def reduce_night():
     args.max_preview_tries = 5
 
     pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
-
-    logs.start_logging(log_level=pipeline_context.log_level)
 
     # Ping the configdb to get currently schedulable telescopes
     try:
@@ -366,8 +363,6 @@ def run_preview_pipeline():
     args.raw_path = None
     args.filename = None
     pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
-
-    logs.start_logging(log_level=pipeline_context.log_level)
 
     try:
         dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
