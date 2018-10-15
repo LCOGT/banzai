@@ -1,8 +1,5 @@
 import logging
-import sys
 import os
-
-from lcogt_logging import LCOGTFormatter
 
 from banzai.utils import date_utils
 
@@ -39,19 +36,6 @@ def _image_to_tags(image_config):
     return tags
 
 
-def start_logging(log_level='INFO', filename=None):
-    logging.captureWarnings(True)
-
-    # Set up the root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(getattr(logging, 'DEBUG'))
-
-    # Set up the root handler
-    if filename is not None:
-        root_handler = logging.FileHandler(filename)
-    else:
-        root_handler = logging.StreamHandler(sys.stdout)
-    formatter = LCOGTFormatter()
-    root_handler.setFormatter(formatter)
-    root_handler.setLevel(getattr(logging, log_level.upper(), None))
-    root_logger.addHandler(root_handler)
+def set_log_level(log_level='INFO'):
+    for handler in logging.getLogger().handlers:
+        handler.setLevel(log_level.upper())
