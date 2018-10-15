@@ -18,12 +18,11 @@ import operator
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 
-from banzai import settings
+from banzai.context import PipelineContext
 import banzai.images
 from banzai import bias, dark, flats, trim, photometry, astrometry, qc
 from banzai import dbs
 from banzai import crosstalk, gain, mosaic, bpm
-from banzai.context import PipelineContext
 from banzai import preview
 from banzai.qc import pointing
 from banzai.utils import image_utils, date_utils
