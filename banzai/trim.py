@@ -1,5 +1,3 @@
-__author__ = 'cmccully'
-
 import logging
 
 from banzai.utils import fits_utils

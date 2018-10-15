@@ -1,5 +1,3 @@
-__author__ = 'cmccully'
-
 import os
 import subprocess
 import shlex

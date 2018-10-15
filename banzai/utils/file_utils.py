@@ -1,5 +1,3 @@
-__author__ = 'cmccully'
-
 import hashlib
 import os
 import logging

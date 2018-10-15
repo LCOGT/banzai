@@ -1,5 +1,3 @@
-__author__ = 'cmccully'
-
 import itertools
 import logging
 import abc

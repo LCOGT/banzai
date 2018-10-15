@@ -1,5 +1,3 @@
-__author__ = 'cmccully'
-
 import logging
 
 import numpy as np
