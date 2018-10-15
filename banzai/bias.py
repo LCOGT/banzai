@@ -109,13 +109,14 @@ class OverscanSubtractor(Stage):
         for image in images:
             # Subtract the overscan if it exists
             if image.data_is_3d():
+                logging_tags = {}
                 for i in range(image.get_n_amps()):
                     overscan_level = _subtract_overscan_3d(image, i)
-                    logger.info('Subtracting overscan', image=image,
-                                extra_tags={'OVERSCN{0}'.format(i + 1): float(overscan_level)})
+                    logging_tags['OVERSCN{0}'.format(i + 1)] = float(overscan_level)
             else:
                 overscan_level = _subtract_overscan_2d(image)
-                logger.info('Subtracting overscan', image=image, extra_tags={'OVERSCAN': float(overscan_level)})
+                logging_tags = {'OVERSCAN': float(overscan_level)}
+            logger.info('Subtracting overscan', image=image, extra_tags=logging_tags)
 
         return images
 
