@@ -1,3 +1,5 @@
+from banzai import logs
+
 class TelescopeCriterion:
     def __init__(self, attribute, comparison_operator, comparison_value, exclude=False):
         self.attribute = attribute
@@ -30,3 +32,5 @@ class PipelineContext(object):
         self.elasticsearch_qc_index = args.elasticsearch_qc_index
         self.no_bpm = args.no_bpm
         self.allowed_instrument_criteria = allowed_instrument_criteria
+
+        logs.set_log_level(self.log_level)
