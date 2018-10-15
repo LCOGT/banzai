@@ -1,15 +1,10 @@
 import logging
-import multiprocessing
 import sys
 import os
 
-import logutils.queue
 from lcogt_logging import LCOGTFormatter
 
 from banzai.utils import date_utils
-
-queue = None
-listener = None
 
 
 class BanzaiLogger(logging.getLoggerClass()):
@@ -46,14 +41,6 @@ def _image_to_tags(image_config):
 
 def start_logging(log_level='INFO', filename=None):
     logging.captureWarnings(True)
-    # Set up the message queue
-    global queue
-    queue = multiprocessing.Queue(-1)
-
-    # Start the listener process
-    global listener
-    listener = logutils.queue.QueueListener(queue)
-    listener.start()
 
     # Set up the root logger
     root_logger = logging.getLogger()
@@ -68,14 +55,3 @@ def start_logging(log_level='INFO', filename=None):
     root_handler.setFormatter(formatter)
     root_handler.setLevel(getattr(logging, log_level.upper(), None))
     root_logger.addHandler(root_handler)
-
-    # Set upt he queue handler
-    queue_handler = logutils.queue.QueueHandler(queue)
-    queue_handler.setLevel(logging.DEBUG)
-    root_logger.addHandler(queue_handler)
-
-
-def stop_logging():
-    if listener is not None:
-        queue.put_nowait(None)
-        listener.stop()

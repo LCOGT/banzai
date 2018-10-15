@@ -90,7 +90,6 @@ def run_end_of_night_from_console(scripts_to_run, selection_criteria):
     logs.start_logging(log_level=pipeline_context.log_level)
     for script in scripts_to_run:
         script(pipeline_context)
-    logs.stop_logging()
 
 
 def make_master_bias(pipeline_context):
@@ -265,7 +264,6 @@ def reduce_night():
                 reduce_science_frames(pipeline_context)
             except Exception as e:
                 logger.error(e)
-    logs.stop_logging()
 
 
 def parse_end_of_night_command_line_arguments(selection_criteria):
@@ -385,7 +383,6 @@ def run_preview_pipeline():
                                                                           PipelineContext(args, IMAGING_CRITERIA)))
         p.start()
 
-    logs.stop_logging()
 
 
 def run_individual_listener(broker_url, queue_name, pipeline_context):
