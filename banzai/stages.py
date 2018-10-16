@@ -21,13 +21,13 @@ class Stage(abc.ABC):
         if image is None:
             return image
         try:
-            processed_image = self._run_stage(image)
+            processed_image = self.run_stage(image)
         except Exception as e:
             logger.error(e)
             return image
         return processed_image
 
-    def _run_stage(self, image):
+    def run_stage(self, image):
         logger.info('Running {0}'.format(self.stage_name), image=image)
         return self.do_stage(image)
 
