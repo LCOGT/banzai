@@ -16,7 +16,7 @@ class GainNormalizer(Stage):
         gain = image.gain
         if validate_gain(gain):
             logger.error('Gain missing. Rejecting image.', image=image)
-            return image
+            return None
 
         if image.data_is_3d():
             for i in range(image.get_n_amps()):
