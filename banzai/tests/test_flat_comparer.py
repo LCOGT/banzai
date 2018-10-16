@@ -17,9 +17,15 @@ class FakeFlatImage(FakeImage):
         self.header['FLATLVL'] = flat_level
 
 
-def test_group_by_keywords(set_random_seed):
+def test_null_input_image():
+    comparer = FlatComparer(None)
+    image = comparer.run(None)
+    assert image is None
+
+
+def test_image_attribute_keywords(set_random_seed):
     comparer = FlatComparer(FakeContext())
-    assert comparer.group_by_attributes == ['ccdsum', 'filter']
+    assert comparer.image_attribute_keywords == ['ccdsum', 'filter']
 
 
 @mock.patch('banzai.calibrations.Image')

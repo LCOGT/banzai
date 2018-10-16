@@ -10,6 +10,12 @@ def set_random_seed():
     np.random.seed(9723492)
 
 
+def test_null_input_image():
+    normalizer = FlatNormalizer(None)
+    image = normalizer.run(None)
+    assert image is None
+
+
 def test_header_has_flatlevel(set_random_seed):
     normalizer = FlatNormalizer(None)
     images = [normalizer.run(FakeImage(image_multiplier=2.0)) for _ in range(6)]

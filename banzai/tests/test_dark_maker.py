@@ -1,12 +1,10 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.utils import stats
-from banzai.dark import DarkMaker
 import numpy as np
 from astropy.io import fits
-
-from banzai.tests.utils import FakeImage, FakeContext, throws_inhomogeneous_set_exception
-
 import mock
+
+from banzai.utils import stats
+from banzai.dark import DarkMaker
+from banzai.tests.utils import FakeImage, FakeContext, throws_inhomogeneous_set_exception
 
 
 class FakeDarkImage(FakeImage):
@@ -42,22 +40,22 @@ def test_header_cal_type_dark(mock_image):
 
 @mock.patch('banzai.dark.Image')
 def test_raises_an_exception_if_ccdsums_are_different(mock_images):
-    throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'ccdsum', '1 1')
+    throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
 
 
 @mock.patch('banzai.dark.Image')
 def test_raises_an_exception_if_epochs_are_different(mock_images):
-    throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'epoch', '20160102')
+    throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'epoch', '20160102', calibration_maker=True)
 
 
 @mock.patch('banzai.dark.Image')
 def test_raises_an_exception_if_nx_are_different(mock_images):
-    throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'nx', 105)
+    throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'nx', 105, calibration_maker=True)
 
 
 @mock.patch('banzai.dark.Image')
 def test_raises_an_exception_if_ny_are_different(mock_images):
-    throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'ny', 107)
+    throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'ny', 107, calibration_maker=True)
 
 
 @mock.patch('banzai.dark.Image')

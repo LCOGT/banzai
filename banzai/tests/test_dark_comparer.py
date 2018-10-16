@@ -17,15 +17,15 @@ class FakeDarkImage(FakeImage):
         super(FakeDarkImage, self).__init__(**kwargs)
 
 
-def test_no_input_images():
+def test_null_input_image():
     comparer = DarkComparer(None)
-    images = comparer.do_stage([])
-    assert len(images) == 0
+    image = comparer.run(None)
+    assert image is None
 
 
-def test_group_by_keywords():
+def image_attribute_keywords():
     comparer = DarkComparer(None)
-    assert comparer.group_by_attributes == ['ccdsum']
+    assert comparer.image_attribute_keywords == ['ccdsum']
 
 
 @mock.patch('banzai.calibrations.Image')
@@ -62,8 +62,8 @@ def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_ca
     mock_images.return_value = FakeDarkImage(30.0)
 
     comparer = DarkComparer(FakeContext())
-    images = comparer.do_stage([FakeDarkImage(30.0) for x in range(6)])
-    assert len(images) == 6
+    images = [comparer.do_stage(FakeDarkImage(30.0)) for x in range(6)]
+    assert images.count(None) == 0
 
 
 @mock.patch('banzai.calibrations.Image')
@@ -98,9 +98,9 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image, set_ra
         image.data += np.random.poisson(dark_pattern * dark_exptime)
         image.data /= image.exptime
 
-    images = comparer.do_stage(images)
+    images = [comparer.do_stage(image) for image in images]
 
-    assert len(images) == 6
+    assert images.count(None) == 0
 
 
 @mock.patch('banzai.calibrations.Image')
@@ -142,6 +142,6 @@ def test_does_reject_bad_images(mock_save_qc, mock_cal, mock_image, set_random_s
         yinds = np.random.choice(np.arange(ny), size=int(0.2 * nx * ny), replace=True)
         for x, y in zip(xinds, yinds):
             images[i].data[y, x] *= 10.0
-    images = comparer.do_stage(images)
+    images = [comparer.run(image) for image in images]
 
-    assert len(images) == 4
+    assert images.count(None) == 2
