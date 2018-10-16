@@ -5,8 +5,8 @@ import numpy as np
 
 def test_no_input_images():
     tester = SaturationTest(None)
-    images = tester.do_stage([])
-    assert len(images) == 0
+    image = tester.run(None)
+    assert image is None
 
 
 def test_group_by_keywords():
@@ -23,10 +23,9 @@ def test_no_pixels_saturated():
     for image in images:
         image.header['SATURATE'] = 65535
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
     for image in images:
         assert image.header['SATFRAC'][0] == 0.0
-    assert len(images) == 6
 
 
 def test_nonzero_but_no_pixels_saturated():
@@ -39,10 +38,9 @@ def test_nonzero_but_no_pixels_saturated():
         image.header['SATURATE'] = 65535
         image.data += 5.0
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
     for image in images:
         assert image.header['SATFRAC'][0] == 0.0
-    assert len(images) == 6
 
 
 def test_1_image_10_percent_saturated():
@@ -62,10 +60,11 @@ def test_1_image_10_percent_saturated():
     for i in zip(random_pixels_y, random_pixels_x):
         image.data[i] = image.header['SATURATE']
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
     for image in images:
-        assert image.header['SATFRAC'][0] == 0.0
-    assert len(images) == 5
+        if image is not None:
+            assert image.header['SATFRAC'][0] == 0.0
+    assert images.count(None) == 1
 
 
 def test_all_images_10_percent_saturated():
@@ -81,10 +80,8 @@ def test_all_images_10_percent_saturated():
         for i in zip(random_pixels_y, random_pixels_x):
             image.data[i] = image.header['SATURATE']
 
-    images = tester.do_stage(images)
-    for image in images:
-        assert np.abs(image.header['SATFRAC'][0] - 0.02) < 0.001
-    assert len(images) == 0
+    images = [tester.run(image) for image in images]
+    assert images.count(None) == 6
 
 
 def test_all_images_2_percent_saturated():
@@ -100,7 +97,6 @@ def test_all_images_2_percent_saturated():
         for i in zip(random_pixels_y, random_pixels_x):
             image.data[i] = image.header['SATURATE']
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
     for image in images:
         assert np.abs(image.header['SATFRAC'][0] - 0.02) < 0.001
-    assert len(images) == 6

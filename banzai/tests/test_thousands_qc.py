@@ -5,13 +5,8 @@ import numpy as np
 
 def test_no_input_images():
     tester = ThousandsTest(None)
-    images = tester.do_stage([])
-    assert len(images) == 0
-
-
-def test_group_by_keywords():
-    tester = ThousandsTest(None)
-    assert tester.group_by_attributes is None
+    image = tester.run(None)
+    assert image is None
 
 
 def test_no_pixels_1000():
@@ -21,9 +16,9 @@ def test_no_pixels_1000():
 
     images = [FakeImage(nx=nx, ny=ny) for x in range(6)]
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
 
-    assert len(images) == 6
+    assert images.count(None) == 0
 
 
 def test_nonzero_but_no_pixels_1000():
@@ -35,9 +30,9 @@ def test_nonzero_but_no_pixels_1000():
     for image in images:
         image.data += 5
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
 
-    assert len(images) == 6
+    assert images.count(None) == 0
 
 
 def test_1_image_all_1000s():
@@ -51,9 +46,9 @@ def test_1_image_all_1000s():
 
     images[3].data[:, :] = 1000
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
 
-    assert len(images) == 5
+    assert images.count(None) == 1
 
 
 def test_all_images_all_1000s():
@@ -65,9 +60,9 @@ def test_all_images_all_1000s():
     for image in images:
         image.data[:, :] = 1000
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
 
-    assert len(images) == 0
+    assert images.count(None) == 6
 
 
 def test_1_image_5_percent_1000():
@@ -82,9 +77,9 @@ def test_1_image_5_percent_1000():
     for i in zip(random_pixels_y, random_pixels_x):
         images[3].data[i] = 1000
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
 
-    assert len(images) == 6
+    assert images.count(None) == 0
 
 
 def test_all_images_5_percent_1000():
@@ -99,9 +94,9 @@ def test_all_images_5_percent_1000():
         for i in zip(random_pixels_y, random_pixels_x):
             image.data[i] = 1000
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
 
-    assert len(images) == 6
+    assert images.count(None) == 0
 
 
 def test_1_image_30_percent_1000():
@@ -115,9 +110,9 @@ def test_1_image_30_percent_1000():
     for i in zip(random_pixels_y, random_pixels_x):
         images[3].data[i] = 1000
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
 
-    assert len(images) == 5
+    assert images.count(None) == 1
 
 
 def test_all_image_30_percent_1000():
@@ -132,6 +127,6 @@ def test_all_image_30_percent_1000():
         for i in zip(random_pixels_y, random_pixels_x):
             image.data[i] = 1000
 
-    images = tester.do_stage(images)
+    images = [tester.run(image) for image in images]
 
-    assert len(images) == 0
+    assert images.count(None) == 6
