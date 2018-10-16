@@ -19,11 +19,9 @@ class DarkNormalizer(Stage):
     def group_by_attributes(self):
         return None
 
-    def do_stage(self, images):
-        for image in images:
-            image.data /= image.exptime
-            logger.info('Normalizing dark by exposure time', image=image)
-        return images
+    def do_stage(self, image):
+        image.data /= image.exptime
+        logger.info('Normalizing dark by exposure time', image=image)
 
 
 class DarkMaker(CalibrationMaker):
@@ -86,18 +84,17 @@ class DarkSubtractor(ApplyCalibration):
     def group_by_attributes(self):
         return ['ccdsum']
 
-    def apply_master_calibration(self, images, master_calibration_image):
+    def apply_master_calibration(self, image, master_calibration_image):
         master_dark_data = master_calibration_image.data
         master_dark_filename = os.path.basename(master_calibration_image.filename)
         logging_tags = {'master_dark': os.path.basename(master_calibration_image.filename)}
 
-        for image in images:
-            logger.info('Subtracting dark', image=image, extra_tags=logging_tags)
-            image.data -= master_dark_data * image.exptime
-            image.bpm |= master_calibration_image.bpm
-            image.header['L1IDDARK'] = (master_dark_filename, 'ID of dark frame used')
-            image.header['L1STATDA'] = (1, 'Status flag for dark frame correction')
-        return images
+        logger.info('Subtracting dark', image=image, extra_tags=logging_tags)
+        image.data -= master_dark_data * image.exptime
+        image.bpm |= master_calibration_image.bpm
+        image.header['L1IDDARK'] = (master_dark_filename, 'ID of dark frame used')
+        image.header['L1STATDA'] = (1, 'Status flag for dark frame correction')
+        return image
 
 
 class DarkComparer(CalibrationComparer):

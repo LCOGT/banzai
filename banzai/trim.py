@@ -36,12 +36,10 @@ class Trimmer(Stage):
     def group_by_attributes(self):
         return None
 
-    def do_stage(self, images):
+    def do_stage(self, image):
 
-        for image in images:
+        logger.info('Trimming image', image=image, extra_tags={'trimsec': image.header['TRIMSEC']})
 
-            logger.info('Trimming image', image=image, extra_tags={'trimsec': image.header['TRIMSEC']})
-
-            nx, ny = _trim_image(image)
-            image.update_shape(nx, ny)
-        return images
+        nx, ny = _trim_image(image)
+        image.update_shape(nx, ny)
+        return image

@@ -33,14 +33,14 @@ class HeaderSanity(Stage):
     def group_by_attributes(self):
         return None
 
-    def do_stage(self, images):
+    def do_stage(self, image):
         """
         Run stage to validate header.
 
         Parameters
         ----------
-        images : list
-                 a list of banzais.image.Image object.
+        image : image
+                a banzais.image.Image object
 
         Returns
         -------
@@ -48,13 +48,12 @@ class HeaderSanity(Stage):
                 the list of validated images object after header check
 
        """
-        for image in images:
-            logger.info("Checking header sanity.", image=image)
-            bad_keywords = self.check_keywords_missing_or_na(image)
-            self.check_ra_range(image, bad_keywords)
-            self.check_dec_range(image, bad_keywords)
-            self.check_exptime_value(image, bad_keywords)
-        return images
+        logger.info("Checking header sanity.", image=image)
+        bad_keywords = self.check_keywords_missing_or_na(image)
+        self.check_ra_range(image, bad_keywords)
+        self.check_dec_range(image, bad_keywords)
+        self.check_exptime_value(image, bad_keywords)
+        return image
 
     def check_keywords_missing_or_na(self, image):
         """

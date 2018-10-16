@@ -13,34 +13,29 @@ class GainNormalizer(Stage):
     def group_by_attributes(self):
         return None
 
-    def do_stage(self, images):
-        images_to_remove = []
-        for image in images:
+    def do_stage(self, image):
 
-            logger.info('Multiplying by gain', image=image, extra_tags={'gain': image.gain})
+        logger.info('Multiplying by gain', image=image, extra_tags={'gain': image.gain})
 
-            gain = image.gain
-            if validate_gain(gain):
-                logger.error('Gain missing. Rejecting image.', image=image)
-                images_to_remove.append(image)
-            else:
-                if image.data_is_3d():
-                    for i in range(image.get_n_amps()):
-                        image.data[i] *= gain[i]
-                    image.header['SATURATE'] *= min(gain)
-                    image.header['MAXLIN'] *= min(gain)
-                else:
-                    image.data *= image.gain
-                    image.header['SATURATE'] *= image.gain
-                    image.header['MAXLIN'] *= image.gain
+        gain = image.gain
+        if validate_gain(gain):
+            logger.error('Gain missing. Rejecting image.', image=image)
+            return image
 
-                image.gain = 1.0
-                image.header['GAIN'] = 1.0
+        if image.data_is_3d():
+            for i in range(image.get_n_amps()):
+                image.data[i] *= gain[i]
+            image.header['SATURATE'] *= min(gain)
+            image.header['MAXLIN'] *= min(gain)
+        else:
+            image.data *= image.gain
+            image.header['SATURATE'] *= image.gain
+            image.header['MAXLIN'] *= image.gain
 
-        for image in images_to_remove:
-            images.remove(image)
+        image.gain = 1.0
+        image.header['GAIN'] = 1.0
 
-        return images
+        return image
 
 
 def validate_gain(gain):
