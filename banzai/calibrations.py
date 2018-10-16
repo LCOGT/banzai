@@ -29,6 +29,27 @@ class CalibrationMaker(Stage):
     def min_images(self):
         return 5
 
+    def get_grouping(self, image):
+        grouping_criteria = [image.site, image.instrument, image.epoch]
+        if self.group_by_keywords:
+            grouping_criteria += [image.header[keyword] for keyword in self.group_by_keywords]
+        return grouping_criteria
+
+    def run_stage(self, image_set):
+        image_set = list(image_set)
+        logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
+        return self._do_stage(image_set)
+
+    def run(self, images):
+        images.sort(key=self.get_grouping)
+        processed_images = []
+        for _, image_set in itertools.groupby(images, self.get_grouping):
+            try:
+               processed_images += self.run_stage(image_set)
+            except Exception as e:
+               logger.error(e)
+        return processed_images
+
     def do_stage(self, images):
         if len(images) < self.min_images:
             # Do nothing
