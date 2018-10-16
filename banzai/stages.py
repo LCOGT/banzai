@@ -17,20 +17,23 @@ class Stage(abc.ABC):
     def stage_name(self):
         return '.'.join([__name__, self.__class__.__name__])
 
-    def run_stage(self, image):
-        logger.info('Running {0}'.format(self.stage_name), image=image)
-        return self.do_stage(image)
-
     def run(self, image):
+        if image is None:
+            return image
         try:
-            processed_image = self.run_stage(image)
+            processed_image = self._run_stage(image)
         except Exception as e:
             logger.error(e)
+            return image
         return processed_image
 
+    def _run_stage(self, image):
+        logger.info('Running {0}'.format(self.stage_name), image=image)
+        return self._do_stage(image)
+
     @abc.abstractmethod
-    def do_stage(self, image):
-        return images
+    def _do_stage(self, image):
+        return image
 
     def save_qc_results(self, qc_results, image, **kwargs):
         """

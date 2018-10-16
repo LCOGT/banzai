@@ -24,10 +24,6 @@ class ThousandsTest(Stage):
     def __init__(self, pipeline_context):
         super(ThousandsTest, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, image):
         npixels = np.product(image.data.shape)
         fraction_1000s = float(np.sum(image.data == 1000)) / npixels
@@ -43,4 +39,4 @@ class ThousandsTest(Stage):
         if has_1000s_error:
             logger.error('Image is mostly 1000s. Rejecting image', image=image, extra_tags=logging_tags)
             return None
-        return images
+        return image

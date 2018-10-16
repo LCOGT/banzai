@@ -15,13 +15,10 @@ class DarkNormalizer(Stage):
     def __init__(self, pipeline_context):
         super(DarkNormalizer, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, image):
         image.data /= image.exptime
         logger.info('Normalizing dark by exposure time', image=image)
+        return image
 
 
 class DarkMaker(CalibrationMaker):

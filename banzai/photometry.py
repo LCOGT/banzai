@@ -20,10 +20,6 @@ class SourceDetector(Stage):
     def __init__(self, pipeline_context):
         super(SourceDetector, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, image):
         try:
             # Set the number of source pixels to be 5% of the total. This keeps us safe from

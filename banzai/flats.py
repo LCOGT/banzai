@@ -15,10 +15,6 @@ class FlatNormalizer(Stage):
     def __init__(self, pipeline_context):
         super(FlatNormalizer, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, image):
         # Get the sigma clipped mean of the central 25% of the image
         flat_normalization = stats.sigma_clipped_mean(image.get_inner_image_section(), 3.5)
@@ -26,7 +22,6 @@ class FlatNormalizer(Stage):
         image.header['FLATLVL'] = flat_normalization
         logger.info('Calculate flat normalization', image=image,
                     extra_tags={'flat_normalization': flat_normalization})
-
         return image
 
 

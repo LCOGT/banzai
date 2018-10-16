@@ -11,9 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class BPMUpdater(Stage):
-    @property
-    def group_by_attributes(self):
-        return None
 
     def do_stage(self, image):
         add_bpm_to_image(image, self.pipeline_context)

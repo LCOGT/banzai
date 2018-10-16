@@ -11,10 +11,6 @@ class CrosstalkCorrector(Stage):
     def __init__(self, pipeline_context):
         super(CrosstalkCorrector, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, image):
         if image.data_is_3d():
             logging_tags = {}
@@ -42,3 +38,4 @@ class CrosstalkCorrector(Stage):
             D4 = D4 - Q14 D1 - Q24 D2 - Q34 D3
             """
             image.data = np.dot(crosstalk_matrix.T, np.swapaxes(image.data, 0, 1))
+        return image

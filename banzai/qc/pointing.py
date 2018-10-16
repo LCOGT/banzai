@@ -21,10 +21,6 @@ class PointingTest(Stage):
     def __init__(self, pipeline_context):
         super(PointingTest, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, image):
         try:
             # OFST-RA/DEC is the same as CAT-RA/DEC but includes user requested offset

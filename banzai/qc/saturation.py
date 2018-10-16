@@ -19,10 +19,6 @@ class SaturationTest(Stage):
     def __init__(self, pipeline_context):
         super(SaturationTest, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, image):
         saturation_level = float(image.header['SATURATE'])
         saturated_pixels = image.data >= saturation_level

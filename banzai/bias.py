@@ -100,11 +100,7 @@ class OverscanSubtractor(Stage):
     def __init__(self, pipeline_context):
         super(OverscanSubtractor, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
-    def do_stage(self, image):
+    def _do_stage(self, image):
 
         # Subtract the overscan if it exists
         if image.data_is_3d():
@@ -124,11 +120,7 @@ class BiasMasterLevelSubtractor(Stage):
     def __init__(self, pipeline_context):
         super(BiasMasterLevelSubtractor, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
-    def do_stage(self, images):
+    def _do_stage(self, image):
 
         bias_level = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
         logger.debug('Subtracting bias level', image=image, extra_tags={'BIASLVL': float(bias_level)})

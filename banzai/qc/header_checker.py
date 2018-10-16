@@ -29,10 +29,6 @@ class HeaderSanity(Stage):
                                          'CRVAL1', 'CRVAL2', 'CRPIX1',
                                          'CRPIX2', 'EXPTIME']
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, image):
         """
         Run stage to validate header.
