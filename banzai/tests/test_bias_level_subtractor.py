@@ -18,13 +18,8 @@ class FakeBiasImage(FakeImage):
 
 def test_no_input_images():
     subtractor = BiasMasterLevelSubtractor(None)
-    images = subtractor.do_stage([])
-    assert len(images) == 0
-
-
-def test_group_by_keywords():
-    subtractor = BiasMasterLevelSubtractor(None)
-    assert subtractor.group_by_attributes is None
+    image = subtractor.run(None)
+    assert image is None
 
 
 def test_header_has_biaslevel():
