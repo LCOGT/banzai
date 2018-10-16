@@ -38,16 +38,16 @@ class CalibrationMaker(Stage):
     def run_stage(self, image_set):
         image_set = list(image_set)
         logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
-        return self._do_stage(image_set)
+        return self.do_stage(image_set)
 
     def run(self, images):
         images.sort(key=self.get_grouping)
         processed_images = []
         for _, image_set in itertools.groupby(images, self.get_grouping):
             try:
-               processed_images += self.run_stage(image_set)
+                processed_images += self.run_stage(image_set)
             except Exception as e:
-               logger.error(e)
+                logger.error(e)
         return processed_images
 
     def do_stage(self, images):
@@ -90,13 +90,8 @@ class ApplyCalibration(Stage):
         logger.error('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name), image=image)
         raise MasterCalibrationDoesNotExist
 
-    def do_stage(self, images):
-        if len(images) == 0:
-            # Abort!
-            return []
-        else:
-            image_config = image_utils.check_image_homogeneity(images)
-            master_calibration_filename = self.get_calibration_filename(images[0])
+    def do_stage(self, image):
+        master_calibration_filename = self.get_calibration_filename(image)
 
             if master_calibration_filename is None:
                 self.on_missing_master_calibration(image_config)

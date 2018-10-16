@@ -28,7 +28,7 @@ class WCSSolver(Stage):
     def __init__(self, pipeline_context):
         super(WCSSolver, self).__init__(pipeline_context)
 
-    def _do_stage(self, image):
+    def do_stage(self, image):
 
         # Skip the image if we don't have some kind of initial RA and Dec guess
         if np.isnan(image.ra) or np.isnan(image.dec):

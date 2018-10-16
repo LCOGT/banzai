@@ -29,10 +29,10 @@ class Stage(abc.ABC):
 
     def _run_stage(self, image):
         logger.info('Running {0}'.format(self.stage_name), image=image)
-        return self._do_stage(image)
+        return self.do_stage(image)
 
     @abc.abstractmethod
-    def _do_stage(self, image):
+    def do_stage(self, image):
         return image
 
     def save_qc_results(self, qc_results, image, **kwargs):

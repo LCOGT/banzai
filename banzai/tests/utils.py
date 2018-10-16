@@ -53,7 +53,7 @@ class FakeContext(object):
 
 
 class FakeStage(Stage):
-    def _do_stage(self, images):
+    def do_stage(self, images):
         return images
 
 
