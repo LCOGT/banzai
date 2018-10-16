@@ -63,3 +63,4 @@ class Stage(abc.ABC):
             except Exception as e:
                 error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
                 logger.error(error_message.format(url=self.pipeline_context.elasticsearch_url, exception=e))
+        return es_output
