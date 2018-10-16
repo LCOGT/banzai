@@ -40,7 +40,7 @@ class FakeImage(Image):
                                                      self.ccdsum.replace(' ', 'x'))
 
     def subtract(self, x):
-        self.data -= x
+        jself.data -= x
 
     def add_history(self, msg):
         pass
@@ -57,14 +57,17 @@ class FakeStage(Stage):
         return images
 
 
-def throws_inhomogeneous_set_exception(stagetype, context, keyword, value):
+def throws_inhomogeneous_set_exception(stagetype, context, keyword, value, calibration_maker=False):
     stage = stagetype(context)
-
     with pytest.raises(image_utils.InhomogeneousSetException) as exception_info:
         kwargs = {keyword: value}
-        images = [FakeImage(**kwargs)]
-        images += [FakeImage() for x in range(6)]
-        stage.do_stage(images)
+        if calibration_maker:
+            images = [FakeImage(**kwargs)]
+            images += [FakeImage() for x in range(6)]
+            stage.do_stage(images)
+        else:
+            image = FakeImage(**kwargs)
+            stage.do_stage(image)
     assert 'Images have different {0}s'.format(keyword) == str(exception_info.value)
 
 
