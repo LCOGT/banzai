@@ -4,6 +4,12 @@ from banzai.tests.utils import FakeImage
 from banzai.qc import ThousandsTest
 
 
+def test_null_input_image():
+    tester = ThousandsTest(None)
+    image = tester.run(None)
+    assert image is None
+
+
 def test_no_pixels_1000():
     tester = ThousandsTest(None)
     nx = 101

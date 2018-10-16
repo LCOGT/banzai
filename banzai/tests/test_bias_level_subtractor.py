@@ -16,7 +16,7 @@ class FakeBiasImage(FakeImage):
         self.header = {'BIASLVL': bias_level}
 
 
-def test_no_input_images():
+def test_null_input_image():
     subtractor = BiasMasterLevelSubtractor(None)
     image = subtractor.run(None)
     assert image is None

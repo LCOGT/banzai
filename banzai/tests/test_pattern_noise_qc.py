@@ -15,6 +15,12 @@ def set_random_seed():
     np.random.seed(200)
 
 
+def test_null_input_image():
+    tester = pattern_noise.PatternNoiseDetector(None)
+    image = tester.run(None)
+    assert image is None
+
+
 def generate_data(ny=1000, nx=1000, has_pattern_noise=False):
     data = 1000.0 + np.random.normal(0.0, 10.0, size=nx*ny).reshape(ny, nx)
     if has_pattern_noise:

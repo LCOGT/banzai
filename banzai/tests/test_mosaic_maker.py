@@ -13,6 +13,12 @@ class FakeMosaicImage(FakeImage):
         pass
 
 
+def test_null_input_image():
+    mosaic_creator = MosaicCreator(None)
+    image = mosaic_creator.run(None)
+    assert image is None
+
+
 def test_get_mosaic_size():
     detsecs = [['[1:100,1:100]', '[1:100,200:101]', '[200:101,1:100]', '[200:101,200:101]'],
                ['[1:200,400:201]', '[1:200,1:200]', '[400:201,400:201]', '[400:201,1:200]'],

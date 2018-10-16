@@ -17,6 +17,12 @@ class FakeHeaderImage(FakeImage):
             self.header = header
 
 
+def test_null_input_image():
+    tester = header_checker.HeaderSanity(None)
+    image = tester.run(None)
+    assert image is None
+
+
 def test_all_keywords_missing():
     logger.error = mock.MagicMock()
     tester = header_checker.HeaderSanity(None)

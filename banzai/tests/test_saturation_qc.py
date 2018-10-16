@@ -4,6 +4,12 @@ from banzai.tests.utils import FakeImage
 from banzai.qc import SaturationTest
 
 
+def test_null_input_image():
+    tester = SaturationTest(None)
+    image = tester.run(None)
+    assert image is None
+
+
 def test_no_pixels_saturated():
     tester = SaturationTest(None)
     nx = 101

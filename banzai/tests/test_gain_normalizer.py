@@ -10,6 +10,12 @@ class FakeGainImage(FakeImage):
         self.gain = None
 
 
+def test_null_input_image():
+    gain_normalizer = GainNormalizer(None)
+    image = gain_normalizer.run(None)
+    assert image is None
+
+
 def test_gain_header_missing():
     gain_normalizer = GainNormalizer(None)
     images = [gain_normalizer.run(FakeGainImage()) for x in range(6)]

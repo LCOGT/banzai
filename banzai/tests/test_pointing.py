@@ -4,6 +4,12 @@ from banzai.qc.pointing import PointingTest
 from banzai.tests.utils import FakeImage
 
 
+def test_null_input_image():
+    tester = PointingTest(None)
+    image = tester.run(None)
+    assert image is None
+
+
 def test_no_offset():
     tester = PointingTest(None)
     nx = 101

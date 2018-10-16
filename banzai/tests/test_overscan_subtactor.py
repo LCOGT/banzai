@@ -10,6 +10,12 @@ class FakeOverscanImage(FakeImage):
         self.header = {'BIASSEC': 'UNKNOWN'}
 
 
+def test_null_input_image():
+    subtractor = OverscanSubtractor(None)
+    image = subtractor.run(None)
+    assert image is None
+
+
 def test_header_has_overscan_when_biassec_unknown():
     subtractor = OverscanSubtractor(None)
     images = [subtractor.run(FakeOverscanImage()) for x in range(6)]
