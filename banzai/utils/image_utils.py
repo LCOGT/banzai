@@ -1,19 +1,18 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
 import os
 from glob import glob
+import logging
+from datetime import timedelta
 
 from astropy.io import fits
 import numpy as np
 
 import banzai
 from banzai import dbs
-from banzai import logs
 from banzai.utils import file_utils
 from banzai.utils import fits_utils
 from banzai.utils import date_utils
-from datetime import timedelta
 
-logger = logs.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class MissingBPMError(Exception):
@@ -42,13 +41,13 @@ def select_images(image_list, image_types, instrument_criteria, db_address=dbs._
                     obstype = hdu.header['OBSTYPE']
 
             if obstype is None:
-                logger.error('Unable to get OBSTYPE', extra={'tags': {'filename': filename}})
+                logger.error('Unable to get OBSTYPE', extra_tags={'filename': filename})
 
             if obstype in image_types:
                 images.append(filename)
         except Exception as e:
             logger.error('Exception checking image selection criteria: {e}'.format(e=e),
-                         extra={'tags': {'filename': filename}})
+                         extra_tags={'filename': filename})
     return images
 
 
@@ -154,9 +153,7 @@ def load_bpm_file(bpm_filename, image):
     else:
         image.bpm = np.array(bpm_hdu[0].data, dtype=np.uint8)
     if not bpm_has_valid_size(image.bpm, image):
-        tags = logs.image_config_to_tags(image, None)
-        logs.add_tag(tags, 'filename', image.filename)
-        logger.error('BPM shape mismatch', extra=tags)
+        logger.error('BPM shape mismatch', image=image)
         raise ValueError('BPM shape mismatch')
     image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
 
@@ -191,9 +188,7 @@ def save_pipeline_metadata(image, pipeline_context):
         next_year = date_observed + timedelta(days=365)
         image.header['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year),
                                     '[UTC] Date the frame becomes public')
-    logging_tags = logs.image_config_to_tags(image, None)
-    logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-    logs.add_tag(logging_tags, 'rlevel', int(image.header['RLEVEL']))
-    logs.add_tag(logging_tags, 'pipeline_version', image.header['PIPEVER'])
-    logs.add_tag(logging_tags, 'l1pubdat', image.header['L1PUBDAT'])
-    logger.info('Updating header', extra=logging_tags)
+    logging_tags = {'rlevel': int(image.header['RLEVEL']),
+                    'pipeline_version': image.header['PIPEVER'],
+                    'l1pubdat': image.header['L1PUBDAT'],}
+    logger.info('Updating header', image=image, extra_tags=logging_tags)

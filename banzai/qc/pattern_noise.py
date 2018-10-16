@@ -1,4 +1,5 @@
-import os
+import logging
+
 import numpy as np
 from scipy.ndimage.filters import median_filter
 from itertools import groupby
@@ -6,7 +7,8 @@ from operator import itemgetter
 
 from banzai.stages import Stage
 from banzai.utils.stats import robust_standard_deviation
-from banzai import logs
+
+logger = logging.getLogger(__name__)
 
 
 class PatternNoiseDetector(Stage):
@@ -27,20 +29,15 @@ class PatternNoiseDetector(Stage):
 
     def do_stage(self, images):
         for image in images:
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'snr_threshold', self.SNR_THRESHOLD)
-            logs.add_tag(logging_tags, 'min_fraction_pixels_above_threshold', self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD)
-            logs.add_tag(logging_tags, 'min_adjacent_pixels', self.MIN_ADJACENT_PIXELS)
-
             pattern_noise_is_bad, fraction_pixels_above_threshold = self.check_for_pattern_noise(image.data)
-
-            logs.add_tag(logging_tags, 'fraction_pixels_above_threshold', fraction_pixels_above_threshold)
-
+            logging_tags = {'snr_threshold': self.SNR_THRESHOLD,
+                            'min_fraction_pixels_above_threshold': self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD,
+                            'min_adjacent_pixels': self.MIN_ADJACENT_PIXELS,
+                            'fraction_pixels_above_threshold': fraction_pixels_above_threshold}
             if pattern_noise_is_bad:
-                self.logger.error('Image found to have pattern noise.', extra=logging_tags)
+                logger.error('Image found to have pattern noise.', image=image, extra_tags=logging_tags)
             else:
-                self.logger.info('No pattern noise found.', extra=logging_tags)
+                logger.info('No pattern noise found.', image=image, extra_tags=logging_tags)
             self.save_qc_results({'pattern_noise.failed': pattern_noise_is_bad,
                                   'pattern_noise.snr_threshold': self.SNR_THRESHOLD,
                                   'pattern_noise.min_fraction_pixels_above_threshold':

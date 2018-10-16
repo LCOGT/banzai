@@ -1,3 +1,7 @@
+0.9.12 (2018-10-15)
+-------------------
+- Created new logger class to add image-specific info to logging tags  
+
 0.9.11 (2018-10-02)
 -------------------
 - Added support for more tables to be associated with images (catalogs, etc.)

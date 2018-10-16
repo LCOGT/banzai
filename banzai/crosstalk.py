@@ -1,8 +1,10 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.stages import Stage
-from banzai import logs
+import logging
+
 import numpy as np
-import os
+
+from banzai.stages import Stage
+
+logger = logging.getLogger(__name__)
 
 
 class CrosstalkCorrector(Stage):
@@ -16,8 +18,7 @@ class CrosstalkCorrector(Stage):
     def do_stage(self, images):
         for image in images:
             if image.data_is_3d():
-                logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-                logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
+                logging_tags = {}
                 n_amps = image.get_n_amps()
                 crosstalk_matrix = np.identity(n_amps)
                 for j in range(n_amps):
@@ -25,9 +26,8 @@ class CrosstalkCorrector(Stage):
                         if i != j:
                             crosstalk_keyword = 'CRSTLK{0}{1}'.format(i + 1, j + 1)
                             crosstalk_matrix[i, j] = -float(image.header[crosstalk_keyword])
-                            logs.add_tag(logging_tags, crosstalk_keyword,
-                                         image.header[crosstalk_keyword])
-                self.logger.info('Removing crosstalk', extra=logging_tags)
+                            logging_tags[crosstalk_keyword] = image.header[crosstalk_keyword]
+                logger.info('Removing crosstalk', image=image, extra_tags=logging_tags)
                 # Techinally, we should iterate this process because crosstalk doesn't
                 # produce more crosstalk
                 """This dot product is effectivly the following:

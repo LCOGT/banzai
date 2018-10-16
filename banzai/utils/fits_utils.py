@@ -1,16 +1,15 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import os
+import tempfile
+import logging
+
+import numpy as np
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
-import numpy as np
-import os
-import tempfile
+
 from banzai.utils import date_utils
-from banzai import logs
 
-logger = logs.get_logger(__name__)
-
-__author__ = 'cmccully'
+logger = logging.getLogger(__name__)
 
 
 def sanitizeheader(header):
@@ -34,9 +33,7 @@ def create_master_calibration_header(images):
             if len(h) > 0:
                 header[h] = (images[0].header[h], images[0].header.comments[h])
         except ValueError as e:
-            logging_tags = logs.image_config_to_tags(images[0], None)
-            logs.add_tag(logging_tags, 'filename', images[0].filename)
-            logger.error('Could not add keyword {0}'.format(h), extra=logging_tags)
+            logger.error('Could not add keyword {0}'.format(h), image=image)
             continue
 
     header = sanitizeheader(header)
@@ -127,7 +124,7 @@ def parse_ra_dec(header):
                 dec = coord.dec.deg
             except (ValueError, TypeError) as e:
                 logger.error('Could not get initial pointing guess. {0}'.format(e),
-                             extra={'tags': {'filename': header.get('ORIGNAME')}})
+                             extra_tags={'filename': header.get('ORIGNAME')})
                 ra, dec = np.nan, np.nan
     return ra, dec
 

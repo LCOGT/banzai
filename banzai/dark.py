@@ -1,14 +1,13 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import os.path
+import logging
 
 import numpy as np
-import os.path
 
 from banzai.utils import stats, fits_utils
-from banzai import logs
 from banzai.images import Image
 from banzai.stages import CalibrationMaker, ApplyCalibration, CalibrationComparer, Stage
 
-__author__ = 'cmccully'
+logger = logging.getLogger(__name__)
 
 
 class DarkNormalizer(Stage):
@@ -22,9 +21,7 @@ class DarkNormalizer(Stage):
     def do_stage(self, images):
         for image in images:
             image.data /= image.exptime
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            self.logger.info('Normalizing dark by exposure time', extra=logging_tags)
+            logger.info('Normalizing dark by exposure time', image=image)
         return images
 
 
@@ -44,16 +41,15 @@ class DarkMaker(CalibrationMaker):
     def min_images(self):
         return 5
 
-    def make_master_calibration_frame(self, images, image_config, logging_tags):
+    def make_master_calibration_frame(self, images, image_config):
         dark_data = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         dark_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
         master_dark_filename = self.get_calibration_filename(images[0])
 
-        logs.add_tag(logging_tags, 'master_dark', os.path.basename(master_dark_filename))
+        logging_tags = {'master_dark': os.path.basename(master_dark_filename)}
         for i, image in enumerate(images):
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            self.logger.debug('Combining dark', extra=logging_tags)
+            logger.debug('Combining dark', image=image, extra_tags=logging_tags)
 
             dark_data[:, :, i] = image.data[:, :]
             dark_mask[:, :, i] = image.bpm[:, :]
@@ -73,9 +69,7 @@ class DarkMaker(CalibrationMaker):
         master_dark_image.filename = master_dark_filename
         master_dark_image.bpm = master_bpm
 
-        logs.pop_tag(logging_tags, 'master_dark')
-        logs.add_tag(logging_tags, 'filename', os.path.basename(master_dark_image.filename))
-        self.logger.info('Created master dark', extra=logging_tags)
+        logger.info('Created master dark', image=master_dark_image)
         return [master_dark_image]
 
 
@@ -91,15 +85,13 @@ class DarkSubtractor(ApplyCalibration):
     def group_by_keywords(self):
         return ['ccdsum']
 
-    def apply_master_calibration(self, images, master_calibration_image, logging_tags):
+    def apply_master_calibration(self, images, master_calibration_image):
         master_dark_data = master_calibration_image.data
         master_dark_filename = os.path.basename(master_calibration_image.filename)
-        logs.add_tag(logging_tags, 'master_dark',
-                     os.path.basename(master_calibration_image.filename))
+        logging_tags = {'master_dark': os.path.basename(master_calibration_image.filename)}
 
         for image in images:
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            self.logger.info('Subtracting dark', extra=logging_tags)
+            logger.info('Subtracting dark', image=image, extra_tags=logging_tags)
             image.data -= master_dark_data * image.exptime
             image.bpm |= master_calibration_image.bpm
             image.header['L1IDDARK'] = (master_dark_filename, 'ID of dark frame used')

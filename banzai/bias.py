@@ -1,16 +1,13 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import os.path
+import logging
 
 import numpy as np
 
 from banzai.images import Image
-from banzai import logs
 from banzai.stages import CalibrationMaker, ApplyCalibration, Stage, CalibrationComparer
 from banzai.utils import stats, fits_utils
 
-
-__author__ = 'cmccully'
+logger = logging.getLogger(__name__)
 
 
 class BiasMaker(CalibrationMaker):
@@ -30,7 +27,7 @@ class BiasMaker(CalibrationMaker):
     def min_images(self):
         return 5
 
-    def make_master_calibration_frame(self, images, image_config, logging_tags):
+    def make_master_calibration_frame(self, images, image_config):
 
         bias_data = np.zeros((image_config.ny, image_config.nx, len(images)), dtype=np.float32)
         bias_mask = np.zeros((image_config.ny, image_config.nx, len(images)), dtype=np.uint8)
@@ -55,9 +52,8 @@ class BiasMaker(CalibrationMaker):
         master_bias_image.filename = master_bias_filename
         master_bias_image.bpm = master_bpm
 
-        logs.add_tag(logging_tags, 'filename', os.path.basename(master_bias_image.filename))
-        logs.add_tag(logging_tags, 'BIASLVL', header['BIASLVL'])
-        self.logger.debug('Average bias level in ADU', extra=logging_tags)
+        logger.debug('Average bias level in ADU', image=master_bias_image,
+                     extra_tags={'BIASLVL': float(header['BIASLVL'])})
 
         return [master_bias_image]
 
@@ -74,18 +70,15 @@ class BiasSubtractor(ApplyCalibration):
     def calibration_type(self):
         return 'bias'
 
-    def apply_master_calibration(self, images, master_calibration_image, logging_tags):
+    def apply_master_calibration(self, images, master_calibration_image):
 
         master_bias_data = master_calibration_image.data
         master_bias_level = float(master_calibration_image.header['BIASLVL'])
 
-        logs.add_tag(logging_tags, 'bias', master_bias_level)
-        logs.add_tag(logging_tags, 'master_bias',
-                     os.path.basename(master_calibration_image.filename))
+        master_logging_tags = {'bias': master_bias_level,
+                               'master_bias': os.path.basename(master_calibration_image.filename)}
 
         for image in images:
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-
             image.subtract(master_bias_level)
             image.subtract(master_bias_data)
 
@@ -95,10 +88,11 @@ class BiasSubtractor(ApplyCalibration):
             master_bias_filename = os.path.basename(master_calibration_image.filename)
             image.header['L1IDBIAS'] = (master_bias_filename, 'ID of bias frame used')
             image.header['L1STATBI'] = (1, "Status flag for bias frame correction")
-            logs.add_tag(logging_tags, 'BIASLVL', image.header['BIASLVL'])
-            logs.add_tag(logging_tags, 'L1IDBIAS', image.header['L1IDBIAS'])
+            logging_tags = {'BIASLVL': image.header['BIASLVL'],
+                            'L1IDBIAS': image.header['L1IDBIAS']}
+            logging_tags.update(master_logging_tags)
 
-            self.logger.info('Subtracting bias', extra=logging_tags)
+            logger.info('Subtracting bias', image=image,  extra=logging_tags)
         return images
 
 
@@ -113,19 +107,16 @@ class OverscanSubtractor(Stage):
     def do_stage(self, images):
 
         for image in images:
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-
             # Subtract the overscan if it exists
             if image.data_is_3d():
+                logging_tags = {}
                 for i in range(image.get_n_amps()):
                     overscan_level = _subtract_overscan_3d(image, i)
-                    logs.add_tag(logging_tags, 'OVERSCN{0}'.format(i + 1), overscan_level)
-                    self.logger.info('Subtracting overscan', extra=logging_tags)
+                    logging_tags['OVERSCN{0}'.format(i + 1)] = float(overscan_level)
             else:
                 overscan_level = _subtract_overscan_2d(image)
-                logs.add_tag(logging_tags, 'OVERSCAN', overscan_level)
-                self.logger.info('Subtracting overscan', extra=logging_tags)
+                logging_tags = {'OVERSCAN': float(overscan_level)}
+            logger.info('Subtracting overscan', image=image, extra_tags=logging_tags)
 
         return images
 
@@ -142,10 +133,7 @@ class BiasMasterLevelSubtractor(Stage):
 
         for image in images:
             bias_level = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'BIASLVL', float(bias_level))
-            self.logger.debug('Subtracting bias level', extra=logging_tags)
+            logger.debug('Subtracting bias level', image=image, extra_tags={'BIASLVL': float(bias_level)})
             image.data -= bias_level
             image.header['BIASLVL'] = bias_level, 'Bias Level that was removed'
 

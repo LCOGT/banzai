@@ -1,7 +1,8 @@
-import os
+import logging
 
 from banzai.stages import Stage
-from banzai import logs
+
+logger = logging.getLogger(__name__)
 
 
 class SaturationTest(Stage):
@@ -30,17 +31,15 @@ class SaturationTest(Stage):
             total_pixels = image.data.size
             saturation_fraction = float(saturated_pixels.sum()) / total_pixels
 
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'SATFRAC', saturation_fraction)
-            logs.add_tag(logging_tags, 'threshold', self.SATURATION_THRESHOLD)
-            self.logger.info('Measured saturation fraction.', extra=logging_tags)
+            logging_tags = {'SATFRAC': saturation_fraction,
+                            'threshold': self.SATURATION_THRESHOLD}
+            logger.info('Measured saturation fraction.', image=image, extra_tags=logging_tags)
             is_saturated = saturation_fraction >= self.SATURATION_THRESHOLD
             qc_results = {'saturated.failed': is_saturated,
                           'saturated.fraction': saturation_fraction,
                           'saturated.threshold': self.SATURATION_THRESHOLD}
             if is_saturated:
-                self.logger.error('SATFRAC exceeds threshold.', extra=logging_tags)
+                logger.error('SATFRAC exceeds threshold.', image=image, extra_tags=logging_tags)
                 qc_results['rejected'] = True
                 images_to_remove.append(image)
             else:

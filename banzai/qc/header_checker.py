@@ -3,8 +3,11 @@ This module performs basic sanity checks that the main image header keywords are
 format and validates their values.
 @author:ebachelet
 """
+import logging
+
 from banzai.stages import Stage
-from banzai import logs
+
+logger = logging.getLogger(__name__)
 
 
 class HeaderSanity(Stage):
@@ -46,8 +49,7 @@ class HeaderSanity(Stage):
 
        """
         for image in images:
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            self.logger.info("Checking header sanity.", extra=logging_tags)
+            logger.info("Checking header sanity.", image=image)
             bad_keywords = self.check_keywords_missing_or_na(image)
             self.check_ra_range(image, bad_keywords)
             self.check_dec_range(image, bad_keywords)
@@ -74,18 +76,17 @@ class HeaderSanity(Stage):
         but the 'N/A' placeholder values should be overwritten by 'NaN'.
 
         """
-        logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
         qc_results = {}
         missing_keywords = []
         na_keywords = []
         for keyword in self.expected_header_keywords:
             if keyword not in image.header:
                 sentence = 'The header key {0} is not in image header!'.format(keyword)
-                self.logger.error(sentence, extra=logging_tags)
+                logger.error(sentence, image=image)
                 missing_keywords.append(keyword)
             elif image.header[keyword] == 'N/A':
                 sentence = 'The header key {0} got the unexpected value : N/A'.format(keyword)
-                self.logger.error(sentence, extra=logging_tags)
+                logger.error(sentence, image=image)
                 na_keywords.append(keyword)
         are_keywords_missing = len(missing_keywords) > 0
         are_keywords_na = len(na_keywords) > 0
@@ -114,12 +115,11 @@ class HeaderSanity(Stage):
         if bad_keywords is None:
             bad_keywords = []
         if 'CRVAL1' not in bad_keywords:
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             ra_value = image.header['CRVAL1']
             is_bad_ra_value = (ra_value > self.RA_MAX) | (ra_value < self.RA_MIN)
             if is_bad_ra_value:
                 sentence = 'The header CRVAL1 key got the unexpected value : {0}'.format(ra_value)
-                self.logger.error(sentence, extra=logging_tags)
+                logger.error(sentence, image=image)
             self.save_qc_results({"header.ra.failed": is_bad_ra_value,
                                   "header.ra.value": ra_value}, image)
 
@@ -139,12 +139,11 @@ class HeaderSanity(Stage):
         if bad_keywords is None:
             bad_keywords = []
         if 'CRVAL2' not in bad_keywords:
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             dec_value = image.header['CRVAL2']
             is_bad_dec_value = (dec_value > self.DEC_MAX) | (dec_value < self.DEC_MIN)
             if is_bad_dec_value:
                 sentence = 'The header CRVAL2 key got the unexpected value : {0}'.format(dec_value)
-                self.logger.error(sentence, extra=logging_tags)
+                logger.error(sentence, image=image)
             self.save_qc_results({"header.dec.failed": is_bad_dec_value,
                                   "header.dec.value": dec_value}, image)
 
@@ -162,7 +161,6 @@ class HeaderSanity(Stage):
         if bad_keywords is None:
             bad_keywords = []
         if 'EXPTIME' not in bad_keywords and 'OBSTYPE' not in bad_keywords:
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
             exptime_value = image.header['EXPTIME']
             qc_results = {"header.exptime.value": exptime_value}
             if image.header['OBSTYPE'] != 'BIAS':
@@ -170,6 +168,6 @@ class HeaderSanity(Stage):
                 if is_exptime_null:
                     sentence = 'The header EXPTIME key got the unexpected value {0}:' \
                                'null or negative value'.format(exptime_value)
-                    self.logger.error(sentence, extra=logging_tags)
+                    logger.error(sentence, image=image)
                 qc_results["header.exptime.failed"] = is_exptime_null
             self.save_qc_results(qc_results, image)

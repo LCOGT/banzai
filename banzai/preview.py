@@ -1,9 +1,10 @@
+import logging
+
 from banzai import dbs
 from banzai.utils import file_utils
-from banzai import logs
 from banzai.utils.image_utils import image_passes_criteria
 
-logger = logs.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def set_preview_file_as_processed(path, db_address=dbs._DEFAULT_DB):
