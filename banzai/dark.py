@@ -78,7 +78,7 @@ class DarkSubtractor(ApplyCalibration):
         return 'dark'
 
     @property
-    def group_by_attributes(self):
+    def image_attribute_keywords(self):
         return ['ccdsum']
 
     def apply_master_calibration(self, image, master_calibration_image):
@@ -99,7 +99,11 @@ class DarkComparer(CalibrationComparer):
         super(DarkComparer, self).__init__(pipeline_context)
 
     @property
+<<<<<<< HEAD
     def group_by_attributes(self):
+=======
+    def image_attribute_keywords(self):
+>>>>>>> Renamed group_by_keywords for calibration stages
         return ['ccdsum']
 
     @property
