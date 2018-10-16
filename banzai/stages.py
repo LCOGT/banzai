@@ -1,4 +1,3 @@
-import itertools
 import logging
 import abc
 
@@ -18,34 +17,19 @@ class Stage(abc.ABC):
     def stage_name(self):
         return '.'.join([__name__, self.__class__.__name__])
 
-    @property
-    @abc.abstractmethod
-    def group_by_attributes(self):
-        return []
+    def run_stage(self, image):
+        logger.info('Running {0}'.format(self.stage_name), image=image)
+        return self.do_stage(image)
 
-    def get_grouping(self, image):
-        grouping_criteria = [image.site, image.instrument, image.epoch]
-        if self.group_by_attributes:
-            grouping_criteria += [getattr(image, keyword) for keyword in self.group_by_attributes]
-        return grouping_criteria
-
-    def run_stage(self, image_set):
-        image_set = list(image_set)
-        logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
-        return self.do_stage(image_set)
-
-    def run(self, images):
-        images.sort(key=self.get_grouping)
-        processed_images = []
-        for _, image_set in itertools.groupby(images, self.get_grouping):
-            try:
-                processed_images += self.run_stage(image_set)
-            except Exception as e:
-                logger.error(e)
-        return processed_images
+    def run(self, image):
+        try:
+            processed_image = self.run_stage(image)
+        except Exception as e:
+            logger.error(e)
+        return processed_image
 
     @abc.abstractmethod
-    def do_stage(self, images):
+    def do_stage(self, image):
         return images
 
     def save_qc_results(self, qc_results, image, **kwargs):
@@ -76,4 +60,3 @@ class Stage(abc.ABC):
             except Exception as e:
                 error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
                 logger.error(error_message.format(url=self.pipeline_context.elasticsearch_url, exception=e))
-        return es_output
