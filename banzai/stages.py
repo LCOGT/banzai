@@ -137,15 +137,15 @@ class ApplyCalibration(Stage):
             # Abort!
             return images
         image_config = image_utils.check_image_homogeneity(images)
-        master_calibration_filename = self.get_calibration_filename(images[0])
+        master_calibration_filename = self.get_calibration_filename(image_config)
 
         is_master_calibration_missing = master_calibration_filename is None
         self.save_qc_results({'pipeline.missing_master_'.format(self.calibration_type):
-                              is_master_calibration_missing}, images[0])
+                              is_master_calibration_missing}, image=image_config)
         if is_master_calibration_missing:
             # Short circuit if corresponding master calibration image is not found
-            self.logger.warning('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name),
-                                image=images[0])
+            logger.warning('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name),
+                           image=images[0])
             return images
         master_calibration_image = Image(self.pipeline_context,
                                          filename=master_calibration_filename)
