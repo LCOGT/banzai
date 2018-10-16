@@ -16,7 +16,7 @@ def test_table_to_fits():
     t['b'].description = 'Column b'
     t['c'].description = 'Column c'
     t['a'].unit = 'pix'
-    t['b'].unit = 'ct'
+    t['b'].unit = 'count'
     t['c'].unit = 's'
 
     hdu = fits_utils.table_to_fits(t)
@@ -29,7 +29,7 @@ def test_table_to_fits():
     assert hdu.header['TCOMM2'] == 'Column b'
     assert hdu.header['TCOMM3'] == 'Column c'
     assert hdu.header['TUNIT1'] == 'pix'
-    assert hdu.header['TUNIT2'] == 'ct'
+    assert hdu.header['TUNIT2'] == 'count'
     assert hdu.header['TUNIT3'] == 's'
     assert hdu.header.cards['TTYPE1'].comment == 'Column a'
     assert hdu.header.cards['TTYPE2'].comment == 'Column b'
