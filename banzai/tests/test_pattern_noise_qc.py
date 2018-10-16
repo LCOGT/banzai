@@ -28,17 +28,6 @@ def generate_data(ny=1000, nx=1000, has_pattern_noise=False):
     return data
 
 
-def test_no_input_images(set_random_seed):
-    detector = pattern_noise.PatternNoiseDetector(None)
-    images = detector.do_stage([])
-    assert len(images) == 0
-
-
-def test_group_by_keywords(set_random_seed):
-    detector = pattern_noise.PatternNoiseDetector(None)
-    assert detector.group_by_attributes is None
-
-
 def test_pattern_noise_detects_noise_when_it_should(set_random_seed):
     data = generate_data(has_pattern_noise=True)
     detector = pattern_noise.PatternNoiseDetector(None)
@@ -68,7 +57,7 @@ def test_pattern_noise_on_2d_image(set_random_seed):
 
     detector = pattern_noise.PatternNoiseDetector(None)
     logger.error = mock.MagicMock()
-    detector.do_stage([image])
+    detector.run(image)
     assert logger.error.called
 
 

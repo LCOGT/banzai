@@ -1,8 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import numpy as np
 
 from banzai.mosaic import get_mosaic_size, MosaicCreator
 from banzai.tests.utils import FakeImage
-import numpy as np
 
 
 class FakeMosaicImage(FakeImage):
@@ -27,17 +26,6 @@ def test_get_mosaic_size():
         fake_image = FakeMosaicImage()
         fake_image.extension_headers = [{'DETSEC': d} for d in detsec]
         assert expected_mosaic_sizes[i] == get_mosaic_size(fake_image, 4)
-
-
-def test_no_input_images():
-    mosaic_creator = MosaicCreator(None)
-    images = mosaic_creator.do_stage([])
-    assert len(images) == 0
-
-
-def test_group_by_keywords():
-    mosaic_creator = MosaicCreator(None)
-    assert mosaic_creator.group_by_attributes is None
 
 
 def test_2d_images():
@@ -88,7 +76,7 @@ def test_mosaic_maker():
         fake_images.append(image)
 
     mosaic_creator = MosaicCreator(None)
-    mosaiced_images = mosaic_creator.do_stage(fake_images)
+    mosaiced_images = [mosaic_creator.run(image) for image in fake_images]
 
     for i, image in enumerate(mosaiced_images):
         assert image.data.shape == expected_mosaic_sizes[i]

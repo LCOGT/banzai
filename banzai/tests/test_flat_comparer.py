@@ -17,12 +17,6 @@ class FakeFlatImage(FakeImage):
         self.header['FLATLVL'] = flat_level
 
 
-def test_no_input_images(set_random_seed):
-    comparer = FlatComparer(None)
-    images = comparer.do_stage([])
-    assert len(images) == 0
-
-
 def test_group_by_keywords(set_random_seed):
     comparer = FlatComparer(FakeContext())
     assert comparer.group_by_attributes == ['ccdsum', 'filter']
@@ -62,7 +56,7 @@ def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_ca
     mock_images.return_value = FakeFlatImage(10000.0)
 
     comparer = FlatComparer(None)
-    images = comparer.do_stage([FakeFlatImage(10000.0) for x in range(6)])
+    images = [comparer.run(FakeFlatImage(10000.0)) for x in range(6)]
     assert len(images) == 6
 
 
@@ -87,9 +81,9 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image, set_ra
         image.data += np.random.normal(0.0, image.readnoise)
         image.data /= flat_level
 
-    images = comparer.do_stage(images)
+    images = [comparer.run(image) for image in images]
 
-    assert len(images) == 6
+    assert images.count(None) == 0
 
 
 # Turn on image rejection for Flats. In the long term, this can be removed.
@@ -104,7 +98,6 @@ class FakeFlatComparer(FlatComparer):
 @mock.patch('banzai.stages.Stage.save_qc_results')
 def test_does_reject_bad_images(mock_save_qc, mock_cal, mock_image, set_random_seed):
     mock_cal.return_value = 'test.fits'
-    master_dark_fraction = 0.05
     nx = 101
     ny = 103
     flat_level = 10000.0
@@ -127,6 +120,6 @@ def test_does_reject_bad_images(mock_save_qc, mock_cal, mock_image, set_random_s
         yinds = np.random.choice(np.arange(ny), size=int(0.2 * nx * ny), replace=True)
         for x, y in zip(xinds, yinds):
             images[i].data[y, x] *= 1.2
-    images = comparer.do_stage(images)
+    images = [comparer.run(image) for image in images]
 
-    assert len(images) == 4
+    assert images.count(None) == 2

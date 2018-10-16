@@ -1,8 +1,8 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import pytest
+import numpy as np
+
 from banzai.flats import FlatNormalizer
 from banzai.tests.utils import FakeImage
-import numpy as np
-import pytest
 
 
 @pytest.fixture(scope='module')
@@ -10,27 +10,16 @@ def set_random_seed():
     np.random.seed(9723492)
 
 
-def test_no_input_images(set_random_seed):
-    normalizer = FlatNormalizer(None)
-    images = normalizer.do_stage([])
-    assert len(images) == 0
-
-
-def test_group_by_keywords(set_random_seed):
-    normalizer = FlatNormalizer(None)
-    assert normalizer.group_by_attributes is None
-
-
 def test_header_has_flatlevel(set_random_seed):
     normalizer = FlatNormalizer(None)
-    images = normalizer.do_stage([FakeImage(image_multiplier=2.0) for _ in range(6)])
+    images = [normalizer.run(FakeImage(image_multiplier=2.0)) for _ in range(6)]
     for image in images:
         assert image.header['FLATLVL'] == 2.0
 
 
 def test_header_flatlevel_is_5(set_random_seed):
     normalizer = FlatNormalizer(None)
-    images = normalizer.do_stage([FakeImage(image_multiplier=5.0) for _ in range(6)])
+    images = [normalizer.run(FakeImage(image_multiplier=5.0)) for _ in range(6)]
     for image in images:
         assert image.header['FLATLVL'] == 5.0
 
@@ -47,7 +36,7 @@ def test_flat_normalization_is_reasonable(set_random_seed):
     for image in images:
         image.data = np.random.poisson(flat_pattern * input_level).astype(float)
 
-    images = normalizer.do_stage(images)
+    images = [normalizer.run(image) for image in images]
 
     for image in images:
         # For right now, we only use a quarter of the image to calculate the flat normalization

@@ -1,8 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import numpy as np
+
 from banzai.gain import GainNormalizer, validate_gain
 from banzai.tests.utils import FakeImage
-
-import numpy as np
 
 
 class FakeGainImage(FakeImage):
@@ -11,21 +10,10 @@ class FakeGainImage(FakeImage):
         self.gain = None
 
 
-def test_no_input_images():
-    gain_normalizer = GainNormalizer(None)
-    images = gain_normalizer.do_stage([])
-    assert len(images) == 0
-
-
-def test_group_by_keywords():
-    gain_normalizer = GainNormalizer(None)
-    assert gain_normalizer.group_by_attributes is None
-
-
 def test_gain_header_missing():
     gain_normalizer = GainNormalizer(None)
-    images = gain_normalizer.do_stage([FakeGainImage() for x in range(6)])
-    assert len(images) == 0
+    images = [gain_normalizer.run(FakeGainImage()) for x in range(6)]
+    assert images.count(None) == 6
 
 
 def test_gain_header_0():
@@ -33,8 +21,8 @@ def test_gain_header_0():
     fake_images = [FakeGainImage() for x in range(6)]
     for image in fake_images:
         image.gain = 0.0
-    images = gain_normalizer.do_stage(fake_images)
-    assert len(images) == 0
+    images = [gain_normalizer.run(image) for image in fake_images]
+    assert images.count(None) == 6
 
 
 def test_gain_is_empty_list():
@@ -42,8 +30,8 @@ def test_gain_is_empty_list():
     fake_images = [FakeGainImage() for x in range(6)]
     for image in fake_images:
         image.gain = []
-    images = gain_normalizer.do_stage(fake_images)
-    assert len(images) == 0
+    images = [gain_normalizer.run(image) for image in fake_images]
+    assert images.count(None) == 6
 
 
 def test_gain_1d():
@@ -63,7 +51,7 @@ def test_gain_1d():
         image.header['MAXLIN'] = max_linearity
 
     gain_normalizer = GainNormalizer(None)
-    output_images = gain_normalizer.do_stage(fake_images)
+    output_images = [gain_normalizer.run(image) for image in fake_images]
 
     for i, image in enumerate(output_images):
         np.testing.assert_allclose(image.data, input_data[i] * input_gains[i])
@@ -91,7 +79,7 @@ def test_gain_datacube():
         image.header['MAXLIN'] = max_linearity
 
     gain_normalizer = GainNormalizer(None)
-    output_images = gain_normalizer.do_stage(fake_images)
+    output_images = [gain_normalizer.run(image) for image in fake_images]
 
     for i, image in enumerate(output_images):
         for j in range(n_amplifiers):

@@ -17,17 +17,6 @@ class FakeHeaderImage(FakeImage):
             self.header = header
 
 
-def test_no_input_images():
-    tester = header_checker.HeaderSanity(None)
-    images = tester.do_stage([])
-    assert len(images) == 0
-
-
-def test_group_by_keywords():
-    tester = header_checker.HeaderSanity(None)
-    assert tester.group_by_attributes is None
-
-
 def test_all_keywords_missing():
     logger.error = mock.MagicMock()
     tester = header_checker.HeaderSanity(None)

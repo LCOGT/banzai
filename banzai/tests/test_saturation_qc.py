@@ -1,17 +1,7 @@
-from banzai.tests.utils import FakeImage
-from banzai.qc import SaturationTest
 import numpy as np
 
-
-def test_no_input_images():
-    tester = SaturationTest(None)
-    image = tester.run(None)
-    assert image is None
-
-
-def test_group_by_keywords():
-    tester = SaturationTest(None)
-    assert tester.group_by_attributes is None
+from banzai.tests.utils import FakeImage
+from banzai.qc import SaturationTest
 
 
 def test_no_pixels_saturated():
