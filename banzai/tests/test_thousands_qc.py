@@ -1,6 +1,7 @@
+import numpy as np
+
 from banzai.tests.utils import FakeImage
 from banzai.qc import ThousandsTest
-import numpy as np
 
 
 def test_no_input_images():
