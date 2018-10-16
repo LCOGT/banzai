@@ -1,8 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-import pytest
-from banzai.utils import image_utils
-import numpy as np
 from datetime import datetime
+
+import pytest
+import numpy as np
+
+from banzai.utils import image_utils
 from banzai.stages import Stage
 from banzai.images import Image
 
