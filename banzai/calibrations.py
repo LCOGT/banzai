@@ -56,9 +56,9 @@ class CalibrationMaker(Stage):
             logger.warning('Not enough images to combine.')
             return []
         else:
-            image_config = image_utils.check_image_homogeneity(images)
+            image_utils.check_image_homogeneity(images, self.group_by_keywords)
 
-            return self.make_master_calibration_frame(images, image_config)
+            return self.make_master_calibration_frame(images, images[0])
 
     def get_calibration_filename(self, image):
         cal_file = '{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
@@ -98,12 +98,14 @@ class ApplyCalibration(Stage):
     def do_stage(self, image):
         master_calibration_filename = self.get_calibration_filename(image)
 
-            if master_calibration_filename is None:
-                self.on_missing_master_calibration(image_config)
+        if master_calibration_filename is None:
+            self.on_missing_master_calibration(image)
 
-            master_calibration_image = Image(self.pipeline_context,
-                                             filename=master_calibration_filename)
-            return self.apply_master_calibration(images, master_calibration_image)
+        master_calibration_image = Image(self.pipeline_context,
+                                         filename=master_calibration_filename)
+        image_utils.check_image_homogeneity([image, master_calibration_image],
+                                            self.image_attribute_keywords)
+        return self.apply_master_calibration(image, master_calibration_image)
 
     @abc.abstractmethod
     def apply_master_calibration(self, images, master_calibration_image):
