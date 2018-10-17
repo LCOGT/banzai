@@ -37,7 +37,7 @@ def test_crosstalk():
                     image.header['CRSTLK{i}{j}'.format(i=i+1, j=j+1)] = crosstalk_coeff
                     image.data[j] += original_data[i] * crosstalk_coeff
     # Try to remove it
-    images = [tester.do_stage(image) for image in images]
+    images = [tester.run(image) for image in images]
     # Assert that we got back the original image
     for i, image in enumerate(images):
         np.testing.assert_allclose(image.data, expected_image_data[i], atol=2.0, rtol=1e-5)

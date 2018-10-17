@@ -23,41 +23,47 @@ def test_null_input_image():
     assert image is None
 
 
-def test_image_attribute_keywords(set_random_seed):
+def test_image_attribute_keywords():
     comparer = FlatComparer(FakeContext())
     assert comparer.image_attribute_keywords == ['ccdsum', 'filter']
 
 
 @mock.patch('banzai.calibrations.Image')
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ccdsums_are_different(mock_cal, mock_images, set_random_seed):
+def test_raises_an_exception_if_ccdsums_are_different(mock_cal, mock_images):
+    mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.calibrations.Image')
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_epochs_are_different(mock_cal, mock_images, set_random_seed):
+def test_raises_an_exception_if_epochs_are_different(mock_cal, mock_images):
+    mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'epoch', '20160102')
 
 
 @mock.patch('banzai.calibrations.Image')
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_nx_are_different(mock_cal, mock_images, set_random_seed):
+def test_raises_an_exception_if_nx_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.Image')
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ny_are_different(mock_cal, mock_images, set_random_seed):
+def test_raises_an_exception_if_ny_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.calibrations.Image')
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
-def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_cal, mock_images, set_random_seed):
+def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_cal, mock_images):
     mock_cal.return_value = None
     mock_images.return_value = FakeFlatImage(10000.0)
 

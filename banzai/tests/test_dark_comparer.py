@@ -31,12 +31,16 @@ def image_attribute_keywords():
 @mock.patch('banzai.calibrations.Image')
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_ccdsums_are_different(mock_cal, mock_images):
+    mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(DarkComparer, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.calibrations.Image')
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_epochs_are_different(mock_cal, mock_images):
+    mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(DarkComparer, FakeContext(), 'epoch', '20160102')
 
 
@@ -44,6 +48,7 @@ def test_raises_an_exception_if_epochs_are_different(mock_cal, mock_images):
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_nx_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(DarkComparer, FakeContext(), 'nx', 105)
 
 
@@ -51,6 +56,7 @@ def test_raises_an_exception_if_nx_are_different(mock_cal, mock_images):
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_ny_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(DarkComparer, FakeContext(), 'ny', 107)
 
 

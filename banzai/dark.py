@@ -99,11 +99,7 @@ class DarkComparer(CalibrationComparer):
         super(DarkComparer, self).__init__(pipeline_context)
 
     @property
-<<<<<<< HEAD
-    def group_by_attributes(self):
-=======
     def image_attribute_keywords(self):
->>>>>>> Renamed group_by_keywords for calibration stages
         return ['ccdsum']
 
     @property
