@@ -1,3 +1,7 @@
+0.9.12 (2018-10-17)
+-------------------
+- Updated the table to HDU converter to use astropy's built-in converter.
+
 0.9.11 (2018-10-02)
 -------------------
 - Added support for more tables to be associated with images (catalogs, etc.)
