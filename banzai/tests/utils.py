@@ -40,7 +40,7 @@ class FakeImage(Image):
                                                      self.ccdsum.replace(' ', 'x'))
 
     def subtract(self, x):
-        jself.data -= x
+        self.data -= x
 
     def add_history(self, msg):
         pass
