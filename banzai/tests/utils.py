@@ -6,6 +6,7 @@ import numpy as np
 from banzai.utils import image_utils
 from banzai.stages import Stage
 from banzai.images import Image
+from banzai.context import PipelineContext
 
 
 class FakeImage(Image):
@@ -46,10 +47,15 @@ class FakeImage(Image):
         pass
 
 
-class FakeContext(object):
+class FakeContext(PipelineContext):
     def __init__(self, preview_mode=False):
-        self.processed_path = '/tmp'
+        self.filename = 'test.fits'
+        self.raw_path = '/tmp/raw'
+        self.processed_path = '/tmp/processed'
+        self.db_address = ''
+        self.allowed_instrument_criteria = []
         self.preview_mode = preview_mode
+        self.preview_max_tries = 5
 
 
 class FakeStage(Stage):
