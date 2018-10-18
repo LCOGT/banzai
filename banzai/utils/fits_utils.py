@@ -88,11 +88,7 @@ def table_to_fits(table):
     :param table: astropy table
     :return: fits BinTableHDU
     """
-    columns = [fits.Column(name=col.upper(), unit=str(table[col].unit),
-                           format=fits_formats(table[col].dtype),
-                           array=table[col]) for col in table.colnames]
-    hdu = fits.BinTableHDU.from_columns(columns)
-
+    hdu = fits.BinTableHDU(table)
     # Put in the description keywords
     for k in hdu.header.keys():
         if 'TTYPE' in k:
@@ -234,37 +230,3 @@ def get_extensions_by_name(fits_hdulist, name):
     # deprecated at some point
     extension_info = fits_hdulist.info(False)
     return fits.HDUList([fits_hdulist[ext[0]] for ext in extension_info if ext[1] == name])
-
-
-def fits_formats(dtype):
-    """
-    Convert a numpy data type to a fits format code
-
-    Parameters
-    ----------
-    dtype: data type parameter from numpy array
-
-    Returns
-    -------
-    str: Fits type code
-    """
-    format_code = ''
-    if 'bool' in dtype.name:
-        format_code = 'L'
-    elif np.issubdtype(dtype, np.int16):
-        format_code = 'I'
-    elif np.issubdtype(dtype, np.int32):
-        format_code = 'J'
-    elif np.issubdtype(dtype, np.int64):
-        format_code = 'K'
-    elif np.issubdtype(dtype, np.float32):
-        format_code = 'E'
-    elif np.issubdtype(dtype, np.float64):
-        format_code = 'D'
-    elif np.issubdtype(dtype, np.complex64):
-        format_code = 'C'
-    elif np.issubdtype(dtype, np.complex128):
-        format_code = 'M'
-    elif np.issubdtype(dtype, np.character):
-        format_code = 'A'
-    return format_code
