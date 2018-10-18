@@ -1,17 +1,14 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-import os
+import logging
+
 import numpy as np
-
 from astropy.table import Table
-from banzai.utils import stats, array_utils
-
-from banzai.stages import Stage
-from banzai import logs
-from banzai.images import DataTable
-
 import sep
 
-__author__ = 'cmccully'
+from banzai.utils import stats, array_utils
+from banzai.stages import Stage
+from banzai.images import DataTable
+
+logger = logging.getLogger(__name__)
 
 
 class SourceDetector(Stage):
@@ -203,47 +200,39 @@ class SourceDetector(Stage):
                 catalog.sort('flux')
                 catalog.reverse()
 
-                logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-                logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-
                 # Save some background statistics in the header
                 mean_background = stats.sigma_clipped_mean(bkg.back(), 5.0)
                 image.header['L1MEAN'] = (mean_background,
                                           '[counts] Sigma clipped mean of frame background')
-                logs.add_tag(logging_tags, 'L1MEAN', float(mean_background))
 
                 median_background = np.median(bkg.back())
                 image.header['L1MEDIAN'] = (median_background,
                                             '[counts] Median of frame background')
-                logs.add_tag(logging_tags, 'L1MEDIAN', float(median_background))
 
                 std_background = stats.robust_standard_deviation(bkg.back())
                 image.header['L1SIGMA'] = (std_background,
                                            '[counts] Robust std dev of frame background')
-                logs.add_tag(logging_tags, 'L1SIGMA', float(std_background))
 
                 # Save some image statistics to the header
                 good_objects = catalog['flag'] == 0
 
                 seeing = np.median(catalog['fwhm'][good_objects]) * image.pixel_scale
                 image.header['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
-                logs.add_tag(logging_tags, 'L1FWHM', float(seeing))
 
                 mean_ellipticity = stats.sigma_clipped_mean(sources['ellipticity'][good_objects],
                                                             3.0)
                 image.header['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
-                logs.add_tag(logging_tags, 'L1ELLIP', float(mean_ellipticity))
 
                 mean_position_angle = stats.sigma_clipped_mean(sources['theta'][good_objects], 3.0)
                 image.header['L1ELLIPA'] = (mean_position_angle,
                                             '[deg] PA of mean image ellipticity')
-                logs.add_tag(logging_tags, 'L1ELLIPA', float(mean_position_angle))
 
-                self.logger.info('Extracted sources', extra=logging_tags)
+                logging_tags = {key: float(image.header[key]) for key in ['L1MEAN', 'L1MEDIAN', 'L1SIGMA',
+                                                                          'L1FWHM', 'L1ELLIP', 'L1ELLIPA']}
+
+                logger.info('Extracted sources', image=image, extra_tags=logging_tags)
                 # adding catalog (a data table) to the appropriate images attribute.
                 image.data_tables['catalog'] = DataTable(data_table=catalog, name='CAT')
             except Exception as e:
-                logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-                logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-                self.logger.error(e, extra=logging_tags)
+                logger.error(e, image=image)
         return images

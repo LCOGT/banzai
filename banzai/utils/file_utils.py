@@ -1,13 +1,10 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
 import hashlib
 import os
+import logging
 
-from kombu import Connection, Queue, Exchange
-from banzai import logs
+from kombu import Connection, Exchange
 
-__author__ = 'cmccully'
-
-logger = logs.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def post_to_archive_queue(image_path):

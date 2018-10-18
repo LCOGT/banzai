@@ -1,10 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import logging
+
 import numpy as np
-from banzai import dbs, logs
 from astropy.io import fits
 
-
-logger = logs.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SinistroModeNotSupported(Exception):
@@ -57,14 +56,12 @@ def sinistro_mode_is_supported(image):
     # TODO Add support for other binnings
     supported = True
 
-    tags = logs.image_config_to_tags(image, None)
-    logs.add_tag(tags, 'filename', image.filename)
     if image.header['CCDSUM'] != '1 1':
         supported = False
-        logger.error('Non-supported Sinistro mode', logging_tags=tags)
+        logger.error('Non-supported Sinistro mode', image=image)
     if image.instrument not in crosstalk_coefficients.keys():
         supported = False
-        logger.error('Crosstalk Coefficients missing!', extra=tags)
+        logger.error('Crosstalk Coefficients missing!', image=image)
 
     return supported
 
@@ -137,9 +134,7 @@ def image_has_valid_saturate_value(image):
     valid = True
 
     if float(image.header['SATURATE']) == 0.0:
-        tags = logs.image_config_to_tags(image, None)
-        logs.add_tag(tags, 'filename', image.filename)
-        logger.error('SATURATE keyword cannot be zero', extra=tags)
+        logger.error('SATURATE keyword cannot be zero', image=image)
         valid = False
 
     return valid

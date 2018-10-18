@@ -1,8 +1,10 @@
+import logging
+
 import numpy as np
-import os
 
 from banzai.stages import Stage
-from banzai import logs
+
+logger = logging.getLogger(__name__)
 
 
 class ThousandsTest(Stage):
@@ -31,20 +33,18 @@ class ThousandsTest(Stage):
         for image in images:
             npixels = np.product(image.data.shape)
             fraction_1000s = float(np.sum(image.data == 1000)) / npixels
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'FRAC1000', fraction_1000s)
-            logs.add_tag(logging_tags, 'threshold', self.THOUSANDS_THRESHOLD)
+            logging_tags = {'FRAC1000': fraction_1000s,
+                            'threshold': self.THOUSANDS_THRESHOLD}
             has_1000s_error = fraction_1000s > self.THOUSANDS_THRESHOLD
             qc_results = {'sinistro_thousands.failed': has_1000s_error,
                           'sinistro_thousands.fraction': fraction_1000s,
                           'sinistro_thousands.threshold': self.THOUSANDS_THRESHOLD}
             if has_1000s_error:
-                self.logger.error('Image is mostly 1000s. Rejecting image', extra=logging_tags)
+                logger.error('Image is mostly 1000s. Rejecting image', image=image, extra_tags=logging_tags)
                 qc_results['rejected'] = True
                 images_to_remove.append(image)
             else:
-                self.logger.info('Measuring fraction of 1000s.', extra=logging_tags)
+                logger.info('Measuring fraction of 1000s.', image=image, extra_tags=logging_tags)
             self.save_qc_results(qc_results, image)
         for image in images_to_remove:
             images.remove(image)

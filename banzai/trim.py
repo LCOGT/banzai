@@ -1,14 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import logging
 
-from banzai import logs
 from banzai.utils import fits_utils
 from banzai.stages import Stage
 
-import os
-
-__author__ = 'cmccully'
-
-logger = logs.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _trim_image(image):
@@ -28,10 +23,7 @@ def _trim_image(image):
 
         image.header['L1STATTR'] = (1, 'Status flag for overscan trimming')
     else:
-        logging_tags = logs.image_config_to_tags(image, None)
-        logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-        logs.add_tag(logging_tags, 'trimsec', image.header['TRIMSEC'])
-        logger.warning('TRIMSEC was not defined.', extra=logging_tags)
+        logger.warning('TRIMSEC was not defined.', image=image, extra_tags={'trimsec': image.header['TRIMSEC']})
         image.header['L1STATTR'] = (0, 'Status flag for overscan trimming')
     return image.header['NAXIS1'], image.header['NAXIS2']
 
@@ -48,10 +40,7 @@ class Trimmer(Stage):
 
         for image in images:
 
-            logging_tags = logs.image_config_to_tags(image, self.group_by_keywords)
-            logs.add_tag(logging_tags, 'filename', os.path.basename(image.filename))
-            logs.add_tag(logging_tags, 'trimsec', image.header['TRIMSEC'])
-            self.logger.info('Trimming image', extra=logging_tags)
+            logger.info('Trimming image', image=image, extra_tags={'trimsec': image.header['TRIMSEC']})
 
             nx, ny = _trim_image(image)
             image.update_shape(nx, ny)

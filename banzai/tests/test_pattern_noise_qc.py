@@ -1,9 +1,13 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-import numpy as np
-from banzai.qc import pattern_noise
-from banzai.tests.utils import FakeImage, gaussian2d
+import logging
+
 import pytest
 import mock
+import numpy as np
+
+from banzai.qc import pattern_noise
+from banzai.tests.utils import FakeImage, gaussian2d
+
+logger = logging.getLogger('banzai.qc.pattern_noise')
 
 
 @pytest.fixture(scope='module')
@@ -63,9 +67,9 @@ def test_pattern_noise_on_2d_image(set_random_seed):
     image.data = generate_data(has_pattern_noise=True)
 
     detector = pattern_noise.PatternNoiseDetector(None)
-    detector.logger.error = mock.MagicMock()
+    logger.error = mock.MagicMock()
     detector.do_stage([image])
-    assert detector.logger.error.called
+    assert logger.error.called
 
 
 def test_trim_edges():

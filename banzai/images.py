@@ -1,20 +1,19 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
 import os
+import logging
+import tempfile
+import shutil
 
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table
-import tempfile
-import shutil
 
 from banzai import dbs
 from banzai.utils import date_utils
 from banzai.utils import fits_utils
 from banzai.utils import image_utils
-from banzai import logs
 from banzai.munge import munge
 
-logger = logs.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class DataTable(object):
@@ -120,15 +119,11 @@ class Image(object):
         try:
             fits_hdu_list.verify(option='exception')
         except fits.VerifyError as fits_error:
-            logging_tags = logs.image_config_to_tags(self, None)
-            logs.add_tag(logging_tags, 'filename', os.path.basename(self.filename))
-            logger.warn('Error in FITS Verification. {0}. Attempting fix.'.format(fits_error),
-                        extra=logging_tags)
+            logger.warning('Error in FITS Verification. {0}. Attempting fix.'.format(fits_error), image=self)
             try:
                 fits_hdu_list.verify(option='silentfix+exception')
             except fits.VerifyError as fix_attempt_error:
-                logger.error('Could not repair FITS header. {0}'.format(fix_attempt_error),
-                             extra=logging_tags)
+                logger.error('Could not repair FITS header. {0}'.format(fix_attempt_error), image=self)
 
         with tempfile.TemporaryDirectory() as temp_directory:
             base_filename = os.path.basename(filename)
@@ -201,8 +196,7 @@ class Image(object):
                        Inner section of image
         """
         if self.data_is_3d():
-            logger.error("Cannot get inner section of a 3D image",
-                         extra={'tags': {'filename': self.filename}})
+            logger.error("Cannot get inner section of a 3D image", image=self)
             raise ValueError
 
         inner_nx = round(self.nx * inner_edge_width)
@@ -224,7 +218,7 @@ def read_images(image_list, pipeline_context):
                 image_utils.load_bpm(image, pipeline_context)
             images.append(image)
         except Exception as e:
-            logger.error('Error loading image: {error}'.format(error=e), extra={'tags': {'filename': filename}})
+            logger.error('Error loading image: {error}'.format(error=e), extra_tags={'filename': filename})
             continue
     return images
 
