@@ -45,7 +45,7 @@ class CalibrationMaker(Stage):
         processed_images = []
         for _, image_set in itertools.groupby(images, self.get_grouping):
             try:
-                processed_images += self.run_stage(image_set)
+                processed_images += [self.run_stage(image_set)]
             except Exception as e:
                 logger.error(e)
         return processed_images
