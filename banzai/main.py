@@ -10,8 +10,6 @@ October 2015
 import argparse
 import multiprocessing
 import os
-import sys
-import traceback
 import logging
 import copy
 
@@ -30,39 +28,12 @@ RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
                                         'help': 'Top level directory where the raw data is stored'}}
 
-
-def get_stages_todo(last_stage=None, extra_stages=None):
-    """
-
-    Parameters
-    ----------
-    last_stage: banzai.stages.Stage
-                Last stage to do
-    extra_stages: Stages to do after the last stage
-
-    Returns
-    -------
-    stages_todo: list of banzai.stages.Stage
-                 The stages that need to be done
-
-    Notes
-    -----
-    Extra stages can be other stages that are not in the ordered_stages list.
-    """
-    if extra_stages is None:
-        extra_stages = []
-
-    if last_stage is None:
-        last_index = None
-    else:
-        last_index = settings.ORDERED_STAGES.index(last_stage) + 1
-
-    stages_todo = settings.ORDERED_STAGES[:last_index] + extra_stages
-    return stages_todo
+DEFAULT_IMAGE_TYPES = ['EXPOSE', 'STANDARD']
 
 
 def parse_args(selection_criteria, extra_console_arguments=None,
                parser_description='Process LCO data.', **kwargs):
+
     """Parse arguments, including default command line argument, and set the overall log level"""
 
     parser = argparse.ArgumentParser(description=parser_description)
@@ -111,22 +82,38 @@ def parse_args(selection_criteria, extra_console_arguments=None,
     return pipeline_context
 
 
-def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
+def run(stages_to_do, pipeline_context, image_types):
     """
     Main driver script for banzai.
     """
-    images = banzai.images.read_images(image_paths, pipeline_context)
-
-    for stage in stages_to_do:
-        stage_to_run = stage(pipeline_context)
-        images = stage_to_run.run(images)
+    if not pipeline_context.image_should_be_reduced(image_types):
+        return
+    image = images.read_image(pipeline_context)
+    try:
+        for stage in stages_to_do:
+            stage_to_run = stage(pipeline_context)
+            image = stage_to_run.run(image)
+        image_utils.save_image(pipeline_context, image)
+        return image
+    except Exception as e:
+        logger.error('{0}'.format(e), extra_tags={'filename': pipeline_context.get_image_path()})
 
     output_files = image_utils.save_images(pipeline_context, images, master_calibration=calibration_maker)
     return output_files
 
 
+def run_calibration_maker(stage_to_do, pipeline_context, image_list):
+    try:
+        stage_to_run = stage_to_do(pipeline_context)
+        image_list = stage_to_run.run(image_list)
+        for image in image_list:
+            image_utils.save_image(pipeline_context, image, master_calibration=True)
+    except Exception as e:
+        logger.error('{0}'.format(e), extra_tags={'filename': pipeline_context.get_image_path()})
+
+
 def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None, log_message='',
-                      calibration_maker=False):
+                      calibration_maker_stage=None):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
@@ -134,9 +121,11 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
     image_list = image_utils.select_images(image_list, image_types,
                                            pipeline_context.allowed_instrument_criteria,
                                            db_address=pipeline_context.db_address)
-    if calibration_maker:
-        try:
+
+    if calibration_maker_stage is not None:
+       try:
             run(stages_to_do, image_list, pipeline_context, calibration_maker=True)
+            run_calibration_maker(calibration_maker_stage, pipeline_context, image_list)
         except Exception as e:
             logger.error(e, extra_tags={'raw_path': raw_path})
     else:
@@ -373,12 +362,11 @@ class PreviewModeListener(ConsumerMixin):
 
         if is_eligible_for_preview:
             try:
-                if preview.need_to_make_preview(path, self.pipeline_context.allowed_instrument_criteria,
-                                                db_address=self.pipeline_context.db_address,
-                                                max_tries=self.pipeline_context.max_tries):
+                if preview.need_to_make_preview(self.pipeline_context):
                     stages_to_do = get_preview_stages_todo(image_suffix)
 
-                    logger.info('Running preview reduction', extra_tags={'filename': os.path.basename(path)})
+                    logger.info('Running preview reduction on {}'.format(path),
+                                extra_tags={'filename': os.path.basename(path)})
 
                     # Increment the number of tries for this file
                     preview.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
