@@ -1,6 +1,6 @@
-0.9.12 (2018-10-17)
+0.9.12 (2018-10-15)
 -------------------
-- Updated the table to HDU converter to use astropy's built-in converter.
+- Created new logger class to add image-specific info to logging tags  
 
 0.9.11 (2018-10-02)
 -------------------
