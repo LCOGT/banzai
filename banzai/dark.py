@@ -66,7 +66,7 @@ class DarkMaker(CalibrationMaker):
         master_dark_image.bpm = master_bpm
 
         logger.info('Created master dark', image=master_dark_image)
-        return [master_dark_image]
+        return master_dark_image
 
 
 class DarkSubtractor(ApplyCalibration):

@@ -56,7 +56,7 @@ class BiasMaker(CalibrationMaker):
         logger.debug('Average bias level in ADU', image=master_bias_image,
                      extra_tags={'BIASLVL': float(header['BIASLVL'])})
 
-        return [master_bias_image]
+        return master_bias_image
 
 
 class BiasSubtractor(ApplyCalibration):

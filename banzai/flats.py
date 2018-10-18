@@ -68,7 +68,7 @@ class FlatMaker(CalibrationMaker):
 
         logger.info('Created master flat', image=master_flat_image)
 
-        return [master_flat_image]
+        return master_flat_image
 
 
 class FlatDivider(ApplyCalibration):
