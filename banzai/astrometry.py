@@ -96,8 +96,8 @@ def add_ra_dec_to_catalog(image):
     ras, decs = image_wcs.all_pix2world(image.data_tables['catalog']['x'], image.data_tables['catalog']['y'], 1)
     image.data_tables['catalog']['ra'] = ras
     image.data_tables['catalog']['dec'] = decs
-    image.data_tables['catalog']['ra'].unit = 'degrees'
-    image.data_tables['catalog']['dec'].unit = 'degrees'
+    image.data_tables['catalog']['ra'].unit = 'degree'
+    image.data_tables['catalog']['dec'].unit = 'degree'
     image.data_tables['catalog']['ra'].description = 'Right Ascension'
     image.data_tables['catalog']['dec'].description = 'Declination'
 
