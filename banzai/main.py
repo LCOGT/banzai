@@ -182,14 +182,8 @@ def create_master_calibrations():
     run_end_of_night_from_console([make_master_bias, make_master_dark, make_master_flat], IMAGING_CRITERIA)
 
 
-def reduce_night():
-    parser = argparse.ArgumentParser(
-        description='Reduce all the data from a site at the end of a night.')
-    parser.add_argument('--site', dest='site', help='Site code (e.g. ogg)')
-    parser.add_argument('--dayobs', dest='dayobs',
-                        default=None, help='Day-Obs to reduce (e.g. 20160201)')
-    parser.add_argument('--raw-path-root', dest='rawpath_root', default='/archive/engineering',
-                        help='Top level directory with raw data.')
+def parse_args(parser):
+    """Parse arguments, including default command line argument, and set the overall log level"""
     parser.add_argument("--processed-path", default='/archive/engineering',
                         help='Top level directory where the processed data will be stored')
 
@@ -213,13 +207,23 @@ def reduce_night():
                         help='Elasticsearch document type for QC records')
     parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
                         help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
-
     args = parser.parse_args()
 
-    args.preview_mode = False
-    args.raw_path = None
-    args.filename = None
-    args.max_preview_tries = 5
+    root_logger = logging.getLogger()
+    root_logger.setLevel(args.log_level)
+
+    return args
+
+
+def reduce_night():
+    parser = argparse.ArgumentParser(description='Reduce all the data from a site at the end of a night.')
+    parse_args(parser)
+    parser.add_argument('--site', dest='site', help='Site code (e.g. ogg)')
+    parser.add_argument('--dayobs', dest='dayobs',
+                        default=None, help='Day-Obs to reduce (e.g. 20160201)')
+    parser.add_argument('--raw-path-root', dest='rawpath_root', default='/archive/engineering',
+                        help='Top level directory with raw data.')
+    args = parse_args(parser)
 
     pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
 
@@ -241,8 +245,8 @@ def reduce_night():
 
         # For each telescope at the given site
         for telescope in telescopes:
-            pipeline_context.raw_path = os.path.join(args.rawpath_root, args.site, telescope.instrument,
-                                                     args.dayobs, 'raw')
+            raw_path = os.path.join(args.rawpath_root, args.site, telescope.instrument, args.dayobs, 'raw')
+
             # Run the reductions on the given dayobs
             try:
                 make_master_bias(pipeline_context)
@@ -263,38 +267,12 @@ def reduce_night():
 
 
 def parse_end_of_night_command_line_arguments(selection_criteria):
-    parser = argparse.ArgumentParser(
-        description='Make master calibration frames from LCOGT imaging data.')
+    parser = argparse.ArgumentParser(description='Make master calibration frames from LCO data.')
     parser.add_argument("--raw-path", dest='raw_path', default='/archive/engineering',
                         help='Top level directory where the raw data is stored')
-    parser.add_argument("--processed-path", default='/archive/engineering/',
-                        help='Top level directory where the processed data will be stored')
-    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
-                                                                 'critical', 'fatal', 'error'])
-    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
-                        default=False)
-    parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
-                        default=False)
-    parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
-                        help='Database address: Should be in SQLAlchemy form')
-    parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
-                        help='Fpack the output files?')
-    parser.add_argument('--rlevel', dest='rlevel', default=91, help='Reduction level')
     parser.add_argument('--filename', dest='filename', default=None,
                         help='Filename of the image to reduce.')
-    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
-                        default='http://elasticsearch.lco.gtn:9200')
-    parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
-                        help='ElasticSearch index to use for QC results')
-    parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
-                        help='Elasticsearch document type for QC records')
-    parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
-                        help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
-    args = parser.parse_args()
-
-    args.preview_mode = False
-    args.max_preview_tries = 5
+    args = parse_args(parser)
 
     return PipelineContext(args, selection_criteria)
 
@@ -324,21 +302,6 @@ def run(stages_to_do, pipeline_context, image_types=[], calibration_maker=False,
 def run_preview_pipeline():
     parser = argparse.ArgumentParser(
         description='Make master calibration frames from LCOGT imaging data.')
-
-    parser.add_argument("--processed-path", default='/archive/engineering',
-                        help='Top level directory where the processed data will be stored')
-    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
-                                                                 'critical', 'fatal', 'error'])
-    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
-                        default=False)
-    parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
-                        default=False)
-    parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
-                        help='Database address: Should be in SQLAlchemy form')
-    parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
-                        help='Fpack the output files?')
-    parser.add_argument('--rlevel', dest='rlevel', default=11, help='Reduction level')
     parser.add_argument('--n-processes', dest='n_processes', default=12,
                         help='Number of listener processes to spawn.', type=int)
     parser.add_argument('--broker-url', dest='broker_url',
@@ -346,21 +309,9 @@ def run_preview_pipeline():
                         help='URL for the broker service.')
     parser.add_argument('--queue-name', dest='queue_name', default='preview_pipeline',
                         help='Name of the queue to listen to from the fits exchange.')
-    parser.add_argument('--max-preview-tries', dest='max_preview_tries', default=5,
-                        help='Maximum number of tries to produce a preview image.')
-    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
-                        default='http://elasticsearch.lco.gtn:9200')
-    parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
-                        help='ElasticSearch index to use for QC results')
-    parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
-                        help='Elasticsearch document type for QC records')
-    parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
-                        help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
 
-    args = parser.parse_args()
-    args.preview_mode = True
-    args.raw_path = None
-    args.filename = None
+    args = parse_args(parser)
+
     pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
 
     try:
@@ -376,7 +327,6 @@ def run_preview_pipeline():
                                                                           args.queue_name,
                                                                           PipelineContext(args, IMAGING_CRITERIA)))
         p.start()
-
 
 
 def run_individual_listener(broker_url, queue_name, pipeline_context):
@@ -426,7 +376,7 @@ class PreviewModeListener(ConsumerMixin):
             try:
                 if preview.need_to_make_preview(path, self.pipeline_context.allowed_instrument_criteria,
                                                 db_address=self.pipeline_context.db_address,
-                                                max_tries=self.pipeline_context.max_preview_tries):
+                                                max_tries=self.pipeline_context.max_tries):
                     stages_to_do = get_preview_stages_todo(image_suffix)
 
                     logger.info('Running preview reduction on {}'.format(path),
