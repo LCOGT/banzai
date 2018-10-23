@@ -5,7 +5,8 @@ import numpy as np
 
 from banzai.utils import stats, fits_utils
 from banzai.images import Image
-from banzai.stages import CalibrationMaker, ApplyCalibration, CalibrationComparer, Stage
+from banzai.stages import Stage
+from banzai.calibrations import CalibrationMaker, ApplyCalibration, CalibrationComparer
 
 logger = logging.getLogger(__name__)
 
