@@ -21,11 +21,8 @@ from kombu.mixins import ConsumerMixin
 from banzai import settings
 from banzai.context import PipelineContext
 import banzai.images
-from banzai import bias, dark, flats, trim, photometry, astrometry, qc, logs
 from banzai import dbs
-from banzai import crosstalk, gain, mosaic, bpm
 from banzai import preview
-from banzai.qc import pointing
 from banzai.utils import image_utils, date_utils
 from banzai.context import TelescopeCriterion
 from banzai import logs
@@ -33,63 +30,16 @@ import copy
 
 logger = logging.getLogger(__name__)
 
-ORDERED_STAGES = [qc.HeaderSanity,
-                  qc.ThousandsTest,
-                  qc.SaturationTest,
-                  bias.OverscanSubtractor,
-                  crosstalk.CrosstalkCorrector,
-                  gain.GainNormalizer,
-                  mosaic.MosaicCreator,
-                  bpm.BPMUpdater,
-                  trim.Trimmer,
-                  bias.BiasSubtractor,
-                  dark.DarkSubtractor,
-                  flats.FlatDivider,
-                  qc.PatternNoiseDetector,
-                  photometry.SourceDetector,
-                  astrometry.WCSSolver,
-                  pointing.PointingTest]
 
 IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
                     TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
 
 SCHEDULABLE_CRITERIA = [TelescopeCriterion('schedulable', operator.eq, True)]
 
-PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
 
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
                                         'help': 'Top level directory where the raw data is stored'}}
-
-
-def get_stages_todo(last_stage=None, extra_stages=None):
-    """
-
-    Parameters
-    ----------
-    last_stage: banzai.stages.Stage
-                Last stage to do
-    extra_stages: Stages to do after the last stage
-
-    Returns
-    -------
-    stages_todo: list of banzai.stages.Stage
-                 The stages that need to be done
-
-    Notes
-    -----
-    Extra stages can be other stages that are not in the ordered_stages list.
-    """
-    if extra_stages is None:
-        extra_stages = []
-
-    if last_stage is None:
-        last_index = None
-    else:
-        last_index = ORDERED_STAGES.index(last_stage) + 1
-
-    stages_todo = ORDERED_STAGES[:last_index] + extra_stages
-    return stages_todo
 
 
 def parse_args(selection_criteria, extra_console_arguments=None,
@@ -100,7 +50,6 @@ def parse_args(selection_criteria, extra_console_arguments=None,
 
     parser.add_argument("--processed-path", default='/archive/engineering',
                         help='Top level directory where the processed data will be stored')
-
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
@@ -161,7 +110,7 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
                       calibration_maker=False):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
-    stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
+    stages_to_do = settings.get_stages_todo(last_stage, extra_stages=extra_stages)
     image_list = image_utils.make_image_list(raw_path)
     image_list = image_utils.select_images(image_list, image_types,
                                            pipeline_context.allowed_instrument_criteria,
@@ -206,28 +155,25 @@ def parse_directory_args(pipeline_context, raw_path, selection_criteria, extra_c
 
 def make_master_bias(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
-    process_directory(pipeline_context, raw_path, ['BIAS'], last_stage=trim.Trimmer,
-                      extra_stages=[bias.BiasMasterLevelSubtractor, bias.BiasComparer, bias.BiasMaker],
-                      log_message='Making Master BIAS', calibration_maker=True)
+    process_directory(pipeline_context, raw_path, settings.BIAS_IMAGE_TYPES, last_stage=settings.BIAS_LAST_STAGE,
+                      extra_stages=settings.BIAS_EXTRA_STAGES, log_message='Making Master Bias', calibration_maker=True)
 
 
 def make_master_dark(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
-    process_directory(pipeline_context, raw_path, ['DARK'], last_stage=bias.BiasSubtractor,
-                      extra_stages=[dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker],
-                      log_message='Making Master Dark', calibration_maker=True)
+    process_directory(pipeline_context, raw_path, settings.DARK_IMAGE_TYPES, last_stage=settings.DARK_LAST_STAGE,
+                      extra_stages=settings.DARK_EXTRA_STAGES, log_message='Making Master Dark', calibration_maker=True)
 
 
 def make_master_flat(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
-    process_directory(pipeline_context, raw_path, ['SKYFLAT'], last_stage=dark.DarkSubtractor,
-                      log_message='Making Master Flat', calibration_maker=True,
-                      extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker])
+    process_directory(pipeline_context, raw_path, settings.FLAT_IMAGE_TYPES, last_stage=settings.FLAT_LAST_STAGE,
+                      extra_stages=settings.FLAT_EXTRA_STAGES, log_message='Making Master Flat', calibration_maker=True)
 
 
 def reduce_science_frames(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
-    process_directory(pipeline_context, raw_path, ['EXPOSE', 'STANDARD'])
+    process_directory(pipeline_context, raw_path, settings.SCIENCE_IMAGE_TYPES)
 
 
 def reduce_single_science_frame():
@@ -240,19 +186,18 @@ def reduce_single_science_frame():
 
 def reduce_experimental_frames(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
-    process_directory(pipeline_context, raw_path, ['EXPERIMENTAL'])
+    process_directory(pipeline_context, raw_path, settings.EXPERIMENTAL_IMAGE_TYPES)
 
 
 def reduce_trailed_frames(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
-    process_directory(pipeline_context, raw_path, ['TRAILED'])
+    process_directory(pipeline_context, raw_path, settings.TRAILED_IMAGE_TYPES)
 
 
 def preprocess_sinistro_frames(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
-    process_directory(pipeline_context, raw_path,
-                      image_types=['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT', 'TRAILED', 'EXPERIMENTAL'],
-                      last_stage=mosaic.MosaicCreator)
+    process_directory(pipeline_context, raw_path, settings.SINISTRO_IMAGE_TYPES,
+                      last_stage=settings.SINISTRO_LAST_STAGE)
 
 
 def reduce_night():
@@ -308,21 +253,6 @@ def reduce_night():
                 reduce_science_frames(pipeline_context=pipeline_context, raw_path=raw_path)
             except Exception as e:
                 logger.error(e)
-
-
-def get_preview_stages_todo(image_suffix):
-    if image_suffix == 'b00.fits':
-        stages = get_stages_todo(last_stage=trim.Trimmer,
-                                 extra_stages=[bias.BiasMasterLevelSubtractor, bias.BiasComparer])
-    elif image_suffix == 'd00.fits':
-        stages = get_stages_todo(last_stage=bias.BiasSubtractor,
-                                 extra_stages=[dark.DarkNormalizer, dark.DarkComparer])
-    elif image_suffix == 'f00.fits':
-        stages = get_stages_todo(last_stage=dark.DarkSubtractor,
-                                 extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer])
-    else:
-        stages = get_stages_todo()
-    return stages
 
 
 def run_preview_pipeline():
@@ -395,7 +325,7 @@ class PreviewModeListener(ConsumerMixin):
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
         is_eligible_for_preview = False
-        for suffix in PREVIEW_ELIGIBLE_SUFFIXES:
+        for suffix in settings.PREVIEW_ELIGIBLE_SUFFIXES:
             if suffix in path:
                 is_eligible_for_preview = True
                 image_suffix = suffix
@@ -405,7 +335,7 @@ class PreviewModeListener(ConsumerMixin):
                 if preview.need_to_make_preview(path, self.pipeline_context.allowed_instrument_criteria,
                                                 db_address=self.pipeline_context.db_address,
                                                 max_tries=self.pipeline_context.max_tries):
-                    stages_to_do = get_preview_stages_todo(image_suffix)
+                    stages_to_do = settings.get_preview_stages_todo(image_suffix)
 
                     logger.info('Running preview reduction', extra_tags={'filename': os.path.basename(path)})
 

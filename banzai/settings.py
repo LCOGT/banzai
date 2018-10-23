@@ -19,6 +19,8 @@ root_handler.setFormatter(formatter)
 root_handler.setLevel(getattr(logging, 'DEBUG'))
 root_logger.addHandler(root_handler)
 
+# Stage and image type settings
+
 ORDERED_STAGES = [qc.HeaderSanity,
                   qc.ThousandsTest,
                   qc.SaturationTest,
@@ -38,13 +40,28 @@ ORDERED_STAGES = [qc.HeaderSanity,
 
 
 BIAS_IMAGE_TYPES = ['BIAS']
-DARK_IMAGE_TYPES = ['DARK']
-FLAT_IMAGE_TYPES = ['SKYFLAT']
-TRAILED_IMAGE_TYPES = ['TRAILED']
-EXPERIMENTAL_IMAGE_TYPES = ['EXPERIMENTAL']
-SINISTRO_IMAGE_TYPES = ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT', 'TRAILED', 'EXPERIMENTAL']
+BIAS_LAST_STAGE = trim.Trimmer
+BIAS_EXTRA_STAGES = [bias.BiasMasterLevelSubtractor, bias.BiasComparer, bias.BiasMaker]
+BIAS_EXTRA_STAGES_PREVIEW = [bias.BiasMasterLevelSubtractor, bias.BiasComparer]
 
-DEFAULT_IMAGE_TYPES = ['EXPOSE', 'STANDARD']
+DARK_IMAGE_TYPES = ['DARK']
+DARK_LAST_STAGE = bias.BiasSubtractor
+DARK_EXTRA_STAGES = [dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker]
+DARK_EXTRA_STAGES_PREVIEW = [dark.DarkNormalizer, dark.DarkComparer]
+
+FLAT_IMAGE_TYPES = ['SKYFLAT']
+FLAT_LAST_STAGE = dark.DarkSubtractor
+FLAT_EXTRA_STAGES = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker]
+FLAT_EXTRA_STAGES_PREVIEW = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer]
+
+TRAILED_IMAGE_TYPES = ['TRAILED']
+
+EXPERIMENTAL_IMAGE_TYPES = ['EXPERIMENTAL']
+
+SINISTRO_IMAGE_TYPES = ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT', 'TRAILED', 'EXPERIMENTAL']
+SINISTRO_LAST_STAGE = mosaic.MosaicCreator
+
+SCIENCE_IMAGE_TYPES = ['EXPOSE', 'STANDARD']
 
 PREVIEW_IMAGE_TYPES = ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT']
 PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
@@ -82,35 +99,14 @@ def get_stages_todo(last_stage=None, extra_stages=None):
 
 def get_preview_stages_todo(image_suffix):
     if image_suffix == 'b00.fits':
-        stages = get_stages_todo(last_stage=trim.Trimmer,
-                                 extra_stages=[bias.BiasMasterLevelSubtractor, bias.BiasComparer])
+        stages = get_stages_todo(last_stage=BIAS_LAST_STAGE,
+                                 extra_stages=BIAS_EXTRA_STAGES_PREVIEW)
     elif image_suffix == 'd00.fits':
-        stages = get_stages_todo(last_stage=bias.BiasSubtractor,
-                                 extra_stages=[dark.DarkNormalizer, dark.DarkComparer])
+        stages = get_stages_todo(last_stage=DARK_LAST_STAGE,
+                                 extra_stages=DARK_EXTRA_STAGES_PREVIEW)
     elif image_suffix == 'f00.fits':
-        stages = get_stages_todo(last_stage=dark.DarkSubtractor,
-                                 extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer])
+        stages = get_stages_todo(last_stage=FLAT_LAST_STAGE,
+                                 extra_stages=FLAT_EXTRA_STAGES_PREVIEW)
     else:
         stages = get_stages_todo()
     return stages
-
-
-def get_bias_stages_todo():
-    return get_stages_todo(trim.Trimmer, extra_stages=[bias.BiasMasterLevelSubtractor,
-                                                       bias.BiasComparer, bias.BiasMaker])
-
-
-def get_dark_stages_todo():
-    return get_stages_todo(bias.BiasSubtractor, extra_stages=[dark.DarkNormalizer, dark.DarkComparer,
-                                                              dark.DarkMaker])
-
-
-def get_flat_stages_todo():
-    return get_stages_todo(dark.DarkSubtractor, extra_stages=[flats.FlatNormalizer,
-                                                              qc.PatternNoiseDetector,
-                                                              flats.FlatComparer,
-                                                              flats.FlatMaker])
-
-
-def get_sinistro_stages_todo():
-    return get_stages_todo(mosaic.MosaicCreator)
