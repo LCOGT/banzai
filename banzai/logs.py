@@ -37,5 +37,5 @@ def _image_to_tags(image_config):
 
 
 def set_log_level(log_level='INFO'):
-    for handler in logging.getLogger().handlers:
-        handler.setLevel(log_level.upper())
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level.upper())
