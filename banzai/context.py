@@ -18,7 +18,7 @@ class PipelineContext(object):
                  log_level='INFO', preview_mode=False, max_tries=5, post_to_elasticsearch=False,
                  elasticsearch_url='http://elasticsearch.lco.gtn:9200', elasticsearch_doc_type='qc',
                  elasticsearch_qc_index = 'banzai_qc', **kwargs):
-        # TODO: preivew_mode will be removed once we start processing everything in real time.
+        # TODO: preview_mode will be removed once we start processing everything in real time.
         # TODO: no_bpm can also be removed once we are in "do our best" mode
         local_variables = locals()
         for variable in local_variables:
