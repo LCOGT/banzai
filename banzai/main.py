@@ -18,6 +18,7 @@ import operator
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 
+from banzai import settings
 from banzai.context import PipelineContext
 import banzai.images
 from banzai import bias, dark, flats, trim, photometry, astrometry, qc
@@ -27,6 +28,7 @@ from banzai import preview
 from banzai.qc import pointing
 from banzai.utils import image_utils, date_utils
 from banzai.context import TelescopeCriterion
+from banzai import logs
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +223,7 @@ def reduce_night():
     args.filename = None
     args.max_preview_tries = 5
 
+    logs.set_log_level(args.log_level)
     pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
 
     # Ping the configdb to get currently schedulable telescopes
@@ -296,6 +299,8 @@ def parse_end_of_night_command_line_arguments(selection_criteria):
     args.preview_mode = False
     args.max_preview_tries = 5
 
+    logs.set_log_level(args.log_level)
+
     return PipelineContext(args, selection_criteria)
 
 
@@ -361,6 +366,8 @@ def run_preview_pipeline():
     args.preview_mode = True
     args.raw_path = None
     args.filename = None
+
+    logs.set_log_level(args.log_level)
     pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
 
     try:
@@ -376,7 +383,6 @@ def run_preview_pipeline():
                                                                           args.queue_name,
                                                                           PipelineContext(args, IMAGING_CRITERIA)))
         p.start()
-
 
 
 def run_individual_listener(broker_url, queue_name, pipeline_context):
