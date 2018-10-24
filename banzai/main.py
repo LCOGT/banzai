@@ -368,6 +368,9 @@ def run_preview_pipeline():
     args.filename = None
 
     logs.set_log_level(args.log_level)
+    # Need to keep the amqp logger level low, or else it send heartbeat check messages every second
+    logging.getLogger('amqp').setLevel('INFO')
+
     pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
 
     try:
