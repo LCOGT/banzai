@@ -1,5 +1,3 @@
-from collections import namedtuple
-
 class TelescopeCriterion:
     def __init__(self, attribute, comparison_operator, comparison_value, exclude=False):
         self.attribute = attribute
