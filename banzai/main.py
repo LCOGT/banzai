@@ -141,8 +141,18 @@ def parse_end_of_night_command_line_arguments(selection_criteria):
 
 
 def process_directory(selection_criteria, image_types=None, last_stage=None, extra_stages=None, log_message='',
-                      calibration_maker=False):
-    pipeline_context, raw_path = parse_end_of_night_command_line_arguments(selection_criteria)
+                      calibration_maker=False, raw_path=None):
+    parser = argparse.ArgumentParser(description='Process LCO data.')
+    if raw_path is None:
+        parser.add_argument("--raw-path", dest='raw_path', default='/archive/engineering',
+                            help='Top level directory where the raw data is stored')
+    args = parse_args(parser)
+    if raw_path is None:
+        raw_path = args.raw_path
+        delattr(args, 'raw_path')
+
+    pipeline_context = PipelineContext(args, selection_criteria)
+
     if len(log_message) > 0:
         logger.info(log_message, raw_path=raw_path)
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
@@ -163,39 +173,39 @@ def process_directory(selection_criteria, image_types=None, last_stage=None, ext
                 logger.error(e, filename=image)
 
 
-def make_master_bias():
+def make_master_bias(raw_path=None):
     process_directory(IMAGING_CRITERIA, ['BIAS'], last_stage=trim.Trimmer,
                       extra_stages=[bias.BiasMasterLevelSubtractor, bias.BiasComparer, bias.BiasMaker],
-                      log_message='Making Master BIAS', calibration_maker=True)
+                      log_message='Making Master BIAS', calibration_maker=True, raw_path=raw_path)
 
 
-def make_master_dark():
+def make_master_dark(raw_path=None):
     process_directory(IMAGING_CRITERIA, ['DARK'], last_stage=bias.BiasSubtractor,
                       extra_stages=[dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker],
-                      log_message='Making Master Dark', calibration_maker=True)
+                      log_message='Making Master Dark', calibration_maker=True, raw_path=raw_path)
 
 
 def make_master_flat():
     process_directory(IMAGING_CRITERIA, ['SKYFLAT'], last_stage=dark.DarkSubtractor, log_message='Making Master Flat',
                       extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker],
-                      calibration_maker=True)
+                      calibration_maker=True, raw_path=raw_path)
 
 
-def reduce_science_frames():
-    process_directory(IMAGING_CRITERIA, ['EXPOSE', 'STANDARD'])
+def reduce_science_frames(raw_path=None):
+    process_directory(IMAGING_CRITERIA, ['EXPOSE', 'STANDARD'], raw_path=raw_path)
 
 
-def reduce_experimental_frames():
-    process_directory(IMAGING_CRITERIA, ['EXPERIMENTAL'])
+def reduce_experimental_frames(raw_path=None):
+    process_directory(IMAGING_CRITERIA, ['EXPERIMENTAL'], raw_path=raw_path)
 
 
-def reduce_trailed_frames():
-    process_directory(IMAGING_CRITERIA, ['TRAILED'])
+def reduce_trailed_frames(raw_path=None):
+    process_directory(IMAGING_CRITERIA, ['TRAILED'], raw_path=raw_path)
 
 
-def preprocess_sinistro_frames():
+def preprocess_sinistro_frames(raw_path=None):
     process_directory(IMAGING_CRITERIA, ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT', 'TRAILED', 'EXPERIMENTAL'],
-                      last_stage=mosaic.MosaicCreator)
+                      last_stage=mosaic.MosaicCreator, raw_path=raw_path)
 
 
 def reduce_night():
@@ -232,19 +242,19 @@ def reduce_night():
 
             # Run the reductions on the given dayobs
             try:
-                make_master_bias(pipeline_context)
+                make_master_bias(raw_path=raw_path)
             except Exception as e:
                 logger.error(e)
             try:
-                make_master_dark(pipeline_context)
+                make_master_dark(raw_path=raw_path)
             except Exception as e:
                 logger.error(e)
             try:
-                make_master_flat(pipeline_context)
+                make_master_flat(raw_path=raw_path)
             except Exception as e:
                 logger.error(e)
             try:
-                reduce_science_frames(pipeline_context)
+                reduce_science_frames(raw_path=raw_path)
             except Exception as e:
                 logger.error(e)
 
@@ -345,19 +355,17 @@ class PreviewModeListener(ConsumerMixin):
                     stages_to_do = get_preview_stages_todo(image_suffix)
 
                     logger.info('Running preview reduction on {}'.format(path),
-                                extra_tags={'filename': os.path.basename(path)})
-                    self.pipeline_context.filename = os.path.basename(path)
-                    self.pipeline_context.raw_path = os.path.dirname(path)
+                                filename=os.path.basename(path))
 
                     # Increment the number of tries for this file
                     preview.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
 
-                    run(stages_to_do, self.pipeline_context, image_types=['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT'])
+                    run(stages_to_do, [path], self.pipeline_context)
                     preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
             except Exception:
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 tb_msg = traceback.format_exception(exc_type, exc_value, exc_tb)
 
-                logger.error("Exception producing preview frame. {0}. {1}".format(path, tb_msg),
-                             extra_tags={'filename': os.path.basename(path)})
+                logger.error("Exception producing preview frame. {path}. {error}".format(path=path, error=tb_msg),
+                             filename=os.path.basename(path))
