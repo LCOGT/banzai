@@ -5,7 +5,7 @@ from banzai.utils import date_utils
 
 
 class BanzaiLogger(logging.getLoggerClass()):
-    def __init__(self, name, level='NOTSET'):
+    def __init__(self, name, level='DEBUG'):
         super(BanzaiLogger, self).__init__(name, level)
 
     def _log(self, level, msg, *args, **kwargs):
@@ -37,5 +37,5 @@ def _image_to_tags(image_config):
 
 
 def set_log_level(log_level='INFO'):
-    for handler in logging.getLogger().handlers:
-        handler.setLevel(log_level.upper())
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level.upper())
