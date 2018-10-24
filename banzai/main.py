@@ -18,6 +18,7 @@ import operator
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 
+from banzai import settings
 from banzai.context import PipelineContext
 import banzai.images
 from banzai import bias, dark, flats, trim, photometry, astrometry, qc, logs
@@ -27,6 +28,7 @@ from banzai import preview
 from banzai.qc import pointing
 from banzai.utils import image_utils, date_utils
 from banzai.context import TelescopeCriterion
+from banzai import logs
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +187,7 @@ def make_master_dark(raw_path=None):
                       log_message='Making Master Dark', calibration_maker=True, raw_path=raw_path)
 
 
-def make_master_flat():
+def make_master_flat(raw_path=None):
     process_directory(IMAGING_CRITERIA, ['SKYFLAT'], last_stage=dark.DarkSubtractor, log_message='Making Master Flat',
                       extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker],
                       calibration_maker=True, raw_path=raw_path)
@@ -218,6 +220,7 @@ def reduce_night():
                         help='Top level directory with raw data.')
     args = parse_args(parser)
 
+    logs.set_log_level(args.log_level)
     pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
 
     # Ping the configdb to get currently schedulable telescopes
@@ -287,7 +290,12 @@ def run_preview_pipeline():
 
     args = parse_args(parser)
 
-    pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
+    logs.set_log_level(args.log_level)
+    # Need to keep the amqp logger level at least as high as INFO,
+    # or else it send heartbeat check messages every second
+    logging.getLogger('amqp').setLevel(max(logger.level, getattr(logging, 'INFO')))
+
+    pipeline_context = PipelineContext(args, IMAGING_CRITERIA, preview_mode=True)
 
     try:
         dbs.populate_telescope_tables(db_address=pipeline_context.db_address)

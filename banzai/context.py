@@ -1,22 +1,3 @@
-import sys
-import logging
-from lcogt_logging import LCOGTFormatter
-
-from banzai import logs
-
-logging.captureWarnings(True)
-
-# Set up the root logger
-root_logger = logging.getLogger()
-root_logger.setLevel(getattr(logging, 'DEBUG'))
-root_handler = logging.StreamHandler(sys.stdout)
-
-# Add handler
-formatter = LCOGTFormatter()
-root_handler.setFormatter(formatter)
-root_logger.addHandler(root_handler)
-
-
 class TelescopeCriterion:
     def __init__(self, attribute, comparison_operator, comparison_value, exclude=False):
         self.attribute = attribute
@@ -42,12 +23,13 @@ class PipelineContext(object):
         local_variables = locals()
         for variable in local_variables:
             if variable != 'command_line_args':
-                setattr(self, variable, local_variables[variable])
+                super().setattr(self, variable, local_variables[variable])
         for keyword in vars(command_line_args):
-            setattr(self, keyword, getattr(command_line_args, keyword))
+            super().setattr(self, keyword, getattr(command_line_args, keyword))
 
     def __delattr__(self, item):
         raise TypeError('Deleting attribute is not allowed. PipelineContext is immutable')
 
     def __setattr__(self, key, value):
-        raise TypeError('Resetting attribute is not allow. PipelineContext is immutable.')
+        raise TypeError('Resetting attribute is not allowed. PipelineContext is immutable.')
+
