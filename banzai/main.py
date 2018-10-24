@@ -156,7 +156,7 @@ def process_directory(selection_criteria, image_types=None, last_stage=None, ext
     pipeline_context = PipelineContext(args, selection_criteria)
 
     if len(log_message) > 0:
-        logger.info(log_message, raw_path=raw_path)
+        logger.info(log_message, extra_tags={'raw_path': raw_path})
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
     image_list = image_utils.make_image_list(raw_path)
     image_list = image_utils.select_images(image_list, image_types,
@@ -166,13 +166,13 @@ def process_directory(selection_criteria, image_types=None, last_stage=None, ext
         try:
             run(stages_to_do, image_list, pipeline_context, calibration_maker=True)
         except Exception as e:
-            logger.error(e, raw_path=raw_path)
+            logger.error(e, extra_tags={'raw_path': raw_path})
     else:
         for image in image_list:
             try:
                 run(stages_to_do, [image], pipeline_context, calibration_maker=False)
             except Exception as e:
-                logger.error(e, filename=image)
+                logger.error(e, extra_tags={'filename': image})
 
 
 def make_master_bias(raw_path=None):
@@ -362,8 +362,7 @@ class PreviewModeListener(ConsumerMixin):
                                                 max_tries=self.pipeline_context.max_tries):
                     stages_to_do = get_preview_stages_todo(image_suffix)
 
-                    logger.info('Running preview reduction on {}'.format(path),
-                                filename=os.path.basename(path))
+                    logger.info('Running preview reduction', extra_tags={'filename': os.path.basename(path)})
 
                     # Increment the number of tries for this file
                     preview.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
@@ -375,5 +374,5 @@ class PreviewModeListener(ConsumerMixin):
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 tb_msg = traceback.format_exception(exc_type, exc_value, exc_tb)
 
-                logger.error("Exception producing preview frame. {path}. {error}".format(path=path, error=tb_msg),
-                             filename=os.path.basename(path))
+                logger.error("Exception producing preview frame. {error}".format(error=tb_msg),
+                             extra_tags={'filename': os.path.basename(path)})

@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 class TelescopeCriterion:
     def __init__(self, attribute, comparison_operator, comparison_value, exclude=False):
         self.attribute = attribute
@@ -23,13 +25,12 @@ class PipelineContext(object):
         local_variables = locals()
         for variable in local_variables:
             if variable != 'command_line_args':
-                super().setattr(self, variable, local_variables[variable])
+                super(PipelineContext, self).__setattr__(variable, local_variables[variable])
         for keyword in vars(command_line_args):
-            super().setattr(self, keyword, getattr(command_line_args, keyword))
+            super(PipelineContext, self).__setattr__(keyword, getattr(command_line_args, keyword))
 
     def __delattr__(self, item):
         raise TypeError('Deleting attribute is not allowed. PipelineContext is immutable')
 
     def __setattr__(self, key, value):
         raise TypeError('Resetting attribute is not allowed. PipelineContext is immutable.')
-
