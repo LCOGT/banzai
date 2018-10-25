@@ -172,15 +172,15 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
                 logger.error(e, extra_tags={'filename': image})
 
 
-def parse_directory_args(pipeline_context, raw_path, extra_console_args=None):
-    if extra_console_args is None:
-        extra_console_args = []
+def parse_directory_args(pipeline_context, raw_path, extra_console_arguments=None):
+    if extra_console_arguments is None:
+        extra_console_arguments = []
 
     if pipeline_context is None:
         if raw_path is None:
-            extra_console_args += [RAW_PATH_CONSOLE_ARGUMENT]
+            extra_console_arguments += [RAW_PATH_CONSOLE_ARGUMENT]
 
-        pipeline_context = parse_args(IMAGING_CRITERIA, extra_console_args=extra_console_args)
+        pipeline_context = parse_args(IMAGING_CRITERIA, extra_console_arguments=extra_console_arguments)
 
         if raw_path is None:
             raw_path = pipeline_context.raw_path
