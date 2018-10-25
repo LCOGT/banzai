@@ -231,10 +231,10 @@ def preprocess_sinistro_frames(pipeline_context=None, raw_path=None):
 
 
 def reduce_night():
-    extra_console_arguments = [{'args': '--site', 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
-                               {'args': '--dayobs', 'kwargs': {'dest': 'dayobs', 'default': None,
+    extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
+                               {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs', 'default': None,
                                                                'help': 'Day-Obs to reduce (e.g. 20160201)'}},
-                               {'args': '--raw-path-root',
+                               {'args': ['--raw-path-root'],
                                 'kwargs': {'dest': 'rawpath_root', 'default': '/archive/engineering',
                                            'help': 'Top level directory with raw data.'}}]
 
