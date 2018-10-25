@@ -56,9 +56,10 @@ IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS
 
 PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
 
-RAW_PATH_CONSOLE_ARGUMENT =  {'args': ["--raw-path"],
+RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
                                         'help': 'Top level directory where the raw data is stored'}}
+
 
 def get_stages_todo(last_stage=None, extra_stages=None):
     """
@@ -195,37 +196,38 @@ def make_master_bias(pipeline_context=None, raw_path=None):
 
 def make_master_dark(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
-    process_directory(pipeline_context, ['DARK'], last_stage=bias.BiasSubtractor,
+    process_directory(pipeline_context, raw_path, ['DARK'], last_stage=bias.BiasSubtractor,
                       extra_stages=[dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker],
-                      log_message='Making Master Dark', calibration_maker=True, raw_path=raw_path)
+                      log_message='Making Master Dark', calibration_maker=True)
 
 
 def make_master_flat(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
-    process_directory(pipeline_context, ['SKYFLAT'], last_stage=dark.DarkSubtractor, log_message='Making Master Flat',
-                      extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker],
-                      calibration_maker=True, raw_path=raw_path)
+    process_directory(pipeline_context, raw_path, ['SKYFLAT'], last_stage=dark.DarkSubtractor,
+                      log_message='Making Master Flat', calibration_maker=True,
+                      extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker])
 
 
 def reduce_science_frames(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
-    process_directory(IMAGING_CRITERIA, ['EXPOSE', 'STANDARD'], raw_path=raw_path)
+    process_directory(pipeline_context, raw_path, ['EXPOSE', 'STANDARD'])
 
 
 def reduce_experimental_frames(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
-    process_directory(IMAGING_CRITERIA, ['EXPERIMENTAL'], raw_path=raw_path)
+    process_directory(pipeline_context, raw_path, ['EXPERIMENTAL'])
 
 
 def reduce_trailed_frames(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
-    process_directory(IMAGING_CRITERIA, ['TRAILED'], raw_path=raw_path)
+    process_directory(pipeline_context, raw_path, ['TRAILED'])
 
 
 def preprocess_sinistro_frames(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
-    process_directory(IMAGING_CRITERIA, ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT', 'TRAILED', 'EXPERIMENTAL'],
-                      last_stage=mosaic.MosaicCreator, raw_path=raw_path)
+    process_directory(pipeline_context, raw_path,
+                      ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT', 'TRAILED', 'EXPERIMENTAL'],
+                      last_stage=mosaic.MosaicCreator)
 
 
 def reduce_night():
