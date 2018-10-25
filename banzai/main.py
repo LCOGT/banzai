@@ -29,6 +29,7 @@ from banzai.qc import pointing
 from banzai.utils import image_utils, date_utils
 from banzai.context import TelescopeCriterion
 from banzai import logs
+import copy
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,9 @@ IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS
 
 PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
 
+RAW_PATH_CONSOLE_ARGUMENT =  {'args': ["--raw-path"],
+                             'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
+                                        'help': 'Top level directory where the raw data is stored'}}
 
 def get_stages_todo(last_stage=None, extra_stages=None):
     """
@@ -86,8 +90,11 @@ def get_stages_todo(last_stage=None, extra_stages=None):
     return stages_todo
 
 
-def parse_args(parser, extra_console_arguments=None):
+def parse_args(selection_criteria, extra_console_arguments=None,
+               parser_description='Process LCO data.', **kwargs):
     """Parse arguments, including default command line argument, and set the overall log level"""
+
+    parser = argparse.ArgumentParser(description=parser_description)
 
     parser.add_argument("--processed-path", default='/archive/engineering',
                         help='Top level directory where the processed data will be stored')
@@ -114,7 +121,7 @@ def parse_args(parser, extra_console_arguments=None):
                         help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
 
     if extra_console_arguments is None:
-        extra_console_arguments = {}
+        extra_console_arguments = []
 
     for argument in extra_console_arguments:
         parser.add_argument(*argument['args'], **argument['kwargs'])
@@ -123,7 +130,9 @@ def parse_args(parser, extra_console_arguments=None):
 
     logs.set_log_level(args.log_level)
 
-    return args
+    pipeline_context = PipelineContext(args, selection_criteria, **kwargs)
+
+    return pipeline_context
 
 
 def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
@@ -140,21 +149,8 @@ def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
     return output_files
 
 
-def process_directory(selection_criteria, image_types=None, last_stage=None, extra_stages=None, log_message='',
-                      calibration_maker=False, raw_path=None, extra_console_arguments=None):
-
-    parser = argparse.ArgumentParser(description='Process LCO data.')
-    if raw_path is None:
-        parser.add_argument("--raw-path", dest='raw_path', default='/archive/engineering',
-                            help='Top level directory where the raw data is stored')
-
-    args = parse_args(parser, extra_console_arguments=extra_console_arguments)
-    if raw_path is None:
-        raw_path = args.raw_path
-        delattr(args, 'raw_path')
-
-    pipeline_context = PipelineContext(args, selection_criteria)
-
+def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None, log_message='',
+                      calibration_maker=False):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
@@ -175,53 +171,73 @@ def process_directory(selection_criteria, image_types=None, last_stage=None, ext
                 logger.error(e, extra_tags={'filename': image})
 
 
-def make_master_bias(raw_path=None):
-    process_directory(IMAGING_CRITERIA, ['BIAS'], last_stage=trim.Trimmer,
+def parse_directory_args(pipeline_context, raw_path, extra_console_args=None):
+    if extra_console_args is None:
+        extra_console_args = []
+
+    if pipeline_context is None:
+        if raw_path is None:
+            extra_console_args += [RAW_PATH_CONSOLE_ARGUMENT]
+
+        pipeline_context = parse_args(IMAGING_CRITERIA, extra_console_args=extra_console_args)
+
+        if raw_path is None:
+            raw_path = pipeline_context.raw_path
+        return pipeline_context, raw_path
+
+
+def make_master_bias(pipeline_context=None, raw_path=None):
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
+    process_directory(pipeline_context, raw_path, ['BIAS'], last_stage=trim.Trimmer,
                       extra_stages=[bias.BiasMasterLevelSubtractor, bias.BiasComparer, bias.BiasMaker],
-                      log_message='Making Master BIAS', calibration_maker=True, raw_path=raw_path)
+                      log_message='Making Master BIAS', calibration_maker=True)
 
 
-def make_master_dark(raw_path=None):
-    process_directory(IMAGING_CRITERIA, ['DARK'], last_stage=bias.BiasSubtractor,
+def make_master_dark(pipeline_context=None, raw_path=None):
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
+    process_directory(pipeline_context, ['DARK'], last_stage=bias.BiasSubtractor,
                       extra_stages=[dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker],
                       log_message='Making Master Dark', calibration_maker=True, raw_path=raw_path)
 
 
-def make_master_flat(raw_path=None):
-    process_directory(IMAGING_CRITERIA, ['SKYFLAT'], last_stage=dark.DarkSubtractor, log_message='Making Master Flat',
+def make_master_flat(pipeline_context=None, raw_path=None):
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
+    process_directory(pipeline_context, ['SKYFLAT'], last_stage=dark.DarkSubtractor, log_message='Making Master Flat',
                       extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker],
                       calibration_maker=True, raw_path=raw_path)
 
 
-def reduce_science_frames(raw_path=None):
+def reduce_science_frames(pipeline_context=None, raw_path=None):
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
     process_directory(IMAGING_CRITERIA, ['EXPOSE', 'STANDARD'], raw_path=raw_path)
 
 
-def reduce_experimental_frames(raw_path=None):
+def reduce_experimental_frames(pipeline_context=None, raw_path=None):
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
     process_directory(IMAGING_CRITERIA, ['EXPERIMENTAL'], raw_path=raw_path)
 
 
-def reduce_trailed_frames(raw_path=None):
+def reduce_trailed_frames(pipeline_context=None, raw_path=None):
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
     process_directory(IMAGING_CRITERIA, ['TRAILED'], raw_path=raw_path)
 
 
-def preprocess_sinistro_frames(raw_path=None):
+def preprocess_sinistro_frames(pipeline_context=None, raw_path=None):
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
     process_directory(IMAGING_CRITERIA, ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT', 'TRAILED', 'EXPERIMENTAL'],
                       last_stage=mosaic.MosaicCreator, raw_path=raw_path)
 
 
 def reduce_night():
-    parser = argparse.ArgumentParser(description='Reduce all the data from a site at the end of a night.')
-    parse_args(parser)
-    parser.add_argument('--site', dest='site', help='Site code (e.g. ogg)')
-    parser.add_argument('--dayobs', dest='dayobs',
-                        default=None, help='Day-Obs to reduce (e.g. 20160201)')
-    parser.add_argument('--raw-path-root', dest='rawpath_root', default='/archive/engineering',
-                        help='Top level directory with raw data.')
-    args = parse_args(parser)
+    extra_console_arguments = [{'args': '--site', 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
+                               {'args': '--dayobs', 'kwargs': {'dest': 'dayobs', 'default': None,
+                                                               'help': 'Day-Obs to reduce (e.g. 20160201)'}},
+                               {'args': '--raw-path-root',
+                                'kwargs': {'dest': 'rawpath_root', 'default': '/archive/engineering',
+                                           'help': 'Top level directory with raw data.'}}]
 
-    logs.set_log_level(args.log_level)
-    pipeline_context = PipelineContext(args, IMAGING_CRITERIA)
+    pipeline_context = parse_args(IMAGING_CRITERIA, extra_console_arguments=extra_console_arguments,
+                                  parser_description='Reduce all the data from a site at the end of a night.')
 
     # Ping the configdb to get currently schedulable telescopes
     try:
@@ -230,34 +246,35 @@ def reduce_night():
         logger.error('Could not connect to the configdb.')
         logger.error(e)
 
-    timezone = dbs.get_timezone(args.site, db_address=args.db_address)
+    timezone = dbs.get_timezone(pipeline_context.site, db_address=pipeline_context.db_address)
 
-    telescopes = dbs.get_schedulable_telescopes(args.site, db_address=args.db_address)
+    telescopes = dbs.get_schedulable_telescopes(pipeline_context.site, db_address=pipeline_context.db_address)
 
     if timezone is not None:
         # If no dayobs is given, calculate it.
-        if args.dayobs is None:
-            args.dayobs = date_utils.get_dayobs(timezone=timezone)
+        if pipeline_context.dayobs is None:
+            pipeline_context.dayobs = date_utils.get_dayobs(timezone=timezone)
 
         # For each telescope at the given site
         for telescope in telescopes:
-            raw_path = os.path.join(args.rawpath_root, args.site, telescope.instrument, args.dayobs, 'raw')
+            raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
+                                    telescope.instrument, pipeline_context.dayobs, 'raw')
 
             # Run the reductions on the given dayobs
             try:
-                make_master_bias(raw_path=raw_path)
+                make_master_bias(pipeline_context=pipeline_context, raw_path=raw_path)
             except Exception as e:
                 logger.error(e)
             try:
-                make_master_dark(raw_path=raw_path)
+                make_master_dark(pipeline_context=pipeline_context, raw_path=raw_path)
             except Exception as e:
                 logger.error(e)
             try:
-                make_master_flat(raw_path=raw_path)
+                make_master_flat(pipeline_context=pipeline_context, raw_path=raw_path)
             except Exception as e:
                 logger.error(e)
             try:
-                reduce_science_frames(raw_path=raw_path)
+                reduce_science_frames(pipeline_context=pipeline_context, raw_path=raw_path)
             except Exception as e:
                 logger.error(e)
 
@@ -278,24 +295,21 @@ def get_preview_stages_todo(image_suffix):
 
 
 def run_preview_pipeline():
-    parser = argparse.ArgumentParser(
-        description='Make master calibration frames from LCOGT imaging data.')
-    parser.add_argument('--n-processes', dest='n_processes', default=12,
-                        help='Number of listener processes to spawn.', type=int)
-    parser.add_argument('--broker-url', dest='broker_url',
-                        default='amqp://guest:guest@rabbitmq.lco.gtn:5672/',
-                        help='URL for the broker service.')
-    parser.add_argument('--queue-name', dest='queue_name', default='preview_pipeline',
-                        help='Name of the queue to listen to from the fits exchange.')
+    extra_console_arguments = [{'args': '--n-processes',
+                                'kwargs': {'dest': 'n_processes', 'default': 12,
+                                           'help': 'Number of listener processes to spawn.', 'type': int}},
+                               {'args': '--broker-url',
+                                'kwargs': {'dest': 'broker_url', 'default': 'amqp://guest:guest@rabbitmq.lco.gtn:5672/',
+                                           'help': 'URL for the broker service.'}},
+                               {'args': '--queue-name',
+                                'kwargs': {'dest': 'queue_name', 'default': 'preview_pipeline',
+                                           'help': 'Name of the queue to listen to from the fits exchange.'}}]
+    pipeline_context = parse_args(IMAGING_CRITERIA, parser_description='Reduce LCO imaging data in real time.',
+                                  extra_console_arguments=extra_console_arguments)
 
-    args = parse_args(parser)
-
-    logs.set_log_level(args.log_level)
     # Need to keep the amqp logger level at least as high as INFO,
     # or else it send heartbeat check messages every second
     logging.getLogger('amqp').setLevel(max(logger.level, getattr(logging, 'INFO')))
-
-    pipeline_context = PipelineContext(args, IMAGING_CRITERIA, preview_mode=True)
 
     try:
         dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
@@ -305,10 +319,10 @@ def run_preview_pipeline():
 
     logger.info('Starting pipeline preview mode listener')
 
-    for i in range(args.n_processes):
-        p = multiprocessing.Process(target=run_individual_listener, args=(args.broker_url,
-                                                                          args.queue_name,
-                                                                          PipelineContext(args, IMAGING_CRITERIA)))
+    for i in range(pipeline_context.n_processes):
+        p = multiprocessing.Process(target=run_individual_listener, args=(pipeline_context.broker_url,
+                                                                          pipeline_context.queue_name,
+                                                                          copy.deepcopy(pipeline_context)))
         p.start()
 
 
