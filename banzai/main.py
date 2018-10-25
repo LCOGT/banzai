@@ -132,18 +132,8 @@ def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
     return output_files
 
 
-def parse_end_of_night_command_line_arguments(selection_criteria):
-    parser = argparse.ArgumentParser(description='Process LCO data.')
-    parser.add_argument("--raw-path", dest='raw_path', default='/archive/engineering',
-                        help='Top level directory where the raw data is stored')
-    args = parse_args(parser)
-    raw_path = args.raw_path
-    delattr(args, 'raw_path')
-    return PipelineContext(args, selection_criteria), raw_path
-
-
 def process_directory(selection_criteria, image_types=None, last_stage=None, extra_stages=None, log_message='',
-                      calibration_maker=False, raw_path=None):
+                      calibration_maker=False, raw_path=None, **kwargs):
     parser = argparse.ArgumentParser(description='Process LCO data.')
     if raw_path is None:
         parser.add_argument("--raw-path", dest='raw_path', default='/archive/engineering',
@@ -153,7 +143,7 @@ def process_directory(selection_criteria, image_types=None, last_stage=None, ext
         raw_path = args.raw_path
         delattr(args, 'raw_path')
 
-    pipeline_context = PipelineContext(args, selection_criteria)
+    pipeline_context = PipelineContext(args, selection_criteria, **kwargs)
 
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})

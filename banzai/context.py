@@ -17,13 +17,18 @@ class PipelineContext(object):
                  post_to_archive=False, fpack=True, rlevel=91, db_address='mysql://cmccully:password@localhost/test',
                  log_level='INFO', preview_mode=False, max_tries=5, post_to_elasticsearch=False,
                  elasticsearch_url='http://elasticsearch.lco.gtn:9200', elasticsearch_doc_type='qc',
-                 elasticsearch_qc_index = 'banzai_qc', **kwargs):
+                 elasticsearch_qc_index='banzai_qc', **kwargs):
         # TODO: preview_mode will be removed once we start processing everything in real time.
         # TODO: no_bpm can also be removed once we are in "do our best" mode
         local_variables = locals()
         for variable in local_variables:
-            if variable != 'command_line_args':
+            if variable == 'kwargs':
+                kwarg_variables = local_variables[variable]
+                for kwarg in kwarg_variables:
+                    super(PipelineContext, self).__setattr__(kwarg, kwarg_variables[kwarg])
+            elif variable != 'command_line_args':
                 super(PipelineContext, self).__setattr__(variable, local_variables[variable])
+
         for keyword in vars(command_line_args):
             super(PipelineContext, self).__setattr__(keyword, getattr(command_line_args, keyword))
 
