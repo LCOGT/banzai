@@ -172,7 +172,7 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
                 logger.error(e, extra_tags={'filename': image})
 
 
-def parse_directory_args(pipeline_context, raw_path, extra_console_arguments=None):
+def parse_directory_args(pipeline_context, raw_path, selection_criteria, extra_console_arguments=None):
     if extra_console_arguments is None:
         extra_console_arguments = []
 
@@ -180,7 +180,7 @@ def parse_directory_args(pipeline_context, raw_path, extra_console_arguments=Non
         if raw_path is None:
             extra_console_arguments += [RAW_PATH_CONSOLE_ARGUMENT]
 
-        pipeline_context = parse_args(IMAGING_CRITERIA, extra_console_arguments=extra_console_arguments)
+        pipeline_context = parse_args(selection_criteria, extra_console_arguments=extra_console_arguments)
 
         if raw_path is None:
             raw_path = pipeline_context.raw_path
@@ -188,45 +188,45 @@ def parse_directory_args(pipeline_context, raw_path, extra_console_arguments=Non
 
 
 def make_master_bias(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
     process_directory(pipeline_context, raw_path, ['BIAS'], last_stage=trim.Trimmer,
                       extra_stages=[bias.BiasMasterLevelSubtractor, bias.BiasComparer, bias.BiasMaker],
                       log_message='Making Master BIAS', calibration_maker=True)
 
 
 def make_master_dark(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
     process_directory(pipeline_context, raw_path, ['DARK'], last_stage=bias.BiasSubtractor,
                       extra_stages=[dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker],
                       log_message='Making Master Dark', calibration_maker=True)
 
 
 def make_master_flat(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
     process_directory(pipeline_context, raw_path, ['SKYFLAT'], last_stage=dark.DarkSubtractor,
                       log_message='Making Master Flat', calibration_maker=True,
                       extra_stages=[flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker])
 
 
 def reduce_science_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
     process_directory(pipeline_context, raw_path, ['EXPOSE', 'STANDARD'])
 
 
 def reduce_experimental_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
     process_directory(pipeline_context, raw_path, ['EXPERIMENTAL'])
 
 
 def reduce_trailed_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
     process_directory(pipeline_context, raw_path, ['TRAILED'])
 
 
 def preprocess_sinistro_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
     process_directory(pipeline_context, raw_path,
-                      ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT', 'TRAILED', 'EXPERIMENTAL'],
+                      image_types=['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT', 'TRAILED', 'EXPERIMENTAL'],
                       last_stage=mosaic.MosaicCreator)
 
 
@@ -297,13 +297,13 @@ def get_preview_stages_todo(image_suffix):
 
 
 def run_preview_pipeline():
-    extra_console_arguments = [{'args': '--n-processes',
+    extra_console_arguments = [{'args': ['--n-processes'],
                                 'kwargs': {'dest': 'n_processes', 'default': 12,
                                            'help': 'Number of listener processes to spawn.', 'type': int}},
-                               {'args': '--broker-url',
+                               {'args': ['--broker-url'],
                                 'kwargs': {'dest': 'broker_url', 'default': 'amqp://guest:guest@rabbitmq.lco.gtn:5672/',
                                            'help': 'URL for the broker service.'}},
-                               {'args': '--queue-name',
+                               {'args': ['--queue-name'],
                                 'kwargs': {'dest': 'queue_name', 'default': 'preview_pipeline',
                                            'help': 'Name of the queue to listen to from the fits exchange.'}}]
     pipeline_context = parse_args(IMAGING_CRITERIA, parser_description='Reduce LCO imaging data in real time.',
