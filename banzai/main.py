@@ -86,8 +86,9 @@ def get_stages_todo(last_stage=None, extra_stages=None):
     return stages_todo
 
 
-def parse_args(parser):
+def parse_args(parser, extra_console_arguments=None):
     """Parse arguments, including default command line argument, and set the overall log level"""
+
     parser.add_argument("--processed-path", default='/archive/engineering',
                         help='Top level directory where the processed data will be stored')
 
@@ -111,6 +112,13 @@ def parse_args(parser):
                         help='Elasticsearch document type for QC records')
     parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
                         help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
+
+    if extra_console_arguments is None:
+        extra_console_arguments = {}
+
+    for argument in extra_console_arguments:
+        parser.add_argument(*argument['args'], **argument['kwargs'])
+
     args = parser.parse_args()
 
     logs.set_log_level(args.log_level)
@@ -133,17 +141,19 @@ def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
 
 
 def process_directory(selection_criteria, image_types=None, last_stage=None, extra_stages=None, log_message='',
-                      calibration_maker=False, raw_path=None, **kwargs):
+                      calibration_maker=False, raw_path=None, extra_console_arguments=None):
+
     parser = argparse.ArgumentParser(description='Process LCO data.')
     if raw_path is None:
         parser.add_argument("--raw-path", dest='raw_path', default='/archive/engineering',
                             help='Top level directory where the raw data is stored')
-    args = parse_args(parser)
+
+    args = parse_args(parser, extra_console_arguments=extra_console_arguments)
     if raw_path is None:
         raw_path = args.raw_path
         delattr(args, 'raw_path')
 
-    pipeline_context = PipelineContext(args, selection_criteria, **kwargs)
+    pipeline_context = PipelineContext(args, selection_criteria)
 
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
