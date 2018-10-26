@@ -184,7 +184,7 @@ def parse_directory_args(pipeline_context, raw_path, selection_criteria, extra_c
 
         if raw_path is None:
             raw_path = pipeline_context.raw_path
-        return pipeline_context, raw_path
+    return pipeline_context, raw_path
 
 
 def make_master_bias(pipeline_context=None, raw_path=None):
