@@ -51,14 +51,11 @@ def select_images(image_list, image_types, instrument_criteria, db_address=dbs._
     return images
 
 
-def make_image_list(pipeline_context):
-
-    search_path = os.path.join(pipeline_context.raw_path)
-
-    if pipeline_context.filename is None:
+def make_image_list(raw_path):
+    if os.path.isdir(raw_path):
         # return the list of file and a dummy image configuration
-        fits_files = glob(search_path + '/*.fits')
-        fz_files = glob(search_path + '/*.fits.fz')
+        fits_files = glob(os.path.join(raw_path, '*.fits'))
+        fz_files = glob(os.path.join(raw_path, '*.fits.fz'))
 
         fz_files_to_remove = []
         for i, f in enumerate(fz_files):
@@ -70,7 +67,7 @@ def make_image_list(pipeline_context):
         image_list = fits_files + fz_files
 
     else:
-        image_list = glob(os.path.join(pipeline_context.raw_path, pipeline_context.filename))
+        image_list = glob(raw_path)
     return image_list
 
 

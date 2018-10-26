@@ -1,3 +1,10 @@
+0.10.0 (2018-10-25)
+-------------------
+- Refactored how the pipeline context object works:
+    - The pipeline context object is now immutable
+    - The pipeline context object now has sensible defaults for the standard parameters.
+    - Future parameters can be added to the pipeline context without requiring banzai core to edited.
+
 0.9.12 (2018-10-15)
 -------------------
 - Created new logger class to add image-specific info to logging tags  
