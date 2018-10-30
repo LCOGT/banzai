@@ -1,3 +1,7 @@
+0.11.0 (2018-10-30)
+-------------------
+- Added command-line option to ignore telescope schedulability requirement  
+
 0.10.0 (2018-10-25)
 -------------------
 - Refactored how the pipeline context object works:
