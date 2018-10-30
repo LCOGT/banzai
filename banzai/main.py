@@ -136,7 +136,7 @@ def parse_args(selection_criteria, extra_console_arguments=None,
 
     if getattr(args, 'telescope_schedulable_not_required', False):
         selection_criteria = [selection_criterion for selection_criterion in selection_criteria
-                              if selection_criterion != TelescopeCriterion('schedulable', operator.eq, True)]
+                              if not selection_criterion.__eq__(TelescopeCriterion('schedulable', operator.eq, True))]
 
     pipeline_context = PipelineContext(args, selection_criteria, **kwargs)
 
