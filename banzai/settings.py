@@ -1,8 +1,10 @@
 import sys
 import logging
+import operator
 
 from lcogt_logging import LCOGTFormatter
 
+from banzai.context import TelescopeCriterion
 from banzai import bias, dark, flats, trim, photometry, astrometry, qc, crosstalk, gain, mosaic, bpm
 
 
@@ -20,6 +22,11 @@ root_handler.setLevel(getattr(logging, 'DEBUG'))
 root_logger.addHandler(root_handler)
 
 # Stage and image type settings
+
+IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
+                    TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
+
+SCHEDULABLE_CRITERIA = [TelescopeCriterion('schedulable', operator.eq, True)]
 
 ORDERED_STAGES = [qc.HeaderSanity,
                   qc.ThousandsTest,
@@ -65,18 +72,3 @@ SCIENCE_IMAGE_TYPES = ['EXPOSE', 'STANDARD']
 
 PREVIEW_IMAGE_TYPES = ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT']
 PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
-
-
-def get_preview_stages_todo(image_suffix):
-    if image_suffix == 'b00.fits':
-        stages = get_stages_todo(last_stage=settings.BIAS_LAST_STAGE,
-                                 extra_stages=settings.BIAS_EXTRA_STAGES_PREVIEW)
-    elif image_suffix == 'd00.fits':
-        stages = get_stages_todo(last_stage=settings.DARK_LAST_STAGE,
-                                 extra_stages=settings.DARK_EXTRA_STAGES_PREVIEW)
-    elif image_suffix == 'f00.fits':
-        stages = get_stages_todo(last_stage=settings.FLAT_LAST_STAGE,
-                                 extra_stages=settings.FLAT_EXTRA_STAGES_PREVIEW)
-    else:
-        stages = get_stages_todo()
-    return stages
