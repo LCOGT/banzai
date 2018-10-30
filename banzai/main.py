@@ -41,6 +41,36 @@ RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                                         'help': 'Top level directory where the raw data is stored'}}
 
 
+def get_stages_todo(last_stage=None, extra_stages=None):
+    """
+
+    Parameters
+    ----------
+    last_stage: banzai.stages.Stage
+                Last stage to do
+    extra_stages: Stages to do after the last stage
+
+    Returns
+    -------
+    stages_todo: list of banzai.stages.Stage
+                 The stages that need to be done
+
+    Notes
+    -----
+    Extra stages can be other stages that are not in the ordered_stages list.
+    """
+    if extra_stages is None:
+        extra_stages = []
+
+    if last_stage is None:
+        last_index = None
+    else:
+        last_index = settings.ORDERED_STAGES.index(last_stage) + 1
+
+    stages_todo = settings.ORDERED_STAGES[:last_index] + extra_stages
+    return stages_todo
+
+
 def parse_args(selection_criteria, extra_console_arguments=None,
                parser_description='Process LCO data.', **kwargs):
     """Parse arguments, including default command line argument, and set the overall log level"""
@@ -252,6 +282,21 @@ def reduce_night():
                 reduce_science_frames(pipeline_context=pipeline_context, raw_path=raw_path)
             except Exception as e:
                 logger.error(e)
+
+
+def get_preview_stages_todo(image_suffix):
+    if image_suffix == 'b00.fits':
+        stages = get_stages_todo(last_stage=settings.BIAS_LAST_STAGE,
+                                 extra_stages=settings.BIAS_EXTRA_STAGES_PREVIEW)
+    elif image_suffix == 'd00.fits':
+        stages = get_stages_todo(last_stage=settings.DARK_LAST_STAGE,
+                                 extra_stages=settings.DARK_EXTRA_STAGES_PREVIEW)
+    elif image_suffix == 'f00.fits':
+        stages = get_stages_todo(last_stage=settings.FLAT_LAST_STAGE,
+                                 extra_stages=settings.FLAT_EXTRA_STAGES_PREVIEW)
+    else:
+        stages = get_stages_todo()
+    return stages
 
 
 def run_preview_pipeline():

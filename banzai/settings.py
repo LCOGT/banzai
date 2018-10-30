@@ -67,46 +67,16 @@ PREVIEW_IMAGE_TYPES = ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT']
 PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
 
 
-def get_stages_todo(last_stage=None, extra_stages=None):
-    """
-
-    Parameters
-    ----------
-    last_stage: banzai.stages.Stage
-                Last stage to do
-    extra_stages: Stages to do after the last stage
-
-    Returns
-    -------
-    stages_todo: list of banzai.stages.Stage
-                 The stages that need to be done
-
-    Notes
-    -----
-    Extra stages can be other stages that are not in the ordered_stages list.
-    """
-    if extra_stages is None:
-        extra_stages = []
-
-    if last_stage is None:
-        last_index = None
-    else:
-        last_index = ORDERED_STAGES.index(last_stage) + 1
-
-    stages_todo = ORDERED_STAGES[:last_index] + extra_stages
-    return stages_todo
-
-
 def get_preview_stages_todo(image_suffix):
     if image_suffix == 'b00.fits':
-        stages = get_stages_todo(last_stage=BIAS_LAST_STAGE,
-                                 extra_stages=BIAS_EXTRA_STAGES_PREVIEW)
+        stages = get_stages_todo(last_stage=settings.BIAS_LAST_STAGE,
+                                 extra_stages=settings.BIAS_EXTRA_STAGES_PREVIEW)
     elif image_suffix == 'd00.fits':
-        stages = get_stages_todo(last_stage=DARK_LAST_STAGE,
-                                 extra_stages=DARK_EXTRA_STAGES_PREVIEW)
+        stages = get_stages_todo(last_stage=settings.DARK_LAST_STAGE,
+                                 extra_stages=settings.DARK_EXTRA_STAGES_PREVIEW)
     elif image_suffix == 'f00.fits':
-        stages = get_stages_todo(last_stage=FLAT_LAST_STAGE,
-                                 extra_stages=FLAT_EXTRA_STAGES_PREVIEW)
+        stages = get_stages_todo(last_stage=settings.FLAT_LAST_STAGE,
+                                 extra_stages=settings.FLAT_EXTRA_STAGES_PREVIEW)
     else:
         stages = get_stages_todo()
     return stages
