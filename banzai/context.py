@@ -11,6 +11,9 @@ class TelescopeCriterion:
             test = not test
         return test
 
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
 
 class PipelineContext(object):
     def __init__(self, command_line_args, allowed_instrument_criteria, processed_path='/archive/engineering/',
