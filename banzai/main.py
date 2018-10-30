@@ -120,9 +120,9 @@ def parse_args(selection_criteria, extra_console_arguments=None,
                         help='Elasticsearch document type for QC records')
     parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
                         help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
-    parser.add_argument('--telescope-schedulable-not-required', dest='telescope_schedulable_not_required',
+    parser.add_argument('--ignore-schedulability', dest='ignore_schedulability',
                         default=False, action='store_true',
-                        help='Relax requirement that telescope is schedulable')
+                        help='Relax requirement that the telescope be schedulable')
 
     if extra_console_arguments is None:
         extra_console_arguments = []
@@ -134,7 +134,7 @@ def parse_args(selection_criteria, extra_console_arguments=None,
 
     logs.set_log_level(args.log_level)
 
-    if getattr(args, 'telescope_schedulable_not_required', False):
+    if args.ignore_schedulability:
         selection_criteria = [selection_criterion for selection_criterion in selection_criteria
                               if not selection_criterion.__eq__(TelescopeCriterion('schedulable', operator.eq, True))]
 
