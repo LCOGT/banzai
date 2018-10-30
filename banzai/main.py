@@ -120,6 +120,9 @@ def parse_args(selection_criteria, extra_console_arguments=None,
                         help='Elasticsearch document type for QC records')
     parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
                         help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
+    parser.add_argument('--telescope-schedulable-not-required', dest='telescope_schedulable_not_required',
+                        default=False, action='store_true',
+                        help='Relax requirement that telescope is schedulable')
 
     if extra_console_arguments is None:
         extra_console_arguments = []
@@ -130,6 +133,10 @@ def parse_args(selection_criteria, extra_console_arguments=None,
     args = parser.parse_args()
 
     logs.set_log_level(args.log_level)
+
+    if getattr(args, 'telescope_schedulable_not_required', False):
+        selection_criteria = [selection_criterion for selection_criterion in selection_criteria
+                              if selection_criterion != TelescopeCriterion('schedulable', operator.eq, True)]
 
     pipeline_context = PipelineContext(args, selection_criteria, **kwargs)
 
@@ -241,7 +248,7 @@ def reduce_night():
     pipeline_context = parse_args(IMAGING_CRITERIA, extra_console_arguments=extra_console_arguments,
                                   parser_description='Reduce all the data from a site at the end of a night.')
 
-    # Ping the configdb to get currently schedulable telescopes
+    # Ping the configdb to get telescopes
     try:
         dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
     except Exception as e:
@@ -250,7 +257,9 @@ def reduce_night():
 
     timezone = dbs.get_timezone(pipeline_context.site, db_address=pipeline_context.db_address)
 
-    telescopes = dbs.get_schedulable_telescopes(pipeline_context.site, db_address=pipeline_context.db_address)
+    telescopes = dbs.get_telescopes_at_site(pipeline_context.site,
+                                            db_address=pipeline_context.db_address,
+                                            must_be_schedulable=pipeline_context.telescopes_must_be_schedulable)
 
     if timezone is not None:
         # If no dayobs is given, calculate it.
