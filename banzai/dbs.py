@@ -32,6 +32,7 @@ Base = declarative_base()
 
 logger = logging.getLogger(__name__)
 
+
 def get_session(db_address=_DEFAULT_DB):
     """
     Get a connection to the database.
@@ -378,9 +379,11 @@ def get_timezone(site, db_address=_DEFAULT_DB):
     return timezone
 
 
-def get_schedulable_telescopes(site, db_address=_DEFAULT_DB):
+def get_telescopes_at_site(site, db_address=_DEFAULT_DB, must_be_schedulable=True):
     db_session = get_session(db_address=db_address)
-    query = (Telescope.site == site) & Telescope.schedulable
+    query = (Telescope.site == site)
+    if must_be_schedulable:
+        query &= Telescope.schedulable
     telescopes = db_session.query(Telescope).filter(query).all()
     db_session.close()
     return telescopes
