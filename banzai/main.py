@@ -36,7 +36,6 @@ IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS
 
 SCHEDULABLE_CRITERIA = [TelescopeCriterion('schedulable', operator.eq, True)]
 
-
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
                                         'help': 'Top level directory where the raw data is stored'}}
