@@ -1,3 +1,7 @@
+0.11.1 (2018-10-31)
+-------------------
+- Fixed bug where preview mode was not set to true when running preview pipeline
+
 0.11.0 (2018-10-30)
 -------------------
 - Added command-line option to ignore telescope schedulability requirement  
