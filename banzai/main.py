@@ -259,7 +259,7 @@ def reduce_night():
 
     telescopes = dbs.get_telescopes_at_site(pipeline_context.site,
                                             db_address=pipeline_context.db_address,
-                                            must_be_schedulable=pipeline_context.telescopes_must_be_schedulable)
+                                            must_be_schedulable=not pipeline_context.ignore_schedulability)
 
     if timezone is not None:
         # If no dayobs is given, calculate it.
