@@ -51,8 +51,9 @@ ORDERED_STAGES = [qc.HeaderSanity,
                   pointing.PointingTest]
 
 IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
-                    TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True),
-                    TelescopeCriterion('schedulable', operator.eq, True)]
+                    TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
+
+SCHEDULABLE_CRITERIA = [TelescopeCriterion('schedulable', operator.eq, True)]
 
 PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
 
@@ -134,9 +135,8 @@ def parse_args(selection_criteria, extra_console_arguments=None,
 
     logs.set_log_level(args.log_level)
 
-    if args.ignore_schedulability:
-        selection_criteria = [selection_criterion for selection_criterion in selection_criteria
-                              if not selection_criterion.__eq__(TelescopeCriterion('schedulable', operator.eq, True))]
+    if not args.ignore_schedulability:
+        selection_criteria += SCHEDULABLE_CRITERIA
 
     pipeline_context = PipelineContext(args, selection_criteria, **kwargs)
 
@@ -264,12 +264,14 @@ def reduce_night():
     if timezone is not None:
         # If no dayobs is given, calculate it.
         if pipeline_context.dayobs is None:
-            pipeline_context.dayobs = date_utils.get_dayobs(timezone=timezone)
+            dayobs = date_utils.get_dayobs(timezone=timezone)
+        else:
+            dayobs = pipeline_context.dayobs
 
         # For each telescope at the given site
         for telescope in telescopes:
             raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
-                                    telescope.instrument, pipeline_context.dayobs, 'raw')
+                                    telescope.instrument, dayobs, 'raw')
 
             # Run the reductions on the given dayobs
             try:
