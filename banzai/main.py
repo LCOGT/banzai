@@ -179,6 +179,16 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
                 logger.error(e, extra_tags={'filename': image})
 
 
+def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, extra_stages=None, log_message=''):
+    if len(log_message) > 0:
+        logger.info(log_message, extra_tags={'raw_path': raw_path})
+    stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
+    try:
+        run(stages_to_do, [os.path.join(raw_path, filename)], pipeline_context, calibration_maker=False)
+    except Exception as e:
+        logger.error(e, extra_tags={'filename': filename})
+
+
 def parse_directory_args(pipeline_context, raw_path, selection_criteria, extra_console_arguments=None):
     if extra_console_arguments is None:
         extra_console_arguments = []
@@ -218,6 +228,14 @@ def make_master_flat(pipeline_context=None, raw_path=None):
 def reduce_science_frames(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
     process_directory(pipeline_context, raw_path, ['EXPOSE', 'STANDARD'])
+
+
+def reduce_single_science_frame():
+    extra_console_arguments = [{'args': ['--filename'],
+                                'kwargs': {'dest': 'filename', 'help': 'Name of file to process'}}]
+    pipeline_context, raw_path = parse_directory_args(None, None, IMAGING_CRITERIA,
+                                                      extra_console_arguments=extra_console_arguments)
+    process_single_frame(pipeline_context, raw_path, pipeline_context.filename)
 
 
 def reduce_experimental_frames(pipeline_context=None, raw_path=None):

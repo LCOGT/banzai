@@ -1,3 +1,8 @@
+0.11.2 (2018-11-01)
+-------------------
+- Fixed a bug in calling reduce_night
+- Added back the ability to process individual science frames rather than a full directory.
+
 0.11.1 (2018-10-31)
 -------------------
 - Fixed bug where preview mode was not set to true when running preview pipeline
