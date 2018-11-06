@@ -51,8 +51,9 @@ ORDERED_STAGES = [qc.HeaderSanity,
                   pointing.PointingTest]
 
 IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
-                    TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True),
-                    TelescopeCriterion('schedulable', operator.eq, True)]
+                    TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
+
+SCHEDULABLE_CRITERIA = [TelescopeCriterion('schedulable', operator.eq, True)]
 
 PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
 
@@ -134,9 +135,8 @@ def parse_args(selection_criteria, extra_console_arguments=None,
 
     logs.set_log_level(args.log_level)
 
-    if args.ignore_schedulability:
-        selection_criteria = [selection_criterion for selection_criterion in selection_criteria
-                              if not selection_criterion.__eq__(TelescopeCriterion('schedulable', operator.eq, True))]
+    if not args.ignore_schedulability:
+        selection_criteria += SCHEDULABLE_CRITERIA
 
     pipeline_context = PipelineContext(args, selection_criteria, **kwargs)
 
@@ -177,6 +177,16 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
                 run(stages_to_do, [image], pipeline_context, calibration_maker=False)
             except Exception as e:
                 logger.error(e, extra_tags={'filename': image})
+
+
+def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, extra_stages=None, log_message=''):
+    if len(log_message) > 0:
+        logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
+    stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
+    try:
+        run(stages_to_do, [os.path.join(raw_path, filename)], pipeline_context, calibration_maker=False)
+    except Exception as e:
+        logger.error(e, extra_tags={'filename': filename})
 
 
 def parse_directory_args(pipeline_context, raw_path, selection_criteria, extra_console_arguments=None):
@@ -220,6 +230,14 @@ def reduce_science_frames(pipeline_context=None, raw_path=None):
     process_directory(pipeline_context, raw_path, ['EXPOSE', 'STANDARD'])
 
 
+def reduce_single_science_frame():
+    extra_console_arguments = [{'args': ['--filename'],
+                                'kwargs': {'dest': 'filename', 'help': 'Name of file to process'}}]
+    pipeline_context, raw_path = parse_directory_args(None, None, IMAGING_CRITERIA,
+                                                      extra_console_arguments=extra_console_arguments)
+    process_single_frame(pipeline_context, raw_path, pipeline_context.filename)
+
+
 def reduce_experimental_frames(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, IMAGING_CRITERIA)
     process_directory(pipeline_context, raw_path, ['EXPERIMENTAL'])
@@ -259,17 +277,19 @@ def reduce_night():
 
     telescopes = dbs.get_telescopes_at_site(pipeline_context.site,
                                             db_address=pipeline_context.db_address,
-                                            must_be_schedulable=pipeline_context.telescopes_must_be_schedulable)
+                                            ignore_schedulability=pipeline_context.ignore_schedulability)
 
     if timezone is not None:
         # If no dayobs is given, calculate it.
         if pipeline_context.dayobs is None:
-            pipeline_context.dayobs = date_utils.get_dayobs(timezone=timezone)
+            dayobs = date_utils.get_dayobs(timezone=timezone)
+        else:
+            dayobs = pipeline_context.dayobs
 
         # For each telescope at the given site
         for telescope in telescopes:
             raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
-                                    telescope.instrument, pipeline_context.dayobs, 'raw')
+                                    telescope.instrument, dayobs, 'raw')
 
             # Run the reductions on the given dayobs
             try:
