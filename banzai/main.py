@@ -181,7 +181,7 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
 
 def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, extra_stages=None, log_message=''):
     if len(log_message) > 0:
-        logger.info(log_message, extra_tags={'raw_path': raw_path})
+        logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
     try:
         run(stages_to_do, [os.path.join(raw_path, filename)], pipeline_context, calibration_maker=False)
@@ -277,7 +277,7 @@ def reduce_night():
 
     telescopes = dbs.get_telescopes_at_site(pipeline_context.site,
                                             db_address=pipeline_context.db_address,
-                                            must_be_schedulable=not pipeline_context.ignore_schedulability)
+                                            ignore_schedulability=pipeline_context.ignore_schedulability)
 
     if timezone is not None:
         # If no dayobs is given, calculate it.
