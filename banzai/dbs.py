@@ -289,6 +289,10 @@ def populate_bpm_table(directory, db_address=_DEFAULT_DB):
     db_session.close()
 
 
+class SiteMissingException(Exception):
+    pass
+
+
 class TelescopeMissingException(Exception):
     pass
 
@@ -371,12 +375,11 @@ def commit_preview_image(preview_image, db_address=_DEFAULT_DB):
 def get_timezone(site, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
     site_list = db_session.query(Site).filter(Site.id == site).all()
-    if len(site_list) > 0:
-        timezone = site_list[0].timezone
-    else:
-        timezone = None
     db_session.close()
-    return timezone
+    if len(site_list) > 0:
+        return site_list[0].timezone
+    else:
+        raise SiteMissingException
 
 
 def get_telescopes_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=False):
