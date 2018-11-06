@@ -14,7 +14,6 @@ import sys
 import traceback
 import logging
 import copy
-import operator
 
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
@@ -238,51 +237,55 @@ def reduce_night():
         logger.error('Could not connect to the configdb.')
         logger.error(e)
 
-    timezone = dbs.get_timezone(pipeline_context.site, db_address=pipeline_context.db_address)
+    try:
+        timezone = dbs.get_timezone(pipeline_context.site, db_address=pipeline_context.db_address)
+    except dbs.SiteMissingException:
+        logger.warning("Site {0} not found in database {1}, exiting.".format(pipeline_context.site,
+                                                                             pipeline_context.db_address))
+        return
 
     telescopes = dbs.get_telescopes_at_site(pipeline_context.site,
                                             db_address=pipeline_context.db_address,
                                             ignore_schedulability=pipeline_context.ignore_schedulability)
 
-    if timezone is not None:
-        # If no dayobs is given, calculate it.
-        if pipeline_context.dayobs is None:
-            dayobs = date_utils.get_dayobs(timezone=timezone)
-        else:
-            dayobs = pipeline_context.dayobs
+    # If no dayobs is given, calculate it.
+    if pipeline_context.dayobs is None:
+        dayobs = date_utils.get_dayobs(timezone=timezone)
+    else:
+        dayobs = pipeline_context.dayobs
 
-        # For each telescope at the given site
-        for telescope in telescopes:
-            raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
-                                    telescope.instrument, dayobs, 'raw')
+    # For each telescope at the given site
+    for telescope in telescopes:
+        raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
+                                telescope.instrument, dayobs, 'raw')
 
-            # Run the reductions on the given dayobs
-            try:
-                make_master_bias(pipeline_context=pipeline_context, raw_path=raw_path)
-            except Exception as e:
-                logger.error(e)
-            try:
-                make_master_dark(pipeline_context=pipeline_context, raw_path=raw_path)
-            except Exception as e:
-                logger.error(e)
-            try:
-                make_master_flat(pipeline_context=pipeline_context, raw_path=raw_path)
-            except Exception as e:
-                logger.error(e)
-            try:
-                reduce_science_frames(pipeline_context=pipeline_context, raw_path=raw_path)
-            except Exception as e:
-                logger.error(e)
+    # Run the reductions on the given dayobs
+    try:
+        make_master_bias(pipeline_context=pipeline_context, raw_path=raw_path)
+    except Exception as e:
+        logger.error(e)
+    try:
+        make_master_dark(pipeline_context=pipeline_context, raw_path=raw_path)
+    except Exception as e:
+        logger.error(e)
+    try:
+        make_master_flat(pipeline_context=pipeline_context, raw_path=raw_path)
+    except Exception as e:
+        logger.error(e)
+    try:
+        reduce_science_frames(pipeline_context=pipeline_context, raw_path=raw_path)
+    except Exception as e:
+        logger.error(e)
 
 
 def get_preview_stages_todo(image_suffix):
-    if image_suffix == 'b00.fits':
+    if image_suffix in settings.BIAS_SUFFIXES:
         stages = get_stages_todo(last_stage=settings.BIAS_LAST_STAGE,
                                  extra_stages=settings.BIAS_EXTRA_STAGES_PREVIEW)
-    elif image_suffix == 'd00.fits':
+    elif image_suffix in settings.DARK_SUFFIXES:
         stages = get_stages_todo(last_stage=settings.DARK_LAST_STAGE,
                                  extra_stages=settings.DARK_EXTRA_STAGES_PREVIEW)
-    elif image_suffix == 'f00.fits':
+    elif image_suffix in settings.FLAT_SUFFIXES:
         stages = get_stages_todo(last_stage=settings.FLAT_LAST_STAGE,
                                  extra_stages=settings.FLAT_EXTRA_STAGES_PREVIEW)
     else:

@@ -47,16 +47,19 @@ ORDERED_STAGES = [qc.HeaderSanity,
 
 
 BIAS_IMAGE_TYPES = ['BIAS']
+BIAS_SUFFIXES = ['b00.fits']
 BIAS_LAST_STAGE = trim.Trimmer
 BIAS_EXTRA_STAGES = [bias.BiasMasterLevelSubtractor, bias.BiasComparer, bias.BiasMaker]
 BIAS_EXTRA_STAGES_PREVIEW = [bias.BiasMasterLevelSubtractor, bias.BiasComparer]
 
 DARK_IMAGE_TYPES = ['DARK']
+DARK_SUFFIXES = ['d00.fits']
 DARK_LAST_STAGE = bias.BiasSubtractor
 DARK_EXTRA_STAGES = [dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker]
 DARK_EXTRA_STAGES_PREVIEW = [dark.DarkNormalizer, dark.DarkComparer]
 
 FLAT_IMAGE_TYPES = ['SKYFLAT']
+FLAT_SUFFIXES = ['f00.fits']
 FLAT_LAST_STAGE = dark.DarkSubtractor
 FLAT_EXTRA_STAGES = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker]
 FLAT_EXTRA_STAGES_PREVIEW = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer]
@@ -69,6 +72,6 @@ SINISTRO_IMAGE_TYPES = ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT', 'TRAILE
 SINISTRO_LAST_STAGE = mosaic.MosaicCreator
 
 SCIENCE_IMAGE_TYPES = ['EXPOSE', 'STANDARD']
+SCIENCE_SUFFIXES = ['e00.fits', 's00.fits']
 
-PREVIEW_IMAGE_TYPES = ['EXPOSE', 'STANDARD', 'BIAS', 'DARK', 'SKYFLAT']
-PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
+PREVIEW_ELIGIBLE_SUFFIXES = SCIENCE_SUFFIXES + BIAS_SUFFIXES + DARK_SUFFIXES + FLAT_SUFFIXES
