@@ -376,10 +376,9 @@ def get_timezone(site, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
     site_list = db_session.query(Site).filter(Site.id == site).all()
     db_session.close()
-    if len(site_list) > 0:
-        return site_list[0].timezone
-    else:
+    if len(site_list) == 0:
         raise SiteMissingException
+    return site_list[0].timezone
 
 
 def get_telescopes_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=False):
