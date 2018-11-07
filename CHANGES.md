@@ -2,6 +2,8 @@
 -------------------
 - Refactored calibration-related stages into their own module 
 - Moved stage and image parameters from main to settings
+- Refactored BPM read-in and addition to occur in BPM stage instead of
+  during image read-in
 
 0.11.2 (2018-11-01)
 -------------------
