@@ -20,7 +20,7 @@ from kombu.mixins import ConsumerMixin
 
 from banzai import settings
 from banzai import dbs, preview, logs
-from banzai.context import PipelineContext, TelescopeCriterion
+from banzai.context import PipelineContext
 from banzai.utils import image_utils, date_utils
 import banzai.images
 
