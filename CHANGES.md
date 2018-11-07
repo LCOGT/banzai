@@ -1,6 +1,7 @@
 0.11.3 (2018-11-07)
 -------------------
 - Refactored calibration-related stages into their own module 
+- Moved stage and image parameters from main to settings
 
 0.11.2 (2018-11-01)
 -------------------
