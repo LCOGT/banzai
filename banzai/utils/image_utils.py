@@ -111,14 +111,6 @@ def save_images(pipeline_context, images, master_calibration=False):
     return output_files
 
 
-def add_empty_bpm(image):
-    if image.data is None:
-        image.bpm = None
-    else:
-        image.bpm = np.zeros(image.data.shape, dtype=np.uint8)
-    image.header['L1IDMASK'] = ('', 'Id. of mask file used')
-
-
 def save_pipeline_metadata(image, pipeline_context):
     image.header['RLEVEL'] = (pipeline_context.rlevel, 'Reduction level')
     image.header['PIPEVER'] = (banzai.__version__, 'Pipeline version')
