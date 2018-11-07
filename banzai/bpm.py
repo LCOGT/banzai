@@ -10,10 +10,6 @@ from banzai import dbs
 logger = logging.getLogger(__name__)
 
 
-class MissingBPMError(Exception):
-    pass
-
-
 class BPMUpdater(Stage):
     @property
     def group_by_keywords(self):
@@ -22,12 +18,11 @@ class BPMUpdater(Stage):
     def do_stage(self, images):
         images_to_remove = []
         for image in images:
-            try:
-                self.add_bpm_to_image(image)
-            except MissingBPMError:
+            self.add_bpm_to_image(image)
+            if image.bpm is None:
                 if self.pipeline_context.no_bpm:
+                    add_empty_bpm(image)
                     logger.info('BPM misisng but not required, falling back to empty BPM', image=image)
-                    pass
                 else:
                     logger.error("Can't add BPM to image, stopping reduction", image=image)
                     images_to_remove.append(image)
@@ -43,16 +38,17 @@ class BPMUpdater(Stage):
         # Check if file is missing
         if bpm_filename is None:
             logger.warning('Unable to find BPM in database', image=image)
-            raise MissingBPMError
+            return
         # Load the BPM
         bpm = load_bpm(bpm_filename)
         # Check if the BPM is the right size
         if not bpm_has_valid_size(bpm, image):
             logger.warning('BPM shape mismatch', image=image)
-            raise MissingBPMError
+            return
         # Add BPM to image and header info
         image.bpm = bpm
         image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
+        logger.debug('Added BPM from file {}'.format(bpm_filename))
 
     def get_bpm_filename(self, image):
         return dbs.get_bpm_filename(image.telescope.id, image.ccdsum,
@@ -73,6 +69,14 @@ def load_bpm(bpm_filename):
     else:
         bpm = np.array(bpm_hdu[0].data, dtype=np.uint8)
     return bpm
+
+
+def add_empty_bpm(image):
+    if image.data is None:
+        image.bpm = None
+    else:
+        image.bpm = np.zeros(image.data.shape, dtype=np.uint8)
+    image.header['L1IDMASK'] = ('', 'Id. of mask file used')
 
 
 def bpm_has_valid_size(bpm, image):
