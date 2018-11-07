@@ -1,11 +1,8 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.bias import BiasMasterLevelSubtractor
-from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception
-from banzai.stages import MasterCalibrationDoesNotExist
 import pytest
-import mock
-
 import numpy as np
+
+from banzai.bias import BiasMasterLevelSubtractor
+from banzai.tests.utils import FakeImage
 
 
 @pytest.fixture(scope='module')

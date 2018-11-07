@@ -1,3 +1,7 @@
+0.11.3 (2018-11-07)
+-------------------
+- Refactored calibration-related stages into their own module 
+
 0.11.2 (2018-11-01)
 -------------------
 - Fixed a bug in calling reduce_night

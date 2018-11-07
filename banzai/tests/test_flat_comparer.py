@@ -1,9 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.flats import FlatComparer
-from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception, FakeContext
+import pytest
 import mock
 import numpy as np
-import pytest
+
+from banzai.flats import FlatComparer
+from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception, FakeContext
 
 
 @pytest.fixture(scope='module')
@@ -28,34 +28,34 @@ def test_group_by_keywords(set_random_seed):
     assert comparer.group_by_keywords == ['ccdsum', 'filter']
 
 
-@mock.patch('banzai.stages.Image')
-@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.Image')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_ccdsums_are_different(mock_cal, mock_images, set_random_seed):
     throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'ccdsum', '1 1')
 
 
-@mock.patch('banzai.stages.Image')
-@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.Image')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_epochs_are_different(mock_cal, mock_images, set_random_seed):
     throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'epoch', '20160102')
 
 
-@mock.patch('banzai.stages.Image')
-@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.Image')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_nx_are_different(mock_cal, mock_images, set_random_seed):
     mock_cal.return_value = 'test.fits'
     throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'nx', 105)
 
 
-@mock.patch('banzai.stages.Image')
-@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.Image')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_ny_are_different(mock_cal, mock_images, set_random_seed):
     mock_cal.return_value = 'test.fits'
     throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'ny', 107)
 
 
-@mock.patch('banzai.stages.Image')
-@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.Image')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
 def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_cal, mock_images, set_random_seed):
     mock_cal.return_value = None
@@ -66,8 +66,8 @@ def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_ca
     assert len(images) == 6
 
 
-@mock.patch('banzai.stages.Image')
-@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.Image')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
 def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, mock_image, set_random_seed):
     mock_cal.return_value = 'test.fits'
@@ -99,8 +99,8 @@ class FakeFlatComparer(FlatComparer):
         return True
 
 
-@mock.patch('banzai.stages.Image')
-@mock.patch('banzai.stages.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.Image')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
 def test_does_reject_bad_images(mock_save_qc, mock_cal, mock_image, set_random_seed):
     mock_cal.return_value = 'test.fits'
