@@ -5,7 +5,7 @@ import operator
 from lcogt_logging import LCOGTFormatter
 
 from banzai.context import TelescopeCriterion
-from banzai import bias, dark, flats, trim, photometry, astrometry, qc, crosstalk, gain, mosaic, bpm
+from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, photometry, astrometry
 
 
 # Logger set up
