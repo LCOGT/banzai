@@ -240,8 +240,9 @@ def reduce_night():
     try:
         timezone = dbs.get_timezone(pipeline_context.site, db_address=pipeline_context.db_address)
     except dbs.SiteMissingException:
-        logger.warning("Site {0} not found in database {1}, exiting.".format(pipeline_context.site,
-                                                                             pipeline_context.db_address))
+        logger.error("Site {site} not found in database {db}, exiting.".format(site=pipeline_context.site,
+                                                                               db=pipeline_context.db_address),
+                     extra_tags={'site': pipeline_context.site})
         return
 
     telescopes = dbs.get_telescopes_at_site(pipeline_context.site,
