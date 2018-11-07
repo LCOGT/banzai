@@ -214,8 +214,6 @@ def read_images(image_list, pipeline_context):
                 error_message = error_message.format(site=image.site, instrument=image.instrument)
                 raise dbs.TelescopeMissingException(error_message)
             munge(image, pipeline_context)
-            if image.bpm is None:
-                image_utils.add_empty_bpm(image)
             images.append(image)
         except Exception as e:
             logger.error('Error loading image: {error}'.format(error=e), extra_tags={'filename': filename})
