@@ -71,14 +71,6 @@ def load_bpm(bpm_filename):
     return bpm
 
 
-def add_empty_bpm(image):
-    if image.data is None:
-        image.bpm = None
-    else:
-        image.bpm = np.zeros(image.data.shape, dtype=np.uint8)
-    image.header['L1IDMASK'] = ('', 'Id. of mask file used')
-
-
 def bpm_has_valid_size(bpm, image):
     is_valid = True
     # If 3d, check and make sure the number of extensions is the same
@@ -88,6 +80,14 @@ def bpm_has_valid_size(bpm, image):
     else:
         is_valid &= bpm.shape == image.data.shape
     return is_valid
+
+
+def add_empty_bpm(image):
+    if image.data is None:
+        image.bpm = None
+    else:
+        image.bpm = np.zeros(image.data.shape, dtype=np.uint8)
+    image.header['L1IDMASK'] = ('', 'Id. of mask file used')
 
 
 def flag_bad_pixels(image):
