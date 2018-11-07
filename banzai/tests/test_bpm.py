@@ -2,8 +2,7 @@ import pytest
 import mock
 import numpy as np
 
-from banzai.bpm import BPMUpdater, MissingBPMError
-from banzai.utils import image_utils
+from banzai.bpm import BPMUpdater
 from banzai.tests.utils import FakeImage, FakeContext
 
 
@@ -23,8 +22,8 @@ class FakeImageForBPM(FakeImage):
         else:
             data_shape = (self.ny, self.nx)
         self.data = np.random.normal(1, 1, size=data_shape)
-        self.header['SATURATE'] = 0
-        image_utils.add_empty_bpm(self)
+        self.header['SATURATE'] = 10000
+        self.bpm = None
 
 
 class FakeContextForBPM(FakeContext):
@@ -90,7 +89,7 @@ def test_removes_image_if_file_missing(mock_get_bpm_filename):
 @mock.patch('banzai.bpm.BPMUpdater.get_bpm_filename')
 def test_uses_fallback_if_bpm_missing_and_no_bpm_set(mock_get_bpm_filename):
     image = FakeImageForBPM()
-    fallback_bpm = image.bpm[::]
+    fallback_bpm = np.zeros(image.data.shape, dtype=np.uint8)
     mock_get_bpm_filename.return_value = None
     tester = BPMUpdater(FakeContextForBPM(no_bpm=True))
     assert len(tester.do_stage([image])) == 1
