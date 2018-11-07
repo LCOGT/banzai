@@ -30,7 +30,7 @@ class MosaicCreator(Stage):
 
                     detsec = image.extension_headers[i]['DETSEC']
                     mosaic_slice = fits_utils.parse_region_keyword(detsec)
-                    logging_tags['DETASEC{0}'.format(i + 1)] = detsec
+                    logging_tags['DATASEC{0}'.format(i + 1)] = detsec
 
                     mosaiced_data[mosaic_slice] = image.data[i][amp_slice]
                     mosaiced_bpm[mosaic_slice] = image.bpm[i][amp_slice]
