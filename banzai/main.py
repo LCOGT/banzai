@@ -36,10 +36,12 @@ def get_stages_todo(last_stage=None, extra_stages=None):
     last_stage: banzai.stages.Stage
                 Last stage to do
     extra_stages: Stages to do after the last stage
+
     Returns
     -------
     stages_todo: list of banzai.stages.Stage
                  The stages that need to be done
+
     Notes
     -----
     Extra stages can be other stages that are not in the ordered_stages list.
