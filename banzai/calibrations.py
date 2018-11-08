@@ -1,5 +1,6 @@
 import logging
 import abc
+import itertools
 
 import numpy as np
 
@@ -28,6 +29,11 @@ class CalibrationMaker(Stage):
     @abc.abstractmethod
     def min_images(self):
         return 5
+
+    @property
+    @abc.abstractmethod
+    def group_by_keywords(self):
+        return []
 
     def get_grouping(self, image):
         grouping_criteria = [image.site, image.instrument, image.epoch]
