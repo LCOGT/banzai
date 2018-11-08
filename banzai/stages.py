@@ -17,6 +17,10 @@ class Stage(abc.ABC):
     def stage_name(self):
         return '.'.join([__name__, self.__class__.__name__])
 
+    def run_stage(self, image):
+        logger.info('Running {0}'.format(self.stage_name), image=image)
+        return self.do_stage(image)
+
     def run(self, image):
         if image is None:
             return image
@@ -26,10 +30,6 @@ class Stage(abc.ABC):
             logger.error(e)
             return image
         return processed_image
-
-    def run_stage(self, image):
-        logger.info('Running {0}'.format(self.stage_name), image=image)
-        return self.do_stage(image)
 
     @abc.abstractmethod
     def do_stage(self, image):
