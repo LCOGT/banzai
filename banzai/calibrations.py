@@ -139,51 +139,45 @@ class CalibrationComparer(ApplyCalibration):
         msg = 'No master {caltype} frame exists. Assuming these images are ok.'
         logger.warning(msg.format(caltype=self.calibration_type), image=image)
 
-    def apply_master_calibration(self, images, master_calibration_image):
+    def apply_master_calibration(self, image, master_calibration_image):
         # Short circuit
         if master_calibration_image.data is None:
-            return images
+            return image
 
-        images_to_reject = []
+        # We assume the images have already been normalized before this stage is run.
+        bad_pixel_fraction = np.abs(image.data - master_calibration_image.data)
+        # Estimate the noise of the image
+        noise = self.noise_model(image)
+        bad_pixel_fraction /= noise
+        bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
+        bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
+        frame_is_bad = bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION
 
-        for image in images:
-            # We assume the images have already been normalized before this stage is run.
-            bad_pixel_fraction = np.abs(image.data - master_calibration_image.data)
-            # Estimate the noise of the image
-            noise = self.noise_model(image)
-            bad_pixel_fraction /= noise
-            bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
-            bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
-            frame_is_bad = bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION
+        qc_results = {"master_comparison.fraction": bad_pixel_fraction,
+                      "master_comparison.snr_threshold": self.SIGNAL_TO_NOISE_THRESHOLD,
+                      "master_comparison.pixel_threshold": self.ACCEPTABLE_PIXEL_FRACTION,
+                      "master_comparison.comparison_master_filename": master_calibration_image.filename}
 
-            qc_results = {"master_comparison.fraction": bad_pixel_fraction,
-                          "master_comparison.snr_threshold": self.SIGNAL_TO_NOISE_THRESHOLD,
-                          "master_comparison.pixel_threshold": self.ACCEPTABLE_PIXEL_FRACTION,
-                          "master_comparison.comparison_master_filename": master_calibration_image.filename}
+        logging_tags = {}
+        for qc_check, qc_result in qc_results.items():
+            logging_tags[qc_check] = qc_result
+        logging_tags['master_comparison_filename'] = master_calibration_image.filename
+        msg = "Performing comparison to last good master {caltype} frame"
+        logger.info(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
 
-            logging_tags = {}
-            for qc_check, qc_result in qc_results.items():
-                logging_tags[qc_check] = qc_result
-            logging_tags['master_comparison_filename'] = master_calibration_image.filename
-            msg = "Performing comparison to last good master {caltype} frame"
-            logger.info(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
+        # This needs to be added after the qc_results dictionary is used for the logging tags because
+        # they can't handle booleans
+        qc_results["master_comparison.failed"] = frame_is_bad
+        qc_results['rejected'] = frame_is_bad
+        self.save_qc_results(qc_results, image)
 
-            # This needs to be added after the qc_results dictionary is used for the logging tags because
-            # they can't handle booleans
-            qc_results["master_comparison.failed"] = frame_is_bad
-            if frame_is_bad:
-                # Reject the image and log an error
-                images_to_reject.append(image)
-                qc_results['rejected'] = True
-                msg = 'Rejecting {caltype} image because it deviates too much from the previous master'
-                logger.error(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
+        if frame_is_bad:
+            # Reject the image and log an error
+            msg = 'Rejecting {caltype} image because it deviates too much from the previous master'
+            logger.error(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
+            return None
 
-            self.save_qc_results(qc_results, image)
-
-        if self.reject_images and not self.pipeline_context.preview_mode:
-            for image_to_reject in images_to_reject:
-                images.remove(image_to_reject)
-        return images
+        return image
 
     @abc.abstractmethod
     def noise_model(self, image):
