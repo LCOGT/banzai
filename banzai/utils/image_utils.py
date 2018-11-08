@@ -114,7 +114,8 @@ def make_image_list(raw_path):
 
         for f in fz_files_to_remove:
             fz_files.remove(f)
-            image_list = fits_files + fz_files
+        image_list = fits_files + fz_files
+
     else:
         image_list = glob(raw_path)
     return image_list
