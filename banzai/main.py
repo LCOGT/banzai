@@ -10,6 +10,8 @@ October 2015
 import argparse
 import multiprocessing
 import os
+import sys
+import traceback
 import logging
 import copy
 
@@ -30,6 +32,7 @@ RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
 
 
 def get_stages_todo(last_stage=None, extra_stages=None):
+
     """
     Parameters
     ----------
@@ -118,7 +121,7 @@ def run(stages_to_do, image_path, pipeline_context):
         stage_to_run = stage(pipeline_context)
         image = stage_to_run.run(image)
 
-    image = image_utils.save_image(pipeline_context, image)
+    image_utils.save_image(pipeline_context, image)
     return image
 
 
@@ -127,6 +130,7 @@ def run_calibration_maker(stage_to_do, image_list, pipeline_context):
     image_list = stage_to_run.run(image_list)
     for image in image_list:
         image_utils.save_image(pipeline_context, image, master_calibration=True)
+    return image_list
 
 
 def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None, log_message='',
@@ -136,14 +140,14 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
     image_path_list = image_utils.make_image_path_list(raw_path)
     image_path_list = image_utils.select_images(image_path_list, image_types,
-                                           pipeline_context.allowed_instrument_criteria,
-                                           db_address=pipeline_context.db_address)
+                                                pipeline_context.allowed_instrument_criteria,
+                                                db_address=pipeline_context.db_address)
     try:
         image_list = []
         for image_path in image_path_list:
             image_list.append(run(stages_to_do, image_path, pipeline_context))
         if calibration_maker_stage is not None:
-            run_calibration_maker(stages_to_do, image_list)
+            run_calibration_maker(calibration_maker_stage, image_list, pipeline_context)
     except Exception as e:
         logger.error(e, extra_tags={'raw_path': raw_path})
 
