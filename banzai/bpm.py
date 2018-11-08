@@ -18,41 +18,40 @@ class BPMUpdater(Stage):
     def do_stage(self, images):
         images_to_remove = []
         for image in images:
-            self.add_bpm_to_image(image)
-            if image.bpm is None:
-                if self.pipeline_context.no_bpm:
-                    add_empty_bpm(image)
-                    logger.info('BPM misisng but not required, falling back to empty BPM', image=image)
-                else:
-                    logger.error("Can't add BPM to image, stopping reduction", image=image)
-                    images_to_remove.append(image)
-                    continue
+            add_bpm_to_image(image, self.pipeline_context)
+            validate_bpm_size(image)
+            if image.bpm and not self.pipeline_context.no_bpm:
+                logger.error("Can't add BPM to image, stopping reduction", image=image)
+                images_to_remove.append(image)
+                continue
             flag_bad_pixels(image)
         for image in images_to_remove:
             images.remove(image)
         return images
 
-    def add_bpm_to_image(self, image):
-        # Get the BPM filename
-        bpm_filename = self.get_bpm_filename(image)
-        # Check if file is missing
-        if bpm_filename is None:
-            logger.warning('Unable to find BPM in database', image=image)
-            return
-        # Load the BPM
-        bpm = load_bpm(bpm_filename)
-        # Check if the BPM is the right size
-        if not bpm_has_valid_size(bpm, image):
-            logger.warning('BPM shape mismatch', image=image)
-            return
-        # Add BPM to image and header info
-        image.bpm = bpm
-        image.header['L1IDMASK'] = (os.path.basename(bpm_filename), 'Id. of mask file used')
-        logger.debug('Added BPM from file {}'.format(bpm_filename))
 
-    def get_bpm_filename(self, image):
-        return dbs.get_bpm_filename(image.telescope.id, image.ccdsum,
-                                    db_address=self.pipeline_context.db_address)
+def add_bpm_to_image(image, pipeline_context):
+    # Exit if image already has a BPM
+    if image.bpm is not None:
+        return
+    # Get the BPM filename
+    bpm_filename = dbs.get_bpm_filename(image.telescope.id, image.ccdsum, db_address=pipeline_context.db_address)
+    # Check if file is missing
+    if bpm_filename is None:
+        logger.warning('Unable to find BPM in database, falling back to empty BPM', image=image)
+        add_empty_bpm(image)
+        return
+    # Load and add the BPM
+    bpm = load_bpm(bpm_filename)
+    set_image_bpm_and_header(image, bpm, os.path.basename(bpm_filename))
+
+
+def add_empty_bpm(image):
+    if image.data is None:
+        bpm = None
+    else:
+        bpm = np.zeros(image.data.shape, dtype=np.uint8)
+    set_image_bpm_and_header(image, bpm, '')
 
 
 def load_bpm(bpm_filename):
@@ -71,23 +70,26 @@ def load_bpm(bpm_filename):
     return bpm
 
 
-def bpm_has_valid_size(bpm, image):
+def set_image_bpm_and_header(image, bpm, bpm_filename):
+    image.bpm = bpm
+    image.header['L1IDMASK'] = (bpm_filename, 'Id. of mask file used')
+
+
+def validate_bpm_size(image):
+    if not bpm_has_valid_size(image):
+        logger.warning('BPM shape mismatch, falling back to empty BPM', image=image)
+        add_empty_bpm(image)
+
+
+def bpm_has_valid_size(image):
     is_valid = True
     # If 3d, check and make sure the number of extensions is the same
     if image.data_is_3d():
         for i in range(image.get_n_amps()):
-            is_valid &= bpm[i].shape == image.data[i].shape
+            is_valid &= image.bpm[i].shape == image.data[i].shape
     else:
-        is_valid &= bpm.shape == image.data.shape
+        is_valid &= image.bpm.shape == image.data.shape
     return is_valid
-
-
-def add_empty_bpm(image):
-    if image.data is None:
-        image.bpm = None
-    else:
-        image.bpm = np.zeros(image.data.shape, dtype=np.uint8)
-    image.header['L1IDMASK'] = ('', 'Id. of mask file used')
 
 
 def flag_bad_pixels(image):
