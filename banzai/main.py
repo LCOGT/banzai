@@ -117,6 +117,7 @@ def run(stages_to_do, image_path, pipeline_context):
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
         image = stage_to_run.run(image)
+
     image = image_utils.save_image(pipeline_context, image)
     return image
 
