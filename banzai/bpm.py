@@ -25,6 +25,7 @@ class BPMUpdater(Stage):
                 images_to_remove.append(image)
                 continue
             flag_bad_pixels(image)
+            logger.info('Added BPM to image', image=image, extra_tags={'l1idmask': image.header['L1IDMASK']})
         for image in images_to_remove:
             images.remove(image)
         return images
