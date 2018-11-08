@@ -1,7 +1,9 @@
 import os
+from glob import glob
 import logging
 from datetime import timedelta
 
+from astropy.io import fits
 import numpy as np
 
 import banzai
@@ -67,6 +69,47 @@ class MissingCatalogException(Exception):
     pass
 
 
+def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
+    telescope = dbs.get_telescope_for_file(filename, db_address=db_address)
+    passes = True
+    for criterion in criteria:
+        if not criterion.telescope_passes(telescope):
+            passes = False
+    return passes
+
+
+def select_images(image_list, image_types, instrument_criteria, db_address=dbs._DEFAULT_DB):
+    images = []
+    for filename in image_list:
+        try:
+            if not image_passes_criteria(filename, instrument_criteria, db_address=db_address):
+                continue
+            obstype = None
+            hdu_list = fits.open(filename)
+            for hdu in hdu_list:
+                if 'OBSTYPE' in hdu.header.keys():
+                    obstype = hdu.header['OBSTYPE']
+             if obstype is None:
+                logger.error('Unable to get OBSTYPE', extra_tags={'filename': filename})
+             if obstype in image_types:
+                images.append(filename)
+        except Exception as e:
+            logger.error('Exception checking image selection criteria: {e}'.format(e=e),
+                         extra_tags={'filename': filename})
+    return images
+
+
+def make_image_list(raw_path):
+    if os.path.isdir(raw_path):
+        # return the list of file and a dummy image configuration
+        fits_files = glob(os.path.join(raw_path, '*.fits'))
+        fz_files = glob(os.path.join(raw_path, '*.fits.fz'))
+        fz_files_to_remove = []
+        for i, f in enumerate(fz_files):
+            if f[:-3] in fits_files:
+                fz_files_to_remove.append(f)
+
+
 class InhomogeneousSetException(Exception):
     pass
 
@@ -85,26 +128,26 @@ def save_image(pipeline_context, image, master_calibration=False):
     if not master_calibration:
         image.filename = image.filename.replace('00.fits',
                                                 '{:02d}.fits'.format(int(pipeline_context.rlevel)))
-
     image_filename = os.path.basename(image.filename)
     filepath = os.path.join(output_directory, image_filename)
     save_pipeline_metadata(image, pipeline_context)
     image.writeto(filepath, pipeline_context.fpack)
-    logger.info("Saved image to {0}".format(filepath), image=image)
+    logger.info("Saving image to {filepath}".format(filepath=filepath), image=image)
     if pipeline_context.fpack:
         image_filename += '.fz'
         filepath += '.fz'
     if master_calibration:
         dbs.save_calibration_info(image.obstype, filepath, image,
                                   db_address=pipeline_context.db_address)
-
-    if pipeline_context.post_to_archive:
+     if pipeline_context.post_to_archive:
         logger.info('Posting {filename} to the archive'.format(filename=image_filename))
         try:
             file_utils.post_to_archive_queue(filepath)
         except Exception as e:
             logger.error("Could not post {0} to ingester.".format(filepath))
             logger.error(e)
+            continue
+    return image
 
 
 def save_pipeline_metadata(image, pipeline_context):
