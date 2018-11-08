@@ -47,7 +47,7 @@ class FakeImage(Image):
         pass
 
 
-class FakeContext(PipelineContext):
+class FakeContext(object):
     def __init__(self, preview_mode=False):
         self.filename = 'test.fits'
         self.raw_path = '/tmp/raw'
