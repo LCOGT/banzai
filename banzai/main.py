@@ -77,7 +77,7 @@ def parse_args(selection_criteria, extra_console_arguments=None,
                         default=False)
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
-    parser.add_argument('--rlevel', dest='rlevel', default=91, help='Reduction level')
+    parser.add_argument('--rlevel', dest='rlevel', default=91, type=int, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
