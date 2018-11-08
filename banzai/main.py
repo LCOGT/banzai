@@ -31,25 +31,27 @@ RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
 
 def get_stages_todo(last_stage=None, extra_stages=None):
     """
-     Parameters
+    Parameters
     ----------
     last_stage: banzai.stages.Stage
                 Last stage to do
     extra_stages: Stages to do after the last stage
-     Returns
+    Returns
     -------
     stages_todo: list of banzai.stages.Stage
                  The stages that need to be done
-     Notes
+    Notes
     -----
     Extra stages can be other stages that are not in the ordered_stages list.
     """
     if extra_stages is None:
         extra_stages = []
+
     if last_stage is None:
         last_index = None
     else:
         last_index = settings.ORDERED_STAGES.index(last_stage) + 1
+
     stages_todo = settings.ORDERED_STAGES[:last_index] + extra_stages
     return stages_todo
 
@@ -109,10 +111,11 @@ def run(stages_to_do, image_path, pipeline_context):
     Main driver script for banzai.
     """
     image = banzai.images.read_image(image_path, pipeline_context)
+
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
         image = stage_to_run.run(image)
-    image_utils.save_image(pipeline_context, image)
+    image = image_utils.save_image(pipeline_context, image)
     return image
 
 
@@ -371,11 +374,12 @@ class PreviewModeListener(ConsumerMixin):
 
         if is_eligible_for_preview:
             try:
-                if preview.need_to_make_preview(self.pipeline_context):
+                if preview.need_to_make_preview(path, self.pipeline_context.allowed_instrument_criteria,
+                                                db_address=self.pipeline_context.db_address,
+                                                max_tries=self.pipeline_context.max_tries):
                     stages_to_do = get_preview_stages_todo(image_suffix)
 
-                    logger.info('Running preview reduction on {}'.format(path),
-                                extra_tags={'filename': os.path.basename(path)})
+                    logger.info('Running preview reduction', extra_tags={'filename': os.path.basename(path)})
 
                     # Increment the number of tries for this file
                     preview.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
