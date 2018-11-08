@@ -1,3 +1,9 @@
+0.12.0 (2018-11-08)
+-------------------
+- Refactored BPM read-in and addition to occur in BPM stage instead of
+  during image read-in
+- Cast rlevel to an integer in command line arguments 
+
 0.11.3 (2018-11-07)
 -------------------
 - Refactored calibration-related stages into their own module 

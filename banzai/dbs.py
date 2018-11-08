@@ -320,7 +320,7 @@ def get_telescope(header, db_address=_DEFAULT_DB):
     return telescope
 
 
-def get_bpm(telescope_id, ccdsum, db_address=_DEFAULT_DB):
+def get_bpm_filename(telescope_id, ccdsum, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
     bpm_query = db_session.query(BadPixelMask).filter(BadPixelMask.telescope_id == telescope_id,
                                                       BadPixelMask.ccdsum == ccdsum)
