@@ -204,8 +204,7 @@ class Image(object):
         return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
 
 
-def read_image(pipeline_context, image_path=None):
-    image_path = pipeline_context.get_image_path() if image_path is None else image_path
+def read_image(image_path, pipeline_context):
     try:
         image = Image(pipeline_context, filename=image_path)
         if image.telescope is None:
