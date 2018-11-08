@@ -47,6 +47,8 @@ class CalibrationMaker(Stage):
         return self.do_stage(image_set)
 
     def run(self, images):
+        # Take out any images that are None
+        images = [image for image in images if image is not None]
         images.sort(key=self.get_grouping)
         processed_images = []
         for _, image_set in itertools.groupby(images, self.get_grouping):
