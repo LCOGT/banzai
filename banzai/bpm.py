@@ -20,7 +20,7 @@ class BPMUpdater(Stage):
         for image in images:
             add_bpm_to_image(image, self.pipeline_context)
             validate_bpm_size(image)
-            if image.bpm and not self.pipeline_context.no_bpm:
+            if image.header['L1IDMASK'][0] == '' and not self.pipeline_context.no_bpm:
                 logger.error("Can't add BPM to image, stopping reduction", image=image)
                 images_to_remove.append(image)
                 continue
