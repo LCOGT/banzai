@@ -24,12 +24,19 @@ class FakeImageForBPM(FakeImage):
         self.data = np.random.normal(1, 1, size=data_shape)
         self.header['SATURATE'] = 10000
         self.bpm = None
+        self.telescope = FakeTelescope()
+
+
+class FakeTelescope(object):
+    def __init__(self):
+        self.id = 1
 
 
 class FakeContextForBPM(FakeContext):
 
     def __init__(self, *args, **kwargs):
         self.no_bpm = kwargs.pop('no_bpm', False)
+        self.db_address = 'FakeDBAddress'
         super(FakeContextForBPM, self).__init__(*args, **kwargs)
 
 
@@ -52,33 +59,33 @@ def test_no_input_images():
     assert len(images) == 0
 
 
-@mock.patch('banzai.dbs.get_bpm_filename')
+@mock.patch('banzai.bpm.dbs.get_bpm_filename')
 @mock.patch('banzai.bpm.load_bpm')
 def test_adds_good_bpm(mock_load_bpm, mock_get_bpm_filename, set_random_seed):
     image = FakeImageForBPM()
     bpm_to_load = make_test_bpm(image.nx, image.ny)
     mock_get_bpm_filename.return_value = 'fake_bpm_filename'
     mock_load_bpm.return_value = bpm_to_load
-    tester = BPMUpdater(FakeContext())
+    tester = BPMUpdater(FakeContextForBPM())
     image = tester.do_stage([image])[0]
     np.testing.assert_array_equal(image.bpm, bpm_to_load)
     assert image.header['L1IDMASK'][0] == 'fake_bpm_filename'
 
 
-@mock.patch('banzai.dbs.get_bpm_filename')
+@mock.patch('banzai.bpm.dbs.get_bpm_filename')
 @mock.patch('banzai.bpm.load_bpm')
 def test_adds_good_bpm_3d(mock_load_bpm, mock_get_bpm_filename, set_random_seed):
     image = FakeImageForBPM(make_image_3d=True)
     bpm_to_load = make_test_bpm(image.nx, image.ny, make_3d=True)
     mock_get_bpm_filename.return_value = 'fake_bpm_filename'
     mock_load_bpm.return_value = bpm_to_load
-    tester = BPMUpdater(FakeContext())
+    tester = BPMUpdater(FakeContextForBPM())
     image = tester.do_stage([image])[0]
     np.testing.assert_array_equal(image.bpm, bpm_to_load)
     assert image.header['L1IDMASK'][0] == 'fake_bpm_filename'
 
 
-@mock.patch('banzai.dbs.get_bpm_filename')
+@mock.patch('banzai.bpm.dbs.get_bpm_filename')
 def test_removes_image_if_file_missing(mock_get_bpm_filename):
     image = FakeImageForBPM()
     mock_get_bpm_filename.return_value = None
@@ -86,7 +93,7 @@ def test_removes_image_if_file_missing(mock_get_bpm_filename):
     assert len(tester.do_stage([image])) == 0
 
 
-@mock.patch('banzai.dbs.get_bpm_filename')
+@mock.patch('banzai.bpm.dbs.get_bpm_filename')
 def test_uses_fallback_if_bpm_missing_and_no_bpm_set(mock_get_bpm_filename):
     image = FakeImageForBPM()
     fallback_bpm = np.zeros(image.data.shape, dtype=np.uint8)
@@ -96,7 +103,7 @@ def test_uses_fallback_if_bpm_missing_and_no_bpm_set(mock_get_bpm_filename):
     np.testing.assert_array_equal(image.bpm, fallback_bpm)
 
 
-@mock.patch('banzai.dbs.get_bpm_filename')
+@mock.patch('banzai.bpm.dbs.get_bpm_filename')
 @mock.patch('banzai.bpm.load_bpm')
 def test_removes_image_if_wrong_shape(mock_load_bpm, mock_get_bpm_filename, set_random_seed):
     image = FakeImageForBPM()
@@ -106,7 +113,7 @@ def test_removes_image_if_wrong_shape(mock_load_bpm, mock_get_bpm_filename, set_
     assert len(tester.do_stage([image])) == 0
 
 
-@mock.patch('banzai.dbs.get_bpm_filename')
+@mock.patch('banzai.bpm.dbs.get_bpm_filename')
 @mock.patch('banzai.bpm.load_bpm')
 def test_removes_image_wrong_shape_3d(mock_load_bpm, mock_get_bpm_filename, set_random_seed):
     image = FakeImageForBPM(make_image_3d=True)
