@@ -161,6 +161,7 @@ def save_image(pipeline_context, image, master_calibration=False):
         except Exception as e:
             logger.error("Could not post {0} to ingester.".format(filepath))
             logger.error(e)
+    return image
 
 
 def save_pipeline_metadata(image, pipeline_context):
