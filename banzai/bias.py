@@ -17,7 +17,7 @@ class BiasMaker(CalibrationMaker):
         super(BiasMaker, self).__init__(pipeline_context)
 
     @property
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return ['ccdsum']
 
     @property
@@ -64,7 +64,7 @@ class BiasSubtractor(ApplyCalibration):
         super(BiasSubtractor, self).__init__(pipeline_context)
 
     @property
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return ['ccdsum']
 
     @property
@@ -102,7 +102,7 @@ class OverscanSubtractor(Stage):
         super(OverscanSubtractor, self).__init__(pipeline_context)
 
     @property
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return None
 
     def do_stage(self, images):
@@ -127,7 +127,7 @@ class BiasMasterLevelSubtractor(Stage):
         super(BiasMasterLevelSubtractor, self).__init__(pipeline_context)
 
     @property
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return None
 
     def do_stage(self, images):
@@ -146,7 +146,7 @@ class BiasComparer(CalibrationComparer):
         super(BiasComparer, self).__init__(pipeline_context)
 
     @property
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return ['ccdsum']
 
     @property

@@ -1,3 +1,8 @@
+0.12.1 (2018-11-08)
+-------------------
+- Refactored group_by_keywords to be group_by_attributes
+- Images are now grouped by Image attributes rather than header keywords.
+
 0.12.0 (2018-11-08)
 -------------------
 - Refactored BPM read-in and addition to occur in BPM stage instead of

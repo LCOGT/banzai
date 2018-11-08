@@ -54,7 +54,7 @@ class FakeContext(object):
 class FakeStage(Stage):
     def do_stage(self, images):
         return images
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return None
 
 

@@ -37,7 +37,7 @@ def test_no_input_images():
 
 def test_group_by_keywords():
     mosaic_creator = MosaicCreator(None)
-    assert mosaic_creator.group_by_keywords is None
+    assert mosaic_creator.group_by_attributes is None
 
 
 def test_2d_images():

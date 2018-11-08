@@ -25,7 +25,7 @@ def test_min_images():
 
 def test_group_by_keywords():
     maker = BiasMaker(None)
-    assert maker.group_by_keywords == ['ccdsum']
+    assert maker.group_by_attributes == ['ccdsum']
 
 
 @mock.patch('banzai.bias.Image')

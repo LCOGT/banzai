@@ -29,7 +29,7 @@ class WCSSolver(Stage):
         super(WCSSolver, self).__init__(pipeline_context)
 
     @property
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return None
 
     def do_stage(self, images):

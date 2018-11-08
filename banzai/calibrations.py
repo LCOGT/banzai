@@ -41,7 +41,7 @@ class CalibrationMaker(Stage):
 
     def get_calibration_filename(self, image):
         cal_file = '{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
-        if 'filter' in self.group_by_keywords:
+        if 'filter' in self.group_by_attributes:
             filter_str = '_{filter}'.format(filter=image.filter)
         else:
             filter_str = ''
@@ -89,7 +89,7 @@ class ApplyCalibration(Stage):
         pass
 
     def get_calibration_filename(self, image):
-        return dbs.get_master_calibration_image(image, self.calibration_type, self.group_by_keywords,
+        return dbs.get_master_calibration_image(image, self.calibration_type, self.group_by_attributes,
                                                 db_address=self.pipeline_context.db_address)
 
 

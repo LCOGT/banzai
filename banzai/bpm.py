@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class BPMUpdater(Stage):
     @property
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return None
 
     def do_stage(self, images):

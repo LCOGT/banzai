@@ -18,7 +18,7 @@ def test_no_input_images(set_random_seed):
 
 def test_group_by_keywords(set_random_seed):
     normalizer = FlatNormalizer(None)
-    assert normalizer.group_by_keywords is None
+    assert normalizer.group_by_attributes is None
 
 
 def test_header_has_flatlevel(set_random_seed):

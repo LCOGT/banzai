@@ -12,7 +12,7 @@ def test_no_input_images():
 
 def test_group_by_keywords():
     tester = PointingTest(None)
-    assert tester.group_by_keywords is None
+    assert tester.group_by_attributes is None
 
 
 def test_no_offset():
