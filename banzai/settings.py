@@ -28,13 +28,13 @@ IMAGING_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS
 
 SCHEDULABLE_CRITERIA = [TelescopeCriterion('schedulable', operator.eq, True)]
 
-ORDERED_STAGES = [qc.HeaderSanity,
+ORDERED_STAGES = [bpm.BPMUpdater,
+                  qc.HeaderSanity,
                   qc.ThousandsTest,
                   qc.SaturationTest,
                   bias.OverscanSubtractor,
                   crosstalk.CrosstalkCorrector,
                   gain.GainNormalizer,
-                  bpm.BPMUpdater,
                   mosaic.MosaicCreator,
                   trim.Trimmer,
                   bias.BiasSubtractor,
