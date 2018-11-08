@@ -45,7 +45,7 @@ def select_images(image_list, image_types, instrument_criteria, db_address=dbs._
     return images
 
 
-def make_image_list(raw_path):
+def make_image_path_list(raw_path):
     if os.path.isdir(raw_path):
         # return the list of file and a dummy image configuration
         fits_files = glob(os.path.join(raw_path, '*.fits'))
@@ -114,11 +114,11 @@ def make_image_list(raw_path):
 
         for f in fz_files_to_remove:
             fz_files.remove(f)
-        image_list = fits_files + fz_files
+        image_path_list = fits_files + fz_files
 
     else:
-        image_list = glob(raw_path)
-    return image_list
+        image_path_list = glob(raw_path)
+    return image_path_list
 
 
 def check_image_homogeneity(images, extra_attribute_keywords=None):
@@ -154,7 +154,7 @@ def save_image(pipeline_context, image, master_calibration=False):
     if master_calibration:
         dbs.save_calibration_info(image.obstype, filepath, image,
                                   db_address=pipeline_context.db_address)
-     if pipeline_context.post_to_archive:
+    if pipeline_context.post_to_archive:
         logger.info('Posting {filename} to the archive'.format(filename=image_filename))
         try:
             file_utils.post_to_archive_queue(filepath)
