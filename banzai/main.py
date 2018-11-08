@@ -20,7 +20,6 @@ from banzai import settings
 from banzai import dbs, preview, logs
 from banzai.context import PipelineContext
 from banzai.utils import image_utils, date_utils
-import banzai.images
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +122,7 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
                                            db_address=pipeline_context.db_address)
 
     if calibration_maker_stage is not None:
-       try:
+        try:
             run(stages_to_do, image_list, pipeline_context, calibration_maker=True)
             run_calibration_maker(calibration_maker_stage, pipeline_context, image_list)
         except Exception as e:
