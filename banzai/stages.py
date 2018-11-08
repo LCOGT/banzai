@@ -20,13 +20,13 @@ class Stage(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return []
 
     def get_grouping(self, image):
         grouping_criteria = [image.site, image.instrument, image.epoch]
-        if self.group_by_keywords:
-            grouping_criteria += [image.header[keyword] for keyword in self.group_by_keywords]
+        if self.group_by_attributes:
+            grouping_criteria += [getattr(image, keyword) for keyword in self.group_by_attributes]
         return grouping_criteria
 
     def run_stage(self, image_set):

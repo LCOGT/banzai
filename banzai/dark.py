@@ -16,7 +16,7 @@ class DarkNormalizer(Stage):
         super(DarkNormalizer, self).__init__(pipeline_context)
 
     @property
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return None
 
     def do_stage(self, images):
@@ -31,7 +31,7 @@ class DarkMaker(CalibrationMaker):
         super(DarkMaker, self).__init__(pipeline_context)
 
     @property
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return ['ccdsum']
 
     @property
@@ -83,7 +83,7 @@ class DarkSubtractor(ApplyCalibration):
         return 'dark'
 
     @property
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return ['ccdsum']
 
     def apply_master_calibration(self, images, master_calibration_image):
@@ -105,7 +105,7 @@ class DarkComparer(CalibrationComparer):
         super(DarkComparer, self).__init__(pipeline_context)
 
     @property
-    def group_by_keywords(self):
+    def group_by_attributes(self):
         return ['ccdsum']
 
     @property

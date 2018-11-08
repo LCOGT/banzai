@@ -25,7 +25,7 @@ def test_no_input_images():
 
 def test_group_by_keywords():
     comparer = DarkComparer(None)
-    assert comparer.group_by_keywords == ['ccdsum']
+    assert comparer.group_by_attributes == ['ccdsum']
 
 
 @mock.patch('banzai.calibrations.Image')

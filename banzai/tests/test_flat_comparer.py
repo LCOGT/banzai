@@ -25,7 +25,7 @@ def test_no_input_images(set_random_seed):
 
 def test_group_by_keywords(set_random_seed):
     comparer = FlatComparer(FakeContext())
-    assert comparer.group_by_keywords == ['ccdsum', 'filter']
+    assert comparer.group_by_attributes == ['ccdsum', 'filter']
 
 
 @mock.patch('banzai.calibrations.Image')

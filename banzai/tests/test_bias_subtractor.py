@@ -21,7 +21,7 @@ def test_no_input_images():
 
 def test_group_by_keywords():
     subtractor = BiasSubtractor(None)
-    assert subtractor.group_by_keywords == ['ccdsum']
+    assert subtractor.group_by_attributes == ['ccdsum']
 
 
 @mock.patch('banzai.calibrations.Image')
