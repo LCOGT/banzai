@@ -1,3 +1,7 @@
+0.13.0 (2018-11-08)
+-------------------
+- Refactored pipeline context so that we can subclass image types for BANZAI NRES.
+
 0.12.1 (2018-11-08)
 -------------------
 - Refactored group_by_keywords to be group_by_attributes

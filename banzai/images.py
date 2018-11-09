@@ -208,7 +208,7 @@ def read_images(image_list, pipeline_context):
     images = []
     for filename in image_list:
         try:
-            image = Image(pipeline_context, filename=filename)
+            image = pipeline_context.image_class(pipeline_context, filename=filename)
             if image.telescope is None:
                 error_message = 'Telescope is not in the database: {site}/{instrument}'
                 error_message = error_message.format(site=image.site, instrument=image.instrument)
