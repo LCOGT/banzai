@@ -147,21 +147,22 @@ def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
 
 
 def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None, log_message='',
-                      calibration_maker_stage=None):
+                      calibration_maker_stage=None, group_by_attributes=None):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
-    full_image_path_list = image_utils.make_image_path_list(raw_path)
-    pruned_image_path_list = image_utils.select_images(full_image_path_list, image_types,
+    image_path_list = image_utils.make_image_path_list(raw_path)
+    pruned_image_path_list = image_utils.select_images(image_path_list, image_types,
                                                        pipeline_context.FRAME_SELECTION_CRITERIA,
                                                        db_address=pipeline_context.db_address)
     try:
-        run(stages_to_do, pruned_image_path_list, pipeline_context)
+        #run(stages_to_do, pruned_image_path_list, pipeline_context)
         if calibration_maker_stage is not None:
             reduced_image_path_list = image_utils.select_calibration_images(
-                full_image_path_list, image_types, pipeline_context.FRAME_SELECTION_CRITERIA,
+                pruned_image_path_list, image_types, pipeline_context.FRAME_SELECTION_CRITERIA,
                 db_address=pipeline_context.db_address)
-            run([calibration_maker_stage], reduced_image_path_list, pipeline_context, calibration_maker=True)
+            for reduced_image_path_list in reduced_image_path_lists:
+                run([calibration_maker_stage], reduced_image_path_list, pipeline_context, calibration_maker=True)
     except Exception as e:
         logger.error(e, extra_tags={'raw_path': raw_path})
 
