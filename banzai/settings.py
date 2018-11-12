@@ -40,7 +40,7 @@ ORDERED_STAGES = [bpm.BPMUpdater,
                   bias.BiasSubtractor,
                   dark.DarkSubtractor,
                   flats.FlatDivider,
-                  qc.PatternNoiseDetector,
+                  #qc.PatternNoiseDetector,
                   photometry.SourceDetector,
                   astrometry.WCSSolver,
                   qc.pointing.PointingTest]
@@ -48,6 +48,7 @@ ORDERED_STAGES = [bpm.BPMUpdater,
 
 BIAS_IMAGE_TYPES = ['BIAS']
 BIAS_SUFFIXES = ['b00.fits']
+BIAS_GROUP_BY_ATTRIBUTES = ['ccdsum']
 BIAS_LAST_STAGE = trim.Trimmer
 BIAS_MAKER_STAGE = bias.BiasMaker
 BIAS_EXTRA_STAGES = [bias.BiasMasterLevelSubtractor, bias.BiasComparer]
@@ -55,6 +56,7 @@ BIAS_EXTRA_STAGES_PREVIEW = [bias.BiasMasterLevelSubtractor, bias.BiasComparer]
 
 DARK_IMAGE_TYPES = ['DARK']
 DARK_SUFFIXES = ['d00.fits']
+DARK_GROUP_BY_ATTRIBUTES = ['ccdsum']
 DARK_LAST_STAGE = bias.BiasSubtractor
 DARK_MAKER_STAGE = dark.DarkMaker
 DARK_EXTRA_STAGES = [dark.DarkNormalizer, dark.DarkComparer]
@@ -62,6 +64,7 @@ DARK_EXTRA_STAGES_PREVIEW = [dark.DarkNormalizer, dark.DarkComparer]
 
 FLAT_IMAGE_TYPES = ['SKYFLAT']
 FLAT_SUFFIXES = ['f00.fits']
+FLAT_GROUP_BY_ATTRIBUTES = ['ccdsum', 'filter']
 FLAT_LAST_STAGE = dark.DarkSubtractor
 FLAT_MAKER_STAGE = flats.FlatMaker
 FLAT_EXTRA_STAGES = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer]
