@@ -28,7 +28,6 @@ def test_instrument_criterion_should_pass_with_exclude():
     criterion = InstrumentCriterion('type', operator.contains, 'NRES', exclude=True)
     assert criterion.instrument_passes(FakeInstrument(schedulable=True, type='SciCam'))
 
-
 @mock.patch('banzai.dbs.get_instrument_for_file')
 def test_image_passes_multiple_criteria_should_fail(mock_instrument):
     mock_instrument.return_value = FakeInstrument(schedulable=False, type='SciCam')

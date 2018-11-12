@@ -2,7 +2,7 @@ import logging
 
 from banzai import dbs
 from banzai.utils import file_utils
-from banzai.utils.image_utils import image_passes_instrument_criteria
+from banzai.utils.image_utils import image_passes_criteria
 
 logger = logging.getLogger(__name__)
 
