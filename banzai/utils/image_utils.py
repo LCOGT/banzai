@@ -65,10 +65,6 @@ def make_image_path_list(raw_path):
     return image_list
 
 
-class MissingCatalogException(Exception):
-    pass
-
-
 def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
     telescope = dbs.get_telescope_for_file(filename, db_address=db_address)
     passes = True
