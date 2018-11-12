@@ -5,7 +5,7 @@ import operator
 from lcogt_logging import LCOGTFormatter
 
 from banzai.context import TelescopeCriterion
-from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, photometry, astrometry
+from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, photometry, astrometry, images
 
 
 # Logger set up
@@ -75,3 +75,5 @@ SCIENCE_IMAGE_TYPES = ['EXPOSE', 'STANDARD']
 SCIENCE_SUFFIXES = ['e00.fits', 's00.fits']
 
 PREVIEW_ELIGIBLE_SUFFIXES = SCIENCE_SUFFIXES + BIAS_SUFFIXES + DARK_SUFFIXES + FLAT_SUFFIXES
+
+IMAGE_CLASS = images.Image

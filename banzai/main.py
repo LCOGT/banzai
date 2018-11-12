@@ -22,7 +22,7 @@ from banzai import settings
 from banzai import dbs, preview, logs
 from banzai.context import PipelineContext
 from banzai.utils import image_utils, date_utils
-import banzai.images
+from banzai.images import read_images
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def get_stages_todo(last_stage=None, extra_stages=None):
     return stages_todo
 
 
-def parse_args(selection_criteria, extra_console_arguments=None,
+def parse_args(selection_criteria, image_class, extra_console_arguments=None,
                parser_description='Process LCO data.', **kwargs):
     """Parse arguments, including default command line argument, and set the overall log level"""
 
@@ -106,7 +106,7 @@ def parse_args(selection_criteria, extra_console_arguments=None,
     if not args.ignore_schedulability:
         selection_criteria += settings.SCHEDULABLE_CRITERIA
 
-    pipeline_context = PipelineContext(args, selection_criteria, **kwargs)
+    pipeline_context = PipelineContext(args, selection_criteria, image_class, **kwargs)
 
     return pipeline_context
 
@@ -115,7 +115,7 @@ def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
     """
     Main driver script for banzai.
     """
-    images = banzai.images.read_images(image_paths, pipeline_context)
+    images = read_images(image_paths, pipeline_context)
 
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
@@ -125,8 +125,8 @@ def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
     return output_files
 
 
-def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None, log_message='',
-                      calibration_maker=False):
+def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None,
+                      log_message='', calibration_maker=False, ):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
@@ -157,7 +157,7 @@ def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, 
         logger.error(e, extra_tags={'filename': filename})
 
 
-def parse_directory_args(pipeline_context, raw_path, selection_criteria, extra_console_arguments=None):
+def parse_directory_args(pipeline_context, raw_path, selection_criteria, image_class, extra_console_arguments=None):
     if extra_console_arguments is None:
         extra_console_arguments = []
 
@@ -165,7 +165,7 @@ def parse_directory_args(pipeline_context, raw_path, selection_criteria, extra_c
         if raw_path is None:
             extra_console_arguments += [RAW_PATH_CONSOLE_ARGUMENT]
 
-        pipeline_context = parse_args(selection_criteria, extra_console_arguments=extra_console_arguments)
+        pipeline_context = parse_args(selection_criteria, image_class, extra_console_arguments=extra_console_arguments)
 
         if raw_path is None:
             raw_path = pipeline_context.raw_path
@@ -173,48 +173,55 @@ def parse_directory_args(pipeline_context, raw_path, selection_criteria, extra_c
 
 
 def make_master_bias(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA,
+                                                      settings.IMAGE_CLASS)
     process_directory(pipeline_context, raw_path, settings.BIAS_IMAGE_TYPES, last_stage=settings.BIAS_LAST_STAGE,
                       extra_stages=settings.BIAS_EXTRA_STAGES, log_message='Making Master Bias', calibration_maker=True)
 
 
 def make_master_dark(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA,
+                                                      settings.IMAGE_CLASS)
     process_directory(pipeline_context, raw_path, settings.DARK_IMAGE_TYPES, last_stage=settings.DARK_LAST_STAGE,
                       extra_stages=settings.DARK_EXTRA_STAGES, log_message='Making Master Dark', calibration_maker=True)
 
 
 def make_master_flat(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA,
+                                                      settings.IMAGE_CLASS)
     process_directory(pipeline_context, raw_path, settings.FLAT_IMAGE_TYPES, last_stage=settings.FLAT_LAST_STAGE,
                       extra_stages=settings.FLAT_EXTRA_STAGES, log_message='Making Master Flat', calibration_maker=True)
 
 
 def reduce_science_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA,
+                                                      settings.IMAGE_CLASS)
     process_directory(pipeline_context, raw_path, settings.SCIENCE_IMAGE_TYPES)
 
 
 def reduce_single_science_frame():
     extra_console_arguments = [{'args': ['--filename'],
                                 'kwargs': {'dest': 'filename', 'help': 'Name of file to process'}}]
-    pipeline_context, raw_path = parse_directory_args(None, None, settings.IMAGING_CRITERIA,
+    pipeline_context, raw_path = parse_directory_args(None, None, settings.IMAGING_CRITERIA, settings.IMAGE_CLASS,
                                                       extra_console_arguments=extra_console_arguments)
     process_single_frame(pipeline_context, raw_path, pipeline_context.filename)
 
 
 def reduce_experimental_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA,
+                                                      settings.IMAGE_CLASS)
     process_directory(pipeline_context, raw_path, settings.EXPERIMENTAL_IMAGE_TYPES)
 
 
 def reduce_trailed_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA,
+                                                      settings.IMAGE_CLASS)
     process_directory(pipeline_context, raw_path, settings.TRAILED_IMAGE_TYPES)
 
 
 def preprocess_sinistro_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA)
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, settings.IMAGING_CRITERIA,
+                                                      settings.IMAGE_CLASS)
     process_directory(pipeline_context, raw_path, settings.SINISTRO_IMAGE_TYPES,
                       last_stage=settings.SINISTRO_LAST_STAGE)
 
@@ -227,7 +234,8 @@ def reduce_night():
                                 'kwargs': {'dest': 'rawpath_root', 'default': '/archive/engineering',
                                            'help': 'Top level directory with raw data.'}}]
 
-    pipeline_context = parse_args(settings.IMAGING_CRITERIA, extra_console_arguments=extra_console_arguments,
+    pipeline_context = parse_args(settings.IMAGING_CRITERIA, settings.IMAGE_CLASS,
+                                  extra_console_arguments=extra_console_arguments,
                                   parser_description='Reduce all the data from a site at the end of a night.')
 
     # Ping the configdb to get telescopes
@@ -305,7 +313,7 @@ def run_preview_pipeline():
                                 'kwargs': {'dest': 'queue_name', 'default': 'preview_pipeline',
                                            'help': 'Name of the queue to listen to from the fits exchange.'}}]
 
-    pipeline_context = parse_args(settings.IMAGING_CRITERIA,
+    pipeline_context = parse_args(settings.IMAGING_CRITERIA, settings.IMAGE_CLASS,
                                   parser_description='Reduce LCO imaging data in real time.',
                                   extra_console_arguments=extra_console_arguments, preview_mode=True)
 
