@@ -166,7 +166,6 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
     except Exception as e:
         logger.error(e, extra_tags={'raw_path': raw_path})
 
-
 def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, extra_stages=None, log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
