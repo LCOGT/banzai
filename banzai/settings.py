@@ -40,7 +40,7 @@ ORDERED_STAGES = [bpm.BPMUpdater,
                   bias.BiasSubtractor,
                   dark.DarkSubtractor,
                   flats.FlatDivider,
-                  #qc.PatternNoiseDetector,
+                  qc.PatternNoiseDetector,
                   photometry.SourceDetector,
                   astrometry.WCSSolver,
                   qc.pointing.PointingTest]
