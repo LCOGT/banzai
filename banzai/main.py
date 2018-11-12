@@ -268,23 +268,23 @@ def reduce_night():
         raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
                                 telescope.instrument, dayobs, 'raw')
 
-    # Run the reductions on the given dayobs
-    try:
-        make_master_bias(pipeline_context=pipeline_context, raw_path=raw_path)
-    except Exception as e:
-        logger.error(e)
-    try:
-        make_master_dark(pipeline_context=pipeline_context, raw_path=raw_path)
-    except Exception as e:
-        logger.error(e)
-    try:
-        make_master_flat(pipeline_context=pipeline_context, raw_path=raw_path)
-    except Exception as e:
-        logger.error(e)
-    try:
-        reduce_science_frames(pipeline_context=pipeline_context, raw_path=raw_path)
-    except Exception as e:
-        logger.error(e)
+        # Run the reductions on the given dayobs
+        try:
+            make_master_bias(pipeline_context=pipeline_context, raw_path=raw_path)
+        except Exception as e:
+            logger.error(e)
+        try:
+            make_master_dark(pipeline_context=pipeline_context, raw_path=raw_path)
+        except Exception as e:
+            logger.error(e)
+        try:
+            make_master_flat(pipeline_context=pipeline_context, raw_path=raw_path)
+        except Exception as e:
+            logger.error(e)
+        try:
+            reduce_science_frames(pipeline_context=pipeline_context, raw_path=raw_path)
+        except Exception as e:
+            logger.error(e)
 
 
 def get_preview_stages_todo(image_suffix):
