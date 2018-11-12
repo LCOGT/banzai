@@ -156,7 +156,7 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
                                                        pipeline_context.FRAME_SELECTION_CRITERIA,
                                                        db_address=pipeline_context.db_address)
     try:
-        #run(stages_to_do, pruned_image_path_list, pipeline_context)
+        run(stages_to_do, pruned_image_path_list, pipeline_context)
         if calibration_maker_stage is not None:
             reduced_image_path_list = image_utils.select_calibration_images(
                 pruned_image_path_list, image_types, pipeline_context.FRAME_SELECTION_CRITERIA,
