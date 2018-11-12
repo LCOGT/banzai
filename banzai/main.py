@@ -134,16 +134,16 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
     pruned_image_path_list = image_utils.select_images(image_path_list, image_types,
                                                        pipeline_context.allowed_instrument_criteria,
                                                        db_address=pipeline_context.db_address)
-    #try:
-    run(stages_to_do, pruned_image_path_list, pipeline_context)
-    if calibration_maker_stage is not None:
-        reduced_image_path_lists = image_utils.select_calibration_images(
-            pruned_image_path_list, image_types, pipeline_context.allowed_instrument_criteria, group_by_attributes,
-            db_address=pipeline_context.db_address)
-        for reduced_image_path_list in reduced_image_path_lists:
-            run([calibration_maker_stage], reduced_image_path_list, pipeline_context, calibration_maker=True)
-    #except Exception as e:
-    #    logger.error(e, extra_tags={'raw_path': raw_path})
+    try:
+        run(stages_to_do, pruned_image_path_list, pipeline_context)
+        if calibration_maker_stage is not None:
+            reduced_image_path_lists = image_utils.select_calibration_images(
+                pruned_image_path_list, image_types, pipeline_context.allowed_instrument_criteria, group_by_attributes,
+                db_address=pipeline_context.db_address)
+            for reduced_image_path_list in reduced_image_path_lists:
+                run([calibration_maker_stage], reduced_image_path_list, pipeline_context, calibration_maker=True)
+    except Exception as e:
+        logger.error(e, extra_tags={'raw_path': raw_path})
 
 
 def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, extra_stages=None, log_message=''):
