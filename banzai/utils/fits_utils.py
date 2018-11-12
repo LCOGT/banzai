@@ -33,7 +33,7 @@ def create_master_calibration_header(images):
             if len(h) > 0:
                 header[h] = (images[0].header[h], images[0].header.comments[h])
         except ValueError as e:
-            logger.error('Could not add keyword {0}'.format(h), image=image)
+            logger.error('Could not add keyword {0}'.format(h), image=images[0])
             continue
 
     header = sanitizeheader(header)
