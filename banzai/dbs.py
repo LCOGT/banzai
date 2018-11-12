@@ -461,18 +461,21 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     return calibration_file
 
 
-def get_individual_calibration_images(image_parameters, db_address=_DEFAULT_DB):
+def get_individual_calibration_images(image_parameters, group_by_attributes, db_address=_DEFAULT_DB):
+
     calibration_criteria = CalibrationImageIndividual.type == image_parameters['obstype']
     calibration_criteria &= CalibrationImageIndividual.telescope_id == image_parameters['telescope_id']
     calibration_criteria &= CalibrationImageIndividual.dayobs == image_parameters['dayobs']
-    calibration_criteria &= CalibrationImageIndividual.ccdsum == image_parameters['ccdsum']
-    if image_parameters['obstype'] == 'SKYFLAT':
-        calibration_criteria &= CalibrationImageIndividual.filter_name == image_parameters['filter']
+
+    for criterion in group_by_attributes:
+        if criterion == 'filter':
+            calibration_criteria &= CalibrationImageIndividual.filter_name == image_parameters[criterion]
+        else:
+            calibration_criteria &= getattr(CalibrationImageIndividual, criterion) == image_parameters[criterion]
 
     db_session = get_session(db_address=db_address)
 
     calibration_images = db_session.query(CalibrationImageIndividual).filter(calibration_criteria).all()
-
     calibration_images = [os.path.join(calibration_image.filepath, calibration_image.filename) for
                           calibration_image in calibration_images]
 
