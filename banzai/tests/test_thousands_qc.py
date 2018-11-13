@@ -9,11 +9,6 @@ def test_no_input_images():
     assert len(images) == 0
 
 
-def test_group_by_keywords():
-    tester = ThousandsTest(None)
-    assert tester.group_by_attributes is None
-
-
 def test_no_pixels_1000():
     tester = ThousandsTest(None)
     nx = 101

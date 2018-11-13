@@ -17,11 +17,6 @@ def test_no_input_images():
     assert len(images) == 0
 
 
-def test_group_by_keywords():
-    gain_normalizer = GainNormalizer(None)
-    assert gain_normalizer.group_by_attributes is None
-
-
 def test_gain_header_missing():
     gain_normalizer = GainNormalizer(None)
     images = gain_normalizer.do_stage([FakeGainImage() for x in range(6)])
