@@ -88,9 +88,6 @@ class Image(object):
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE', 0.0))
 
-        if self.telescope is None:
-            logger.warning("Image telescope attribute is None", image=self)
-
     def _init_telescope_info(self, pipeline_context):
         if len(self.header) > 0:
             try:
@@ -215,6 +212,7 @@ def read_images(image_list, pipeline_context):
         try:
             image = pipeline_context.image_class(pipeline_context, filename=filename)
             if image.telescope is None:
+                logger.error("Image telescope attribute is None, removing from list", image=image)
                 continue
             munge(image)
             images.append(image)
