@@ -1,5 +1,6 @@
 import logging
 import abc
+import itertools
 
 import numpy as np
 
@@ -29,6 +30,29 @@ class CalibrationMaker(Stage):
     @abc.abstractmethod
     def min_images(self):
         return 5
+
+    @property
+    @abc.abstractmethod
+    def group_by_attributes(self):
+        return []
+
+    def get_grouping(self, image):
+        grouping_criteria = [image.site, image.instrument, image.epoch]
+        if self.group_by_attributes:
+            grouping_criteria += [getattr(image, keyword) for keyword in self.group_by_attributes]
+        return grouping_criteria
+
+    def run(self, images):
+        images.sort(key=self.get_grouping)
+        processed_images = []
+        for _, image_set in itertools.groupby(images, self.get_grouping):
+            try:
+                image_set = list(image_set)
+                logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
+                processed_images += self.do_stage(image_set)
+            except Exception as e:
+                logger.error(e)
+        return processed_images
 
     def do_stage(self, images):
         if len(images) < self.min_images:
@@ -100,6 +124,11 @@ class ApplyCalibration(Stage):
     @abc.abstractmethod
     def calibration_type(self):
         pass
+
+    @property
+    @abc.abstractmethod
+    def group_by_attributes(self):
+        return []
 
     def on_missing_master_calibration(self, image):
         logger.error('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name), image=image)
