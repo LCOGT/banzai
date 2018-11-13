@@ -14,10 +14,6 @@ class FlatNormalizer(Stage):
     def __init__(self, pipeline_context):
         super(FlatNormalizer, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, images):
         for image in images:
             # Get the sigma clipped mean of the central 25% of the image
@@ -65,7 +61,7 @@ class FlatDivider(ApplyCalibration):
         super(FlatDivider, self).__init__(pipeline_context)
 
     @property
-    def group_by_attributes(self):
+    def master_selection_criteria(self):
         return ['ccdsum', 'filter']
 
     @property
@@ -93,7 +89,7 @@ class FlatComparer(CalibrationComparer):
         super(FlatComparer, self).__init__(pipeline_context)
 
     @property
-    def group_by_attributes(self):
+    def master_selection_criteria(self):
         return ['ccdsum', 'filter']
 
     @property
