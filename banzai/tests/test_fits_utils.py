@@ -1,7 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
 import numpy as np
 from astropy.table import Table
 from astropy.io import fits
+
 from banzai.utils import fits_utils
 
 

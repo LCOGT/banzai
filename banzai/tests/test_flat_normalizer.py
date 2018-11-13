@@ -1,8 +1,8 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import pytest
+import numpy as np
+
 from banzai.flats import FlatNormalizer
 from banzai.tests.utils import FakeImage
-import numpy as np
-import pytest
 
 
 @pytest.fixture(scope='module')

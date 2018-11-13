@@ -1,8 +1,10 @@
+import operator
+
 import mock
+
 from banzai.dbs import TelescopeMissingException
 from banzai.preview import need_to_make_preview
 from banzai.context import TelescopeCriterion
-import operator
 
 md5_hash1 = '49a6bb35cdd3859224c0214310b1d9b6'
 md5_hash2 = 'aec5ef355e7e43a59fedc88ac95caed6'

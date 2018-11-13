@@ -1,8 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import numpy as np
 
 from banzai.mosaic import get_mosaic_size, MosaicCreator
 from banzai.tests.utils import FakeImage
-import numpy as np
 
 
 class FakeMosaicImage(FakeImage):

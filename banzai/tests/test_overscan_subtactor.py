@@ -1,8 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import numpy as np
+
 from banzai.bias import OverscanSubtractor
 from banzai.tests.utils import FakeImage
-
-import numpy as np
 
 
 class FakeOverscanImage(FakeImage):

@@ -1,9 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.bias import BiasComparer
-from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception, FakeContext
+import pytest
 import mock
 import numpy as np
-import pytest
+
+from banzai.bias import BiasComparer
+from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception, FakeContext
 
 
 @pytest.fixture(scope='module')

@@ -1,8 +1,10 @@
-from banzai.context import TelescopeCriterion
-from banzai.utils.image_utils import image_passes_criteria
 from collections import namedtuple
 import operator
+
 import mock
+
+from banzai.context import TelescopeCriterion
+from banzai.utils.image_utils import image_passes_criteria
 
 FakeTelescope = namedtuple('FakeTelescope', ['schedulable', 'camera_type'])
 

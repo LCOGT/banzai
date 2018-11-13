@@ -1,11 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.bias import BiasMaker
+import mock
 import numpy as np
 from astropy.io import fits
 
+from banzai.bias import BiasMaker
 from banzai.tests.utils import FakeImage, FakeContext, throws_inhomogeneous_set_exception
-
-import mock
 
 
 class FakeBiasImage(FakeImage):

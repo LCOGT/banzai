@@ -1,7 +1,7 @@
 import numpy as np
 
 from banzai.qc.pointing import PointingTest
-from .utils import FakeImage
+from banzai.tests.utils import FakeImage
 
 
 def test_no_input_images():
