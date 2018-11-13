@@ -19,9 +19,9 @@ def test_no_input_images():
     assert len(images) == 0
 
 
-def test_group_by_keywords():
+def test_master_selection_criteria():
     subtractor = BiasSubtractor(None)
-    assert subtractor.group_by_attributes == ['ccdsum']
+    assert subtractor.master_selection_criteria == ['ccdsum']
 
 
 @mock.patch('banzai.calibrations.Image')

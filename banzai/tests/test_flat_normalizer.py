@@ -16,11 +16,6 @@ def test_no_input_images(set_random_seed):
     assert len(images) == 0
 
 
-def test_group_by_keywords(set_random_seed):
-    normalizer = FlatNormalizer(None)
-    assert normalizer.group_by_attributes is None
-
-
 def test_header_has_flatlevel(set_random_seed):
     normalizer = FlatNormalizer(None)
     images = normalizer.do_stage([FakeImage(image_multiplier=2.0) for _ in range(6)])

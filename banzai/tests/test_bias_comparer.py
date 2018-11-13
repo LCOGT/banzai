@@ -23,9 +23,9 @@ def test_no_input_images(set_random_seed):
     assert len(images) == 0
 
 
-def test_group_by_keywords(set_random_seed):
+def test_master_selection_criteria(set_random_seed):
     comparer = BiasComparer(None)
-    assert comparer.group_by_attributes == ['ccdsum']
+    assert comparer.master_selection_criteria == ['ccdsum']
 
 
 @mock.patch('banzai.calibrations.Image')

@@ -17,11 +17,6 @@ def test_no_input_images():
     assert len(images) == 0
 
 
-def test_group_by_keywords():
-    subtractor = OverscanSubtractor(None)
-    assert subtractor.group_by_attributes is None
-
-
 def test_header_has_overscan_when_biassec_unknown():
     subtractor = OverscanSubtractor(None)
     images = subtractor.do_stage([FakeOverscanImage() for x in range(6)])
