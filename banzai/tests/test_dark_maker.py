@@ -23,7 +23,7 @@ def test_min_images():
     assert len(processed_images) == 0
 
 
-def test_group_by_keywords():
+def test_group_by_attributes():
     maker = DarkMaker(None)
     assert maker.group_by_attributes == ['ccdsum']
 
