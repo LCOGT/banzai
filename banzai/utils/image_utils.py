@@ -14,7 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
-    telescope = dbs.get_telescope_for_file(filename, db_address=db_address)
+    try:
+        telescope = dbs.get_telescope_for_file(filename, db_address=db_address)
+    except dbs.TelescopeMissingException:
+        logger.error('Unable to check whether image passes criteria', extra_tags={'filename': filename})
+        return False
     passes = True
     for criterion in criteria:
         if not criterion.telescope_passes(telescope):
