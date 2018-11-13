@@ -60,7 +60,7 @@ class CalibrationMaker(Stage):
             logger.warning('Not enough images to combine.')
             return []
         else:
-            image_config = image_utils.check_image_homogeneity(images)
+            image_config = image_utils.check_image_homogeneity(images, self.group_by_attributes)
 
             return self.make_master_calibration_frame(images, image_config)
 
@@ -127,7 +127,7 @@ class ApplyCalibration(Stage):
 
     @property
     @abc.abstractmethod
-    def group_by_attributes(self):
+    def master_selection_criteria(self):
         return []
 
     def on_missing_master_calibration(self, image):
@@ -154,7 +154,7 @@ class ApplyCalibration(Stage):
         pass
 
     def get_calibration_filename(self, image):
-        return dbs.get_master_calibration_image(image, self.calibration_type, self.group_by_attributes,
+        return dbs.get_master_calibration_image(image, self.calibration_type, self.master_selection_criteria,
                                                 db_address=self.pipeline_context.db_address)
 
 
