@@ -391,12 +391,12 @@ def get_telescopes_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=F
     return telescopes
 
 
-def get_master_calibration_image(image, calibration_type, group_by_keywords,
+def get_master_calibration_image(image, calibration_type, master_selection_criteria,
                                  db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.telescope_id == image.telescope.id
 
-    for criterion in group_by_keywords:
+    for criterion in master_selection_criteria:
         if criterion == 'filter':
             calibration_criteria &= CalibrationImage.filter_name == getattr(image, criterion)
         else:
