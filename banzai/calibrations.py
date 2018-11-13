@@ -57,21 +57,6 @@ class CalibrationStacker(CalibrationMaker):
     def __init__(self, pipeline_context):
         super(CalibrationStacker, self).__init__(pipeline_context)
 
-    @property
-    @abc.abstractmethod
-    def group_by_attributes(self):
-        return []
-
-    @property
-    @abc.abstractmethod
-    def calibration_type(self):
-        return ''
-
-    @property
-    @abc.abstractmethod
-    def min_images(self):
-        return 5
-
     def make_master_calibration_frame(self, images, image_config):
         data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)

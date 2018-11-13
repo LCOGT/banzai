@@ -28,7 +28,7 @@ def test_group_by_keywords():
     assert maker.group_by_attributes == ['ccdsum']
 
 
-@mock.patch('banzai.bias.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_header_cal_type_bias(mock_image):
 
     maker = BiasMaker(FakeContext())
@@ -40,27 +40,27 @@ def test_header_cal_type_bias(mock_image):
     assert header['OBSTYPE'].upper() == 'BIAS'
 
 
-@mock.patch('banzai.bias.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_ccdsums_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ccdsum', '1 1')
 
 
-@mock.patch('banzai.bias.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_epochs_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'epoch', '20160102')
 
 
-@mock.patch('banzai.bias.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_nx_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'nx', 105)
 
 
-@mock.patch('banzai.bias.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_ny_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ny', 107)
 
 
-@mock.patch('banzai.bias.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_bias_level_is_average_of_inputs(mock_images):
     nimages = 20
 
@@ -72,7 +72,7 @@ def test_bias_level_is_average_of_inputs(mock_images):
     np.testing.assert_allclose(output_images[0].header['BIASLVL'], np.mean(np.arange(nimages)))
 
 
-@mock.patch('banzai.bias.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_makes_a_sensible_master_bias(mock_images):
     nimages = 20
     expected_readnoise = 15.0

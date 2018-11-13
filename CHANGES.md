@@ -1,8 +1,13 @@
+0.14.0 (2018-11-13)
+-------------------
+- Refactored bias, dark, and flat makers to use a common superclass to remove
+  code duplication.
+
 0.13.0 (2018-11-12)
 -------------------
 - Refactored pipeline context so that we can subclass image types for BANZAI NRES.
 - Fixed bug (introduced in 0.11.3) where reduce night would 
-  only reduce data from a single telescope per site 
+  only reduce data from a single telescope per site
 
 0.12.1 (2018-11-08)
 -------------------

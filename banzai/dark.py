@@ -3,8 +3,6 @@ import logging
 
 import numpy as np
 
-from banzai.utils import stats, fits_utils
-from banzai.images import Image
 from banzai.stages import Stage
 from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
 
@@ -26,7 +24,7 @@ class DarkNormalizer(Stage):
         return images
 
 
-class DarkMaker(Stage):
+class DarkMaker(CalibrationStacker):
     def __init__(self, pipeline_context):
         super(DarkMaker, self).__init__(pipeline_context)
 
