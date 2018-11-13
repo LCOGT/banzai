@@ -88,13 +88,17 @@ class Image(object):
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE', 0.0))
 
+        if self.telescope is None:
+            logger.warning("Image telescope attribute is None", image=self)
+
     def _init_telescope_info(self, pipeline_context):
         if len(self.header) > 0:
-            telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
-            if telescope is not None:
+            try:
+                telescope = dbs.get_telescope_from_header(self.header, db_address=pipeline_context.db_address)
                 site = telescope.site
                 instrument = telescope.instrument
-            else:
+            except dbs.TelescopeMissingException:
+                telescope = None
                 site = self.header.get('SITEID')
                 instrument = self.header.get('INSTRUME')
         else:
@@ -211,10 +215,8 @@ def read_images(image_list, pipeline_context):
         try:
             image = pipeline_context.image_class(pipeline_context, filename=filename)
             if image.telescope is None:
-                error_message = 'Telescope is not in the database: {site}/{instrument}'
-                error_message = error_message.format(site=image.site, instrument=image.instrument)
-                raise dbs.TelescopeMissingException(error_message)
-            munge(image, pipeline_context)
+                continue
+            munge(image)
             images.append(image)
         except Exception:
             logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
