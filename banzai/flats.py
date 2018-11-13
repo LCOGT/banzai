@@ -5,7 +5,7 @@ import numpy as np
 
 from banzai.utils import stats, fits_utils
 from banzai.stages import Stage
-from banzai.calibrations import CalibrationMaker, ApplyCalibration, CalibrationComparer
+from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
 from banzai.images import Image
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class FlatNormalizer(Stage):
         return images
 
 
-class FlatMaker(CalibrationMaker):
+class FlatMaker(CalibrationStacker):
     def __init__(self, pipeline_context):
         super(FlatMaker, self).__init__(pipeline_context)
 
@@ -47,34 +47,17 @@ class FlatMaker(CalibrationMaker):
     def min_images(self):
         return 5
 
-    def make_master_calibration_frame(self, images, image_config):
-        flat_data = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
-        flat_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
-        master_flat_filename = self.get_calibration_filename(images[0])
-        for i, image in enumerate(images):
+class FlatMasker(Stage):
+    @property
+    def group_by_attributes(self):
+        return None
 
-            flat_data[:, :, i] = image.data[:, :]
-            flat_mask[:, :, i] = image.bpm[:, :]
-
-        master_flat = stats.sigma_clipped_mean(flat_data, 3.0, axis=2, mask=flat_mask, fill_value=1.0, inplace=True)
-
-        master_bpm = np.array(master_flat == 1.0, dtype=np.uint8)
-
-        master_bpm = np.logical_and(master_bpm, master_flat < 0.2)
-
-        master_flat[master_flat < 0.2] = 1.0
-
-        master_flat_header = fits_utils.create_master_calibration_header(images)
-
-        master_flat_image = Image(self.pipeline_context, data=master_flat,
-                                  header=master_flat_header)
-        master_flat_image.filename = master_flat_filename
-        master_flat_image.bpm = master_bpm
-
-        logger.info('Created master flat', image=master_flat_image)
-
-        return [master_flat_image]
+    def do_stage(self, images):
+        for image in images:
+            image.bpm = np.logical_or(image.bpm, image.data < 0.2)
+            image.data[image.bpm] = 1.0
+        return images
 
 
 class FlatDivider(ApplyCalibration):

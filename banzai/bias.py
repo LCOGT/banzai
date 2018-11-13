@@ -5,13 +5,13 @@ import numpy as np
 
 from banzai.images import Image
 from banzai.stages import Stage
-from banzai.calibrations import CalibrationMaker, ApplyCalibration, CalibrationComparer
+from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
 from banzai.utils import stats, fits_utils
 
 logger = logging.getLogger(__name__)
 
 
-class BiasMaker(CalibrationMaker):
+class BiasMaker(CalibrationStacker):
 
     def __init__(self, pipeline_context):
         super(BiasMaker, self).__init__(pipeline_context)
@@ -27,36 +27,6 @@ class BiasMaker(CalibrationMaker):
     @property
     def min_images(self):
         return 5
-
-    def make_master_calibration_frame(self, images, image_config):
-
-        bias_data = np.zeros((image_config.ny, image_config.nx, len(images)), dtype=np.float32)
-        bias_mask = np.zeros((image_config.ny, image_config.nx, len(images)), dtype=np.uint8)
-
-        master_bias_filename = self.get_calibration_filename(image_config)
-        for i, image in enumerate(images):
-            # Subtract the bias level for each image
-            bias_data[:, :, i] = image.data[:, :]
-            bias_mask[:, :, i] = image.bpm[:, :]
-
-        master_bias = stats.sigma_clipped_mean(bias_data, 3.0, axis=2, mask=bias_mask, inplace=True)
-
-        del bias_data
-        del bias_mask
-
-        master_bpm = np.array(master_bias == 0.0, dtype=np.uint8)
-
-        header = fits_utils.create_master_calibration_header(images)
-
-        header['BIASLVL'] = (np.mean([image.header['BIASLVL'] for image in images]), 'Mean bias level of master bias')
-        master_bias_image = Image(self.pipeline_context, data=master_bias, header=header)
-        master_bias_image.filename = master_bias_filename
-        master_bias_image.bpm = master_bpm
-
-        logger.debug('Average bias level in ADU', image=master_bias_image,
-                     extra_tags={'BIASLVL': float(header['BIASLVL'])})
-
-        return [master_bias_image]
 
 
 class BiasSubtractor(ApplyCalibration):

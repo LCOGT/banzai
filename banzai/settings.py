@@ -61,7 +61,8 @@ DARK_EXTRA_STAGES_PREVIEW = [dark.DarkNormalizer, dark.DarkComparer]
 FLAT_IMAGE_TYPES = ['SKYFLAT']
 FLAT_SUFFIXES = ['f00.fits']
 FLAT_LAST_STAGE = dark.DarkSubtractor
-FLAT_EXTRA_STAGES = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker]
+FLAT_EXTRA_STAGES = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer,
+                     flats.FlatMaker, flats.FlatMasker]
 FLAT_EXTRA_STAGES_PREVIEW = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer]
 
 TRAILED_IMAGE_TYPES = ['TRAILED']
