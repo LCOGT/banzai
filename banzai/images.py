@@ -91,7 +91,7 @@ class Image(object):
     def _init_telescope_info(self, pipeline_context):
         if len(self.header) > 0:
             try:
-                telescope = dbs.get_telescope_from_header(self.header, db_address=pipeline_context.db_address)
+                telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
                 site = telescope.site
                 instrument = telescope.instrument
             except dbs.TelescopeMissingException:

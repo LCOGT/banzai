@@ -308,7 +308,7 @@ def _query_for_telescope(db_address, site, instrument):
     return telescope
 
 
-def get_telescope_from_header(header, db_address=_DEFAULT_DB):
+def get_telescope(header, db_address=_DEFAULT_DB):
     site = header.get('SITEID')
     instrument = header.get('INSTRUME')
     telescope_for_instrument = _query_for_telescope(db_address, site, instrument)
@@ -353,7 +353,7 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
 
 def get_telescope_for_file(path, db_address=_DEFAULT_DB):
     data, header, bpm, extension_headers = fits_utils.open_image(path)
-    return get_telescope_from_header(header, db_address=db_address)
+    return get_telescope(header, db_address=db_address)
 
 
 def get_preview_image(path, db_address=_DEFAULT_DB):
