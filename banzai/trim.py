@@ -32,10 +32,6 @@ class Trimmer(Stage):
     def __init__(self, pipeline_context):
         super(Trimmer, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, images):
 
         for image in images:

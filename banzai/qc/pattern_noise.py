@@ -23,10 +23,6 @@ class PatternNoiseDetector(Stage):
     def __init__(self, pipeline_context):
         super(PatternNoiseDetector, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, images):
         for image in images:
             pattern_noise_is_bad, fraction_pixels_above_threshold = self.check_for_pattern_noise(image.data)
