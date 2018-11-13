@@ -3,10 +3,8 @@ import logging
 
 import numpy as np
 
-from banzai.utils import stats, fits_utils
-from banzai.images import Image
 from banzai.stages import Stage
-from banzai.calibrations import CalibrationMaker, ApplyCalibration, CalibrationComparer
+from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +24,7 @@ class DarkNormalizer(Stage):
         return images
 
 
-class DarkMaker(CalibrationMaker):
+class DarkMaker(CalibrationStacker):
     def __init__(self, pipeline_context):
         super(DarkMaker, self).__init__(pipeline_context)
 
@@ -41,37 +39,6 @@ class DarkMaker(CalibrationMaker):
     @property
     def min_images(self):
         return 5
-
-    def make_master_calibration_frame(self, images, image_config):
-        dark_data = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
-        dark_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
-
-        master_dark_filename = self.get_calibration_filename(images[0])
-
-        logging_tags = {'master_dark': os.path.basename(master_dark_filename)}
-        for i, image in enumerate(images):
-            logger.debug('Combining dark', image=image, extra_tags=logging_tags)
-
-            dark_data[:, :, i] = image.data[:, :]
-            dark_mask[:, :, i] = image.bpm[:, :]
-
-        master_dark = stats.sigma_clipped_mean(dark_data, 3.0, axis=2, mask=dark_mask, inplace=True)
-
-        # Memory cleanup
-        del dark_data
-        del dark_mask
-
-        master_bpm = np.array(master_dark == 0.0, dtype=np.uint8)
-
-        # Save the master dark image with all of the combined images in the header
-        master_dark_header = fits_utils.create_master_calibration_header(images)
-        master_dark_image = Image(self.pipeline_context, data=master_dark,
-                                  header=master_dark_header)
-        master_dark_image.filename = master_dark_filename
-        master_dark_image.bpm = master_bpm
-
-        logger.info('Created master dark', image=master_dark_image)
-        return [master_dark_image]
 
 
 class DarkSubtractor(ApplyCalibration):
