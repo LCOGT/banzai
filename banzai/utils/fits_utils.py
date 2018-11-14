@@ -40,11 +40,8 @@ def create_master_calibration_header(images):
 
     observation_dates = [image.dateobs for image in images]
     mean_dateobs = date_utils.mean_date(observation_dates)
-    header['DATE-OBS'] = (date_utils.date_obs_to_string(mean_dateobs), '[UTC] Mean observation start time')
 
-    if header['OBSTYPE'] == 'BIAS':
-        header['BIASLVL'] = (np.mean([image.header['BIASLVL'] for image in images]),
-                             'Mean bias level of master bias')
+    header['DATE-OBS'] = (date_utils.date_obs_to_string(mean_dateobs), '[UTC] Mean observation start time')
 
     header.add_history("Images combined to create master calibration image:")
     for image in images:
