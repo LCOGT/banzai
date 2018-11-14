@@ -90,14 +90,9 @@ class Image(object):
 
     def _init_telescope_info(self, pipeline_context):
         if len(self.header) > 0:
-            try:
-                telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
-                site = telescope.site
-                instrument = telescope.instrument
-            except dbs.TelescopeMissingException:
-                telescope = None
-                site = self.header.get('SITEID')
-                instrument = self.header.get('INSTRUME')
+            telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
+            site = telescope.site
+            instrument = telescope.instrument
         else:
             telescope, site, instrument = None, None, None
         return telescope, site, instrument
