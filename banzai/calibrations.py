@@ -45,7 +45,7 @@ class CalibrationStacker(Stage):
             try:
                 image_set = list(image_set)
                 logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
-                processed_images += self.do_stage(image_set)
+                processed_images.append(self.do_stage(image_set))
             except Exception as e:
                 logger.error(e)
         return processed_images
@@ -99,7 +99,7 @@ class CalibrationStacker(Stage):
 
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})
-        return [master_image]
+        return master_image
 
 
 class MasterCalibrationDoesNotExist(Exception):
