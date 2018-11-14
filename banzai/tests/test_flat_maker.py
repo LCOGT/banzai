@@ -14,8 +14,8 @@ class FakeFlatImage(FakeImage):
 
 
 def test_min_images():
-    dark_maker = FlatMaker(None)
-    processed_images = dark_maker.do_stage([])
+    flat_maker = FlatMaker(None)
+    processed_images = flat_maker.do_stage([])
     assert len(processed_images) == 0
 
 
@@ -25,7 +25,8 @@ def test_group_by_attributes():
 
 
 @mock.patch('banzai.calibrations.Image')
-def test_header_cal_type_dark(mock_image):
+@mock.patch('banzai.flats.FlatMaker.final_step')
+def test_header_cal_type_flat(mock_final_step, mock_image):
 
     maker = FlatMaker(FakeContext())
 
