@@ -27,12 +27,6 @@ class BiasMaker(CalibrationStacker):
     def min_images(self):
         return 5
 
-    def make_master_calibration_frmae(self, images):
-        master_image = super(BiasMaker, self).make_master_calibration_frame(images)
-        master_image.header['BIASLVL'] = (np.mean([image.header['BIASLVL'] for image in images]),
-                                          'Mean bias level of master bias')
-        return master_image
-
 
 class BiasSubtractor(ApplyCalibration):
     def __init__(self, pipeline_context):
