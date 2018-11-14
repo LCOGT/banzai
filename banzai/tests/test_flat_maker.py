@@ -24,16 +24,17 @@ def test_group_by_attributes():
     assert maker.group_by_attributes == ['ccdsum', 'filter']
 
 
-@mock.patch('banzai.calibrations.Image')
-@mock.patch('banzai.flats.FlatMaker.final_step')
-def test_header_cal_type_flat(mock_final_step, mock_image):
+@mock.patch('banzai.calibrations.Image._init_telescope_info')
+def test_header_cal_type_flat(mock_telescope_info):
 
-    maker = FlatMaker(FakeContext())
+    mock_telescope_info.return_value = None, None, None
+    fake_context = FakeContext()
+    fake_context.db_address = ''
 
-    maker.do_stage([FakeFlatImage() for x in range(6)])
+    maker = FlatMaker(fake_context)
+    master_flat = maker.do_stage([FakeFlatImage() for x in range(6)])[0]
 
-    args, kwargs = mock_image.call_args
-    header = kwargs['header']
+    header = master_flat.header
     assert header['OBSTYPE'].upper() == 'SKYFLAT'
 
 

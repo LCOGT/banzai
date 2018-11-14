@@ -70,7 +70,7 @@ def test_bias_level_is_average_of_inputs(mock_telescope_info):
     fake_context.db_address = ''
 
     maker = BiasMaker(fake_context)
-    master_bias = maker.do_stage(images)
+    master_bias = maker.do_stage(images)[0]
 
     header = master_bias.header
 
