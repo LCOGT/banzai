@@ -13,13 +13,17 @@ import os
 logger = logging.getLogger(__name__)
 
 
-class CalibrationStacker(Stage):
+class CalibrationMaker(Stage):
     def __init__(self, pipeline_context):
-        super(CalibrationStacker, self).__init__(pipeline_context)
+        super(CalibrationMaker, self).__init__(pipeline_context)
 
     @property
     @abc.abstractmethod
     def calibration_type(self):
+        pass
+
+    @abc.abstractmethod
+    def make_master_calibration_frame(self, images, image_config):
         pass
 
     @property
@@ -31,10 +35,6 @@ class CalibrationStacker(Stage):
     @abc.abstractmethod
     def group_by_attributes(self):
         return []
-
-    @abc.abstractmethod
-    def final_step(self, images, master_image):
-        pass
 
     def get_grouping(self, image):
         grouping_criteria = [image.site, image.instrument, image.epoch]
@@ -49,7 +49,7 @@ class CalibrationStacker(Stage):
             try:
                 image_set = list(image_set)
                 logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
-                processed_images.append(self.do_stage(image_set))
+                processed_images += self.do_stage(image_set)
             except Exception as e:
                 logger.error(e)
         return processed_images
@@ -61,9 +61,8 @@ class CalibrationStacker(Stage):
             return []
         else:
             image_utils.check_image_homogeneity(images, self.group_by_attributes)
-            master_image = self.make_master_calibration_frame(images)
-            self.final_step(images, master_image)
-            return master_image
+
+            return self.make_master_calibration_frame(images)
 
     def get_calibration_filename(self, image):
         cal_file = '{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
@@ -76,6 +75,11 @@ class CalibrationStacker(Stage):
                                    epoch=image.epoch, bin=image.ccdsum.replace(' ', 'x'),
                                    cal_type=self.calibration_type.lower(), filter=filter_str)
         return cal_file
+
+
+class CalibrationStacker(CalibrationMaker):
+    def __init__(self, pipeline_context):
+        super(CalibrationStacker, self).__init__(pipeline_context)
 
     def make_master_calibration_frame(self, images):
         data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
@@ -105,7 +109,7 @@ class CalibrationStacker(Stage):
 
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})
-        return master_image
+        return [master_image]
 
 
 class MasterCalibrationDoesNotExist(Exception):
