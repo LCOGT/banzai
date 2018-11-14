@@ -66,9 +66,11 @@ def test_bias_level_is_average_of_inputs(mock_image):
 
     maker = BiasMaker(FakeContext())
     maker.do_stage(images)
-    args, kwargs = mock_image.call_args
 
-    assert kwargs['header']['BIASLVL'] == np.mean(np.arange(nimages, dtype=float))
+    args, kwargs = mock_image.call_args
+    header = kwargs['header']
+
+    assert header['BIASLVL'] == np.mean(np.arange(nimages, dtype=float))
 
 
 @mock.patch('banzai.calibrations.Image')
