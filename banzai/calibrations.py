@@ -56,7 +56,7 @@ class CalibrationStacker(Stage):
             logger.warning('Not enough images to combine.')
             return []
         else:
-            image_utils.check_image_homogeneity(images)
+            image_utils.check_image_homogeneity(images, self.group_by_attributes)
             return self.make_master_calibration_frame(images)
 
     def get_calibration_filename(self, image):
