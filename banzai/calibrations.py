@@ -62,7 +62,7 @@ class CalibrationMaker(Stage):
         else:
             image_utils.check_image_homogeneity(images, self.group_by_attributes)
 
-            return self.make_master_calibration_frame(images)
+            return [self.make_master_calibration_frame(images)]
 
     def get_calibration_filename(self, image):
         cal_file = '{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
@@ -109,7 +109,7 @@ class CalibrationStacker(CalibrationMaker):
 
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})
-        return [master_image]
+        return master_image
 
 
 class MasterCalibrationDoesNotExist(Exception):
