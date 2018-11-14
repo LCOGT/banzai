@@ -1,8 +1,6 @@
 import mock
-import numpy as np
 from astropy.io import fits
 
-from banzai.utils import stats
 from banzai.flats import FlatMaker
 from banzai.tests.utils import FakeImage, FakeContext, throws_inhomogeneous_set_exception
 
@@ -26,7 +24,7 @@ def test_group_by_attributes():
     assert maker.group_by_attributes == ['ccdsum', 'filter']
 
 
-@mock.patch('banzai.flats.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_header_cal_type_dark(mock_image):
 
     maker = FlatMaker(FakeContext())
@@ -38,26 +36,26 @@ def test_header_cal_type_dark(mock_image):
     assert header['OBSTYPE'].upper() == 'SKYFLAT'
 
 
-@mock.patch('banzai.flats.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_ccdsums_are_different(mock_images):
     throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'ccdsum', '1 1')
 
 
-@mock.patch('banzai.flats.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_epochs_are_different(mock_images):
     throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'epoch', '20160102')
 
 
-@mock.patch('banzai.flats.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_nx_are_different(mock_images):
     throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'nx', 105)
 
 
-@mock.patch('banzai.flats.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_ny_are_different(mock_images):
     throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'ny', 107)
 
 
-@mock.patch('banzai.flats.Image')
+@mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_filters_are_different(mock_images):
     throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'filter', 'w')
