@@ -32,6 +32,10 @@ class CalibrationStacker(Stage):
     def group_by_attributes(self):
         return []
 
+    @abc.abstractmethod
+    def final_step(self, images, master_image):
+        pass
+
     def get_grouping(self, image):
         grouping_criteria = [image.site, image.instrument, image.epoch]
         if self.group_by_attributes:
@@ -57,7 +61,9 @@ class CalibrationStacker(Stage):
             return []
         else:
             image_utils.check_image_homogeneity(images, self.group_by_attributes)
-            return self.make_master_calibration_frame(images)
+            master_image = self.make_master_calibration_frame(images)
+            self.final_step(images, master_image)
+            return master_image
 
     def get_calibration_filename(self, image):
         cal_file = '{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
