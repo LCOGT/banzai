@@ -61,8 +61,9 @@ def test_raises_an_exception_if_ny_are_different(mock_images):
 @mock.patch('banzai.calibrations.Image')
 def test_bias_level_is_average_of_inputs(mock_image):
     nimages = 20
+    bias_levels = np.arange(nimages, dtype=float)
 
-    images = [FakeBiasImage(bias_level=i) for i in np.arange(nimages, dtype=float)]
+    images = [FakeBiasImage(bias_level=i) for i in bias_levels]
 
     maker = BiasMaker(FakeContext())
     maker.do_stage(images)
@@ -70,7 +71,7 @@ def test_bias_level_is_average_of_inputs(mock_image):
     args, kwargs = mock_image.call_args
     header = kwargs['header']
 
-    assert header['BIASLVL'] == np.mean(np.arange(nimages, dtype=float))
+    assert header['BIASLVL'] == np.mean(bias_levels)
 
 
 @mock.patch('banzai.calibrations.Image')
