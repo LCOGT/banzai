@@ -22,11 +22,6 @@ def test_no_input_images():
     assert len(images) == 0
 
 
-def test_group_by_keywords():
-    subtractor = BiasMasterLevelSubtractor(None)
-    assert subtractor.group_by_attributes is None
-
-
 def test_header_has_biaslevel():
     subtractor = BiasMasterLevelSubtractor(None)
     images = subtractor.do_stage([FakeImage() for x in range(6)])

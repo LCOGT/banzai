@@ -34,11 +34,6 @@ def test_no_input_images(set_random_seed):
     assert len(images) == 0
 
 
-def test_group_by_keywords(set_random_seed):
-    detector = pattern_noise.PatternNoiseDetector(None)
-    assert detector.group_by_attributes is None
-
-
 def test_pattern_noise_detects_noise_when_it_should(set_random_seed):
     data = generate_data(has_pattern_noise=True)
     detector = pattern_noise.PatternNoiseDetector(None)

@@ -1,8 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-from banzai import astrometry
 from astropy import units
 from astropy.coordinates import SkyCoord
+
+from banzai import astrometry
 
 
 def test_ra_dec_string_conversion():

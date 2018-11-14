@@ -1,6 +1,8 @@
 0.14.1 (2018-11-13)
 -------------------
 - Added full traceback of uncaught exceptions to the logs
+- Removed group_by_attributes property fom all stages except CalibrationMaker
+- Added master_selection_criteria property to CalibrationComparer
   
 0.14.0 (2018-11-13)
 -------------------

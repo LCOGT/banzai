@@ -1,8 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import numpy as np
+
 from banzai.bias import OverscanSubtractor
 from banzai.tests.utils import FakeImage
-
-import numpy as np
 
 
 class FakeOverscanImage(FakeImage):
@@ -15,11 +14,6 @@ def test_no_input_images():
     subtractor = OverscanSubtractor(None)
     images = subtractor.do_stage([])
     assert len(images) == 0
-
-
-def test_group_by_keywords():
-    subtractor = OverscanSubtractor(None)
-    assert subtractor.group_by_attributes is None
 
 
 def test_header_has_overscan_when_biassec_unknown():

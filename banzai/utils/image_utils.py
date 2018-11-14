@@ -64,8 +64,11 @@ def make_image_list(raw_path):
     return image_list
 
 
-def check_image_homogeneity(images):
-    for attribute in ['nx', 'ny', 'ccdsum', 'epoch', 'site', 'instrument']:
+def check_image_homogeneity(images, group_by_attributes=None):
+    attribute_list = ['nx', 'ny', 'ccdsum', 'epoch', 'site', 'instrument']
+    if group_by_attributes is not None:
+        attribute_list += group_by_attributes
+    for attribute in attribute_list:
         if len(set([getattr(image, attribute) for image in images])) > 1:
             raise InhomogeneousSetException('Images have different {0}s'.format(attribute))
     return images[0]

@@ -1,9 +1,10 @@
-from banzai import dbs
-import mock
 import os
 import json
 
+import mock
 from astropy.utils.data import get_pkg_data_filename
+
+from banzai import dbs
 
 
 class FakeResponse(object):

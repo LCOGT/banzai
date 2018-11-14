@@ -1,8 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import numpy as np
+
 from banzai.gain import GainNormalizer, validate_gain
 from banzai.tests.utils import FakeImage
-
-import numpy as np
 
 
 class FakeGainImage(FakeImage):
@@ -15,11 +14,6 @@ def test_no_input_images():
     gain_normalizer = GainNormalizer(None)
     images = gain_normalizer.do_stage([])
     assert len(images) == 0
-
-
-def test_group_by_keywords():
-    gain_normalizer = GainNormalizer(None)
-    assert gain_normalizer.group_by_attributes is None
 
 
 def test_gain_header_missing():

@@ -12,10 +12,6 @@ class MosaicCreator(Stage):
     def __init__(self, pipeline_context):
         super(MosaicCreator, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, images):
         for image in images:
             if image.data_is_3d():

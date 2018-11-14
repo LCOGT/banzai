@@ -1,7 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.utils import array_utils
-from astropy.table import Table
 import numpy as np
+from astropy.table import Table
+
+from banzai.utils import array_utils
 
 
 def test_pruning_nans():

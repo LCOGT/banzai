@@ -1,9 +1,11 @@
-import pytest
 import os
 from glob import glob
+import argparse
+
+import pytest
+
 from banzai.dbs import populate_bpm_table, create_db, get_session, CalibrationImage
 from banzai.utils import fits_utils
-import argparse
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
 

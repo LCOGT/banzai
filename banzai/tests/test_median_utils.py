@@ -1,6 +1,6 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.utils import median_utils
 import numpy as np
+
+from banzai.utils import median_utils
 
 
 def _compare_median1d(a, mask):

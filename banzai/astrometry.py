@@ -28,10 +28,6 @@ class WCSSolver(Stage):
     def __init__(self, pipeline_context):
         super(WCSSolver, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, images):
 
         for i, image in enumerate(images):

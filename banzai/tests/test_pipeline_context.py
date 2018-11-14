@@ -1,5 +1,6 @@
-from banzai.context import PipelineContext
 from argparse import Namespace
+
+from banzai.context import PipelineContext
 
 
 def test_pipeline_context_gets_arguments_from_argparse():

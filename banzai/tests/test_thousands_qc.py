@@ -1,17 +1,13 @@
+import numpy as np
+
 from banzai.tests.utils import FakeImage
 from banzai.qc import ThousandsTest
-import numpy as np
 
 
 def test_no_input_images():
     tester = ThousandsTest(None)
     images = tester.do_stage([])
     assert len(images) == 0
-
-
-def test_group_by_keywords():
-    tester = ThousandsTest(None)
-    assert tester.group_by_attributes is None
 
 
 def test_no_pixels_1000():
