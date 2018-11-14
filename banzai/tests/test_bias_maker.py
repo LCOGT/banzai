@@ -1,11 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from banzai.bias import BiasMaker
+import mock
 import numpy as np
 from astropy.io import fits
 
+from banzai.bias import BiasMaker
 from banzai.tests.utils import FakeImage, FakeContext, throws_inhomogeneous_set_exception
-
-import mock
 
 
 class FakeBiasImage(FakeImage):
@@ -23,7 +21,7 @@ def test_min_images():
     assert len(processed_images) == 0
 
 
-def test_group_by_keywords():
+def test_group_by_attributes():
     maker = BiasMaker(None)
     assert maker.group_by_attributes == ['ccdsum']
 

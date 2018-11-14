@@ -31,7 +31,7 @@ class BiasSubtractor(ApplyCalibration):
         super(BiasSubtractor, self).__init__(pipeline_context)
 
     @property
-    def group_by_attributes(self):
+    def master_selection_criteria(self):
         return ['ccdsum']
 
     @property
@@ -68,10 +68,6 @@ class OverscanSubtractor(Stage):
     def __init__(self, pipeline_context):
         super(OverscanSubtractor, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, images):
 
         for image in images:
@@ -93,10 +89,6 @@ class BiasMasterLevelSubtractor(Stage):
     def __init__(self, pipeline_context):
         super(BiasMasterLevelSubtractor, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, images):
 
         for image in images:
@@ -113,7 +105,7 @@ class BiasComparer(CalibrationComparer):
         super(BiasComparer, self).__init__(pipeline_context)
 
     @property
-    def group_by_attributes(self):
+    def master_selection_criteria(self):
         return ['ccdsum']
 
     @property

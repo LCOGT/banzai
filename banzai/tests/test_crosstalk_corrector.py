@@ -1,17 +1,13 @@
+import numpy as np
+
 from banzai.tests.utils import FakeImage
 from banzai.crosstalk import CrosstalkCorrector
-import numpy as np
 
 
 def test_no_input_images():
     tester = CrosstalkCorrector(None)
     images = tester.do_stage([])
     assert len(images) == 0
-
-
-def test_group_by_keywords():
-    tester = CrosstalkCorrector(None)
-    assert tester.group_by_attributes is None
 
 
 def test_crosstalk():

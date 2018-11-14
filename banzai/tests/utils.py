@@ -1,15 +1,16 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-import pytest
-from banzai.utils import image_utils
-import numpy as np
 from datetime import datetime
+
+import pytest
+import numpy as np
+
+from banzai.utils import image_utils
 from banzai.stages import Stage
 from banzai.images import Image
 
 
 class FakeImage(Image):
     def __init__(self, nx=101, ny=103, image_multiplier=1.0,
-                 ccdsum='2 2', epoch='20160101', n_amps=1):
+                 ccdsum='2 2', epoch='20160101', n_amps=1, filter='U'):
         self.nx = nx
         self.ny = ny
         self.telescope_id = -1
@@ -21,7 +22,7 @@ class FakeImage(Image):
         if n_amps > 1:
             self.data = np.stack(n_amps*[self.data])
         self.filename = 'test.fits'
-        self.filter = 'U'
+        self.filter = filter
         self.dateobs = datetime(2016, 1, 1)
         self.header = {}
         self.caltype = ''

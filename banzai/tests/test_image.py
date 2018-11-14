@@ -1,9 +1,10 @@
-from banzai.images import Image, DataTable, regenerate_data_table_from_fits_hdu_list
-from banzai.tests.utils import FakeContext, FakeImage
-import numpy as np
 import pytest
+import numpy as np
 from astropy.table import Table
 from astropy.io import fits
+
+from banzai.images import Image, DataTable, regenerate_data_table_from_fits_hdu_list
+from banzai.tests.utils import FakeContext, FakeImage
 
 
 @pytest.fixture(scope='module')

@@ -1,5 +1,6 @@
 import logging
 import abc
+import itertools
 
 import numpy as np
 
@@ -30,13 +31,36 @@ class CalibrationMaker(Stage):
     def min_images(self):
         return 5
 
+    @property
+    @abc.abstractmethod
+    def group_by_attributes(self):
+        return []
+
+    def get_grouping(self, image):
+        grouping_criteria = [image.site, image.instrument, image.epoch]
+        if self.group_by_attributes:
+            grouping_criteria += [getattr(image, keyword) for keyword in self.group_by_attributes]
+        return grouping_criteria
+
+    def run(self, images):
+        images.sort(key=self.get_grouping)
+        processed_images = []
+        for _, image_set in itertools.groupby(images, self.get_grouping):
+            try:
+                image_set = list(image_set)
+                logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
+                processed_images += self.do_stage(image_set)
+            except Exception as e:
+                logger.error(e)
+        return processed_images
+
     def do_stage(self, images):
         if len(images) < self.min_images:
             # Do nothing
             logger.warning('Not enough images to combine.')
             return []
         else:
-            image_config = image_utils.check_image_homogeneity(images)
+            image_config = image_utils.check_image_homogeneity(images, self.group_by_attributes)
 
             return self.make_master_calibration_frame(images, image_config)
 
@@ -101,6 +125,11 @@ class ApplyCalibration(Stage):
     def calibration_type(self):
         pass
 
+    @property
+    @abc.abstractmethod
+    def master_selection_criteria(self):
+        return []
+
     def on_missing_master_calibration(self, image):
         logger.error('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name), image=image)
         raise MasterCalibrationDoesNotExist
@@ -125,7 +154,7 @@ class ApplyCalibration(Stage):
         pass
 
     def get_calibration_filename(self, image):
-        return dbs.get_master_calibration_image(image, self.calibration_type, self.group_by_attributes,
+        return dbs.get_master_calibration_image(image, self.calibration_type, self.master_selection_criteria,
                                                 db_address=self.pipeline_context.db_address)
 
 

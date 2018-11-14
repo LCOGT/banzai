@@ -1,8 +1,8 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+import pytest
+import numpy as np
+
 from banzai.flats import FlatNormalizer
 from banzai.tests.utils import FakeImage
-import numpy as np
-import pytest
 
 
 @pytest.fixture(scope='module')
@@ -14,11 +14,6 @@ def test_no_input_images(set_random_seed):
     normalizer = FlatNormalizer(None)
     images = normalizer.do_stage([])
     assert len(images) == 0
-
-
-def test_group_by_keywords(set_random_seed):
-    normalizer = FlatNormalizer(None)
-    assert normalizer.group_by_attributes is None
 
 
 def test_header_has_flatlevel(set_random_seed):

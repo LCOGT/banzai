@@ -1,18 +1,13 @@
 import numpy as np
 
 from banzai.qc.pointing import PointingTest
-from .utils import FakeImage
+from banzai.tests.utils import FakeImage
 
 
 def test_no_input_images():
     tester = PointingTest(None)
     images = tester.do_stage([])
     assert len(images) == 0
-
-
-def test_group_by_keywords():
-    tester = PointingTest(None)
-    assert tester.group_by_attributes is None
 
 
 def test_no_offset():

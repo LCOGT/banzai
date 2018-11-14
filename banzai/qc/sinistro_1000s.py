@@ -24,10 +24,6 @@ class ThousandsTest(Stage):
     def __init__(self, pipeline_context):
         super(ThousandsTest, self).__init__(pipeline_context)
 
-    @property
-    def group_by_attributes(self):
-        return None
-
     def do_stage(self, images):
         images_to_remove = []
         for image in images:

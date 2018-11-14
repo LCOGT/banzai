@@ -1,6 +1,7 @@
-import numpy as np
-from banzai.tests.utils import FakeImage, FakeContext, FakeStage
 import mock
+import numpy as np
+
+from banzai.tests.utils import FakeImage, FakeContext, FakeStage
 from banzai.utils.qc import format_qc_results
 
 

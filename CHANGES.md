@@ -2,6 +2,8 @@
 -------------------
 - Refactored bias, dark, and flat makers to use a common superclass to remove
   code duplication.
+- Removed group_by_attributes property fom all stages except CalibratrionMaker
+- Added master_selection_criteria property to CalibrationComprarer
 
 0.13.0 (2018-11-12)
 -------------------
