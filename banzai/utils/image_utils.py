@@ -4,7 +4,6 @@ import logging
 from datetime import timedelta
 
 from astropy.io import fits
-import numpy as np
 
 import banzai
 from banzai import dbs
@@ -72,7 +71,6 @@ def check_image_homogeneity(images, group_by_attributes=None):
     for attribute in attribute_list:
         if len(set([getattr(image, attribute) for image in images])) > 1:
             raise InhomogeneousSetException('Images have different {0}s'.format(attribute))
-    return images[0]
 
 
 class InhomogeneousSetException(Exception):
