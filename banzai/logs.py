@@ -1,5 +1,7 @@
 import logging
 import os
+import traceback
+import sys
 
 from banzai.utils import date_utils
 
@@ -39,3 +41,8 @@ def _image_to_tags(image_config):
 def set_log_level(log_level='INFO'):
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level.upper())
+
+
+def format_exception():
+    exc_type, exc_value, exc_tb = sys.exc_info()
+    return traceback.format_exception(exc_type, exc_value, exc_tb)

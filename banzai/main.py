@@ -271,20 +271,20 @@ def reduce_night():
         # Run the reductions on the given dayobs
         try:
             make_master_bias(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.error(logs.format_exception())
         try:
             make_master_dark(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.error(logs.format_exception())
         try:
             make_master_flat(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.error(logs.format_exception())
         try:
             reduce_science_frames(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.error(logs.format_exception())
 
 
 def get_preview_stages_todo(image_suffix):

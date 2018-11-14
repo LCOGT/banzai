@@ -7,6 +7,7 @@ import sep
 from banzai.utils import stats, array_utils
 from banzai.stages import Stage
 from banzai.images import DataTable
+from banzai import logs
 
 logger = logging.getLogger(__name__)
 
@@ -233,6 +234,6 @@ class SourceDetector(Stage):
                 logger.info('Extracted sources', image=image, extra_tags=logging_tags)
                 # adding catalog (a data table) to the appropriate images attribute.
                 image.data_tables['catalog'] = DataTable(data_table=catalog, name='CAT')
-            except Exception as e:
-                logger.error(e, image=image)
+            except Exception:
+                logger.error(logs.format_exception(), image=image)
         return images

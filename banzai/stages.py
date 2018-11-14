@@ -1,7 +1,7 @@
 import itertools
 import logging
 import abc
-
+from banzai import logs
 import elasticsearch
 
 from banzai.utils.qc import format_qc_results
@@ -40,8 +40,8 @@ class Stage(abc.ABC):
         for _, image_set in itertools.groupby(images, self.get_grouping):
             try:
                 processed_images += self.run_stage(image_set)
-            except Exception as e:
-                logger.error(e)
+            except Exception:
+                logger.error(logs.format_exception())
         return processed_images
 
     @abc.abstractmethod
@@ -73,7 +73,8 @@ class Stage(abc.ABC):
                                       doc_type=self.pipeline_context.elasticsearch_doc_type,
                                       id=filename, body={'doc': results_to_save, 'doc_as_upsert': True},
                                       retry_on_conflict=5, timestamp=results_to_save['@timestamp'], **kwargs)
-            except Exception as e:
+            except Exception:
                 error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
-                logger.error(error_message.format(url=self.pipeline_context.elasticsearch_url, exception=e))
+                logger.error(error_message.format(url=self.pipeline_context.elasticsearch_url,
+                                                  exception=logs.format_exception()))
         return es_output
