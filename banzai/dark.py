@@ -36,6 +36,9 @@ class DarkMaker(CalibrationStacker):
     def min_images(self):
         return 5
 
+    def final_step(self, images, master_image):
+        pass
+
 
 class DarkSubtractor(ApplyCalibration):
     def __init__(self, pipeline_context):
