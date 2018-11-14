@@ -1,6 +1,8 @@
 import os.path
 import logging
 
+import numpy as np
+
 from banzai.stages import Stage
 from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
 from banzai.utils import stats, fits_utils
@@ -24,6 +26,12 @@ class BiasMaker(CalibrationStacker):
     @property
     def min_images(self):
         return 5
+
+    def make_master_calibration_frame(self, images):
+        master_image = super(BiasMaker, self).make_master_calibration_frame(images)
+        master_image.header['BIASLVL'] = (np.mean([image.header['BIASLVL'] for image in images]),
+                                          'Mean bias level of master bias')
+        return master_image
 
 
 class BiasSubtractor(ApplyCalibration):

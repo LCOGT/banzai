@@ -58,16 +58,23 @@ def test_raises_an_exception_if_ny_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ny', 107)
 
 
-@mock.patch('banzai.calibrations.Image')
-def test_bias_level_is_average_of_inputs(mock_images):
+@mock.patch('banzai.calibrations.Image._init_telescope_info')
+def test_bias_level_is_average_of_inputs(mock_telescope_info):
     nimages = 20
+    bias_levels = np.arange(nimages, dtype=float)
 
-    images = [FakeBiasImage(bias_level=i) for i in range(nimages)]
+    images = [FakeBiasImage(bias_level=i) for i in bias_levels]
 
-    maker = BiasMaker(FakeContext())
-    output_images = maker.do_stage(images)
+    mock_telescope_info.return_value = None, None, None
+    fake_context = FakeContext()
+    fake_context.db_address = ''
 
-    np.testing.assert_allclose(output_images[0].header['BIASLVL'], np.mean(np.arange(nimages)))
+    maker = BiasMaker(fake_context)
+    master_bias = maker.do_stage(images)[0]
+
+    header = master_bias.header
+
+    assert header['BIASLVL'] == np.mean(bias_levels)
 
 
 @mock.patch('banzai.calibrations.Image')
@@ -85,6 +92,7 @@ def test_makes_a_sensible_master_bias(mock_images):
 
     args, kwargs = mock_images.call_args
     master_bias = kwargs['data']
+
     assert np.abs(np.mean(master_bias)) < 0.1
     actual_readnoise = np.std(master_bias)
     assert np.abs(actual_readnoise - expected_readnoise / (nimages ** 0.5)) < 0.2

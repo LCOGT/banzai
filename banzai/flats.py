@@ -42,17 +42,11 @@ class FlatMaker(CalibrationStacker):
     def min_images(self):
         return 5
 
-
-class FlatMasker(Stage):
-    @property
-    def group_by_attributes(self):
-        return None
-
-    def do_stage(self, images):
-        for image in images:
-            image.bpm = np.logical_or(image.bpm, image.data < 0.2)
-            image.data[image.bpm] = 1.0
-        return images
+    def make_master_calibration_frame(self, images):
+        master_image = super(FlatMaker, self).make_master_calibration_frame(images)
+        master_image.bpm = np.logical_or(master_image.bpm, master_image.data < 0.2)
+        master_image.data[master_image.bpm] = 1.0
+        return master_image
 
 
 class FlatDivider(ApplyCalibration):
