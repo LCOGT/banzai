@@ -93,9 +93,6 @@ class CalibrationStacker(Stage):
 
         # Save the master dark image with all of the combined images in the header
         master_header = fits_utils.create_master_calibration_header(images)
-        if self.calibration_type == 'BIAS':
-            master_header['BIASLVL'] = (np.mean([image.header['BIASLVL'] for image in images]),
-                                        'Mean bias level of master bias')
         master_image = Image(self.pipeline_context, data=stacked_data, header=master_header)
         master_image.filename = master_calibration_filename
         master_image.bpm = master_bpm
