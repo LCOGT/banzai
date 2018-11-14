@@ -1,3 +1,7 @@
+0.14.1 (2018-11-13)
+-------------------
+- Added full traceback of uncaught exceptions to the logs
+  
 0.14.0 (2018-11-13)
 -------------------
 - Refactored bias, dark, and flat makers to use a common superclass to remove
