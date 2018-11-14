@@ -13,17 +13,13 @@ import os
 logger = logging.getLogger(__name__)
 
 
-class CalibrationMaker(Stage):
+class CalibrationStacker(Stage):
     def __init__(self, pipeline_context):
-        super(CalibrationMaker, self).__init__(pipeline_context)
+        super(CalibrationStacker, self).__init__(pipeline_context)
 
     @property
     @abc.abstractmethod
     def calibration_type(self):
-        pass
-
-    @abc.abstractmethod
-    def make_master_calibration_frame(self, images, image_config):
         pass
 
     @property
@@ -60,9 +56,8 @@ class CalibrationMaker(Stage):
             logger.warning('Not enough images to combine.')
             return []
         else:
-            image_config = image_utils.check_image_homogeneity(images, self.group_by_attributes)
-
-            return self.make_master_calibration_frame(images, image_config)
+            image_utils.check_image_homogeneity(images)
+            return self.make_master_calibration_frame(images)
 
     def get_calibration_filename(self, image):
         cal_file = '{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
@@ -76,12 +71,7 @@ class CalibrationMaker(Stage):
                                    cal_type=self.calibration_type.lower(), filter=filter_str)
         return cal_file
 
-
-class CalibrationStacker(CalibrationMaker):
-    def __init__(self, pipeline_context):
-        super(CalibrationStacker, self).__init__(pipeline_context)
-
-    def make_master_calibration_frame(self, images, image_config):
+    def make_master_calibration_frame(self, images):
         data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
@@ -103,6 +93,9 @@ class CalibrationStacker(CalibrationMaker):
 
         # Save the master dark image with all of the combined images in the header
         master_header = fits_utils.create_master_calibration_header(images)
+        if self.calibration_type == 'BIAS':
+            master_header['BIASLVL'] = (np.mean([image.header['BIASLVL'] for image in images]),
+                                        'Mean bias level of master bias')
         master_image = Image(self.pipeline_context, data=stacked_data, header=master_header)
         master_image.filename = master_calibration_filename
         master_image.bpm = master_bpm
