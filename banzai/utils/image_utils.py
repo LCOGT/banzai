@@ -36,7 +36,7 @@ def image_is_correct_obstype(filename, image_types):
 
 
 def select_images(image_path_list, image_types, instrument_criteria, db_address=dbs._DEFAULT_DB):
-    logger.info("Selecting images to reduce from directory image path list")
+    logger.info("Selecting images to reduce from list of filenames")
     pruned_image_path_list = []
     for filename in image_path_list:
         try:
