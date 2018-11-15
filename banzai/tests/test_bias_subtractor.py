@@ -13,10 +13,10 @@ class FakeBiasImage(FakeImage):
         self.header = {'BIASLVL': bias_level}
 
 
-def test_no_input_images():
+def test_null_input_image():
     subtractor = BiasSubtractor(None)
-    images = subtractor.do_stage([])
-    assert len(images) == 0
+    image = subtractor.run(None)
+    assert image is None
 
 
 def test_master_selection_criteria():
@@ -29,9 +29,8 @@ def test_master_selection_criteria():
 def test_header_has_biaslevel(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage()
     subtractor = BiasSubtractor(None)
-    images = subtractor.do_stage([FakeImage() for x in range(6)])
-    for image in images:
-        assert image.header['BIASLVL'][0] == 0
+    image = subtractor.do_stage(FakeImage())
+    assert image.header['BIASLVL'][0] == 0
 
 
 @mock.patch('banzai.calibrations.Image')
@@ -39,9 +38,8 @@ def test_header_has_biaslevel(mock_cal, mock_image):
 def test_header_biaslevel_is_1(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage(bias_level=1)
     subtractor = BiasSubtractor(None)
-    images = subtractor.do_stage([FakeImage() for x in range(6)])
-    for image in images:
-        assert image.header['BIASLVL'][0] == 1
+    image = subtractor.do_stage(FakeImage())
+    assert image.header['BIASLVL'][0] == 1
 
 
 @mock.patch('banzai.calibrations.Image')
@@ -49,20 +47,23 @@ def test_header_biaslevel_is_1(mock_cal, mock_image):
 def test_header_biaslevel_is_2(mock_cal, mock_image):
     mock_image.return_value = FakeBiasImage(bias_level=2.0)
     subtractor = BiasSubtractor(None)
-    images = subtractor.do_stage([FakeImage() for x in range(6)])
-    for image in images:
-        assert image.header['BIASLVL'][0] == 2
+    image = subtractor.do_stage(FakeImage())
+    assert image.header['BIASLVL'][0] == 2
 
 
 @mock.patch('banzai.calibrations.Image')
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_ccdsums_are_different(mock_cal, mock_images):
+    mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.calibrations.Image')
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_epochs_are_different(mock_cal, mock_images):
+    mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'epoch', '20160102')
 
 
@@ -70,6 +71,7 @@ def test_raises_an_exception_if_epochs_are_different(mock_cal, mock_images):
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_nx_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'nx', 105)
 
 
@@ -77,6 +79,7 @@ def test_raises_an_exception_if_nx_are_different(mock_cal, mock_images):
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_ny_are_different(mock_cal, mock_images):
     mock_cal.return_value = 'test.fits'
+    mock_images.return_value = FakeImage()
     throws_inhomogeneous_set_exception(BiasSubtractor, None, 'ny', 107)
 
 
@@ -88,7 +91,7 @@ def test_raises_exception_if_no_master_calibration(mock_cal, mock_images):
     subtractor = BiasSubtractor(None)
 
     with pytest.raises(MasterCalibrationDoesNotExist):
-        images = subtractor.do_stage([FakeImage() for x in range(6)])
+        image = subtractor.do_stage(FakeImage())
 
 
 @mock.patch('banzai.calibrations.Image')
@@ -106,10 +109,9 @@ def test_bias_subtraction_is_reasonable(mock_cal, mock_image):
     mock_image.return_value = fake_master_bias
 
     subtractor = BiasSubtractor(None)
-    images = [FakeImage(image_multiplier=input_level) for x in range(6)]
+    image = FakeImage(image_multiplier=input_level)
 
-    images = subtractor.do_stage(images)
+    image = subtractor.do_stage(image)
 
-    for image in images:
-        assert np.abs(image.header['BIASLVL'][0] - input_bias) < 1.0
-        assert np.abs(np.mean(image.data) - input_level + input_bias) < 1.0
+    assert np.abs(image.header['BIASLVL'][0] - input_bias) < 1.0
+    assert np.abs(np.mean(image.data) - input_level + input_bias) < 1.0

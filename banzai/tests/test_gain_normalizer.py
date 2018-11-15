@@ -10,34 +10,32 @@ class FakeGainImage(FakeImage):
         self.gain = None
 
 
-def test_no_input_images():
+def test_null_input_image():
     gain_normalizer = GainNormalizer(None)
-    images = gain_normalizer.do_stage([])
-    assert len(images) == 0
+    image = gain_normalizer.run(None)
+    assert image is None
 
 
 def test_gain_header_missing():
     gain_normalizer = GainNormalizer(None)
-    images = gain_normalizer.do_stage([FakeGainImage() for x in range(6)])
-    assert len(images) == 0
+    image = gain_normalizer.do_stage(FakeGainImage())
+    assert image is None
 
 
 def test_gain_header_0():
     gain_normalizer = GainNormalizer(None)
-    fake_images = [FakeGainImage() for x in range(6)]
-    for image in fake_images:
-        image.gain = 0.0
-    images = gain_normalizer.do_stage(fake_images)
-    assert len(images) == 0
+    image = FakeGainImage()
+    image.gain = 0.0
+    image = gain_normalizer.do_stage(image)
+    assert image is None
 
 
 def test_gain_is_empty_list():
     gain_normalizer = GainNormalizer(None)
-    fake_images = [FakeGainImage() for x in range(6)]
-    for image in fake_images:
-        image.gain = []
-    images = gain_normalizer.do_stage(fake_images)
-    assert len(images) == 0
+    image = FakeGainImage()
+    image.gain = []
+    image = gain_normalizer.do_stage(image)
+    assert image is None
 
 
 def test_gain_1d():
@@ -57,7 +55,7 @@ def test_gain_1d():
         image.header['MAXLIN'] = max_linearity
 
     gain_normalizer = GainNormalizer(None)
-    output_images = gain_normalizer.do_stage(fake_images)
+    output_images = [gain_normalizer.do_stage(image) for image in fake_images]
 
     for i, image in enumerate(output_images):
         np.testing.assert_allclose(image.data, input_data[i] * input_gains[i])
@@ -85,7 +83,7 @@ def test_gain_datacube():
         image.header['MAXLIN'] = max_linearity
 
     gain_normalizer = GainNormalizer(None)
-    output_images = gain_normalizer.do_stage(fake_images)
+    output_images = [gain_normalizer.do_stage(image) for image in fake_images]
 
     for i, image in enumerate(output_images):
         for j in range(n_amplifiers):

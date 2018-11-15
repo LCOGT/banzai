@@ -204,21 +204,18 @@ class Image(object):
         return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
 
 
-def read_images(image_list, pipeline_context):
-    images = []
-    for filename in image_list:
-        try:
-            image = pipeline_context.image_class(pipeline_context, filename=filename)
-            if image.telescope is None:
-                error_message = 'Telescope is not in the database: {site}/{instrument}'
-                error_message = error_message.format(site=image.site, instrument=image.instrument)
-                raise dbs.TelescopeMissingException(error_message)
-            munge(image, pipeline_context)
-            images.append(image)
-        except Exception as e:
-            logger.error('Error loading image: {error}'.format(error=e), extra_tags={'filename': filename})
-            continue
-    return images
+def read_image(image_path, pipeline_context):
+    try:
+        image = pipeline_context.image_class(pipeline_context, filename=image_path)
+        if image.telescope is None:
+            error_message = 'Telescope is not in the database: {site}/{instrument}'
+            error_message = error_message.format(site=image.site, instrument=image.instrument)
+            raise dbs.TelescopeMissingException(error_message)
+        munge(image, pipeline_context)
+    except Exception as e:
+        logger.error('Error loading image: {error}'.format(error=e), extra_tags={'filename': image_path})
+        return
+    return image
 
 
 def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, input_dictionary=None):

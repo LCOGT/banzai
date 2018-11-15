@@ -28,10 +28,10 @@ def test_get_mosaic_size():
         assert expected_mosaic_sizes[i] == get_mosaic_size(fake_image, 4)
 
 
-def test_no_input_images():
+def test_null_input_image():
     mosaic_creator = MosaicCreator(None)
-    images = mosaic_creator.do_stage([])
-    assert len(images) == 0
+    image = mosaic_creator.run(None)
+    assert image is None
 
 
 def test_2d_images():
@@ -82,7 +82,7 @@ def test_mosaic_maker():
         fake_images.append(image)
 
     mosaic_creator = MosaicCreator(None)
-    mosaiced_images = mosaic_creator.do_stage(fake_images)
+    mosaiced_images = [mosaic_creator.do_stage(fake_image) for fake_image in fake_images]
 
     for i, image in enumerate(mosaiced_images):
         assert image.data.shape == expected_mosaic_sizes[i]

@@ -23,25 +23,24 @@ class PatternNoiseDetector(Stage):
     def __init__(self, pipeline_context):
         super(PatternNoiseDetector, self).__init__(pipeline_context)
 
-    def do_stage(self, images):
-        for image in images:
-            pattern_noise_is_bad, fraction_pixels_above_threshold = self.check_for_pattern_noise(image.data)
-            logging_tags = {'snr_threshold': self.SNR_THRESHOLD,
-                            'min_fraction_pixels_above_threshold': self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD,
-                            'min_adjacent_pixels': self.MIN_ADJACENT_PIXELS,
-                            'fraction_pixels_above_threshold': fraction_pixels_above_threshold}
-            if pattern_noise_is_bad:
-                logger.error('Image found to have pattern noise.', image=image, extra_tags=logging_tags)
-            else:
-                logger.info('No pattern noise found.', image=image, extra_tags=logging_tags)
-            self.save_qc_results({'pattern_noise.failed': pattern_noise_is_bad,
-                                  'pattern_noise.snr_threshold': self.SNR_THRESHOLD,
-                                  'pattern_noise.min_fraction_pixels_above_threshold':
-                                      self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD,
-                                  'pattern_noise.min_adjacent_pixels': self.MIN_ADJACENT_PIXELS,
-                                  'patter_noise.fraction_pixels_above_threshold': fraction_pixels_above_threshold
-                                  }, image)
-        return images
+    def do_stage(self, image):
+        pattern_noise_is_bad, fraction_pixels_above_threshold = self.check_for_pattern_noise(image.data)
+        logging_tags = {'snr_threshold': self.SNR_THRESHOLD,
+                        'min_fraction_pixels_above_threshold': self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD,
+                        'min_adjacent_pixels': self.MIN_ADJACENT_PIXELS,
+                        'fraction_pixels_above_threshold': fraction_pixels_above_threshold}
+        if pattern_noise_is_bad:
+            logger.error('Image found to have pattern noise.', image=image, extra_tags=logging_tags)
+        else:
+            logger.info('No pattern noise found.', image=image, extra_tags=logging_tags)
+        self.save_qc_results({'pattern_noise.failed': pattern_noise_is_bad,
+                              'pattern_noise.snr_threshold': self.SNR_THRESHOLD,
+                              'pattern_noise.min_fraction_pixels_above_threshold':
+                                  self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD,
+                              'pattern_noise.min_adjacent_pixels': self.MIN_ADJACENT_PIXELS,
+                              'patter_noise.fraction_pixels_above_threshold': fraction_pixels_above_threshold
+                              }, image)
+        return image
 
     def check_for_pattern_noise(self, data):
         """

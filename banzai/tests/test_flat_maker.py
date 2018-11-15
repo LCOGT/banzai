@@ -40,24 +40,24 @@ def test_header_cal_type_flat(mock_telescope_info):
 
 @mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_ccdsums_are_different(mock_images):
-    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'ccdsum', '1 1')
+    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
 
 
 @mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_epochs_are_different(mock_images):
-    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'epoch', '20160102')
+    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'epoch', '20160102', calibration_maker=True)
 
 
 @mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_nx_are_different(mock_images):
-    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'nx', 105)
+    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'nx', 105, calibration_maker=True)
 
 
 @mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_ny_are_different(mock_images):
-    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'ny', 107)
+    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'ny', 107, calibration_maker=True)
 
 
 @mock.patch('banzai.calibrations.Image')
 def test_raises_an_exception_if_filters_are_different(mock_images):
-    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'filter', 'w')
+    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'filter', 'w', calibration_maker=True)

@@ -22,7 +22,7 @@ from banzai import settings
 from banzai import dbs, preview, logs
 from banzai.context import PipelineContext
 from banzai.utils import image_utils, date_utils
-from banzai.images import read_images
+from banzai.images import read_image
 
 logger = logging.getLogger(__name__)
 
@@ -111,18 +111,27 @@ def parse_args(selection_criteria, image_class, extra_console_arguments=None,
     return pipeline_context
 
 
-def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
+def run(stages_to_do, image_path, pipeline_context):
     """
     Main driver script for banzai.
     """
-    images = read_images(image_paths, pipeline_context)
+    image = read_image(image_path, pipeline_context)
 
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
-        images = stage_to_run.run(images)
+        image = stage_to_run.run(image)
 
-    output_files = image_utils.save_images(pipeline_context, images, master_calibration=calibration_maker)
+    output_files = image_utils.save_image(pipeline_context, image)
     return output_files
+
+
+def run_calibration_maker(stage_to_do, image_path_list, pipeline_context):
+    stage_to_run = stage_to_do(pipeline_context)
+    image_list = [read_image(image_path, pipeline_context) for image_path in image_path_list]
+    master_images = stage_to_run.run(image_list)
+    for master_image in master_images:
+        image_utils.save_image(pipeline_context, master_image, master_calibration=True)
+    return master_images
 
 
 def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None, log_message='',
@@ -135,13 +144,14 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
                                                        pipeline_context.allowed_instrument_criteria,
                                                        db_address=pipeline_context.db_address)
     try:
-        run(stages_to_do, pruned_image_path_list, pipeline_context)
+        for image_path in pruned_image_path_list:
+            run(stages_to_do, image_path, pipeline_context)
         if calibration_maker_stage is not None:
             reduced_image_path_lists = image_utils.select_calibration_images(
                 pruned_image_path_list, image_types, pipeline_context.allowed_instrument_criteria, group_by_attributes,
                 db_address=pipeline_context.db_address)
             for reduced_image_path_list in reduced_image_path_lists:
-                run([calibration_maker_stage], reduced_image_path_list, pipeline_context, calibration_maker=True)
+                run_calibration_maker(calibration_maker_stage, reduced_image_path_list, pipeline_context)
     except Exception as e:
         logger.error(e, extra_tags={'raw_path': raw_path})
 
@@ -151,7 +161,7 @@ def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, 
         logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
     try:
-        run(stages_to_do, [os.path.join(raw_path, filename)], pipeline_context, calibration_maker=False)
+        run(stages_to_do, [os.path.join(raw_path, filename)], pipeline_context)
     except Exception as e:
         logger.error(e, extra_tags={'filename': filename})
 
@@ -393,7 +403,7 @@ class PreviewModeListener(ConsumerMixin):
                     # Increment the number of tries for this file
                     preview.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
 
-                    run(stages_to_do, [path], self.pipeline_context)
+                    run(stages_to_do, path, self.pipeline_context)
                     preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
             except Exception:

@@ -29,7 +29,7 @@ class HeaderSanity(Stage):
                                          'CRVAL1', 'CRVAL2', 'CRPIX1',
                                          'CRPIX2', 'EXPTIME']
 
-    def do_stage(self, images):
+    def do_stage(self, image):
         """
         Run stage to validate header.
 
@@ -43,14 +43,13 @@ class HeaderSanity(Stage):
         images: list
                 the list of validated images object after header check
 
-       """
-        for image in images:
-            logger.info("Checking header sanity.", image=image)
-            bad_keywords = self.check_keywords_missing_or_na(image)
-            self.check_ra_range(image, bad_keywords)
-            self.check_dec_range(image, bad_keywords)
-            self.check_exptime_value(image, bad_keywords)
-        return images
+        """
+        logger.info("Checking header sanity.", image=image)
+        bad_keywords = self.check_keywords_missing_or_na(image)
+        self.check_ra_range(image, bad_keywords)
+        self.check_dec_range(image, bad_keywords)
+        self.check_exptime_value(image, bad_keywords)
+        return image
 
     def check_keywords_missing_or_na(self, image):
         """

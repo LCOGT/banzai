@@ -134,38 +134,33 @@ class MissingCatalogException(Exception):
     pass
 
 
-def save_images(pipeline_context, images, master_calibration=False):
-    output_files = []
-    for image in images:
-        output_directory = file_utils.make_output_directory(pipeline_context, image)
-        if not master_calibration:
-            image.filename = image.filename.replace('00.fits',
-                                                    '{:02d}.fits'.format(int(pipeline_context.rlevel)))
+def save_image(pipeline_context, image, master_calibration=False):
+    output_directory = file_utils.make_output_directory(pipeline_context, image)
+    if not master_calibration:
+        image.filename = image.filename.replace('00.fits',
+                                                '{:02d}.fits'.format(int(pipeline_context.rlevel)))
 
-        image_filename = os.path.basename(image.filename)
-        filepath = os.path.join(output_directory, image_filename)
-        output_files.append(filepath)
-        save_pipeline_metadata(image, pipeline_context)
-        image.writeto(filepath, pipeline_context.fpack)
-        if pipeline_context.fpack:
-            image_filename += '.fz'
-            filepath += '.fz'
-        if master_calibration:
-            dbs.save_calibration_info(image.obstype, filepath, image,
-                                      db_address=pipeline_context.db_address)
+    image_filename = os.path.basename(image.filename)
+    filepath = os.path.join(output_directory, image_filename)
+    save_pipeline_metadata(image, pipeline_context)
+    image.writeto(filepath, pipeline_context.fpack)
+    if pipeline_context.fpack:
+        image_filename += '.fz'
+        filepath += '.fz'
+    if master_calibration:
+        dbs.save_calibration_info(image.obstype, filepath, image,
+                                  db_address=pipeline_context.db_address)
 
-        elif image.obstype in CALIBRATION_OBSTYPES:
-            dbs.save_individual_calibration_info(image.obstype, filepath, image,
-                                                 db_address=pipeline_context.db_address)
-        if pipeline_context.post_to_archive:
-            logger.info('Posting {filename} to the archive'.format(filename=image_filename))
-            try:
-                file_utils.post_to_archive_queue(filepath)
-            except Exception as e:
-                logger.error("Could not post {0} to ingester.".format(filepath))
-                logger.error(e)
-                continue
-    return output_files
+    elif image.obstype in CALIBRATION_OBSTYPES:
+        dbs.save_individual_calibration_info(image.obstype, filepath, image,
+                                             db_address=pipeline_context.db_address)
+    if pipeline_context.post_to_archive:
+        logger.info('Posting {filename} to the archive'.format(filename=image_filename))
+        try:
+            file_utils.post_to_archive_queue(filepath)
+        except Exception as e:
+            logger.error("Could not post {0} to ingester.".format(filepath))
+            logger.error(e)
 
 
 def save_pipeline_metadata(image, pipeline_context):

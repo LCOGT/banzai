@@ -12,20 +12,15 @@ logger = logging.getLogger(__name__)
 
 class BPMUpdater(Stage):
 
-    def do_stage(self, images):
-        images_to_remove = []
-        for image in images:
-            add_bpm_to_image(image, self.pipeline_context)
-            validate_bpm_size(image)
-            if image.header['L1IDMASK'][0] == '' and not self.pipeline_context.no_bpm:
-                logger.error("Can't add BPM to image, stopping reduction", image=image)
-                images_to_remove.append(image)
-                continue
-            flag_bad_pixels(image)
-            logger.info('Added BPM to image', image=image, extra_tags={'l1idmask': image.header['L1IDMASK']})
-        for image in images_to_remove:
-            images.remove(image)
-        return images
+    def do_stage(self, image):
+        add_bpm_to_image(image, self.pipeline_context)
+        validate_bpm_size(image)
+        if image.header['L1IDMASK'][0] == '' and not self.pipeline_context.no_bpm:
+            logger.error("Can't add BPM to image, stopping reduction", image=image)
+            return None
+        flag_bad_pixels(image)
+        logger.info('Added BPM to image', image=image, extra_tags={'l1idmask': image.header['L1IDMASK']})
+        return image
 
 
 def add_bpm_to_image(image, pipeline_context):

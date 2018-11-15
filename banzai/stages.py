@@ -8,7 +8,7 @@ from banzai.utils.qc import format_qc_results
 logger = logging.getLogger(__name__)
 
 
-class Stage(abc.ABC):
+class StageBase(abc.ABC):
 
     def __init__(self, pipeline_context):
         self.pipeline_context = pipeline_context
@@ -16,18 +16,6 @@ class Stage(abc.ABC):
     @property
     def stage_name(self):
         return '.'.join([__name__, self.__class__.__name__])
-
-    def run(self, images):
-        logger.info('Running {0}'.format(self.stage_name), image=images[0])
-        try:
-            images = self.do_stage(images)
-        except Exception as e:
-            logger.error(e)
-        return images
-
-    @abc.abstractmethod
-    def do_stage(self, images):
-        return images
 
     def save_qc_results(self, qc_results, image, **kwargs):
         """
@@ -58,3 +46,23 @@ class Stage(abc.ABC):
                 error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
                 logger.error(error_message.format(url=self.pipeline_context.elasticsearch_url, exception=e))
         return es_output
+
+
+class Stage(StageBase):
+
+    def __init__(self, pipeline_context):
+        super(Stage, self).__init__(pipeline_context)
+
+    def run(self, image):
+        if image is None:
+            return image
+        logger.info('Running {0}'.format(self.stage_name), image=image)
+        try:
+            image = self.do_stage(image)
+        except Exception as e:
+            logger.error(e)
+        return image
+
+    @abc.abstractmethod
+    def do_stage(self, image):
+        return image

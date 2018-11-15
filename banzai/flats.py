@@ -14,16 +14,15 @@ class FlatNormalizer(Stage):
     def __init__(self, pipeline_context):
         super(FlatNormalizer, self).__init__(pipeline_context)
 
-    def do_stage(self, images):
-        for image in images:
-            # Get the sigma clipped mean of the central 25% of the image
-            flat_normalization = stats.sigma_clipped_mean(image.get_inner_image_section(), 3.5)
-            image.data /= flat_normalization
-            image.header['FLATLVL'] = flat_normalization
-            logger.info('Calculate flat normalization', image=image,
-                             extra_tags={'flat_normalization': flat_normalization})
+    def do_stage(self, image):
+        # Get the sigma clipped mean of the central 25% of the image
+        flat_normalization = stats.sigma_clipped_mean(image.get_inner_image_section(), 3.5)
+        image.data /= flat_normalization
+        image.header['FLATLVL'] = flat_normalization
+        logger.info('Calculate flat normalization', image=image,
+                         extra_tags={'flat_normalization': flat_normalization})
 
-        return images
+        return image
 
 
 class FlatMaker(CalibrationStacker):
@@ -62,20 +61,20 @@ class FlatDivider(ApplyCalibration):
     def calibration_type(self):
         return 'skyflat'
 
-    def apply_master_calibration(self, images, master_calibration_image):
+    def apply_master_calibration(self, image, master_calibration_image):
 
         master_flat_filename = master_calibration_image.filename
         master_flat_data = master_calibration_image.data
         logging_tags = {'master_flat': os.path.basename(master_calibration_image.filename)}
-        for image in images:
-            logger.info('Flattening image', image=image, extra_tags=logging_tags)
-            image.data /= master_flat_data
-            image.bpm |= master_calibration_image.bpm
-            master_flat_filename = os.path.basename(master_flat_filename)
-            image.header['L1IDFLAT'] = (master_flat_filename, 'ID of flat frame used')
-            image.header['L1STATFL'] = (1, 'Status flag for flat field correction')
 
-        return images
+        logger.info('Flattening image', image=image, extra_tags=logging_tags)
+        image.data /= master_flat_data
+        image.bpm |= master_calibration_image.bpm
+        master_flat_filename = os.path.basename(master_flat_filename)
+        image.header['L1IDFLAT'] = (master_flat_filename, 'ID of flat frame used')
+        image.header['L1STATFL'] = (1, 'Status flag for flat field correction')
+
+        return image
 
 
 class FlatComparer(CalibrationComparer):
