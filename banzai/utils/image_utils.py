@@ -80,7 +80,7 @@ def select_calibration_images(image_path_list, image_types, instrument_criteria,
         except Exception as e:
             logger.error('Exception checking image selection criteria: {e}'.format(e=e),
                          extra={'tags': {'filename': filename}})
-    logger.debug("Checked {n_images} images, and found {n_parameter_sets} sets of parameters".format(
+    logger.debug("Checked {n_images} images, and found {n_parameter_sets} set(s) of parameters".format(
         n_images=len(image_path_list), n_parameter_sets=len(image_parameters_list)))
     # For each unique set of image parameters, query the db for reduced image files that match.
     # Return a list of reduced image filenames for each set of image parameters.
@@ -90,7 +90,7 @@ def select_calibration_images(image_path_list, image_types, instrument_criteria,
             dbs.get_individual_calibration_images(image_parameters,
                                                   group_by_attributes=group_by_attributes,
                                                   db_address=db_address))
-    logger.debug("Returning {n_lists} image path lists, with respective lengths {len_lists}".format(
+    logger.debug("Returning {n_lists} image path list(s), with respective length(s) {len_lists}".format(
         n_lists=len(calibration_image_path_lists),
         len_lists=[len(image_path_list) for image_path_list in calibration_image_path_lists]
     ))
