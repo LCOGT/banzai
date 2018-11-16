@@ -137,14 +137,14 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
     if calibration_maker:
         try:
             run(stages_to_do, image_list, pipeline_context, calibration_maker=True)
-        except Exception as e:
-            logger.error(e, extra_tags={'raw_path': raw_path})
+        except Exception:
+            logger.error(logs.format_exception(), extra_tags={'raw_path': raw_path})
     else:
         for image in image_list:
             try:
                 run(stages_to_do, [image], pipeline_context, calibration_maker=False)
-            except Exception as e:
-                logger.error(e, extra_tags={'filename': image})
+            except Exception:
+                logger.error(logs.format_exception(), extra_tags={'filename': image})
 
 
 def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, extra_stages=None, log_message=''):
@@ -153,8 +153,8 @@ def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, 
     stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
     try:
         run(stages_to_do, [os.path.join(raw_path, filename)], pipeline_context, calibration_maker=False)
-    except Exception as e:
-        logger.error(e, extra_tags={'filename': filename})
+    except Exception:
+        logger.error(logs.format_exception(), extra_tags={'filename': filename})
 
 
 def parse_directory_args(pipeline_context, raw_path, selection_criteria, image_class, extra_console_arguments=None):
@@ -241,9 +241,8 @@ def reduce_night():
     # Ping the configdb to get telescopes
     try:
         dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
-    except Exception as e:
-        logger.error('Could not connect to the configdb.')
-        logger.error(e)
+    except Exception:
+        logger.error('Could not connect to the configdb. ' + logs.format_exception())
 
     try:
         timezone = dbs.get_timezone(pipeline_context.site, db_address=pipeline_context.db_address)
@@ -271,20 +270,20 @@ def reduce_night():
         # Run the reductions on the given dayobs
         try:
             make_master_bias(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.error(logs.format_exception())
         try:
             make_master_dark(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.error(logs.format_exception())
         try:
             make_master_flat(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.error(logs.format_exception())
         try:
             reduce_science_frames(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.error(logs.format_exception())
 
 
 def get_preview_stages_todo(image_suffix):
@@ -323,9 +322,8 @@ def run_preview_pipeline():
 
     try:
         dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
-    except Exception as e:
-        logger.error('Could not connect to the configdb.')
-        logger.error(e)
+    except Exception:
+        logger.error('Could not connect to the configdb. ' + logs.format_exception())
 
     logger.info('Starting pipeline preview mode listener')
 
@@ -395,8 +393,5 @@ class PreviewModeListener(ConsumerMixin):
                     preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
             except Exception:
-                exc_type, exc_value, exc_tb = sys.exc_info()
-                tb_msg = traceback.format_exception(exc_type, exc_value, exc_tb)
-
-                logger.error("Exception producing preview frame. {error}".format(error=tb_msg),
+                logger.error("Exception producing preview frame. {error}".format(error=logs.format_exception()),
                              extra_tags={'filename': os.path.basename(path)})

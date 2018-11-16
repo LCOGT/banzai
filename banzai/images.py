@@ -12,6 +12,7 @@ from banzai.utils import date_utils
 from banzai.utils import fits_utils
 from banzai.utils import image_utils
 from banzai.munge import munge
+from banzai import logs
 
 logger = logging.getLogger(__name__)
 
@@ -215,8 +216,9 @@ def read_images(image_list, pipeline_context):
                 raise dbs.TelescopeMissingException(error_message)
             munge(image, pipeline_context)
             images.append(image)
-        except Exception as e:
-            logger.error('Error loading image: {error}'.format(error=e), extra_tags={'filename': filename})
+        except Exception:
+            logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
+                         extra_tags={'filename': filename})
             continue
     return images
 

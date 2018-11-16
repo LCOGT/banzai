@@ -6,6 +6,7 @@ from datetime import timedelta
 from astropy.io import fits
 
 import banzai
+from banzai import logs
 from banzai import dbs
 from banzai.utils import file_utils, date_utils
 
@@ -38,9 +39,8 @@ def select_images(image_list, image_types, instrument_criteria, db_address=dbs._
 
             if obstype in image_types:
                 images.append(filename)
-        except Exception as e:
-            logger.error('Exception checking image selection criteria: {e}'.format(e=e),
-                         extra_tags={'filename': filename})
+        except Exception:
+            logger.error(logs.format_exception(), extra_tags={'filename': filename})
     return images
 
 
@@ -102,12 +102,12 @@ def save_images(pipeline_context, images, master_calibration=False):
                                       db_address=pipeline_context.db_address)
 
         if pipeline_context.post_to_archive:
-            logger.info('Posting {filename} to the archive'.format(filename=image_filename))
+            logger.info('Posting file to the archive', extra_tags={'filename', image_filename})
             try:
                 file_utils.post_to_archive_queue(filepath)
-            except Exception as e:
-                logger.error("Could not post {0} to ingester.".format(filepath))
-                logger.error(e)
+            except Exception:
+                logger.error("Could not post to ingester: " + logs.format_exception(),
+                             extra_tags={'filename': filepath})
                 continue
     return output_files
 
