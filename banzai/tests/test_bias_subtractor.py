@@ -31,7 +31,7 @@ def test_header_has_biaslevel(mock_cal, mock_image):
     subtractor = BiasSubtractor(None)
     images = subtractor.do_stage([FakeImage() for x in range(6)])
     for image in images:
-        assert image.header['BIASLVL'][0] == 0
+        assert image.header.get('BIASLVL') == 0
 
 
 @mock.patch('banzai.calibrations.Image')
@@ -41,7 +41,7 @@ def test_header_biaslevel_is_1(mock_cal, mock_image):
     subtractor = BiasSubtractor(None)
     images = subtractor.do_stage([FakeImage() for x in range(6)])
     for image in images:
-        assert image.header['BIASLVL'][0] == 1
+        assert image.header.get('BIASLVL') == 1
 
 
 @mock.patch('banzai.calibrations.Image')
@@ -51,7 +51,7 @@ def test_header_biaslevel_is_2(mock_cal, mock_image):
     subtractor = BiasSubtractor(None)
     images = subtractor.do_stage([FakeImage() for x in range(6)])
     for image in images:
-        assert image.header['BIASLVL'][0] == 2
+        assert image.header.get('BIASLVL') == 2
 
 
 @mock.patch('banzai.calibrations.Image')
@@ -111,5 +111,5 @@ def test_bias_subtraction_is_reasonable(mock_cal, mock_image):
     images = subtractor.do_stage(images)
 
     for image in images:
-        assert np.abs(image.header['BIASLVL'][0] - input_bias) < 1.0
+        assert np.abs(image.header.get('BIASLVL') - input_bias) < 1.0
         assert np.abs(np.mean(image.data) - input_level + input_bias) < 1.0

@@ -21,7 +21,7 @@ def test_no_pixels_saturated():
 
     images = tester.do_stage(images)
     for image in images:
-        assert image.header['SATFRAC'][0] == 0.0
+        assert image.header.get('SATFRAC') == 0.0
     assert len(images) == 6
 
 
@@ -37,7 +37,7 @@ def test_nonzero_but_no_pixels_saturated():
 
     images = tester.do_stage(images)
     for image in images:
-        assert image.header['SATFRAC'][0] == 0.0
+        assert image.header.get('SATFRAC') == 0.0
     assert len(images) == 6
 
 
@@ -60,7 +60,7 @@ def test_1_image_10_percent_saturated():
 
     images = tester.do_stage(images)
     for image in images:
-        assert image.header['SATFRAC'][0] == 0.0
+        assert image.header.get('SATFRAC') == 0.0
     assert len(images) == 5
 
 
@@ -79,7 +79,7 @@ def test_all_images_10_percent_saturated():
 
     images = tester.do_stage(images)
     for image in images:
-        assert np.abs(image.header['SATFRAC'][0] - 0.02) < 0.001
+        assert np.abs(image.header.get('SATFRAC') - 0.02) < 0.001
     assert len(images) == 0
 
 
@@ -98,5 +98,5 @@ def test_all_images_2_percent_saturated():
 
     images = tester.do_stage(images)
     for image in images:
-        assert np.abs(image.header['SATFRAC'][0] - 0.02) < 0.001
+        assert np.abs(image.header.get('SATFRAC') - 0.02) < 0.001
     assert len(images) == 6
