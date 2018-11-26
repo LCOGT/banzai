@@ -1,6 +1,9 @@
-0.14.2 (2018-11-14)
+0.14.2 (2018-11-26)
 -------------------
 - If telescope isn't found in the database, parameters are populated from image header
+- Fixed BPM filename header keyword check in BPM stage
+- Fixed logging call in stages.py when image list is empty
+- Fixed logging call in create_master_calibration_header when keyword cannot be added
 
 0.14.1 (2018-11-13)
 -------------------
