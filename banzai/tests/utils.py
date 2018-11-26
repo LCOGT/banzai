@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pytest
 import numpy as np
+from astropy.io.fits import Header
 
 from banzai.utils import image_utils
 from banzai.stages import Stage
@@ -24,7 +25,7 @@ class FakeImage(Image):
         self.filename = 'test.fits'
         self.filter = filter
         self.dateobs = datetime(2016, 1, 1)
-        self.header = {}
+        self.header = Header()
         self.caltype = ''
         self.bpm = np.zeros((ny, nx), dtype=np.uint8)
         self.request_number = '0000331403'

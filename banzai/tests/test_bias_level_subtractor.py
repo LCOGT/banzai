@@ -33,14 +33,14 @@ def test_header_biaslevel_is_1():
     subtractor = BiasMasterLevelSubtractor(None)
     images = subtractor.do_stage([FakeImage(image_multiplier=1.0) for x in range(6)])
     for image in images:
-        assert image.header['BIASLVL'][0] == 1
+        assert image.header.get('BIASLVL') == 1
 
 
 def test_header_mbiaslevel_is_2():
     subtractor = BiasMasterLevelSubtractor(None)
     images = subtractor.do_stage([FakeImage(image_multiplier=2.0) for x in range(6)])
     for image in images:
-        assert image.header['BIASLVL'][0] == 2.0
+        assert image.header.get('BIASLVL') == 2.0
 
 
 def test_bias_master_level_subtraction_is_reasonable():
@@ -56,4 +56,4 @@ def test_bias_master_level_subtraction_is_reasonable():
 
     for image in images:
         np.testing.assert_allclose(np.zeros(image.data.shape), image.data, atol=8 * read_noise)
-        np.testing.assert_allclose(image.header['BIASLVL'][0], input_bias, atol=1.0)
+        np.testing.assert_allclose(image.header.get('BIASLVL'), input_bias, atol=1.0)

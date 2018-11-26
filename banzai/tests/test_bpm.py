@@ -69,7 +69,7 @@ def test_adds_good_bpm(mock_load_bpm, mock_get_bpm_filename, set_random_seed):
     tester = BPMUpdater(FakeContextForBPM())
     image = tester.do_stage([image])[0]
     np.testing.assert_array_equal(image.bpm, bpm_to_load)
-    assert image.header['L1IDMASK'][0] == 'fake_bpm_filename'
+    assert image.header.get('L1IDMASK') == 'fake_bpm_filename'
 
 
 @mock.patch('banzai.bpm.dbs.get_bpm_filename')
@@ -82,7 +82,7 @@ def test_adds_good_bpm_3d(mock_load_bpm, mock_get_bpm_filename, set_random_seed)
     tester = BPMUpdater(FakeContextForBPM())
     image = tester.do_stage([image])[0]
     np.testing.assert_array_equal(image.bpm, bpm_to_load)
-    assert image.header['L1IDMASK'][0] == 'fake_bpm_filename'
+    assert image.header.get('L1IDMASK') == 'fake_bpm_filename'
 
 
 @mock.patch('banzai.bpm.dbs.get_bpm_filename')

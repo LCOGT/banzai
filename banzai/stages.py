@@ -18,7 +18,8 @@ class Stage(abc.ABC):
         return '.'.join([__name__, self.__class__.__name__])
 
     def run(self, images):
-        logger.info('Running {0}'.format(self.stage_name), image=images[0])
+        if len(images) > 0:
+            logger.info('Running {0}'.format(self.stage_name), image=images[0])
         try:
             images = self.do_stage(images)
         except Exception:

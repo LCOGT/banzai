@@ -24,7 +24,7 @@ def test_no_offset():
 
     images = tester.do_stage(images)
     for image in images:
-        np.testing.assert_allclose(image.header['PNTOFST'][0], 0.0, atol=1e-7)
+        np.testing.assert_allclose(image.header.get('PNTOFST'), 0.0, atol=1e-7)
 
 
 def test_large_offset():
@@ -41,4 +41,4 @@ def test_large_offset():
 
     images = tester.do_stage(images)
     for image in images:
-        assert image.header['PNTOFST'][0] == 10.0
+        assert image.header.get('PNTOFST') == 10.0
