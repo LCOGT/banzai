@@ -1,3 +1,7 @@
+0.14.2 (2018-11-14)
+-------------------
+- If telescope isn't found in the database, parameters are populated from image header
+
 0.14.1 (2018-11-13)
 -------------------
 - Added full traceback of uncaught exceptions to the logs

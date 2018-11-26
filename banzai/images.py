@@ -91,12 +91,8 @@ class Image(object):
     def _init_telescope_info(self, pipeline_context):
         if len(self.header) > 0:
             telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
-            if telescope is not None:
-                site = telescope.site
-                instrument = telescope.instrument
-            else:
-                site = self.header.get('SITEID')
-                instrument = self.header.get('INSTRUME')
+            site = telescope.site
+            instrument = telescope.instrument
         else:
             telescope, site, instrument = None, None, None
         return telescope, site, instrument
@@ -211,10 +207,9 @@ def read_images(image_list, pipeline_context):
         try:
             image = pipeline_context.image_class(pipeline_context, filename=filename)
             if image.telescope is None:
-                error_message = 'Telescope is not in the database: {site}/{instrument}'
-                error_message = error_message.format(site=image.site, instrument=image.instrument)
-                raise dbs.TelescopeMissingException(error_message)
-            munge(image, pipeline_context)
+                logger.error("Image telescope attribute is None, removing from list", image=image)
+                continue
+            munge(image)
             images.append(image)
         except Exception:
             logger.error('Error loading image: {error}'.format(error=logs.format_exception()),

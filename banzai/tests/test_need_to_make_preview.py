@@ -2,7 +2,6 @@ import operator
 
 import mock
 
-from banzai.dbs import TelescopeMissingException
 from banzai.preview import need_to_make_preview
 from banzai.context import TelescopeCriterion
 
@@ -26,13 +25,6 @@ class FakePreviewImage(object):
 def test_no_preview_if_telescope_is_not_schedulable(mock_telescope):
     mock_telescope.return_value = FakeTelescope(schedulable=False)
     assert not need_to_make_preview('test.fits', [TelescopeCriterion('schedulable', operator.eq, True)])
-
-
-@mock.patch('banzai.dbs.get_telescope_for_file')
-def test_no_preview_if_telescope_not_in_db(mock_telescope):
-    mock_telescope.return_value = FakeTelescope(schedulable=True)
-    mock_telescope.side_effect = TelescopeMissingException
-    assert not need_to_make_preview('test.fits', [])
 
 
 @mock.patch('banzai.utils.file_utils.get_md5')

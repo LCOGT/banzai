@@ -47,12 +47,9 @@ def need_to_make_preview(path, criteria, db_address=dbs._DEFAULT_DB, max_tries=5
     We only attempt to make preview images if the telescope is in the database and is set as
     schedulable.
     """
-    try:
-        if not image_passes_criteria(path, criteria, db_address=db_address):
-            return False
+    logger.info("Checking preview eligibility", extra_tags={"filename": path})
 
-    except dbs.TelescopeMissingException:
-        logger.error('Telescope/Camera not in database for {f}'.format(f=path))
+    if not image_passes_criteria(path, criteria, db_address=db_address):
         return False
 
     # Get the preview image in db. If it doesn't exist add it.

@@ -10,7 +10,7 @@ class SinistroModeNotSupported(Exception):
     pass
 
 
-def munge(image, pipeline_context):
+def munge(image):
     if 'sinistro' in image.telescope.camera_type.lower():
         if sinistro_mode_is_supported(image):
             munge_sinistro(image)
