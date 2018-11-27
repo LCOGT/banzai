@@ -28,58 +28,58 @@ def test_no_preview_if_instrument_is_not_schedulable(mock_instrument):
 
 
 @mock.patch('banzai.utils.file_utils.get_md5')
-@mock.patch('banzai.dbs.get_preview_image')
+@mock.patch('banzai.dbs.get_processed_image')
 @mock.patch('banzai.dbs.get_instrument_for_file')
-def test_no_preview_if_previous_success(mock_instrument, mock_preview, mock_md5):
+def test_no_preview_if_previous_success(mock_instrument, mock_processed, mock_md5):
     mock_instrument.return_value = FakeInstrument(schedulable=True)
-    mock_preview.return_value = FakePreviewImage(success=True, checksum=md5_hash1)
+    mock_processed.return_value = FakePreviewImage(success=True, checksum=md5_hash1)
     mock_md5.return_value = md5_hash1
     assert not need_to_make_preview('test.fits', [])
 
 
-@mock.patch('banzai.dbs.commit_preview_image')
+@mock.patch('banzai.dbs.commit_processed_image')
 @mock.patch('banzai.utils.file_utils.get_md5')
-@mock.patch('banzai.dbs.get_preview_image')
+@mock.patch('banzai.dbs.get_processed_image')
 @mock.patch('banzai.dbs.get_instrument_for_file')
-def test_preview_if_never_tried(mock_instrument, mock_preview, mock_md5, mock_commit):
+def test_preview_if_never_tried(mock_instrument, mock_processed, mock_md5, mock_commit):
     mock_instrument.return_value = FakeInstrument(schedulable=True)
-    mock_preview.return_value = FakePreviewImage(success=False, checksum=md5_hash1, tries=0)
+    mock_processed.return_value = FakePreviewImage(success=False, checksum=md5_hash1, tries=0)
     mock_md5.return_value = md5_hash1
     assert need_to_make_preview('test.fits', [])
 
 
-@mock.patch('banzai.dbs.commit_preview_image')
+@mock.patch('banzai.dbs.commit_processed_image')
 @mock.patch('banzai.utils.file_utils.get_md5')
-@mock.patch('banzai.dbs.get_preview_image')
+@mock.patch('banzai.dbs.get_processed_image')
 @mock.patch('banzai.dbs.get_instrument_for_file')
-def test_preview_if_tries_less_than_max(mock_instrument, mock_preview, mock_md5, mock_commit):
+def test_preview_if_tries_less_than_max(mock_instrument, mock_processed, mock_md5, mock_commit):
     mock_instrument.return_value = FakeInstrument(schedulable=True)
-    mock_preview.return_value = FakePreviewImage(success=False, checksum=md5_hash1, tries=3)
+    mock_processed.return_value = FakePreviewImage(success=False, checksum=md5_hash1, tries=3)
     mock_md5.return_value = md5_hash1
     assert need_to_make_preview('test.fits', [], max_tries=5)
 
 
-@mock.patch('banzai.dbs.commit_preview_image')
+@mock.patch('banzai.dbs.commit_processed_image')
 @mock.patch('banzai.utils.file_utils.get_md5')
-@mock.patch('banzai.dbs.get_preview_image')
+@mock.patch('banzai.dbs.get_processed_image')
 @mock.patch('banzai.dbs.get_instrument_for_file')
-def test_no_preview_if_tries_at_max(mock_instrument, mock_preview, mock_md5, mock_commit):
+def test_no_preview_if_tries_at_max(mock_instrument, mock_processed, mock_md5, mock_commit):
     max_tries = 5
     mock_instrument.return_value = FakeInstrument(schedulable=True)
-    mock_preview.return_value = FakePreviewImage(success=False, checksum=md5_hash1, tries=max_tries)
+    mock_processed.return_value = FakePreviewImage(success=False, checksum=md5_hash1, tries=max_tries)
     mock_md5.return_value = md5_hash1
     assert not need_to_make_preview('test.fits', [], max_tries=max_tries)
 
 
-@mock.patch('banzai.dbs.commit_preview_image')
+@mock.patch('banzai.dbs.commit_processed_image')
 @mock.patch('banzai.utils.file_utils.get_md5')
-@mock.patch('banzai.dbs.get_preview_image')
+@mock.patch('banzai.dbs.get_processed_image')
 @mock.patch('banzai.dbs.get_instrument_for_file')
-def test_preview_if_new_checksum(mock_instrument, mock_preview, mock_md5, mock_commit):
+def test_preview_if_new_checksum(mock_instrument, mock_processed, mock_md5, mock_commit):
     # assert that tries and success are reset to 0
     mock_instrument.return_value = FakeInstrument(schedulable=True)
     preview_image = FakePreviewImage(success=True, checksum=md5_hash1, tries=3)
-    mock_preview.return_value = preview_image
+    mock_processed.return_value = preview_image
     mock_md5.return_value = md5_hash2
     assert need_to_make_preview('test.fits', [])
     assert not preview_image.success

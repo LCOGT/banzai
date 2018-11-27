@@ -110,8 +110,8 @@ class BadPixelMask(Base):
     creation_date = Column(Date)
 
 
-class PreviewImage(Base):
-    __tablename__ = 'previewimages'
+class ProcessedImage(Base):
+    __tablename__ = 'processed_images'
     id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String(50), index=True)
     checksum = Column(CHAR(32), index=True, default='0'*32)
@@ -368,19 +368,19 @@ def get_instrument_for_file(path, db_address=_DEFAULT_DB):
     return get_instrument(header, db_address=db_address)
 
 
-def get_preview_image(path, db_address=_DEFAULT_DB):
+def get_processed_image(path, db_address=_DEFAULT_DB):
     filename = os.path.basename(path)
     db_session = get_session(db_address=db_address)
-    preview_image = add_or_update_record(db_session, PreviewImage, {'filename': filename},
+    processed_image = add_or_update_record(db_session, ProcessedImage, {'filename': filename},
                                          {'filename': filename})
     db_session.commit()
     db_session.close()
-    return preview_image
+    return processed_image
 
 
-def commit_preview_image(preview_image, db_address=_DEFAULT_DB):
+def commit_processed_image(processed_image, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
-    db_session.add(preview_image)
+    db_session.add(processed_image)
     db_session.commit()
     db_session.close()
 
