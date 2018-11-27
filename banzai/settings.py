@@ -1,7 +1,7 @@
 import operator
 import abc
 
-from banzai.context import TelescopeCriterion
+from banzai.context import InstrumentCriterion
 from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, photometry, astrometry, images
 
 
@@ -32,7 +32,7 @@ class Settings(abc.ABC):
     def CALIBRATION_SET_CRITERIA(self):
         pass
 
-    SCHEDULABLE_CRITERIA = [TelescopeCriterion('schedulable', operator.eq, True)]
+    SCHEDULABLE_CRITERIA = [InstrumentCriterion('schedulable', operator.eq, True)]
 
     BIAS_IMAGE_TYPES = ['BIAS']
     BIAS_SUFFIXES = ['b00.fits']
@@ -58,8 +58,8 @@ class Settings(abc.ABC):
 
 class ImagingSettings(Settings):
 
-    FRAME_SELECTION_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
-                                TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
+    FRAME_SELECTION_CRITERIA = [InstrumentCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
+                                InstrumentCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
 
     FRAME_CLASS = images.Image
 
