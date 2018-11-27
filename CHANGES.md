@@ -1,3 +1,9 @@
+0.14.3 (2018-11-27)
+-------------------
+- Added catch to any logger errros to avoid crashing pipeline in case of logging
+  message typos
+- Fixed a logging message typo in image_utils
+
 0.14.2 (2018-11-26)
 -------------------
 - If telescope isn't found in the database, parameters are populated from image header
