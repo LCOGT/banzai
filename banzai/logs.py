@@ -5,6 +5,8 @@ import sys
 
 from banzai.utils import date_utils
 
+logger = logging.getLogger(__name__)
+
 
 class BanzaiLogger(logging.getLoggerClass()):
     def __init__(self, name, level='NOTSET'):
@@ -16,14 +18,18 @@ class BanzaiLogger(logging.getLoggerClass()):
 
 
 def _create_logging_tags_dictionary(kwargs):
-    tags = {}
-    image = kwargs.pop('image', None)
-    extra_tags = kwargs.pop('extra_tags', None)
-    if image:
-        tags.update(_image_to_tags(image))
-    if extra_tags:
-        tags.update(extra_tags)
-    kwargs['extra'] = {'tags': tags}
+    try:
+        tags = {}
+        image = kwargs.pop('image', None)
+        extra_tags = kwargs.pop('extra_tags', None)
+        if image:
+            tags.update(_image_to_tags(image))
+        if extra_tags:
+            tags.update(extra_tags)
+        kwargs['extra'] = {'tags': tags}
+    except Exception:
+        logger.error(format_exception())
+        kwargs = {'extra': {'tags': {'error': 'Check implementation of this logging message'}}}
     return kwargs
 
 
