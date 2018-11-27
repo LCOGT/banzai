@@ -102,7 +102,7 @@ def save_images(pipeline_context, images, master_calibration=False):
                                       db_address=pipeline_context.db_address)
 
         if pipeline_context.post_to_archive:
-            logger.info('Posting file to the archive', extra_tags={'filename', image_filename})
+            logger.info('Posting file to the archive', extra_tags={'filename': image_filename})
             try:
                 file_utils.post_to_archive_queue(filepath)
             except Exception:
