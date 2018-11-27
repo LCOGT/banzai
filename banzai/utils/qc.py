@@ -3,7 +3,7 @@ import numpy as np
 
 def format_qc_results(qc_results, image):
     results_to_save = {'site': image.site,
-                       'instrument': image.instrument,
+                       'instrument': image.camera,
                        'dayobs': image.epoch,
                        'request_number': image.request_number,
                        'block_id': image.block_id,

@@ -33,7 +33,7 @@ def add_bpm_to_image(image, pipeline_context):
     if image.bpm is not None:
         return
     # Get the BPM filename
-    bpm_filename = dbs.get_bpm_filename(image.telescope.id, image.ccdsum, db_address=pipeline_context.db_address)
+    bpm_filename = dbs.get_bpm_filename(image.instrument.id, image.ccdsum, db_address=pipeline_context.db_address)
     # Check if file is missing
     if bpm_filename is None:
         logger.warning('Unable to find BPM in database, falling back to empty BPM', image=image)

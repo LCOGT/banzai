@@ -44,7 +44,7 @@ def need_to_make_preview(path, criteria, db_address=dbs._DEFAULT_DB, max_tries=5
     Notes
     -----
     If the file has changed on disk, we reset the success flags and the number of tries to zero.
-    We only attempt to make preview images if the telescope is in the database and is set as
+    We only attempt to make preview images if the instrument is in the database and is set as
     schedulable.
     """
     logger.info("Checking preview eligibility", extra_tags={"filename": path})

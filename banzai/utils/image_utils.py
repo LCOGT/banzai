@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
-    telescope = dbs.get_telescope_for_file(filename, db_address=db_address)
+    instrument = dbs.get_instrument_for_file(filename, db_address=db_address)
     passes = True
     for criterion in criteria:
-        if not criterion.telescope_passes(telescope):
+        if not criterion.instrument_passes(instrument):
             passes = False
     return passes
 
@@ -65,7 +65,7 @@ def make_image_list(raw_path):
 
 
 def check_image_homogeneity(images, group_by_attributes=None):
-    attribute_list = ['nx', 'ny', 'ccdsum', 'epoch', 'site', 'instrument']
+    attribute_list = ['nx', 'ny', 'ccdsum', 'epoch', 'site', 'camera']
     if group_by_attributes is not None:
         attribute_list += group_by_attributes
     for attribute in attribute_list:

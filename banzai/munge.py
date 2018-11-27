@@ -11,18 +11,18 @@ class SinistroModeNotSupported(Exception):
 
 
 def munge(image):
-    if 'sinistro' in image.telescope.camera_type.lower():
+    if 'sinistro' in image.instrument.camera_type.lower():
         if sinistro_mode_is_supported(image):
             munge_sinistro(image)
         else:
             raise SinistroModeNotSupported('Sinistro mode not supported {f}'.format(f=image.filename))
 
     # 1m SBIGS
-    elif '1m0' in image.telescope.camera_type:
+    elif '1m0' in image.instrument.camera_type:
         image.header['SATURATE'] = (46000.0, '[ADU] Saturation level used')
-    elif '0m4' in image.telescope.camera_type or '0m8' in image.telescope.camera_type:
+    elif '0m4' in image.instrument.camera_type or '0m8' in image.instrument.camera_type:
         image.header['SATURATE'] = (56000.0, '[ADU] Saturation level used')
-    elif 'fs02' == image.telescope.instrument:
+    elif 'fs02' == image.instrument.camera:
         # These values were given by Joe Tufts on 2016-06-07
         # These should really be measured empirically.
         if image.header['CCDSUM'] == '2 2':
@@ -59,7 +59,7 @@ def sinistro_mode_is_supported(image):
     if image.header['CCDSUM'] != '1 1':
         supported = False
         logger.error('Non-supported Sinistro mode', image=image)
-    if image.instrument not in crosstalk_coefficients.keys():
+    if image.camera not in crosstalk_coefficients.keys():
         supported = False
         logger.error('Crosstalk Coefficients missing!', image=image)
 

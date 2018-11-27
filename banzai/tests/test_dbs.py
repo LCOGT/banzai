@@ -28,31 +28,31 @@ def teardown_module():
 def test_add_or_update():
     db_session = dbs.get_session(db_address='sqlite:///test.db')
     # Add a fake telescope
-    dbs.add_or_update_record(db_session, dbs.Telescope, {'site': 'bpl', 'instrument': 'kb101'},
-                             {'site': 'bpl', 'instrument': 'kb101', 'camera_type': 'SBig',
+    dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101'},
+                             {'site': 'bpl', 'camera': 'kb101', 'camera_type': 'SBig',
                               'schedulable': False})
     db_session.commit()
 
     # Make sure it got added
-    query = db_session.query(dbs.Telescope).filter(dbs.Telescope.site == 'bpl')
-    telescope = query.filter(dbs.Telescope.instrument == 'kb101').first()
+    query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
+    telescope = query.filter(dbs.Instrument.camera == 'kb101').first()
     assert telescope is not None
 
     # Update the fake telescope
-    dbs.add_or_update_record(db_session, dbs.Telescope, {'site': 'bpl', 'instrument': 'kb101'},
-                             {'site': 'bpl', 'instrument': 'kb101', 'camera_type': 'SBig',
+    dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101'},
+                             {'site': 'bpl', 'camera': 'kb101', 'camera_type': 'SBig',
                               'schedulable': True})
 
     db_session.commit()
     # Make sure the update took
-    query = db_session.query(dbs.Telescope).filter(dbs.Telescope.site == 'bpl')
-    telescope = query.filter(dbs.Telescope.instrument == 'kb101').first()
+    query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
+    telescope = query.filter(dbs.Instrument.camera == 'kb101').first()
     assert telescope is not None
     assert telescope.schedulable
 
     # make sure there is only one new telescope in the table
-    query = db_session.query(dbs.Telescope).filter(dbs.Telescope.site == 'bpl')
-    telescopes = query.filter(dbs.Telescope.instrument == 'kb101').all()
+    query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
+    telescopes = query.filter(dbs.Instrument.camera == 'kb101').all()
     assert len(telescopes) == 1
 
     # Clean up for other methods

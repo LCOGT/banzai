@@ -28,7 +28,7 @@ class CalibrationMaker(Stage):
         pass
 
     def get_grouping(self, image):
-        grouping_criteria = [image.site, image.instrument, image.epoch]
+        grouping_criteria = [image.site, image.camera, image.epoch]
         if self.group_by_attributes:
             grouping_criteria += [getattr(image, keyword) for keyword in self.group_by_attributes]
         return grouping_criteria
@@ -57,13 +57,13 @@ class CalibrationMaker(Stage):
             return [self.make_master_calibration_frame(images)]
 
     def get_calibration_filename(self, image):
-        cal_file = '{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
+        cal_file = '{cal_type}_{camera}_{epoch}_bin{bin}{filter}.fits'
         if 'filter' in self.group_by_attributes:
             filter_str = '_{filter}'.format(filter=image.filter)
         else:
             filter_str = ''
 
-        cal_file = cal_file.format(instrument=image.instrument,
+        cal_file = cal_file.format(camera=image.camera,
                                    epoch=image.epoch, bin=image.ccdsum.replace(' ', 'x'),
                                    cal_type=self.calibration_type.lower(), filter=filter_str)
         return cal_file

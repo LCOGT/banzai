@@ -106,7 +106,7 @@ def parse_args(settings, extra_console_arguments=None,
                         help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
     parser.add_argument('--ignore-schedulability', dest='ignore_schedulability',
                         default=False, action='store_true',
-                        help='Relax requirement that the telescope be schedulable')
+                        help='Relax requirement that the instrument be schedulable')
 
     if extra_console_arguments is None:
         extra_console_arguments = []
@@ -249,9 +249,9 @@ def reduce_night():
     pipeline_context = parse_args(banzai.settings.ImagingSettings(), extra_console_arguments=extra_console_arguments,
                                   parser_description='Reduce all the data from a site at the end of a night.')
 
-    # Ping the configdb to get telescopes
+    # Ping the configdb to get instruments
     try:
-        dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
+        dbs.populate_instrument_tables(db_address=pipeline_context.db_address)
     except Exception:
         logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
 
@@ -263,9 +263,9 @@ def reduce_night():
                      extra_tags={'site': pipeline_context.site})
         return
 
-    telescopes = dbs.get_telescopes_at_site(pipeline_context.site,
-                                            db_address=pipeline_context.db_address,
-                                            ignore_schedulability=pipeline_context.ignore_schedulability)
+    instruments = dbs.get_instruments_at_site(pipeline_context.site,
+                                              db_address=pipeline_context.db_address,
+                                              ignore_schedulability=pipeline_context.ignore_schedulability)
 
     # If no dayobs is given, calculate it.
     if pipeline_context.dayobs is None:
@@ -273,10 +273,10 @@ def reduce_night():
     else:
         dayobs = pipeline_context.dayobs
 
-    # For each telescope at the given site
-    for telescope in telescopes:
+    # For each instrument at the given site
+    for instrument in instruments:
         raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
-                                telescope.instrument, dayobs, 'raw')
+                                instrument.camera, dayobs, 'raw')
 
         # Run the reductions on the given dayobs
         try:
@@ -335,7 +335,7 @@ def run_preview_pipeline():
     logging.getLogger('amqp').setLevel(max(logger.level, getattr(logging, 'INFO')))
 
     try:
-        dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
+        dbs.populate_instrument_tables(db_address=pipeline_context.db_address)
     except Exception:
         logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
 
