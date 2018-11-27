@@ -242,7 +242,7 @@ def reduce_night():
     try:
         dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
     except Exception:
-        logger.error('Could not connect to the configdb. ' + logs.format_exception())
+        logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
 
     try:
         timezone = dbs.get_timezone(pipeline_context.site, db_address=pipeline_context.db_address)
@@ -323,7 +323,7 @@ def run_preview_pipeline():
     try:
         dbs.populate_telescope_tables(db_address=pipeline_context.db_address)
     except Exception:
-        logger.error('Could not connect to the configdb. ' + logs.format_exception())
+        logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
 
     logger.info('Starting pipeline preview mode listener')
 
@@ -393,5 +393,5 @@ class PreviewModeListener(ConsumerMixin):
                     preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
             except Exception:
-                logger.error("Exception producing preview frame. {error}".format(error=logs.format_exception()),
+                logger.error("Exception producing preview frame: {error}".format(error=logs.format_exception()),
                              extra_tags={'filename': os.path.basename(path)})

@@ -106,7 +106,7 @@ def save_images(pipeline_context, images, master_calibration=False):
             try:
                 file_utils.post_to_archive_queue(filepath)
             except Exception:
-                logger.error("Could not post to ingester: " + logs.format_exception(),
+                logger.error("Could not post to ingester: {error}".format(error=logs.format_exception()),
                              extra_tags={'filename': filepath})
                 continue
     return output_files
