@@ -152,7 +152,7 @@ def _add_extension_header_keyword(image, extension, keyword, value):
 
 def set_crosstalk_header_keywords(image):
     n_amps = image.get_n_amps()
-    coefficients = crosstalk_coefficients[image.instrument]
+    coefficients = crosstalk_coefficients[image.camera]
 
     for i in range(n_amps):
         for j in range(n_amps):
