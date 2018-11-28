@@ -326,9 +326,9 @@ def get_telescope(header, db_address=_DEFAULT_DB):
     telescope = telescope_for_instrument if telescope_for_instrument is not None \
         else _query_for_telescope(db_address, site, header.get('TELESCOP'))
     if telescope is None:
-        logger.warning('Telescope {site}/{instrument} is not in the database, '
-                       'extracting best-guess values from header'.format(site=site, instrument=instrument),
-                        extra_tags={'site': site, 'instrument': instrument})
+        logger.error('Telescope {site}/{instrument} is not in the database, '
+                     'extracting best-guess values from header'.format(site=site, instrument=instrument),
+                     extra_tags={'site': site, 'instrument': instrument})
         telescope = _guess_telescope_values_from_header(header, db_address)
     return telescope
 
