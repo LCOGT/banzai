@@ -152,7 +152,7 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
                     if sci_cam is not None:
                         instruments.append({'site': site['code'],
                                             'camera': sci_cam['code'],
-                                            'camera_type': sci_cam['camera_type']['code'],
+                                            'type': sci_cam['camera_type']['code'],
                                             'schedulable': ins['state'] == 'SCHEDULABLE'})
     return sites, instruments
 
@@ -196,7 +196,7 @@ def populate_instrument_tables(db_address=_DEFAULT_DB,
         add_or_update_record(db_session, Instrument,
                              {'site': instrument['site'], 'camera': instrument['camera']},
                              {'site': instrument['site'], 'camera': instrument['camera'],
-                              'camera_type': instrument['camera_type'],
+                              'type': instrument['camera_type'],
                               'schedulable': instrument['schedulable']})
 
     db_session.commit()
@@ -298,7 +298,7 @@ def _guess_instrument_values_from_header(header, db_address):
     add_or_update_record(db_session, Instrument,
                          {'site': site, 'camera': camera},
                          {'site': site, 'camera': camera,
-                          'camera_type': 'unknown',
+                          'type': 'unknown',
                           'schedulable': False})
     db_session.commit()
     db_session.close()

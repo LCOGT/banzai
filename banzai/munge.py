@@ -11,16 +11,16 @@ class SinistroModeNotSupported(Exception):
 
 
 def munge(image):
-    if 'sinistro' in image.instrument.camera_type.lower():
+    if 'sinistro' in image.instrument.type.lower():
         if sinistro_mode_is_supported(image):
             munge_sinistro(image)
         else:
             raise SinistroModeNotSupported('Sinistro mode not supported {f}'.format(f=image.filename))
 
     # 1m SBIGS
-    elif '1m0' in image.instrument.camera_type:
+    elif '1m0' in image.instrument.type:
         image.header['SATURATE'] = (46000.0, '[ADU] Saturation level used')
-    elif '0m4' in image.instrument.camera_type or '0m8' in image.instrument.camera_type:
+    elif '0m4' in image.instrument.type or '0m8' in image.instrument.type:
         image.header['SATURATE'] = (56000.0, '[ADU] Saturation level used')
     elif 'fs02' == image.instrument.camera:
         # These values were given by Joe Tufts on 2016-06-07
