@@ -15,9 +15,9 @@ import datetime
 import numpy as np
 import requests
 from astropy.io import fits
-from sqlalchemy import create_engine, pool, desc
+from sqlalchemy import create_engine, pool, desc, cast
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 
@@ -66,10 +66,10 @@ class CalibrationImage(Base):
     type = Column(String(30), index=True)
     filename = Column(String(50), unique=True)
     filepath = Column(String(100))
-    dayobs = Column(Date, index=True)
-    ccdsum = Column(String(20))
-    filter_name = Column(String(32))
+    dateobs = Column(Date, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
+    is_master = Column(Boolean)
+    attributes = Column(JSON)
 
 
 class Instrument(Base):
@@ -82,7 +82,7 @@ class Instrument(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     site = Column(String(10), ForeignKey('sites.id'), index=True)
     camera = Column(String(20), index=True)
-    camera_type = Column(String(20))
+    type = Column(String(20))
     schedulable = Column(Boolean, default=False)
 
 
@@ -95,19 +95,6 @@ class Site(Base):
     __tablename__ = 'sites'
     id = Column(String(3), primary_key=True)
     timezone = Column(Integer)
-
-
-class BadPixelMask(Base):
-    """
-    Bad Pixel Mask Database Record
-    """
-    __tablename__ = 'bpms'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
-    filename = Column(String(50))
-    filepath = Column(String(100))
-    ccdsum = Column(String(20))
-    creation_date = Column(Date)
 
 
 class ProcessedImage(Base):
@@ -410,18 +397,15 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
 
     for criterion in master_selection_criteria:
-        if criterion == 'filter':
-            calibration_criteria &= CalibrationImage.filter_name == getattr(image, criterion)
-        else:
-            calibration_criteria &= getattr(CalibrationImage, criterion) == getattr(image, criterion)
+        calibration_criteria &= CalibrationImage.attributes[criterion] == cast(getattr(image, criterion), JSON)
 
     # Only grab the last year. In principle we could go farther back, but this limits the number
     # of files we get back. And if we are using calibrations that are more than a year old
     # it is probably a bad idea anyway.
-    epoch_datetime = date_utils.epoch_string_to_date(image.epoch)
+    date_obs = date_utils.parse_date_obs(image.dateobs)
 
-    calibration_criteria &= CalibrationImage.dayobs < (epoch_datetime + datetime.timedelta(days=365))
-    calibration_criteria &= CalibrationImage.dayobs > (epoch_datetime - datetime.timedelta(days=365))
+    calibration_criteria &= CalibrationImage.dateobs < (date_obs + datetime.timedelta(days=365))
+    calibration_criteria &= CalibrationImage.dateobs > (date_obs - datetime.timedelta(days=365))
 
     db_session = get_session(db_address=db_address)
 
@@ -431,7 +415,7 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     if len(calibration_images) == 0:
         calibration_file = None
     else:
-        date_deltas = np.abs(np.array([i.dayobs - epoch_datetime for i in calibration_images]))
+        date_deltas = np.abs(np.array([i.dayobs - date_obs for i in calibration_images]))
         closest_calibration_image = calibration_images[np.argmin(date_deltas)]
         calibration_file = os.path.join(closest_calibration_image.filepath,
                                         closest_calibration_image.filename)
