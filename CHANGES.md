@@ -1,6 +1,7 @@
 0.14.4 (2018-11-28)
 -------------------
 - Fixed stages to return empty image list if an exception occured
+- Fixed small logging typos
 
 0.14.3 (2018-11-27)
 -------------------
