@@ -275,8 +275,8 @@ def populate_bpm_table(directory, db_address=_DEFAULT_DB):
         telescope = get_telescope(header, db_address=db_address)
 
         if telescope is None:
-            logger.error('Telescope is missing from database', extra={'tags': {'site': header['SITEID'],
-                                                                               'instrument': header['INSTRUME']}})
+            logger.error('Telescope is missing from database', extra_tags={'site': header['SITEID'],
+                                                                           'instrument': header['INSTRUME']})
             continue
 
         bpm_attributes = {'telescope_id': telescope.id, 'filepath': os.path.abspath(directory),
@@ -328,7 +328,7 @@ def get_telescope(header, db_address=_DEFAULT_DB):
     if telescope is None:
         logger.error('Telescope {site}/{instrument} is not in the database, '
                      'extracting best-guess values from header'.format(site=site, instrument=instrument),
-                     extra={'tags': {'site': site, 'instrument': instrument}})
+                     extra_tags={'site': site, 'instrument': instrument})
         telescope = _guess_telescope_values_from_header(header, db_address)
     return telescope
 

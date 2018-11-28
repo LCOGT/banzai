@@ -68,7 +68,7 @@ class BiasSubtractor(ApplyCalibration):
                             'L1IDBIAS': image.header['L1IDBIAS']}
             logging_tags.update(master_logging_tags)
 
-            logger.info('Subtracting bias', image=image,  extra=logging_tags)
+            logger.info('Subtracting bias', image=image,  extra_tags=logging_tags)
         return images
 
 

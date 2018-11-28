@@ -139,11 +139,11 @@ class ApplyCalibration(Stage):
             # Abort!
             return []
         else:
-            image_config = image_utils.check_image_homogeneity(images)
+            image_utils.check_image_homogeneity(images)
             master_calibration_filename = self.get_calibration_filename(images[0])
 
             if master_calibration_filename is None:
-                self.on_missing_master_calibration(image_config)
+                self.on_missing_master_calibration(images[0])
 
             master_calibration_image = Image(self.pipeline_context,
                                              filename=master_calibration_filename)

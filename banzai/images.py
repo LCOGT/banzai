@@ -43,7 +43,7 @@ class Image(object):
     def __init__(self, pipeline_context, filename=None, data=None, data_tables=None,
                  header=None, extension_headers=None, bpm=None):
         if header is None:
-            header = {}
+            header = fits.Header()
 
         if data_tables is None:
             data_tables = {}
