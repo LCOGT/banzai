@@ -20,11 +20,12 @@ class Stage(abc.ABC):
     def run(self, images):
         if len(images) > 0:
             logger.info('Running {0}'.format(self.stage_name), image=images[0])
+        processed_images = []
         try:
-            images = self.do_stage(images)
+            processed_images = self.do_stage(images)
         except Exception:
             logger.error(logs.format_exception())
-        return images
+        return processed_images
 
     @abc.abstractmethod
     def do_stage(self, images):
