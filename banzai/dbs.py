@@ -339,7 +339,7 @@ def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     return bpm_path
 
 
-def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAULT_DB):
+def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAULT_DB, is_master=False):
     # Store the information into the calibration table
     # Check and see if the bias file is already in the database
     db_session = get_session(db_address=db_address)
@@ -352,7 +352,7 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
                           'filepath': os.path.dirname(output_file),
                           'dateobs': image_config.dateobs,
                           'instrument_id': image_config.instrument.id,
-                          'is_master': True,
+                          'is_master': is_master,
                           'attributes': {'ccdsum': image_config.ccdsum,
                                          'filter': image_config.filter}})
     db_session.commit()
@@ -404,6 +404,7 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
                                  db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
+    calibration_criteria &= CalibrationImage.is_master == 1
 
     for criterion in master_selection_criteria:
         calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) ==\

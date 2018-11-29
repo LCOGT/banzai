@@ -130,11 +130,19 @@ def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
     """
     images = read_images(image_paths, pipeline_context)
 
+    if calibration_maker:
+        final_stage = stages_to_do.pop()
+
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
 
-    output_files = image_utils.save_images(pipeline_context, images, master_calibration=calibration_maker)
+    output_files = image_utils.save_images(pipeline_context, images)
+    if calibration_maker:
+        stage_to_run = final_stage(pipeline_context)
+        images = stage_to_run.run(images)
+        output_files = image_utils.save_images(pipeline_context, images, master_calibration=True)
+
     return output_files
 
 
