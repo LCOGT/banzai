@@ -22,7 +22,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from sqlalchemy_jsonfield import JSONField
 
-
 from banzai.utils import date_utils
 from banzai.utils import fits_utils
 
@@ -100,7 +99,7 @@ class Site(Base):
 
 
 class ProcessedImage(Base):
-    __tablename__ = 'processed_images'
+    __tablename__ = 'processedimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String(50), index=True)
     checksum = Column(CHAR(32), index=True, default='0'*32)
@@ -123,7 +122,7 @@ def create_db(bpm_directory, db_address=_DEFAULT_DB,
     Base.metadata.create_all(engine)
 
     populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
-    populate_bpm_table(bpm_directory, db_address=db_address)
+    populate_calibration_table_with_bpms(bpm_directory, db_address=db_address)
 
 
 def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
@@ -247,7 +246,7 @@ def add_or_update_record(db_session, table_model, equivalence_criteria, record_a
     return record
 
 
-def populate_bpm_table(directory, db_address=_DEFAULT_DB):
+def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
     bpm_filenames = glob(os.path.join(directory, 'bpm*.fits*'))
     for bpm_filename in bpm_filenames:
@@ -268,11 +267,16 @@ def populate_bpm_table(directory, db_address=_DEFAULT_DB):
                                                                             'camera': header['INSTRUME']})
             continue
 
-        bpm_attributes = {'instrument_id': instrument.id, 'filepath': os.path.abspath(directory),
-                          'filename': os.path.basename(bpm_filename), 'ccdsum': ccdsum,
-                          'creation_date': creation_date}
+        bpm_attributes = {'type': 'BPM',
+                          'filename': os.path.basename(bpm_filename),
+                          'filepath': os.path.abspath(directory),
+                          'dateobs': creation_date,
+                          'instrument_id': instrument.id,
+                          'is_master': True,
+                          'attributes': {'ccdsum': ccdsum},
+                          }
 
-        add_or_update_record(db_session, BadPixelMask, bpm_attributes, bpm_attributes)
+        add_or_update_record(db_session, CalibrationImage, bpm_attributes, bpm_attributes)
 
     db_session.commit()
     db_session.close()
@@ -324,9 +328,10 @@ def get_instrument(header, db_address=_DEFAULT_DB):
 
 def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
-    bpm_query = db_session.query(BadPixelMask).filter(BadPixelMask.instrument_id == instrument_id,
-                                                      BadPixelMask.ccdsum == ccdsum)
-    bpm = bpm_query.order_by(desc(BadPixelMask.creation_date)).first()
+    bpm_query = db_session.query(CalibrationImage).filter(CalibrationImage.instrument_id == instrument_id,
+                                                          CalibrationImage.attributes['ccdsum'] ==
+                                                          cast(ccdsum, JSONField))
+    bpm = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
     db_session.close()
 
     if bpm is not None:

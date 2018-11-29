@@ -4,7 +4,7 @@ import argparse
 
 import pytest
 
-from banzai.dbs import populate_bpm_table, create_db, get_session, CalibrationImage
+from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage
 from banzai.utils import fits_utils
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
@@ -79,7 +79,8 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
 def init():
     create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
     for instrument in INSTRUMENTS:
-        populate_bpm_table(os.path.join(DATA_ROOT, instrument, 'bpm'), db_address=os.environ['DB_ADDRESS'])
+        populate_calibration_table_with_bpms(os.path.join(DATA_ROOT, instrument, 'bpm'),
+                                             db_address=os.environ['DB_ADDRESS'])
 
 
 @pytest.mark.e2e
