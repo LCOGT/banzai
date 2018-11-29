@@ -17,9 +17,11 @@ import requests
 from astropy.io import fits
 from sqlalchemy import create_engine, pool, desc, cast
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR, JSON
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
+from sqlalchemy_jsonfield import JSONField
+
 
 from banzai.utils import date_utils
 from banzai.utils import fits_utils
@@ -69,7 +71,7 @@ class CalibrationImage(Base):
     dateobs = Column(Date, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
     is_master = Column(Boolean)
-    attributes = Column(JSON)
+    attributes = Column(JSONField)
 
 
 class Instrument(Base):
@@ -196,7 +198,7 @@ def populate_instrument_tables(db_address=_DEFAULT_DB,
         add_or_update_record(db_session, Instrument,
                              {'site': instrument['site'], 'camera': instrument['camera']},
                              {'site': instrument['site'], 'camera': instrument['camera'],
-                              'type': instrument['camera_type'],
+                              'type': instrument['type'],
                               'schedulable': instrument['schedulable']})
 
     db_session.commit()
