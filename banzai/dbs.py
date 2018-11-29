@@ -17,7 +17,7 @@ import requests
 from astropy.io import fits
 from sqlalchemy import create_engine, pool, desc, cast, type_coerce
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 
@@ -66,7 +66,7 @@ class CalibrationImage(Base):
     type = Column(String(30), index=True)
     filename = Column(String(50), unique=True)
     filepath = Column(String(100))
-    dateobs = Column(Date, index=True)
+    dateobs = Column(DateTime, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
     is_master = Column(Boolean)
     attributes = Column(JSON)
@@ -256,8 +256,7 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
 
         header = fits.getheader(bpm_filename, extension_number)
         ccdsum = fits.getval(bpm_filename, 'CCDSUM', extension_number)
-        creation_date = date_utils.epoch_string_to_date(fits.getval(bpm_filename, 'DAY-OBS',
-                                                                    extension_number))
+        dateobs = date_utils.parse_date_obs(fits.getval(bpm_filename, 'DATE-OBS', extension_number))
 
         instrument = get_instrument(header, db_address=db_address)
 
@@ -269,11 +268,10 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
         bpm_attributes = {'type': 'BPM',
                           'filename': os.path.basename(bpm_filename),
                           'filepath': os.path.abspath(directory),
-                          'dateobs': creation_date,
+                          'dateobs': dateobs,
                           'instrument_id': instrument.id,
                           'is_master': True,
-                          'attributes': {'ccdsum': ccdsum},
-                          }
+                          'attributes': {'ccdsum': ccdsum}}
 
         add_or_update_record(db_session, CalibrationImage, bpm_attributes, bpm_attributes)
 
@@ -327,7 +325,9 @@ def get_instrument(header, db_address=_DEFAULT_DB):
 
 def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
-    bpm_query = db_session.query(CalibrationImage).filter(CalibrationImage.instrument_id == instrument_id,
+    bpm_query = db_session.query(CalibrationImage).filter(
+                    CalibrationImage.type == 'BPM',
+                    CalibrationImage.instrument_id == instrument_id,
                     cast(CalibrationImage.attributes['ccdsum'], String) == type_coerce(ccdsum, JSON))
     bpm = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
     db_session.close()
@@ -346,11 +346,15 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
     output_filename = os.path.basename(output_file)
 
     add_or_update_record(db_session, CalibrationImage, {'filename': output_filename},
-                         {'dayobs': date_utils.epoch_string_to_date(image_config.epoch),
-                          'ccdsum': image_config.ccdsum, 'filter_name': image_config.filter,
-                          'instrument_id': image_config.instrument.id, 'type': cal_type.upper(),
-                          'filename': output_filename, 'filepath': os.path.dirname(output_file)})
-
+                         {
+                          'type': cal_type.upper(),
+                          'filename': output_filename,
+                          'filepath': os.path.dirname(output_file),
+                          'dateobs': image_config.dateobs,
+                          'instrument_id': image_config.instrument.id,
+                          'is_master': True,
+                          'attributes': {'ccdsum': image_config.ccdsum,
+                                         'filter': image_config.filter}})
     db_session.commit()
     db_session.close()
 
@@ -402,15 +406,15 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
 
     for criterion in master_selection_criteria:
-        calibration_criteria &= CalibrationImage.attributes[criterion] == cast(getattr(image, criterion), JSON)
+        calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) ==\
+                                type_coerce(getattr(image, criterion), JSON)
 
     # Only grab the last year. In principle we could go farther back, but this limits the number
     # of files we get back. And if we are using calibrations that are more than a year old
     # it is probably a bad idea anyway.
-    date_obs = date_utils.parse_date_obs(image.dateobs)
 
-    calibration_criteria &= CalibrationImage.dateobs < (date_obs + datetime.timedelta(days=365))
-    calibration_criteria &= CalibrationImage.dateobs > (date_obs - datetime.timedelta(days=365))
+    calibration_criteria &= CalibrationImage.dateobs < (image.dateobs + datetime.timedelta(days=365))
+    calibration_criteria &= CalibrationImage.dateobs > (image.dateobs - datetime.timedelta(days=365))
 
     db_session = get_session(db_address=db_address)
 
@@ -420,7 +424,7 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     if len(calibration_images) == 0:
         calibration_file = None
     else:
-        date_deltas = np.abs(np.array([i.dayobs - date_obs for i in calibration_images]))
+        date_deltas = np.abs(np.array([i.dateobs - image.dateobs for i in calibration_images]))
         closest_calibration_image = calibration_images[np.argmin(date_deltas)]
         calibration_file = os.path.join(closest_calibration_image.filepath,
                                         closest_calibration_image.filename)
