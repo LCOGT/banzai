@@ -15,7 +15,7 @@ import datetime
 import numpy as np
 import requests
 from astropy.io import fits
-from sqlalchemy import create_engine, pool, desc, cast
+from sqlalchemy import create_engine, pool, desc, cast, type_coerce
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR, JSON
 from sqlalchemy.ext.declarative import declarative_base
@@ -328,7 +328,7 @@ def get_instrument(header, db_address=_DEFAULT_DB):
 def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
     bpm_query = db_session.query(CalibrationImage).filter(CalibrationImage.instrument_id == instrument_id,
-                                                          CalibrationImage.attributes['ccdsum'] == cast(ccdsum, JSON))
+                    cast(CalibrationImage.attributes['ccdsum'], String) == type_coerce(ccdsum, JSON))
     bpm = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
     db_session.close()
 
