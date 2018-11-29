@@ -21,7 +21,7 @@ from lcogt_logging import LCOGTFormatter
 
 from banzai import settings
 from banzai import dbs, preview, logs
-from banzai.context import PipelineContext
+from banzai.context import PipelineContext, TelescopeCriterion
 from banzai.utils import image_utils, date_utils
 from banzai.images import read_images
 
@@ -121,6 +121,8 @@ def parse_args(selection_criteria, image_class, extra_console_arguments=None,
 
     if not args.ignore_schedulability:
         selection_criteria += settings.SCHEDULABLE_CRITERIA
+    selection_criteria = [TelescopeCriterion(*args) for args in selection_criteria]
+    image_class = getattr(importlib.import_module('banzai.' + image_class[0]), image_class[1])
 
     pipeline_context = PipelineContext(args, selection_criteria, image_class, **kwargs)
 
