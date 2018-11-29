@@ -17,10 +17,9 @@ import requests
 from astropy.io import fits
 from sqlalchemy import create_engine, pool, desc, cast
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
-from sqlalchemy_jsonfield import JSONField
 
 from banzai.utils import date_utils
 from banzai.utils import fits_utils
@@ -70,7 +69,7 @@ class CalibrationImage(Base):
     dateobs = Column(Date, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
     is_master = Column(Boolean)
-    attributes = Column(JSONField)
+    attributes = Column(JSON)
 
 
 class Instrument(Base):
@@ -329,8 +328,7 @@ def get_instrument(header, db_address=_DEFAULT_DB):
 def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
     bpm_query = db_session.query(CalibrationImage).filter(CalibrationImage.instrument_id == instrument_id,
-                                                          CalibrationImage.attributes['ccdsum'] ==
-                                                          cast(ccdsum, JSONField))
+                                                          CalibrationImage.attributes['ccdsum'] == cast(ccdsum, JSON))
     bpm = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
     db_session.close()
 
