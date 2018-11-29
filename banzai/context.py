@@ -1,9 +1,12 @@
+import importlib
+
+
 class TelescopeCriterion:
     def __init__(self, attribute, comparison_operator, comparison_value, exclude=False):
         self.attribute = attribute
+        self.comparison_operator = getattr(importlib.import_module(comparison_operator[0]), comparison_operator[1])
         self.comparison_value = comparison_value
         self.exclude = exclude
-        self.comparison_operator = comparison_operator
 
     def telescope_passes(self, telescope):
         test = self.comparison_operator(getattr(telescope, self.attribute), self.comparison_value)
@@ -23,6 +26,8 @@ class PipelineContext(object):
                  elasticsearch_doc_type='qc', elasticsearch_qc_index='banzai_qc', **kwargs):
         # TODO: preview_mode will be removed once we start processing everything in real time.
         # TODO: no_bpm can also be removed once we are in "do our best" mode
+        allowed_instrument_criteria = [TelescopeCriterion(*args) for args in allowed_instrument_criteria]
+        image_class = getattr(importlib.import_module('banzai.'+image_class[0]), image_class[1])
         local_variables = locals()
         for variable in local_variables:
             if variable == 'kwargs':
