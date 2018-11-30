@@ -21,6 +21,9 @@ RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
         && /usr/sbin/useradd -g 10000 -d /home/archive -M -N -u 10087 archive \
         && chown -R archive:domainusers /home/archive
 
+RUN curl -o /usr/local/src/json1.c https://www.sqlite.org/src/finfo?name=ext/misc/json1.c&m=3f017d2659e531d0 \
+        && gcc -g -fPIC -shared /usr/local/src/json1.c -o /usr/local/lib/json1.so -I /opt/miniconda3/include/
+
 WORKDIR /lco/banzai
 
 COPY . /lco/banzai
@@ -28,6 +31,8 @@ COPY . /lco/banzai
 RUN python /lco/banzai/setup.py install
 
 USER archive
+
+RUN printf ".load /usr/local/lib/json1" > /home/archive/.sqliterc
 
 ENV HOME /home/archive
 
