@@ -20,7 +20,7 @@ pipeline {
 		stage('Build image') {
 			steps {
 				script {
-					dockerImage = docker.build("${DOCKER_IMG}", "--build-arg MINICONDA_VERSION=4.4.10 .")
+					dockerImage = docker.build("${DOCKER_IMG}", "--build-arg MINICONDA_VERSION=4.5.11 .")
 				}
 			}
 		}
