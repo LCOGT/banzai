@@ -18,7 +18,7 @@ class FakeFlatImage(FakeImage):
 
 
 def test_no_input_images(set_random_seed):
-    comparer = FlatComparer(None)
+    comparer = FlatComparer(FakeContext())
     images = comparer.do_stage([])
     assert len(images) == 0
 
@@ -61,7 +61,7 @@ def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_ca
     mock_cal.return_value = None
     mock_images.return_value = FakeFlatImage(10000.0)
 
-    comparer = FlatComparer(None)
+    comparer = FlatComparer(FakeContext())
     images = comparer.do_stage([FakeFlatImage(10000.0) for x in range(6)])
     assert len(images) == 6
 

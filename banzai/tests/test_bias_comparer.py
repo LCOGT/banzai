@@ -18,13 +18,13 @@ class FakeBiasImage(FakeImage):
 
 
 def test_no_input_images(set_random_seed):
-    comparer = BiasComparer(None)
+    comparer = BiasComparer(FakeContext())
     images = comparer.do_stage([])
     assert len(images) == 0
 
 
 def test_master_selection_criteria(set_random_seed):
-    comparer = BiasComparer(None)
+    comparer = BiasComparer(FakeContext())
     assert comparer.master_selection_criteria == ['ccdsum']
 
 

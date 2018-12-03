@@ -16,13 +16,13 @@ class FakeDarkImage(FakeImage):
 
 
 def test_min_images():
-    dark_maker = DarkMaker(None)
+    dark_maker = DarkMaker(FakeContext())
     processed_images = dark_maker.do_stage([])
     assert len(processed_images) == 0
 
 
 def test_group_by_attributes():
-    maker = DarkMaker(None)
+    maker = DarkMaker(FakeContext())
     assert maker.group_by_attributes == ['ccdsum']
 
 

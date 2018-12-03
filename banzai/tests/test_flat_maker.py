@@ -14,13 +14,13 @@ class FakeFlatImage(FakeImage):
 
 
 def test_min_images():
-    flat_maker = FlatMaker(None)
+    flat_maker = FlatMaker(FakeContext())
     processed_images = flat_maker.do_stage([])
     assert len(processed_images) == 0
 
 
 def test_group_by_attributes():
-    maker = FlatMaker(None)
+    maker = FlatMaker(FakeContext())
     assert maker.group_by_attributes == ['ccdsum', 'filter']
 
 

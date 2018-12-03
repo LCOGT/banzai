@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 from astropy.io.fits import Header
 
+from banzai import settings
 from banzai.utils import image_utils
 from banzai.stages import Stage
 from banzai.images import Image
@@ -48,9 +49,14 @@ class FakeImage(Image):
 
 
 class FakeContext(object):
-    def __init__(self, preview_mode=False):
+    def __init__(self, preview_mode=False, settings_version="Imaging"):
         self.processed_path = '/tmp'
         self.preview_mode = preview_mode
+        config = vars(settings)[settings_version]
+        config = {key: getattr(config, key) for key in dir(config) if not key.startswith('_')}
+        for key, value in config.items():
+            if not key.startswith('_'):
+                setattr(self, key, value)
 
 
 class FakeStage(Stage):
