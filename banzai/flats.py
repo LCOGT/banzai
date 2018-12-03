@@ -34,14 +34,6 @@ class FlatMaker(CalibrationStacker):
     def calibration_type(self):
         return 'skyflat'
 
-    @property
-    def group_by_attributes(self):
-        return ['ccdsum', 'filter']
-
-    @property
-    def min_images(self):
-        return 5
-
     def make_master_calibration_frame(self, images):
         master_image = super(FlatMaker, self).make_master_calibration_frame(images)
         master_image.bpm = np.logical_or(master_image.bpm, master_image.data < 0.2)
@@ -53,10 +45,6 @@ class FlatDivider(ApplyCalibration):
     def __init__(self, pipeline_context):
 
         super(FlatDivider, self).__init__(pipeline_context)
-
-    @property
-    def master_selection_criteria(self):
-        return ['ccdsum', 'filter']
 
     @property
     def calibration_type(self):
@@ -81,10 +69,6 @@ class FlatDivider(ApplyCalibration):
 class FlatComparer(CalibrationComparer):
     def __init__(self, pipeline_context):
         super(FlatComparer, self).__init__(pipeline_context)
-
-    @property
-    def master_selection_criteria(self):
-        return ['ccdsum', 'filter']
 
     @property
     def calibration_type(self):

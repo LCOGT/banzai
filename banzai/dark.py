@@ -25,16 +25,8 @@ class DarkMaker(CalibrationStacker):
         super(DarkMaker, self).__init__(pipeline_context)
 
     @property
-    def group_by_attributes(self):
-        return ['ccdsum']
-
-    @property
     def calibration_type(self):
         return 'DARK'
-
-    @property
-    def min_images(self):
-        return 5
 
 
 class DarkSubtractor(ApplyCalibration):
@@ -44,10 +36,6 @@ class DarkSubtractor(ApplyCalibration):
     @property
     def calibration_type(self):
         return 'dark'
-
-    @property
-    def master_selection_criteria(self):
-        return ['ccdsum']
 
     def apply_master_calibration(self, images, master_calibration_image):
         master_dark_data = master_calibration_image.data
@@ -66,10 +54,6 @@ class DarkSubtractor(ApplyCalibration):
 class DarkComparer(CalibrationComparer):
     def __init__(self, pipeline_context):
         super(DarkComparer, self).__init__(pipeline_context)
-
-    @property
-    def master_selection_criteria(self):
-        return ['ccdsum']
 
     @property
     def calibration_type(self):
