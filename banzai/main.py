@@ -14,7 +14,6 @@ import logging
 import copy
 import importlib
 import sys
-import inspect
 
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
@@ -120,8 +119,8 @@ def parse_args(settings_version="Imaging", extra_console_arguments=None,
 
     logs.set_log_level(args.log_level)
 
-    config = inspect.getmembers(vars(settings)[settings_version], lambda a: not (inspect.isroutine(a)))
-    config = dict([c for c in config if not (c[0].startswith('__') and c[0].endswith('__'))])
+    config = vars(settings)[settings_version]
+    config = {key: config[key] for key in dir(config) if not key.startswith('_')}
 
     selection_criteria = config.pop("INSTRUMENT_CRITERIA")
     schedulable_criteria = config.pop("SCHEDULABLE_CRITERIA")
