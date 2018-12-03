@@ -1,11 +1,6 @@
-import importlib
-
-
 class TelescopeCriterion:
     def __init__(self, attribute, comparison_operator, comparison_value, exclude=False):
         self.attribute = attribute
-        if not callable(comparison_operator):
-            comparison_operator = getattr(importlib.import_module(comparison_operator[0]), comparison_operator[1])
         self.comparison_operator = comparison_operator
         self.comparison_value = comparison_value
         self.exclude = exclude
