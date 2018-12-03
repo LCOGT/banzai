@@ -120,7 +120,7 @@ def parse_args(settings_version="Imaging", extra_console_arguments=None,
     logs.set_log_level(args.log_level)
 
     config = vars(settings)[settings_version]
-    config = {key: config[key] for key in dir(config) if not key.startswith('_')}
+    config = {key: getattr(config, key) for key in dir(config) if not key.startswith('_')}
 
     selection_criteria = config.pop("INSTRUMENT_CRITERIA")
     schedulable_criteria = config.pop("SCHEDULABLE_CRITERIA")
