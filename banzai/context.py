@@ -19,7 +19,7 @@ class TelescopeCriterion:
 
 
 class PipelineContext(object):
-    def __init__(self, command_line_args, config,
+    def __init__(self, command_line_args, settings,
                  processed_path='/archive/engineering/', post_to_archive=False, fpack=True, rlevel=91,
                  db_address='mysql://cmccully:password@localhost/test', log_level='INFO', preview_mode=False,
                  max_tries=5, post_to_elasticsearch=False, elasticsearch_url='http://elasticsearch.lco.gtn:9200',
@@ -38,7 +38,7 @@ class PipelineContext(object):
         for keyword in vars(command_line_args):
             super(PipelineContext, self).__setattr__(keyword, getattr(command_line_args, keyword))
 
-        for key, value in dict(inspect.getmembers(config)).items():
+        for key, value in dict(inspect.getmembers(settings)).items():
             if not key.startswith('_'):
                 super(PipelineContext, self).__setattr__(key, value)
 

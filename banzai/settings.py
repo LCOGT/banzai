@@ -51,7 +51,7 @@ class Settings(ABC):
     PREVIEW_ELIGIBLE_SUFFIXES = SCIENCE_SUFFIXES + BIAS_SUFFIXES + DARK_SUFFIXES + FLAT_SUFFIXES
 
 
-class Imaging(Settings):
+class ImagingSettings(Settings):
 
     FRAME_SELECTION_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
                                 TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
