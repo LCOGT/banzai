@@ -174,7 +174,7 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
 def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, extra_stages=None, log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
-    stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
+    stages_to_do = get_stages_todo(pipeline_context, last_stage, extra_stages=extra_stages)
     try:
         run(stages_to_do, [os.path.join(raw_path, filename)], pipeline_context, calibration_maker=False)
     except Exception:
@@ -304,18 +304,21 @@ def reduce_night():
             logger.error(logs.format_exception())
 
 
-def get_preview_stages_todo(pipline_context, image_suffix):
-    if image_suffix in pipline_context.BIAS_SUFFIXES:
-        stages = get_stages_todo(last_stage=pipline_context.BIAS_LAST_STAGE,
-                                 extra_stages=pipline_context.BIAS_EXTRA_STAGES_PREVIEW)
-    elif image_suffix in pipline_context.DARK_SUFFIXES:
-        stages = get_stages_todo(last_stage=pipline_context.DARK_LAST_STAGE,
-                                 extra_stages=pipline_context.DARK_EXTRA_STAGES_PREVIEW)
-    elif image_suffix in pipline_context.FLAT_SUFFIXES:
-        stages = get_stages_todo(last_stage=pipline_context.FLAT_LAST_STAGE,
-                                 extra_stages=pipline_context.FLAT_EXTRA_STAGES_PREVIEW)
+def get_preview_stages_todo(pipeline_context, image_suffix):
+    if image_suffix in pipeline_context.BIAS_SUFFIXES:
+        stages = get_stages_todo(pipeline_context,
+                                 last_stage=pipeline_context.BIAS_LAST_STAGE,
+                                 extra_stages=pipeline_context.BIAS_EXTRA_STAGES_PREVIEW)
+    elif image_suffix in pipeline_context.DARK_SUFFIXES:
+        stages = get_stages_todo(pipeline_context,
+                                 last_stage=pipeline_context.DARK_LAST_STAGE,
+                                 extra_stages=pipeline_context.DARK_EXTRA_STAGES_PREVIEW)
+    elif image_suffix in pipeline_context.FLAT_SUFFIXES:
+        stages = get_stages_todo(pipeline_context,
+                                 last_stage=pipeline_context.FLAT_LAST_STAGE,
+                                 extra_stages=pipeline_context.FLAT_EXTRA_STAGES_PREVIEW)
     else:
-        stages = get_stages_todo()
+        stages = get_stages_todo(pipeline_context)
     return stages
 
 
