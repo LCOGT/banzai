@@ -119,22 +119,20 @@ def parse_args(settings_version="Imaging", extra_console_arguments=None,
 
     logs.set_log_level(args.log_level)
 
-    config = vars(settings)[settings_version]
-    config = {key: getattr(config, key) for key in dir(config) if not key.startswith('_')}
-
-    selection_criteria = config.pop("INSTRUMENT_CRITERIA")
-    schedulable_criteria = config.pop("SCHEDULABLE_CRITERIA")
-    if not args.ignore_schedulability:
-        selection_criteria += schedulable_criteria
-    selection_criteria = [TelescopeCriterion(*args) for args in selection_criteria]
-
-    image_class = config.pop("IMAGE_CLASS")
-    image_class = getattr(importlib.import_module('banzai.' + image_class[0]), image_class[1])
-
-    kwargs.update(config)
-    pipeline_context = PipelineContext(args, selection_criteria, image_class, **kwargs)
+    config = parse_settings(settings_version, args.ignore_schedulability)
+    pipeline_context = PipelineContext(args, config, **kwargs)
 
     return pipeline_context
+
+
+def parse_settings(settings_version, ignore_schedulability=False):
+    config = vars(settings)[settings_version]()
+    if not ignore_schedulability:
+        config.SELECTION_CRITERIA += config.SCHEDULABLE_CRITERIA
+    config.SELECTION_CRITERIA = [TelescopeCriterion(*args) for args in config.SELECTION_CRITERIA]
+    config.IMAGE_CLASS = getattr(importlib.import_module('banzai.' + config.IMAGE_CLASS[0]), config.IMAGE_CLASS[1])
+    config = {key: getattr(config, key) for key in dir(config) if not key.startswith('_')}
+    return config
 
 
 def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
@@ -158,7 +156,7 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
     stages_to_do = get_stages_todo(pipeline_context, last_stage, extra_stages=extra_stages)
     image_list = image_utils.make_image_list(raw_path)
     image_list = image_utils.select_images(image_list, image_types,
-                                           pipeline_context.allowed_instrument_criteria,
+                                           pipeline_context.SELECTION_CRITERIA,
                                            db_address=pipeline_context.db_address)
     if calibration_maker:
         try:

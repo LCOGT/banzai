@@ -8,6 +8,7 @@ from banzai import settings
 from banzai.utils import image_utils
 from banzai.stages import Stage
 from banzai.images import Image
+from banzai.main import parse_settings
 
 
 class FakeImage(Image):
@@ -52,11 +53,9 @@ class FakeContext(object):
     def __init__(self, preview_mode=False, settings_version="Imaging"):
         self.processed_path = '/tmp'
         self.preview_mode = preview_mode
-        config = vars(settings)[settings_version]
-        config = {key: getattr(config, key) for key in dir(config) if not key.startswith('_')}
+        config = parse_settings(settings_version)
         for key, value in config.items():
-            if not key.startswith('_'):
-                setattr(self, key, value)
+            setattr(self, key, value)
 
 
 class FakeStage(Stage):

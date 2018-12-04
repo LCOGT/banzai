@@ -1,7 +1,28 @@
 import operator
+from abc import ABC
 
 
-class Settings:
+class Settings(ABC):
+
+    @property
+    def SELECTION_CRITERIA(self):
+        raise NotImplementedError
+
+    @property
+    def IMAGE_CLASS(self):
+        raise NotImplementedError
+
+    @property
+    def ORDERED_STAGES(self):
+        raise NotImplementedError
+
+    @property
+    def CALIBRATION_MIN_IMAGES(self):
+        raise NotImplementedError
+
+    @property
+    def GROUP_BY_ATTRIBUTES(self):
+        raise NotImplementedError
 
     SCHEDULABLE_CRITERIA = [('schedulable', operator.eq, True)]
 
@@ -22,15 +43,15 @@ class Settings:
     EXPERIMENTAL_IMAGE_TYPES = ['EXPERIMENTAL']
 
     SINISTRO_IMAGE_TYPES = SCIENCE_IMAGE_TYPES + BIAS_IMAGE_TYPES + DARK_IMAGE_TYPES + FLAT_IMAGE_TYPES +\
-    TRAILED_IMAGE_TYPES + EXPERIMENTAL_IMAGE_TYPES
+        TRAILED_IMAGE_TYPES + EXPERIMENTAL_IMAGE_TYPES
 
     PREVIEW_ELIGIBLE_SUFFIXES = SCIENCE_SUFFIXES + BIAS_SUFFIXES + DARK_SUFFIXES + FLAT_SUFFIXES
 
 
 class Imaging(Settings):
 
-    INSTRUMENT_CRITERIA = [('camera_type', operator.contains, 'FLOYDS', True),
-                           ('camera_type', operator.contains, 'NRES', True)]
+    SELECTION_CRITERIA = [('camera_type', operator.contains, 'FLOYDS', True),
+                          ('camera_type', operator.contains, 'NRES', True)]
 
     IMAGE_CLASS = ('images', 'Image')
 
@@ -51,6 +72,13 @@ class Imaging(Settings):
                       ('astrometry', 'WCSSolver'),
                       ('qc', 'PointingTest')]
 
+    CALIBRATION_MIN_IMAGES = 5
+    GROUP_BY_ATTRIBUTES = {
+        'BIAS': ['ccdsum'],
+        'DARK': ['ccdsum'],
+        'SKYFLAT': ['ccdsum', 'filter']
+    }
+
     BIAS_LAST_STAGE = ('trim', 'Trimmer')
     BIAS_EXTRA_STAGES = [('bias', 'BiasMasterLevelSubtractor'), ('bias', 'BiasComparer'), ('bias', 'BiasMaker')]
     BIAS_EXTRA_STAGES_PREVIEW = [('bias', 'BiasMasterLevelSubtractor'),  ('bias', 'BiasComparer')]
@@ -65,10 +93,3 @@ class Imaging(Settings):
     FLAT_EXTRA_STAGES_PREVIEW = [('flats', 'FlatNormalizer'), ('qc', 'PatternNoiseDetector'), ('flats', 'FlatComparer')]
 
     SINISTRO_LAST_STAGE = ('mosaic', 'MosaicCreator')
-
-    CALIBRATION_MIN_IMAGES = 5
-    GROUP_BY_ATTRIBUTES = {
-        'BIAS': ['ccdsum'],
-        'DARK': ['ccdsum'],
-        'SKYFLAT': ['ccdsum', 'filter']
-    }
