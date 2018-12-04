@@ -74,8 +74,7 @@ def get_stages_todo(pipeline_context, last_stage=None, extra_stages=None):
         last_index = pipeline_context.ORDERED_STAGES.index(last_stage) + 1
 
     stages_todo = pipeline_context.ORDERED_STAGES[:last_index] + extra_stages
-    stages_todo = [getattr(importlib.import_module('banzai.'+module_name), stage_name)
-                   for (module_name, stage_name) in stages_todo]
+
     return stages_todo
 
 
@@ -129,8 +128,6 @@ def parse_settings(settings_version, ignore_schedulability=False):
     config = vars(settings)[settings_version]()
     if not ignore_schedulability:
         config.SELECTION_CRITERIA += config.SCHEDULABLE_CRITERIA
-    config.SELECTION_CRITERIA = [TelescopeCriterion(*args) for args in config.SELECTION_CRITERIA]
-    config.IMAGE_CLASS = getattr(importlib.import_module('banzai.' + config.IMAGE_CLASS[0]), config.IMAGE_CLASS[1])
     config = {key: getattr(config, key) for key in dir(config) if not key.startswith('_')}
     return config
 

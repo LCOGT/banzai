@@ -1,6 +1,9 @@
 import operator
 from abc import ABC
 
+from banzai.context import TelescopeCriterion
+from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, photometry, astrometry, images
+
 
 class Settings(ABC):
 
@@ -24,7 +27,7 @@ class Settings(ABC):
     def GROUP_BY_ATTRIBUTES(self):
         raise NotImplementedError
 
-    SCHEDULABLE_CRITERIA = [('schedulable', operator.eq, True)]
+    SCHEDULABLE_CRITERIA = [TelescopeCriterion('schedulable', operator.eq, True)]
 
     BIAS_IMAGE_TYPES = ['BIAS']
     BIAS_SUFFIXES = ['b00.fits']
@@ -50,46 +53,46 @@ class Settings(ABC):
 
 class Imaging(Settings):
 
-    SELECTION_CRITERIA = [('camera_type', operator.contains, 'FLOYDS', True),
-                          ('camera_type', operator.contains, 'NRES', True)]
+    SELECTION_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
+                          TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
 
-    IMAGE_CLASS = ('images', 'Image')
+    IMAGE_CLASS = images.Image
 
-    ORDERED_STAGES = [('bpm', 'BPMUpdater'),
-                      ('qc', 'HeaderSanity'),
-                      ('qc', 'ThousandsTest'),
-                      ('qc', 'SaturationTest'),
-                      ('bias', 'OverscanSubtractor'),
-                      ('crosstalk', 'CrosstalkCorrector'),
-                      ('gain', 'GainNormalizer'),
-                      ('mosaic', 'MosaicCreator'),
-                      ('trim', 'Trimmer'),
-                      ('bias', 'BiasSubtractor'),
-                      ('dark', 'DarkSubtractor'),
-                      ('flats', 'FlatDivider'),
-                      ('qc', 'PatternNoiseDetector'),
-                      ('photometry', 'SourceDetector'),
-                      ('astrometry', 'WCSSolver'),
-                      ('qc', 'PointingTest')]
+    ORDERED_STAGES = [bpm.BPMUpdater,
+                      qc.HeaderSanity,
+                      qc.ThousandsTest,
+                      qc.SaturationTest,
+                      bias.OverscanSubtractor,
+                      crosstalk.CrosstalkCorrector,
+                      gain.GainNormalizer,
+                      mosaic.MosaicCreator,
+                      trim.Trimmer,
+                      bias.BiasSubtractor,
+                      dark.DarkSubtractor,
+                      flats.FlatDivider,
+                      qc.PatternNoiseDetector,
+                      photometry.SourceDetector,
+                      astrometry.WCSSolver,
+                      qc.pointing.PointingTest]
 
     CALIBRATION_MIN_IMAGES = 5
+
     GROUP_BY_ATTRIBUTES = {
         'BIAS': ['ccdsum'],
         'DARK': ['ccdsum'],
         'SKYFLAT': ['ccdsum', 'filter']
     }
 
-    BIAS_LAST_STAGE = ('trim', 'Trimmer')
-    BIAS_EXTRA_STAGES = [('bias', 'BiasMasterLevelSubtractor'), ('bias', 'BiasComparer'), ('bias', 'BiasMaker')]
-    BIAS_EXTRA_STAGES_PREVIEW = [('bias', 'BiasMasterLevelSubtractor'),  ('bias', 'BiasComparer')]
+    BIAS_LAST_STAGE = trim.Trimmer
+    BIAS_EXTRA_STAGES = [bias.BiasMasterLevelSubtractor, bias.BiasComparer, bias.BiasMaker]
+    BIAS_EXTRA_STAGES_PREVIEW = [bias.BiasMasterLevelSubtractor, bias.BiasComparer]
 
-    DARK_LAST_STAGE = ('bias', 'BiasSubtractor')
-    DARK_EXTRA_STAGES = [('dark', 'DarkNormalizer'), ('dark', 'DarkComparer'), ('dark', 'DarkMaker')]
-    DARK_EXTRA_STAGES_PREVIEW = [('dark', 'DarkNormalizer'), ('dark', 'DarkComparer')]
+    DARK_LAST_STAGE = bias.BiasSubtractor
+    DARK_EXTRA_STAGES = [dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker]
+    DARK_EXTRA_STAGES_PREVIEW = [dark.DarkNormalizer, dark.DarkComparer]
 
-    FLAT_LAST_STAGE = ('dark', 'DarkSubtractor')
-    FLAT_EXTRA_STAGES = [('flats', 'FlatNormalizer'), ('qc', 'PatternNoiseDetector'), ('flats', 'FlatComparer'),
-                         ('flats', 'FlatMaker')]
-    FLAT_EXTRA_STAGES_PREVIEW = [('flats', 'FlatNormalizer'), ('qc', 'PatternNoiseDetector'), ('flats', 'FlatComparer')]
+    FLAT_LAST_STAGE = dark.DarkSubtractor
+    FLAT_EXTRA_STAGES = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker]
+    FLAT_EXTRA_STAGES_PREVIEW = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer]
 
-    SINISTRO_LAST_STAGE = ('mosaic', 'MosaicCreator')
+    SINISTRO_LAST_STAGE = mosaic.MosaicCreator
