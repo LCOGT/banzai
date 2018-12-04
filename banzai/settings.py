@@ -8,11 +8,11 @@ from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, ph
 class Settings(ABC):
 
     @property
-    def SELECTION_CRITERIA(self):
+    def FRAME_SELECTION_CRITERIA(self):
         raise NotImplementedError
 
     @property
-    def IMAGE_CLASS(self):
+    def FRAME_CLASS(self):
         raise NotImplementedError
 
     @property
@@ -24,7 +24,7 @@ class Settings(ABC):
         raise NotImplementedError
 
     @property
-    def GROUP_BY_ATTRIBUTES(self):
+    def CALIBRATION_SET_CRITERIA(self):
         raise NotImplementedError
 
     SCHEDULABLE_CRITERIA = [TelescopeCriterion('schedulable', operator.eq, True)]
@@ -53,10 +53,10 @@ class Settings(ABC):
 
 class Imaging(Settings):
 
-    SELECTION_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
-                          TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
+    FRAME_SELECTION_CRITERIA = [TelescopeCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
+                                TelescopeCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
 
-    IMAGE_CLASS = images.Image
+    FRAME_CLASS = images.Image
 
     ORDERED_STAGES = [bpm.BPMUpdater,
                       qc.HeaderSanity,
@@ -75,9 +75,13 @@ class Imaging(Settings):
                       astrometry.WCSSolver,
                       qc.pointing.PointingTest]
 
-    CALIBRATION_MIN_IMAGES = 5
+    CALIBRATION_MIN_IMAGES = {
+        'BIAS': 5,
+        'DARK': 5,
+        'SKYFLAT': 5,
+    }
 
-    GROUP_BY_ATTRIBUTES = {
+    CALIBRATION_SET_CRITERIA = {
         'BIAS': ['ccdsum'],
         'DARK': ['ccdsum'],
         'SKYFLAT': ['ccdsum', 'filter']

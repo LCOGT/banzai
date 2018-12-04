@@ -127,7 +127,7 @@ def parse_args(settings_version="Imaging", extra_console_arguments=None,
 def parse_settings(settings_version, ignore_schedulability=False):
     config = vars(settings)[settings_version]()
     if not ignore_schedulability:
-        config.SELECTION_CRITERIA += config.SCHEDULABLE_CRITERIA
+        config.FRAME_SELECTION_CRITERIA += config.SCHEDULABLE_CRITERIA
     config = {key: getattr(config, key) for key in dir(config) if not key.startswith('_')}
     return config
 
@@ -153,7 +153,7 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
     stages_to_do = get_stages_todo(pipeline_context, last_stage, extra_stages=extra_stages)
     image_list = image_utils.make_image_list(raw_path)
     image_list = image_utils.select_images(image_list, image_types,
-                                           pipeline_context.SELECTION_CRITERIA,
+                                           pipeline_context.FRAME_SELECTION_CRITERIA,
                                            db_address=pipeline_context.db_address)
     if calibration_maker:
         try:

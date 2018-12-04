@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class CalibrationMaker(Stage):
     def __init__(self, pipeline_context):
         super(CalibrationMaker, self).__init__(pipeline_context)
-        self.group_by_attributes = self.pipeline_context.GROUP_BY_ATTRIBUTES.get(self.calibration_type.upper(), [])
+        self.group_by_attributes = self.pipeline_context.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
 
     @property
     @abc.abstractmethod
@@ -46,9 +46,11 @@ class CalibrationMaker(Stage):
         return processed_images
 
     def do_stage(self, images):
-        if len(images) < self.pipeline_context.CALIBRATION_MIN_IMAGES:
+        min_images = self.pipeline_context.CALIBRATION_MIN_IMAGES.get(self.calibration_type.upper(), -1)
+        if len(images) < min_images:
             # Do nothing
-            logger.warning('Not enough images to combine.')
+            logger.warning('Number of images less than minimum requirement of {min_images}, not combining'.format(
+                min_images=min_images))
             return []
         else:
             image_utils.check_image_homogeneity(images, self.group_by_attributes)
@@ -109,7 +111,7 @@ class MasterCalibrationDoesNotExist(Exception):
 class ApplyCalibration(Stage):
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
-        self.master_selection_criteria = self.pipeline_context.GROUP_BY_ATTRIBUTES.get(
+        self.master_selection_criteria = self.pipeline_context.CALIBRATION_SET_CRITERIA.get(
             self.calibration_type.upper(), [])
 
     @property
