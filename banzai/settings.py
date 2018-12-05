@@ -1,31 +1,36 @@
 import operator
-from abc import ABC
+import abc
 
 from banzai.context import TelescopeCriterion
 from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, photometry, astrometry, images
 
 
-class Settings(ABC):
+class Settings(abc.ABC):
 
     @property
+    @abc.abstractmethod
     def FRAME_SELECTION_CRITERIA(self):
-        raise NotImplementedError
+        pass
 
     @property
+    @abc.abstractmethod
     def FRAME_CLASS(self):
-        raise NotImplementedError
+        pass
 
     @property
+    @abc.abstractmethod
     def ORDERED_STAGES(self):
-        raise NotImplementedError
+        pass
 
     @property
+    @abc.abstractmethod
     def CALIBRATION_MIN_IMAGES(self):
-        raise NotImplementedError
+        pass
 
     @property
+    @abc.abstractmethod
     def CALIBRATION_SET_CRITERIA(self):
-        raise NotImplementedError
+        pass
 
     SCHEDULABLE_CRITERIA = [TelescopeCriterion('schedulable', operator.eq, True)]
 
