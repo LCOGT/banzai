@@ -58,8 +58,8 @@ class Settings(abc.ABC):
 
 class ImagingSettings(Settings):
 
-    FRAME_SELECTION_CRITERIA = [InstrumentCriterion('camera_type', operator.contains, 'FLOYDS', exclude=True),
-                                InstrumentCriterion('camera_type', operator.contains, 'NRES', exclude=True)]
+    FRAME_SELECTION_CRITERIA = [InstrumentCriterion('type', operator.contains, 'FLOYDS', exclude=True),
+                                InstrumentCriterion('type', operator.contains, 'NRES', exclude=True)]
 
     FRAME_CLASS = images.Image
 
