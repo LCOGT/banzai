@@ -393,7 +393,7 @@ class PreviewModeListener(ConsumerMixin):
 
         if is_eligible_for_preview:
             try:
-                if preview.need_to_make_preview(path, self.pipeline_context.allowed_instrument_criteria,
+                if preview.need_to_make_preview(path, self.pipeline_context.FRAME_SELECTION_CRITERIA,
                                                 db_address=self.pipeline_context.db_address,
                                                 max_tries=self.pipeline_context.max_tries):
                     stages_to_do = get_preview_stages_todo(self.pipeline_context, image_suffix)

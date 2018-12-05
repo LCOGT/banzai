@@ -1,6 +1,7 @@
 0.15.1 (2018-12-05)
 -------------------
 - Fixed AppplyCalibration class to still use group_by (broken since 0.14.1)
+- Fixed typo that broke preview pipeline in 0.15.0
 
 0.15.0 (2018-12-05)
 -------------------
