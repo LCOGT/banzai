@@ -16,16 +16,8 @@ class BiasMaker(CalibrationStacker):
         super(BiasMaker, self).__init__(pipeline_context)
 
     @property
-    def group_by_attributes(self):
-        return ['ccdsum']
-
-    @property
     def calibration_type(self):
         return 'BIAS'
-
-    @property
-    def min_images(self):
-        return 5
 
     def make_master_calibration_frame(self, images):
         master_image = super(BiasMaker, self).make_master_calibration_frame(images)
@@ -37,10 +29,6 @@ class BiasMaker(CalibrationStacker):
 class BiasSubtractor(ApplyCalibration):
     def __init__(self, pipeline_context):
         super(BiasSubtractor, self).__init__(pipeline_context)
-
-    @property
-    def master_selection_criteria(self):
-        return ['ccdsum']
 
     @property
     def calibration_type(self):
@@ -111,10 +99,6 @@ class BiasMasterLevelSubtractor(Stage):
 class BiasComparer(CalibrationComparer):
     def __init__(self, pipeline_context):
         super(BiasComparer, self).__init__(pipeline_context)
-
-    @property
-    def master_selection_criteria(self):
-        return ['ccdsum']
 
     @property
     def calibration_type(self):

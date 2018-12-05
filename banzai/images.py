@@ -205,7 +205,7 @@ def read_images(image_list, pipeline_context):
     images = []
     for filename in image_list:
         try:
-            image = pipeline_context.image_class(pipeline_context, filename=filename)
+            image = pipeline_context.FRAME_CLASS(pipeline_context, filename=filename)
             if image.telescope is None:
                 logger.error("Image telescope attribute is None, removing from list", image=image)
                 continue

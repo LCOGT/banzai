@@ -1,14 +1,14 @@
 import logging
 import abc
 import itertools
+import os
 
 import numpy as np
 
 from banzai.stages import Stage
-from banzai import dbs
+from banzai import dbs, logs
 from banzai.images import Image
 from banzai.utils import image_utils, stats, fits_utils
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 class CalibrationMaker(Stage):
     def __init__(self, pipeline_context):
         super(CalibrationMaker, self).__init__(pipeline_context)
+        self.group_by_attributes = self.pipeline_context.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
 
     @property
     @abc.abstractmethod
@@ -25,16 +26,6 @@ class CalibrationMaker(Stage):
     @abc.abstractmethod
     def make_master_calibration_frame(self, images, image_config):
         pass
-
-    @property
-    @abc.abstractmethod
-    def min_images(self):
-        return 5
-
-    @property
-    @abc.abstractmethod
-    def group_by_attributes(self):
-        return []
 
     def get_grouping(self, image):
         grouping_criteria = [image.site, image.instrument, image.epoch]
@@ -50,18 +41,19 @@ class CalibrationMaker(Stage):
                 image_set = list(image_set)
                 logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
                 processed_images += self.do_stage(image_set)
-            except Exception as e:
-                logger.error(e)
+            except Exception:
+                logger.error(logs.format_exception())
         return processed_images
 
     def do_stage(self, images):
-        if len(images) < self.min_images:
+        min_images = self.pipeline_context.CALIBRATION_MIN_IMAGES.get(self.calibration_type.upper(), -1)
+        if len(images) < min_images:
             # Do nothing
-            logger.warning('Not enough images to combine.')
+            logger.warning('Number of images less than minimum requirement of {min_images}, not combining'.format(
+                min_images=min_images))
             return []
         else:
             image_utils.check_image_homogeneity(images, self.group_by_attributes)
-
             return [self.make_master_calibration_frame(images)]
 
     def get_calibration_filename(self, image):
@@ -119,16 +111,13 @@ class MasterCalibrationDoesNotExist(Exception):
 class ApplyCalibration(Stage):
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
+        self.master_selection_criteria = self.pipeline_context.CALIBRATION_SET_CRITERIA.get(
+            self.calibration_type.upper(), [])
 
     @property
     @abc.abstractmethod
     def calibration_type(self):
         pass
-
-    @property
-    @abc.abstractmethod
-    def master_selection_criteria(self):
-        return []
 
     def on_missing_master_calibration(self, image):
         logger.error('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name), image=image)
@@ -167,9 +156,6 @@ class CalibrationComparer(ApplyCalibration):
     @abc.abstractmethod
     def reject_images(self):
         pass
-
-    def __init__(self, pipeline_context):
-        super(ApplyCalibration, self).__init__(pipeline_context)
 
     def on_missing_master_calibration(self, image):
         msg = 'No master {caltype} frame exists. Assuming these images are ok.'

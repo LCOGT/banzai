@@ -18,13 +18,13 @@ class FakeDarkImage(FakeImage):
 
 
 def test_no_input_images():
-    comparer = DarkComparer(None)
+    comparer = DarkComparer(FakeContext())
     images = comparer.do_stage([])
     assert len(images) == 0
 
 
 def test_master_selection_criteria():
-    comparer = DarkComparer(None)
+    comparer = DarkComparer(FakeContext())
     assert comparer.master_selection_criteria == ['ccdsum']
 
 

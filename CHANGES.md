@@ -1,3 +1,9 @@
+0.15.0 (2018-12-05)
+-------------------
+- Restructured settings to be an abstract class
+- Methods in main.py must now specify which version of settings to use 
+- All parameters from settings are now added to the pipeline context
+
 0.14.4 (2018-11-28)
 -------------------
 - Fixed stages to return empty image list if an exception occured

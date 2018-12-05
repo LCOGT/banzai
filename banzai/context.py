@@ -1,9 +1,12 @@
+import inspect
+
+
 class TelescopeCriterion:
     def __init__(self, attribute, comparison_operator, comparison_value, exclude=False):
         self.attribute = attribute
+        self.comparison_operator = comparison_operator
         self.comparison_value = comparison_value
         self.exclude = exclude
-        self.comparison_operator = comparison_operator
 
     def telescope_passes(self, telescope):
         test = self.comparison_operator(getattr(telescope, self.attribute), self.comparison_value)
@@ -16,7 +19,7 @@ class TelescopeCriterion:
 
 
 class PipelineContext(object):
-    def __init__(self, command_line_args, allowed_instrument_criteria, image_class,
+    def __init__(self, command_line_args, settings,
                  processed_path='/archive/engineering/', post_to_archive=False, fpack=True, rlevel=91,
                  db_address='mysql://cmccully:password@localhost/test', log_level='INFO', preview_mode=False,
                  max_tries=5, post_to_elasticsearch=False, elasticsearch_url='http://elasticsearch.lco.gtn:9200',
@@ -34,6 +37,10 @@ class PipelineContext(object):
 
         for keyword in vars(command_line_args):
             super(PipelineContext, self).__setattr__(keyword, getattr(command_line_args, keyword))
+
+        for key, value in dict(inspect.getmembers(settings)).items():
+            if not key.startswith('_'):
+                super(PipelineContext, self).__setattr__(key, value)
 
     def __delattr__(self, item):
         raise TypeError('Deleting attribute is not allowed. PipelineContext is immutable')

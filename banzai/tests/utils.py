@@ -1,4 +1,5 @@
 from datetime import datetime
+import inspect
 
 import pytest
 import numpy as np
@@ -7,6 +8,7 @@ from astropy.io.fits import Header
 from banzai.utils import image_utils
 from banzai.stages import Stage
 from banzai.images import Image
+import banzai.settings
 
 
 class FakeImage(Image):
@@ -48,9 +50,12 @@ class FakeImage(Image):
 
 
 class FakeContext(object):
-    def __init__(self, preview_mode=False):
+    def __init__(self, preview_mode=False, settings=banzai.settings.ImagingSettings()):
         self.processed_path = '/tmp'
         self.preview_mode = preview_mode
+        for key, value in dict(inspect.getmembers(settings)).items():
+            if not key.startswith('_'):
+                setattr(self, key, value)
 
 
 class FakeStage(Stage):
