@@ -124,7 +124,7 @@ class ApplyCalibration(Stage):
         raise MasterCalibrationDoesNotExist
 
     def get_grouping(self, image):
-        grouping_criteria = [image.site, image.instrument, image.epoch]
+        grouping_criteria = [image.site, image.camera, image.epoch]
         if self.master_selection_criteria:
             grouping_criteria += [getattr(image, keyword) for keyword in self.master_selection_criteria]
         return grouping_criteria
