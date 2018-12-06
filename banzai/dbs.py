@@ -17,7 +17,7 @@ import requests
 from astropy.io import fits
 from sqlalchemy import create_engine, pool, desc, cast, type_coerce
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Boolean, CHAR, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 
@@ -66,6 +66,7 @@ class CalibrationImage(Base):
     type = Column(String(30), index=True)
     filename = Column(String(50), unique=True)
     filepath = Column(String(100))
+    epoch = Column(Date, index=True)
     dateobs = Column(DateTime, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
     is_master = Column(Boolean)
@@ -350,6 +351,7 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
                           'type': cal_type.upper(),
                           'filename': output_filename,
                           'filepath': os.path.dirname(output_file),
+                          'epoch': date_utils.epoch_string_to_date(image_config.epoch),
                           'dateobs': image_config.dateobs,
                           'instrument_id': image_config.instrument.id,
                           'is_master': is_master,

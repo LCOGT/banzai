@@ -119,9 +119,10 @@ def migrate_db():
 
     # Convert old CalibrationImage to new type
     calibrations = base_to_dict(old_db_session.query(CalibrationImage).all())
-    change_key_name(calibrations, 'dayobs', 'dateobs')
+    change_key_name(calibrations, 'dayobs', 'epoch')
     change_key_name(calibrations, 'telescope_id', 'instrument_id')
     for row in calibrations:
+        row['dateobs'] = row['dayobs']
         row['is_master'] = True
         row['attributes'] = {'filter': row.pop('filter_name'), 'ccdsum': row.pop('ccdsum')}
         del(row['id'])
@@ -129,10 +130,11 @@ def migrate_db():
 
     # Add BPMs to CalibrationImage
     bpms = base_to_dict(old_db_session.query(BadPixelMask).all())
-    change_key_name(bpms, 'creation_date', 'dateobs')
+    change_key_name(bpms, 'creation_date', 'epoch')
     change_key_name(bpms, 'telescope_id', 'instrument_id')
     for row in bpms:
         row['type'] = 'BPM'
+        row['dateobs'] = row['dayobs']
         row['is_master'] = True
         row['attributes'] = {'ccdsum': row.pop('ccdsum')}
         del(row['id'])
