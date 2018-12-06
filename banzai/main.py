@@ -163,8 +163,8 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
                 db_address=pipeline_context.db_address)
             for reduced_image_path_list in reduced_image_path_lists:
                 run([calibration_maker_stage], reduced_image_path_list, pipeline_context, calibration_maker=True)
-    except Exception as e:
-        logger.error(e, extra_tags={'raw_path': raw_path})
+    except Exception:
+        logger.error(logs.format_exception(), extra_tags={'raw_path': raw_path})
 
 
 def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, extra_stages=None, log_message=''):
