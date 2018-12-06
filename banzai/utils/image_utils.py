@@ -12,8 +12,6 @@ from banzai.utils import file_utils, date_utils
 
 logger = logging.getLogger(__name__)
 
-CALIBRATION_OBSTYPES = ["BIAS", "DARK", "SKYFLAT"]
-
 
 def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
     instrument = dbs.get_instrument_for_file(filename, db_address=db_address)
@@ -99,7 +97,7 @@ def save_images(pipeline_context, images, master_calibration=False):
         if pipeline_context.fpack:
             image_filename += '.fz'
             filepath += '.fz'
-        if master_calibration or image.obstype in CALIBRATION_OBSTYPES:
+        if image.obstype in pipeline_context.CALIBRATION_IMAGE_TYPES:
             dbs.save_calibration_info(image.obstype, filepath, image,
                                       db_address=pipeline_context.db_address, is_master=master_calibration)
 
