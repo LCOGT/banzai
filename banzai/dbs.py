@@ -79,6 +79,7 @@ class Instrument(Base):
 
     This defines the instruments table.
     """
+    __tablename__ = 'instruments'
     id = Column(Integer, primary_key=True, autoincrement=True)
     site = Column(String(10), ForeignKey('sites.id'), index=True)
     camera = Column(String(20), index=True)
