@@ -273,7 +273,7 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
                           'is_master': True,
                           'attributes': {'ccdsum': ccdsum}}
 
-        add_or_update_record(db_session, CalibrationImage, bpm_attributes, bpm_attributes)
+        add_or_update_record(db_session, CalibrationImage, {'filename': bpm_attributes['filename']}, bpm_attributes)
 
     db_session.commit()
     db_session.close()
