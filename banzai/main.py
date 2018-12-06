@@ -44,38 +44,6 @@ RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                                         'help': 'Top level directory where the raw data is stored'}}
 
 
-def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
-    """
-
-    Parameters
-    ----------
-    ordered_stages: list of banzai.stages.Stage objects
-    last_stage: banzai.stages.Stage
-                Last stage to do
-    extra_stages: Stages to do after the last stage
-
-    Returns
-    -------
-    stages_todo: list of banzai.stages.Stage
-                 The stages that need to be done
-
-    Notes
-    -----
-    Extra stages can be other stages that are not in the ordered_stages list.
-    """
-    if extra_stages is None:
-        extra_stages = []
-
-    if last_stage is None:
-        last_index = None
-    else:
-        last_index = ordered_stages.index(last_stage) + 1
-
-    stages_todo = ordered_stages[:last_index] + extra_stages
-
-    return stages_todo
-
-
 def parse_args(settings, extra_console_arguments=None,
                parser_description='Process LCO data.', **kwargs):
     """Parse arguments, including default command line argument, and set the overall log level"""
@@ -124,56 +92,39 @@ def parse_args(settings, extra_console_arguments=None,
     return pipeline_context
 
 
-def run(stages_to_do, image_paths, pipeline_context, calibration_maker=False):
+def run(image_path, pipeline_context):
     """
     Main driver script for banzai.
     """
-    images = read_images(image_paths, pipeline_context)
+    images = read_images([image_path], pipeline_context)
 
-    if calibration_maker:
-        final_stage = stages_to_do.pop()
-
+    stages_to_do = pipeline_context.stages_to_do(images[0].obstype)
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
-
-    output_files = image_utils.save_images(pipeline_context, images)
-    if calibration_maker:
-        stage_to_run = final_stage(pipeline_context)
-        images = stage_to_run.run(images)
-        output_files = image_utils.save_images(pipeline_context, images, master_calibration=True)
-
-    return output_files
+    image_utils.save_images(pipeline_context, images)
 
 
-def process_directory(pipeline_context, raw_path, image_types=None, last_stage=None, extra_stages=None,
-                      log_message='', calibration_maker=False, ):
+def process_directory(pipeline_context, raw_path, image_types=None,
+                      log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
-    stages_to_do = get_stages_todo(pipeline_context.ORDERED_STAGES, last_stage=last_stage, extra_stages=extra_stages)
     image_list = image_utils.make_image_list(raw_path)
     image_list = image_utils.select_images(image_list, image_types,
                                            pipeline_context.FRAME_SELECTION_CRITERIA,
                                            db_address=pipeline_context.db_address)
-    if calibration_maker:
+    for image_path in image_list:
         try:
-            run(stages_to_do, image_list, pipeline_context, calibration_maker=True)
+            run(image_path, pipeline_context)
         except Exception:
-            logger.error(logs.format_exception(), extra_tags={'raw_path': raw_path})
-    else:
-        for image in image_list:
-            try:
-                run(stages_to_do, [image], pipeline_context, calibration_maker=False)
-            except Exception:
-                logger.error(logs.format_exception(), extra_tags={'filename': image})
+            logger.error(logs.format_exception(), extra_tags={'filename': image_path})
 
 
-def process_single_frame(pipeline_context, raw_path, filename, last_stage=None, extra_stages=None, log_message=''):
+def process_single_frame(pipeline_context, raw_path, filename, log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
-    stages_to_do = get_stages_todo(pipeline_context.ORDERED_STAGES, last_stage=last_stage, extra_stages=extra_stages)
     try:
-        run(stages_to_do, [os.path.join(raw_path, filename)], pipeline_context, calibration_maker=False)
+        run([os.path.join(raw_path, filename)], pipeline_context)
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
 
