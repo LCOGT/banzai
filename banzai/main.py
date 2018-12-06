@@ -150,7 +150,7 @@ def process_directory(pipeline_context, raw_path, image_types=None, last_stage=N
                       calibration_maker_stage=None, group_by_attributes=None):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
-    stages_to_do = get_stages_todo(last_stage, extra_stages=extra_stages)
+    stages_to_do = get_stages_todo(pipeline_context.ORDERED_STAGES, last_stage=last_stage, extra_stages=extra_stages)
     image_path_list = image_utils.make_image_path_list(raw_path)
     pruned_image_path_list = image_utils.select_images(image_path_list, image_types,
                                                        pipeline_context.FRAME_SELECTION_CRITERIA,
