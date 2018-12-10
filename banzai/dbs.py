@@ -66,7 +66,6 @@ class CalibrationImage(Base):
     type = Column(String(30), index=True)
     filename = Column(String(50), unique=True)
     filepath = Column(String(100))
-    epoch = Column(Date, index=True)
     dateobs = Column(DateTime, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
     is_master = Column(Boolean)
@@ -159,7 +158,7 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
 
 
 def populate_instrument_tables(db_address=_DEFAULT_DB,
-                              configdb_address='http://configdb.lco.gtn/sites/'):
+                               configdb_address='http://configdb.lco.gtn/sites/'):
     """
     Populate the instrument table
 
@@ -240,7 +239,6 @@ def add_or_update_record(db_session, table_model, equivalence_criteria, record_a
     if record is None:
         record = table_model(**record_attributes)
         db_session.add(record)
-
     for attribute in record_attributes:
         setattr(record, attribute, record_attributes[attribute])
     return record
@@ -351,7 +349,6 @@ def save_calibration_info(cal_type, output_file, image_config, db_address=_DEFAU
                           'type': cal_type.upper(),
                           'filename': output_filename,
                           'filepath': os.path.dirname(output_file),
-                          'epoch': date_utils.epoch_string_to_date(image_config.epoch),
                           'dateobs': image_config.dateobs,
                           'instrument_id': image_config.instrument.id,
                           'is_master': is_master,
