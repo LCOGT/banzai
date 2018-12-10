@@ -132,13 +132,6 @@ def migrate_db():
         n=len(bpms_pruned)))
     add_rows(new_db_session, dbs.CalibrationImage, bpms_pruned)
 
-    # Copy the PreviewImage table to ProcssedImage (attributes are all the same)
-    logger.info("Querying and organizing old PreviewImage table")
-    preview_images = base_to_dict(old_db_session.query(PreviewImage).all())
-    logger.info("Adding {n} rows from the old PreviewImage table to the new ProcessedImage table".format(
-        n=len(preview_images)))
-    add_rows(new_db_session, dbs.ProcessedImage, preview_images)
-
     # Convert old CalibrationImage to new type
     logger.info("Querying and organizing old CalibrationsImage table")
     calibrations = base_to_dict(old_db_session.query(CalibrationImage).all())
@@ -151,6 +144,13 @@ def migrate_db():
     logger.info("Adding {n} rows from the old CalibrationImage table to the new CalibrationImage table".format(
         n=len(calibrations)))
     add_rows(new_db_session, dbs.CalibrationImage, calibrations)
+
+    # Copy the PreviewImage table to ProcssedImage (attributes are all the same)
+    logger.info("Querying and organizing old PreviewImage table")
+    preview_images = base_to_dict(old_db_session.query(PreviewImage).all())
+    logger.info("Adding {n} rows from the old PreviewImage table to the new ProcessedImage table".format(
+        n=len(preview_images)))
+    add_rows(new_db_session, dbs.ProcessedImage, preview_images)
 
     logger.info("Finished")
     new_db_session.close()
