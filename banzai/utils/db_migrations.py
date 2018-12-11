@@ -7,13 +7,12 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from banzai import dbs, logs, main
 
-logs.set_log_level("info")
 logger = logging.getLogger(__name__)
+
 Base = declarative_base()
 
-# The base classes below are just copied verbatim from Banzai version < 0.16
 
-
+# The five base classes below are taken from Banzai version < 0.16.0
 class CalibrationImage(Base):
     __tablename__ = 'calimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -76,6 +75,7 @@ def change_key_name(row_list, old_key, new_key):
 
 def add_rows(db_session, base, row_list, max_chunk_size=100000):
     for i in range(0, len(row_list), max_chunk_size):
+        logger.debug("Inserting rows {a} to {b}".format(a=i+1, b=min(i+max_chunk_size, len(row_list))))
         db_session.bulk_insert_mappings(base, row_list[i:i + max_chunk_size])
         db_session.commit()
 
@@ -84,12 +84,15 @@ def migrate_db():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('old_db_address',
-                        help='Old database for migration: Should be in SQLAlchemy form')
+                        help='Old database address to be migrated: Should be in SQLAlchemy form')
     parser.add_argument('new_db_address',
-                        help='New databse: Should be in SQLAlchemy form')
+                        help='New database address: Should be in SQLAlchemy form')
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
     args = parser.parse_args()
 
-    logger.info("Creating new DB {new_db_address} from old DB at {old_db_address}".format(
+    logs.set_log_level(args.log_level)
+    logger.info("Creating new DB {new_db_address} from old DB {old_db_address}".format(
         new_db_address=args.new_db_address, old_db_address=args.old_db_address))
     create_new_db(args.new_db_address)
 
@@ -97,13 +100,13 @@ def migrate_db():
     new_db_session = dbs.get_session(db_address=args.new_db_address)
 
     # First copy sites table
-    logger.info("Querying and organizing old Site table")
+    logger.info("Querying and organizing the old Site table")
     sites = base_to_dict(old_db_session.query(Site).all())
     logger.info("Adding {n} rows from the old Site table to the new Site table".format(n=len(sites)))
     add_rows(new_db_session, dbs.Site, sites)
 
     # Move Telescope to Instrument with a couple of variable renames
-    logger.info("Querying and organizing old Telescopes table")
+    logger.info("Querying and organizing the old Telescope table")
     telescopes = base_to_dict(old_db_session.query(Telescope).all())
     change_key_name(telescopes, 'instrument', 'camera')
     change_key_name(telescopes, 'camera_type', 'type')
@@ -112,7 +115,7 @@ def migrate_db():
     add_rows(new_db_session, dbs.Instrument, telescopes)
 
     # Move old BPMs to CalibrationImage
-    logger.info("Querying and organizing old BPM table")
+    logger.info("Querying and organizing the old BadPixelMask table")
     bpms = base_to_dict(old_db_session.query(BadPixelMask).all())
     for row in bpms:
         row['type'] = 'BPM'
@@ -133,7 +136,7 @@ def migrate_db():
     add_rows(new_db_session, dbs.CalibrationImage, bpms_pruned)
 
     # Convert old CalibrationImage to new type
-    logger.info("Querying and organizing old CalibrationsImage table")
+    logger.info("Querying and organizing the old CalibrationsImage table")
     calibrations = base_to_dict(old_db_session.query(CalibrationImage).all())
     for row in calibrations:
         row['is_master'] = True
@@ -146,7 +149,7 @@ def migrate_db():
     add_rows(new_db_session, dbs.CalibrationImage, calibrations)
 
     # Copy the PreviewImage table to ProcssedImage (attributes are all the same)
-    logger.info("Querying and organizing old PreviewImage table")
+    logger.info("Querying and organizing the old PreviewImage table")
     preview_images = base_to_dict(old_db_session.query(PreviewImage).all())
     logger.info("Adding {n} rows from the old PreviewImage table to the new ProcessedImage table".format(
         n=len(preview_images)))
