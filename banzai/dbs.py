@@ -297,7 +297,7 @@ class SiteMissingException(Exception):
     pass
 
 
-def _query_for_instrument(db_address, site, camera):
+def query_for_instrument(db_address, site, camera):
     # Short circuit
     if site is None or camera is None:
         return None
@@ -319,16 +319,16 @@ def _guess_instrument_values_from_header(header, db_address):
                           'schedulable': False})
     db_session.commit()
     db_session.close()
-    instrument = _query_for_instrument(db_address, site, camera)
+    instrument = query_for_instrument(db_address, site, camera)
     return instrument
 
 
 def get_instrument(header, db_address=_DEFAULT_DB):
     site = header.get('SITEID')
     camera = header.get('INSTRUME')
-    instrument_from_instrume_keyword = _query_for_instrument(db_address, site, camera)
+    instrument_from_instrume_keyword = query_for_instrument(db_address, site, camera)
     instrument = instrument_from_instrume_keyword if instrument_from_instrume_keyword is not None \
-        else _query_for_instrument(db_address, site, header.get('TELESCOP'))
+        else query_for_instrument(db_address, site, header.get('TELESCOP'))
     if instrument is None:
         logger.error('Instrument {site}/{camera} is not in the database, '
                      'extracting best-guess values from header'.format(site=site, camera=camera),
@@ -458,3 +458,34 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
 
     db_session.close()
     return calibration_file
+
+
+def get_individual_calibration_images(instrument, midnight_at_site, calibration_type, selection_criteria,
+                                      db_address=_DEFAULT_DB):
+
+    calibration_criteria = CalibrationImage.type == calibration_type.upper()
+    calibration_criteria &= CalibrationImage.instrument_id == instrument.id
+    calibration_criteria &= CalibrationImage.is_master == 0
+    calibration_criteria &= CalibrationImage.dateobs < midnight_at_site + datetime.timedelta(hours=12)
+    calibration_criteria &= CalibrationImage.dateobs > midnight_at_site - datetime.timedelta(hours=12)
+
+    group_by_criteria = [CalibrationImage.attributes[criterion] for criterion in selection_criteria]
+
+    # group_by seems to only return a single image per group. Use the attributes from each group image
+    # to perform another query to get the full group
+    image_groups = []
+    db_session = get_session(db_address=db_address)
+    single_image_groups = db_session.query(CalibrationImage).filter(calibration_criteria).group_by(*group_by_criteria).all()
+    for group in single_image_groups:
+        group_calibration_criteria = calibration_criteria
+        for criterion in selection_criteria:
+            group_calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) == \
+                                          type_coerce(group.attributes[criterion], JSON)
+        image_groups.append(db_session.query(CalibrationImage).filter(group_calibration_criteria).all())
+    db_session.close()
+
+    image_path_list_groups = []
+    for group in image_groups:
+        image_path_list_groups.append([os.path.join(image.filepath, image.filename) for image in group])
+
+    return image_path_list_groups
