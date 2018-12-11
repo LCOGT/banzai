@@ -35,12 +35,12 @@ class PipelineContext(object):
             elif variable != 'command_line_args':
                 super(PipelineContext, self).__setattr__(variable, local_variables[variable])
 
-        for keyword in vars(command_line_args):
-            super(PipelineContext, self).__setattr__(keyword, getattr(command_line_args, keyword))
-
         for key, value in dict(inspect.getmembers(settings)).items():
             if not key.startswith('_'):
                 super(PipelineContext, self).__setattr__(key, value)
+
+        for keyword in vars(command_line_args):
+            super(PipelineContext, self).__setattr__(keyword, getattr(command_line_args, keyword))
 
     def __delattr__(self, item):
         raise TypeError('Deleting attribute is not allowed. PipelineContext is immutable')
