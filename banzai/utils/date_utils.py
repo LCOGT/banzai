@@ -118,3 +118,10 @@ def get_dayobs(timezone):
     # Assume that the night is over, so we want yesterday's dayobs
     yesterday = now - datetime.timedelta(days=1)
     return epoch_date_to_string(yesterday.date())
+
+
+def get_midnight(dayobs, timezone):
+    midnight_in_utc = datetime.datetime.combine(epoch_string_to_date(dayobs) + datetime.timedelta(days=1),
+                                                datetime.time(0, 0, 0))
+    local_midnight = midnight_in_utc - datetime.timedelta(hours=timezone)
+    return local_midnight
