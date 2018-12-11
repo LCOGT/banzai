@@ -21,7 +21,7 @@ from lcogt_logging import LCOGTFormatter
 from banzai import dbs, preview, logs
 from banzai.context import PipelineContext
 from banzai.utils import image_utils, date_utils
-from banzai.images import read_images
+from banzai.images import read_image
 import banzai.settings
 
 
@@ -42,6 +42,38 @@ logger = logging.getLogger(__name__)
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
                                         'help': 'Top level directory where the raw data is stored'}}
+
+
+def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
+    """
+
+    Parameters
+    ----------
+    ordered_stages: list of banzai.stages.Stage objects
+    last_stage: banzai.stages.Stage
+                Last stage to do
+    extra_stages: Stages to do after the last stage
+
+    Returns
+    -------
+    stages_todo: list of banzai.stages.Stage
+                 The stages that need to be done
+
+    Notes
+    -----
+    Extra stages can be other stages that are not in the ordered_stages list.
+    """
+    if extra_stages is None:
+        extra_stages = []
+
+    if last_stage is None:
+        last_index = None
+    else:
+        last_index = ordered_stages.index(last_stage) + 1
+
+    stages_todo = ordered_stages[:last_index] + extra_stages
+
+    return stages_todo
 
 
 def parse_args(settings, extra_console_arguments=None,
@@ -96,24 +128,35 @@ def run(image_path, pipeline_context):
     """
     Main driver script for banzai.
     """
-    images = read_images([image_path], pipeline_context)
-
-    stages_to_do = pipeline_context.stages_to_do(images[0].obstype)
+    image = read_image(image_path, pipeline_context)
+    stages_to_do = get_stages_todo(pipeline_context.ORDERED_STAGES,
+                                   last_stage=pipeline_context.LAST_STAGE[image.obstype],
+                                   extra_stages=pipeline_context.EXTRA_STAGES_PREVIEW[image.obstype])
+    # TODO: Remove passing the image around in a list once stages take a single image
+    images = [image]
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
-    image_utils.save_images(pipeline_context, images)
+    if len(images):
+        image_utils.save_image(pipeline_context, images[0])
 
 
-def process_directory(pipeline_context, raw_path, image_types=None,
-                      log_message=''):
+def run_master_maker(image_path_list, pipeline_context, frame_type):
+    images = [read_image(image_path, pipeline_context) for image_path in image_path_list]
+    stage_to_run = pipeline_context.CALIBRATION_STACKER_STAGE[frame_type](pipeline_context)
+    # TODO: This should return a single image after the stages refactor
+    images = stage_to_run.run(images)
+    if len(images):
+        image_utils.save_image(pipeline_context, images[0])
+
+
+def process_directory(pipeline_context, raw_path, log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
-    image_list = image_utils.make_image_list(raw_path)
-    image_list = image_utils.select_images(image_list, image_types,
-                                           pipeline_context.FRAME_SELECTION_CRITERIA,
-                                           db_address=pipeline_context.db_address)
-    for image_path in image_list:
+    image_path_list = image_utils.make_image_path_list(raw_path)
+    image_path_list = image_utils.select_images(image_path_list, pipeline_context.FRAME_SELECTION_CRITERIA,
+                                                db_address=pipeline_context.db_address)
+    for image_path in image_path_list:
         try:
             run(image_path, pipeline_context)
         except Exception:
@@ -124,9 +167,22 @@ def process_single_frame(pipeline_context, raw_path, filename, log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
     try:
-        run([os.path.join(raw_path, filename)], pipeline_context)
+        run(os.path.join(raw_path, filename), pipeline_context)
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
+
+
+def process_master_maker(pipeline_context, instrument, dayobs, frame_type):
+    logger.info("Making masters", extra_tags={'instrument': instrument.camera, 'dayobs': dayobs,
+                                              'obstype': frame_type})
+    image_path_lists = image_utils.get_grouped_calibration_image_path_lists(
+        instrument, dayobs, frame_type, pipeline_context.CALIBRATION_SET_CRITERIA[frame_type],
+        db_address=pipeline_context.db_address)
+    for image_path_list in image_path_lists:
+        try:
+            run_master_maker(image_path_list, pipeline_context, frame_type)
+        except Exception:
+            logger.error(logs.format_exception())
 
 
 def parse_directory_args(pipeline_context=None, raw_path=None, settings=None, extra_console_arguments=None):
@@ -147,35 +203,37 @@ def parse_directory_args(pipeline_context=None, raw_path=None, settings=None, ex
     return pipeline_context, raw_path
 
 
-def make_master_bias(pipeline_context=None, raw_path=None):
+def make_master_frame(pipeline_context, raw_path, frame_type):
+    extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
+                           {'args': ['--camera'], 'kwargs': {'dest': 'camera', 'help': 'Site code (e.g. ogg)'}},
+                           {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs',
+                                                           'help': 'Day-Obs to reduce (e.g. 20160201)'}},]
+
+    pipeline_context, _ = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
+                                               extra_console_arguments=extra_console_arguments)
+    instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera)
+    process_master_maker(pipeline_context, instrument, pipeline_context.dayobs, frame_type)
+    return pipeline_context, instrument
+
+
+def make_master_bias(pipeline_context=None, raw_path=''):
+    make_master_frame(pipeline_context, raw_path, 'BIAS')
+
+
+def make_master_darks(pipeline_context=None, raw_path=''):
+    make_master_frame(pipeline_context, raw_path, 'BIAS')
+
+
+def make_master_flat(pipeline_context=None, raw_path=''):
+    make_master_frame(pipeline_context, raw_path, 'BIAS')
+
+
+def reduce_directory(pipeline_context=None, raw_path=None):
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
-    process_directory(pipeline_context, raw_path, ['BIAS'],
-                      last_stage=pipeline_context.LAST_STAGE['BIAS'], extra_stages=pipeline_context.EXTRA_STAGES['BIAS'],
-                      log_message='Making Master Bias', calibration_maker=True)
+    process_directory(pipeline_context, raw_path, log_message='Reducing all frames in directory')
 
 
-def make_master_dark(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
-    process_directory(pipeline_context, raw_path, ['DARK'],
-                      last_stage=pipeline_context.LAST_STAGE['DARK'],
-                      extra_stages=pipeline_context.EXTRA_STAGES['DARK'],
-                      log_message='Making Master Dark', calibration_maker=True)
-
-
-def make_master_flat(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
-    process_directory(pipeline_context, raw_path, ['SKYFLAT'],
-                      last_stage=pipeline_context.LAST_STAGE['SKYFLAT'],
-                      extra_stages=pipeline_context.EXTRA_STAGES['SKYFLAT'],
-                      log_message='Making Master Flat', calibration_maker=True)
-
-
-def reduce_science_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
-    process_directory(pipeline_context, raw_path, ['EXPOSE', 'STANDARD'])
-
-
-def reduce_single_science_frame(pipeline_context=None):
+def reduce_single_frame(pipeline_context=None):
     extra_console_arguments = [{'args': ['--filename'],
                                 'kwargs': {'dest': 'filename', 'help': 'Name of file to process'}}]
     pipeline_context, raw_path = parse_directory_args(pipeline_context, None, banzai.settings.ImagingSettings(),
@@ -183,23 +241,7 @@ def reduce_single_science_frame(pipeline_context=None):
     process_single_frame(pipeline_context, raw_path, pipeline_context.filename)
 
 
-def reduce_experimental_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
-    process_directory(pipeline_context, raw_path, ['EXPERIMENTAL'])
-
-
-def reduce_trailed_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
-    process_directory(pipeline_context, raw_path, ['TRAILED'])
-
-
-def preprocess_sinistro_frames(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
-    process_directory(pipeline_context, raw_path, pipeline_context.SINISTRO_IMAGE_TYPES,
-                      last_stage=pipeline_context.LAST_STAGE['SINISTRO'])
-
-
-def run_end_of_night(settings, commands):
+def reduce_night():
     extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
                                {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs', 'default': None,
                                                                'help': 'Day-Obs to reduce (e.g. 20160201)'}},
@@ -237,20 +279,19 @@ def run_end_of_night(settings, commands):
                    if dbs.instrument_passes_criteria(instrument, pipeline_context.FRAME_SELECTION_CRITERIA)]
     # For each instrument at the given site
     for instrument in instruments:
-        raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
-                                instrument.camera, dayobs, 'raw')
-
         # Run the reductions on the given dayobs
-        for command in commands:
-            try:
-                command(pipeline_context=pipeline_context, raw_path=raw_path)
-            except:
-                logger.error(logs.format_exception())
-
-
-def reduce_night():
-    run_end_of_night(banzai.settings.ImagingSettings(),
-                     [make_master_bias, make_master_dark, make_master_flat, reduce_science_frames])
+        try:
+            process_master_maker(pipeline_context, instrument, dayobs, 'BIAS')
+        except Exception:
+            logger.error(logs.format_exception())
+        try:
+            process_master_maker(pipeline_context, instrument, dayobs, 'DARK')
+        except Exception:
+            logger.error(logs.format_exception())
+        try:
+            process_master_maker(pipeline_context, instrument, dayobs, 'SKYFLAT')
+        except Exception:
+            logger.error(logs.format_exception())
 
 
 def get_preview_stages_todo(pipeline_context, image_path):
@@ -259,7 +300,7 @@ def get_preview_stages_todo(pipeline_context, image_path):
         stages = None
     else:
         stages = get_stages_todo(pipeline_context.ORDERED_STAGES, last_stage=pipeline_context.LAST_STAGE[obstype],
-                                 extra_stages=pipeline_context.EXTRA_STAGES_PREVIEW[obstype])
+                                 extra_stages=pipeline_context.EXTRA_STAGES[obstype])
     return stages
 
 
@@ -334,16 +375,18 @@ class PreviewModeListener(ConsumerMixin):
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
         is_eligible_for_preview = False
-        for suffix in self.pipeline_context.PREVIEW_ELIGIBLE_SUFFIXES:
+        for suffix in self.pipeline_context.PREVIEW_ELIGIBLE_SUFFIXES.keys():
             if suffix in path:
                 is_eligible_for_preview = True
                 image_suffix = suffix
+                frame_type = self.pipeline_context.PREVIEW_ELIGIBLE_SUFFIXEX(image_suffix)
 
         if is_eligible_for_preview:
             try:
                 if preview.need_to_make_preview(path, self.pipeline_context.FRAME_SELECTION_CRITERIA,
                                                 db_address=self.pipeline_context.db_address,
                                                 max_tries=self.pipeline_context.max_tries):
+
                     logger.info('Running preview reduction', extra_tags={'filename': os.path.basename(path)})
 
                     stages_to_do = get_preview_stages_todo(self.pipeline_context, path)
