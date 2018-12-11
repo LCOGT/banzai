@@ -207,21 +207,17 @@ class Image(object):
         return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
 
 
-def read_images(image_list, pipeline_context):
-    images = []
-    for filename in image_list:
-        try:
-            image = pipeline_context.FRAME_CLASS(pipeline_context, filename=filename)
-            if image.instrument is None:
-                logger.error("Image instrument attribute is None, removing from list", image=image)
-                continue
-            munge(image)
-            images.append(image)
-        except Exception:
-            logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
-                         extra_tags={'filename': filename})
-            continue
-    return images
+def read_image(filename, pipeline_context):
+    try:
+        image = pipeline_context.FRAME_CLASS(pipeline_context, filename=filename)
+        if image.instrument is None:
+            logger.error("Image instrument attribute is None, aborting", image=image)
+            raise IOError
+        munge(image)
+        return image
+    except Exception:
+        logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
+                     extra_tags={'filename': filename})
 
 
 def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, input_dictionary=None):
