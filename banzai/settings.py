@@ -25,7 +25,7 @@ class Settings(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def CALIBRATION_MIN_IMAGES(self):
+    def CALIBRATION_MIN_FRAMES(self):
         pass
 
     @property
