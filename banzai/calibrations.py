@@ -45,7 +45,7 @@ class CalibrationMaker(Stage):
         return processed_images
 
     def do_stage(self, images):
-        min_images = self.pipeline_context.CALIBRATION_MIN_IMAGES.get(self.calibration_type.upper(), -1)
+        min_images = self.pipeline_context.CALIBRATION_MIN_FRAMES.get(self.calibration_type.upper(), -1)
         if len(images) < min_images:
             # Do nothing
             logger.warning('Number of images less than minimum requirement of {min_images}, not combining'.format(
