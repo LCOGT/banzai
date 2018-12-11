@@ -1,3 +1,23 @@
+0.16.0 (2018-12-11)
+-------------------
+- Significant changes made to the database structure:
+  - The `PreviewImage` table has been renamed to `ProcessedImage`
+  - The `Telescope` table has been renamed to `Instrument`; the `instrument` 
+    column is now `camera`; and the `camera_type` column is now `type`
+  - The `BadPixelMask` table has been removed, and BPMs are now located in the 
+    `CalibrationImage` table as type `BPM`
+  - In the `CalibrationImage` table, `dayobs` has been changed to `dateobs` and
+    provides the date and time the observation took place; `telescope_id` has 
+    been renamed to `instrument_id`; an `is_master` column has been added; and 
+    a JSON formatted `attributes` column is now used to store parameters such 
+    as `ccdsum` and `filter` which no longer have their own dedicated columns
+- To reflect the name change of the `Telescope` table to `Instrument`, all
+  `telescope` instances are now named `intrument`
+- All calibration frames (individual and master) are saved to the 
+  `CalibrationImage` table
+- Functionality for migrating from an old format to a new format database has
+  been added to `/banzai/utils/db_migration.py`
+
 0.15.1 (2018-12-05)
 -------------------
 - Fixed AppplyCalibration class to still use group_by (broken since 0.14.1)
