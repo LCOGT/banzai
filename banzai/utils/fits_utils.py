@@ -31,13 +31,13 @@ def create_master_calibration_header(images):
     images = [images[i] for i in np.argsort([image.dateobs for image in images])[::-1]]
 
     header = fits.Header()
-    for h in images[0].header.keys():
+    for key in images[0].header.keys():
         try:
             # Dump empty header keywords
-            if len(h) > 0:
-                header[h] = (images[0].header[h], images[0].header.comments[h])
+            if len(key) > 0:
+                header[key] = (images[0].header[key], images[0].header.comments[key])
         except ValueError as e:
-            logger.error('Could not add keyword {0}'.format(h), image=images[0])
+            logger.error('Could not add keyword {key}: {error}'.format(key=key, error=e), image=images[0])
             continue
 
     header = sanitizeheader(header)
