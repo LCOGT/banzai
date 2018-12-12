@@ -403,7 +403,7 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
                                  db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
-    calibration_criteria &= CalibrationImage.is_master == 1
+    calibration_criteria &= CalibrationImage.is_master.is_(True)
 
     for criterion in master_selection_criteria:
         calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) ==\
