@@ -82,7 +82,7 @@ class Instrument(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     site = Column(String(10), ForeignKey('sites.id'), index=True)
     camera = Column(String(20), index=True)
-    type = Column(String(20))
+    type = Column(String(50))
     schedulable = Column(Boolean, default=False)
 
 
@@ -196,7 +196,7 @@ def populate_instrument_tables(db_address=_DEFAULT_DB,
         add_or_update_record(db_session, Instrument,
                              {'site': instrument['site'], 'camera': instrument['camera']},
                              {'site': instrument['site'], 'camera': instrument['camera'],
-                              'type': instrument['type'],
+                              'type': instrument['type'][:20],
                               'schedulable': instrument['schedulable']})
 
     db_session.commit()
