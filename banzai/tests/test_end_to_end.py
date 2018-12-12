@@ -30,11 +30,15 @@ def run_end_to_end_tests():
     os.system(command.format(junit_file=args.junit_file, marker=args.marker))
 
 
-def run_banzai(entry_point):
+def run_banzai(entry_point, calibration_maker=True):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         command = '{cmd} --raw-path {raw_path} --fpack --db-address={db_address} --ignore-schedulability'
         command = command.format(cmd=entry_point, raw_path=raw_path, db_address=os.environ['DB_ADDRESS'])
+        if calibration_maker:
+            site, camera, dayobs = DAYS_OBS.split('/')
+            command += " --site {site} --camera {camera} --dayobs {dayobs}".format(
+                site=site, camera=camera, dayobs=dayobs)
         os.system(command)
 
 
@@ -92,7 +96,7 @@ def init(configdb):
 class TestMasterBiasCreation:
     @pytest.fixture(autouse=True)
     def stack_bias_frames(self, init):
-        run_banzai('banzai_bias_maker')
+        run_banzai('banzai_bias_maker', calibration_maker=True)
 
     def test_if_stacked_bias_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*b00.fits*', 'bias')
@@ -104,7 +108,7 @@ class TestMasterBiasCreation:
 class TestMasterDarkCreation:
     @pytest.fixture(autouse=True)
     def stack_dark_frames(self):
-        run_banzai('banzai_dark_maker')
+        run_banzai('banzai_dark_maker', calibration_maker=True)
 
     def test_if_stacked_dark_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*d00.fits*', 'dark')
@@ -116,7 +120,7 @@ class TestMasterDarkCreation:
 class TestMasterFlatCreation:
     @pytest.fixture(autouse=True)
     def stack_flat_frames(self):
-        run_banzai('banzai_flat_maker')
+        run_banzai('banzai_flat_maker', calibration_maker=True)
 
     def test_if_stacked_flat_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*f00.fits*', 'skyflat')
@@ -128,7 +132,7 @@ class TestMasterFlatCreation:
 class TestScienceFileCreation:
     @pytest.fixture(autouse=True)
     def reduce_science_frames(self):
-        run_banzai('banzai_reduce_science_frames')
+        run_banzai('banzai_reduce_directory')
 
     def test_if_science_frames_were_created(self):
         expected_files = []
