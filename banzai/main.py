@@ -147,15 +147,15 @@ def run_master_maker(image_path_list, pipeline_context, frame_type):
     # TODO: This should return a single image after the stages refactor
     images = stage_to_run.run(images)
     if len(images):
-        image_utils.save_image(pipeline_context, images[0])
+        image_utils.save_image(pipeline_context, images[0], master_calibration=True)
 
 
-def process_directory(pipeline_context, raw_path, log_message=''):
+def process_directory(pipeline_context, raw_path, image_types=None, log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     image_path_list = image_utils.make_image_path_list(raw_path)
     image_path_list = image_utils.select_images(image_path_list, pipeline_context.FRAME_SELECTION_CRITERIA,
-                                                db_address=pipeline_context.db_address)
+                                                image_types=image_types, db_address=pipeline_context.db_address)
     for image_path in image_path_list:
         try:
             run(image_path, pipeline_context)
@@ -203,29 +203,30 @@ def parse_directory_args(pipeline_context=None, raw_path=None, settings=None, ex
     return pipeline_context, raw_path
 
 
-def make_master_frame(pipeline_context, raw_path, frame_type):
+def make_master_frame(pipeline_context, frame_type, raw_path=None):
     extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
-                           {'args': ['--camera'], 'kwargs': {'dest': 'camera', 'help': 'Site code (e.g. ogg)'}},
+                           {'args': ['--camera'], 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)'}},
                            {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs',
-                                                           'help': 'Day-Obs to reduce (e.g. 20160201)'}},]
-
-    pipeline_context, _ = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
-                                               extra_console_arguments=extra_console_arguments)
+                                                             'help': 'Day-Obs to reduce (e.g. 20160201)'}},]
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
+                                                      extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera)
+    process_directory(pipeline_context, raw_path, image_types=[frame_type],
+                      log_message='Reducing all {frame_type} frames in directory'.format(frame_type=frame_type))
     process_master_maker(pipeline_context, instrument, pipeline_context.dayobs, frame_type)
     return pipeline_context, instrument
 
 
-def make_master_bias(pipeline_context=None, raw_path=''):
-    make_master_frame(pipeline_context, raw_path, 'BIAS')
+def make_master_bias(pipeline_context=None):
+    make_master_frame(pipeline_context, 'BIAS')
 
 
-def make_master_darks(pipeline_context=None, raw_path=''):
-    make_master_frame(pipeline_context, raw_path, 'BIAS')
+def make_master_dark(pipeline_context=None):
+    make_master_frame(pipeline_context, 'DARK')
 
 
-def make_master_flat(pipeline_context=None, raw_path=''):
-    make_master_frame(pipeline_context, raw_path, 'BIAS')
+def make_master_flat(pipeline_context=None):
+    make_master_frame(pipeline_context, 'SKYFLAT')
 
 
 def reduce_directory(pipeline_context=None, raw_path=None):
@@ -241,13 +242,10 @@ def reduce_single_frame(pipeline_context=None):
     process_single_frame(pipeline_context, raw_path, pipeline_context.filename)
 
 
-def reduce_night():
+def stack_calibrations():
     extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
                                {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs', 'default': None,
-                                                               'help': 'Day-Obs to reduce (e.g. 20160201)'}},
-                               {'args': ['--raw-path-root'],
-                                'kwargs': {'dest': 'rawpath_root', 'default': '/archive/engineering',
-                                           'help': 'Top level directory with raw data.'}}]
+                                                                 'help': 'Day-Obs to reduce (e.g. 20160201)'}}]
 
     pipeline_context = parse_args(settings, extra_console_arguments=extra_console_arguments,
                                   parser_description='Reduce all the data from a site at the end of a night.')
