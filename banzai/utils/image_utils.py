@@ -3,6 +3,8 @@ from glob import glob
 import logging
 from datetime import timedelta
 
+from astropy.io import fits
+
 import banzai
 from banzai import logs
 from banzai import dbs
@@ -35,18 +37,23 @@ def get_obstype(filename):
     for hdu in hdu_list:
         if 'OBSTYPE' in hdu.header.keys():
             obstype = hdu.header['OBSTYPE']
-
     if obstype is None:
         logger.error('Unable to get OBSTYPE', extra_tags={'filename': filename})
-
     return obstype
 
 
-def select_images(image_list, instrument_criteria, db_address=dbs._DEFAULT_DB):
+def image_is_correct_type(filename, image_types):
+    if image_types is None:
+        return True
+    return get_obstype(filename) in image_types
+
+
+def select_images(image_list, instrument_criteria, image_types=None, db_address=dbs._DEFAULT_DB):
     images = []
     for filename in image_list:
         try:
-            if image_passes_criteria(filename, instrument_criteria, db_address=db_address):
+            if image_passes_criteria(filename, instrument_criteria, db_address=db_address) and \
+                    image_is_correct_type(filename, image_types):
                 images.append(filename)
         except Exception:
             logger.error(logs.format_exception(), extra_tags={'filename': filename})
