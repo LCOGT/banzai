@@ -465,7 +465,7 @@ def get_individual_calibration_images(instrument, midnight_at_site, calibration_
 
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == instrument.id
-    calibration_criteria &= CalibrationImage.is_master == 0
+    calibration_criteria &= CalibrationImage.is_master.isnot(True)
     calibration_criteria &= CalibrationImage.dateobs < midnight_at_site + datetime.timedelta(hours=12)
     calibration_criteria &= CalibrationImage.dateobs > midnight_at_site - datetime.timedelta(hours=12)
 
