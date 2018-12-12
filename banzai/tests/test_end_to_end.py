@@ -30,13 +30,13 @@ def run_end_to_end_tests():
     os.system(command.format(junit_file=args.junit_file, marker=args.marker))
 
 
-def run_banzai(entry_point, calibration_maker=True):
+def run_banzai(entry_point, calibration_maker=False):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         command = '{cmd} --raw-path {raw_path} --fpack --db-address={db_address} --ignore-schedulability'
         command = command.format(cmd=entry_point, raw_path=raw_path, db_address=os.environ['DB_ADDRESS'])
         if calibration_maker:
-            site, camera, dayobs = DAYS_OBS.split('/')
+            site, camera, dayobs = day_obs.split('/')
             command += " --site {site} --camera {camera} --dayobs {dayobs}".format(
                 site=site, camera=camera, dayobs=dayobs)
         os.system(command)
