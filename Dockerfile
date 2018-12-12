@@ -14,7 +14,7 @@ RUN conda install -y pip numpy\>=1.12 cython scipy astropy pytest==3.5 mock requ
         && conda install -c conda-forge kombu elasticsearch pytest-astropy mysql-connector-python\
         && conda clean -y --all
 
-RUN pip install logutils lcogt_logging sqlalchemy\>=1.3.0b1\
+RUN pip install logutils lcogt_logging sqlalchemy\>=1.3.0b1 psycopg2\
         && rm -rf ~/.cache/pip
 
 RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
