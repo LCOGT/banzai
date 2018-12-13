@@ -196,7 +196,7 @@ def populate_instrument_tables(db_address=_DEFAULT_DB,
         add_or_update_record(db_session, Instrument,
                              {'site': instrument['site'], 'camera': instrument['camera']},
                              {'site': instrument['site'], 'camera': instrument['camera'],
-                              'type': instrument['type'][:20],
+                              'type': instrument['type'],
                               'schedulable': instrument['schedulable']})
 
     db_session.commit()
