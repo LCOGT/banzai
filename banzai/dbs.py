@@ -81,6 +81,7 @@ class Instrument(Base):
     __tablename__ = 'instruments'
     id = Column(Integer, primary_key=True, autoincrement=True)
     site = Column(String(10), ForeignKey('sites.id'), index=True)
+    telescope = Column(String(20), index=True)
     camera = Column(String(20), index=True)
     type = Column(String(50))
     schedulable = Column(Boolean, default=False)
@@ -151,6 +152,7 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
                     sci_cam = ins.get('science_camera')
                     if sci_cam is not None:
                         instruments.append({'site': site['code'],
+                                            'telescope': tel['code'],
                                             'camera': sci_cam['code'],
                                             'type': sci_cam['camera_type']['code'],
                                             'schedulable': ins['state'] == 'SCHEDULABLE'})
@@ -193,11 +195,16 @@ def populate_instrument_tables(db_address=_DEFAULT_DB,
     db_session.commit()
 
     for instrument in instruments:
-        add_or_update_record(db_session, Instrument,
-                             {'site': instrument['site'], 'camera': instrument['camera']},
-                             {'site': instrument['site'], 'camera': instrument['camera'],
-                              'type': instrument['type'],
-                              'schedulable': instrument['schedulable']})
+        equivalence_criteria = {'site': instrument['site'],
+                                'telescope': instrument['telescope'],
+                                'camera': instrument['camera']}
+        record_attributes = {'site': instrument['site'],
+                             'telescope': instrument['telescope'],
+                             'camera': instrument['camera'],
+                             'type': instrument['type'],
+                             'schedulable': instrument['schedulable']}
+
+        add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
 
     db_session.commit()
     db_session.close()
