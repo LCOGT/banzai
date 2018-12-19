@@ -57,15 +57,19 @@ class CalibrationMaker(Stage):
             return [self.make_master_calibration_frame(images)]
 
     def get_calibration_filename(self, image):
-        cal_file = '{cal_type}_{camera}_{epoch}_bin{bin}{filter}.fits'
-        if 'filter' in self.group_by_attributes:
-            filter_str = '_{filter}'.format(filter=image.filter)
-        else:
-            filter_str = ''
-
-        cal_file = cal_file.format(camera=image.camera,
-                                   epoch=image.epoch, bin=image.ccdsum.replace(' ', 'x'),
-                                   cal_type=self.calibration_type.lower(), filter=filter_str)
+        cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(
+            site=image.site,
+            telescop=image.header.get('TELESCOP').replace('-', ''),
+            camera=image.camera,
+            epoch=image.epoch,
+            cal_type=self.calibration_type.lower(),
+        )
+        for attribute in sorted(self.group_by_attributes):
+            attribute_value = getattr(image, attribute)
+            if attribute == 'ccdsum':
+                attribute_value = 'bin{ccdsum}'.format(ccdsum=attribute_value.replace(' ', 'x'))
+            cal_file += '-{attribute_value}'.format(attribute_value=attribute_value)
+        cal_file += '.fits'
         return cal_file
 
 
