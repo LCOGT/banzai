@@ -69,6 +69,7 @@ class CalibrationImage(Base):
     dateobs = Column(DateTime, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
     is_master = Column(Boolean)
+    is_bad = Column(Boolean)
     attributes = Column(JSON)
 
 
@@ -277,6 +278,7 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
                           'dateobs': dateobs,
                           'instrument_id': instrument.id,
                           'is_master': True,
+                          'is_bad': False,
                           'attributes': {'ccdsum': ccdsum}}
 
         add_or_update_record(db_session, CalibrationImage, {'filename': bpm_attributes['filename']}, bpm_attributes)
@@ -345,8 +347,8 @@ def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     return bpm_path
 
 
-def save_calibration_info(cal_type, output_file, image_config, image_attributes=None, db_address=_DEFAULT_DB,
-                          is_master=False):
+def save_calibration_info(cal_type, output_file, image_config, image_attributes=None, is_master=False,
+                          image_is_bad=False, db_address=_DEFAULT_DB):
     # Store the information into the calibration table
     # Check and see if the bias file is already in the database
     db_session = get_session(db_address=db_address)
@@ -357,6 +359,7 @@ def save_calibration_info(cal_type, output_file, image_config, image_attributes=
                           'dateobs': image_config.dateobs,
                           'instrument_id': image_config.instrument.id,
                           'is_master': is_master,
+                          'is_bad': image_is_bad,
                           'attributes': {}}
     for image_attribute in image_attributes:
         record_attributes['attributes'][image_attribute] = getattr(image_config, image_attribute)
