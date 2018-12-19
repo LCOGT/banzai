@@ -81,7 +81,7 @@ class MissingCatalogException(Exception):
     pass
 
 
-def save_images(pipeline_context, images, master_calibration=False):
+def save_images(pipeline_context, images, master_calibration=False, image_is_bad=False):
     output_files = []
     for image in images:
         output_directory = file_utils.make_output_directory(pipeline_context, image)
@@ -100,7 +100,8 @@ def save_images(pipeline_context, images, master_calibration=False):
         if image.obstype in pipeline_context.CALIBRATION_IMAGE_TYPES:
             image_attributes = pipeline_context.CALIBRATION_SET_CRITERIA.get(image.obstype, None)
             dbs.save_calibration_info(image.obstype, filepath, image, image_attributes=image_attributes,
-                                      is_master=master_calibration, db_address=pipeline_context.db_address)
+                                      is_master=master_calibration, image_is_bad=image_is_bad,
+                                      db_address=pipeline_context.db_address)
 
         if pipeline_context.post_to_archive:
             logger.info('Posting file to the archive', extra_tags={'filename': image_filename})
