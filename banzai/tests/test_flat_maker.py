@@ -11,6 +11,7 @@ class FakeFlatImage(FakeImage):
         self.caltype = 'skyflat'
         self.header = fits.Header()
         self.header['OBSTYPE'] = 'SKYFLAT'
+        self.header['TELESCOP'] = '1m0-01'
 
 
 def test_min_images():

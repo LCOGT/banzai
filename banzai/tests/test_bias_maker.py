@@ -13,6 +13,7 @@ class FakeBiasImage(FakeImage):
         self.header = fits.Header()
         self.header['OBSTYPE'] = 'BIAS'
         self.header['BIASLVL'] = bias_level
+        self.header['TELESCOP'] = '1m0-01'
 
 
 def test_min_images():
