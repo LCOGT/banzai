@@ -60,7 +60,7 @@ def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_ty
     number_of_stacks_that_should_have_been_created = get_expected_number_of_calibrations(raw_filenames, calibration_type)
     for day_obs in DAYS_OBS:
         created_stacked_calibrations += glob(os.path.join(DATA_ROOT, day_obs, 'processed',
-                                                          calibration_type.lower() + '*.fits*'))
+                                                          '*' + calibration_type.lower() + '*.fits*'))
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(created_stacked_calibrations) == number_of_stacks_that_should_have_been_created
 
