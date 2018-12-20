@@ -82,6 +82,7 @@ class Instrument(Base):
     __tablename__ = 'instruments'
     id = Column(Integer, primary_key=True, autoincrement=True)
     site = Column(String(10), ForeignKey('sites.id'), index=True)
+    enclosure = Column(String(20), index=True)
     telescope = Column(String(20), index=True)
     camera = Column(String(20), index=True)
     type = Column(String(50))
@@ -153,6 +154,7 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
                     sci_cam = ins.get('science_camera')
                     if sci_cam is not None:
                         instruments.append({'site': site['code'],
+                                            'enclosure': enc['code'],
                                             'telescope': tel['code'],
                                             'camera': sci_cam['code'],
                                             'type': sci_cam['camera_type']['code'],
@@ -197,9 +199,11 @@ def populate_instrument_tables(db_address=_DEFAULT_DB,
 
     for instrument in instruments:
         equivalence_criteria = {'site': instrument['site'],
+                                'enclosure': instrument['enclosure'],
                                 'telescope': instrument['telescope'],
                                 'camera': instrument['camera']}
         record_attributes = {'site': instrument['site'],
+                             'enclosure': instrument['enclosure'],
                              'telescope': instrument['telescope'],
                              'camera': instrument['camera'],
                              'type': instrument['type'],
