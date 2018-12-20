@@ -50,7 +50,7 @@ class BiasSubtractor(ApplyCalibration):
             image.header['BIASLVL'] = (master_bias_level, 'Mean bias level of master bias')
 
             master_bias_filename = os.path.basename(master_calibration_image.filename)
-            image.header['L1IDBIAS'] = (master_bias_filename, 'ID of bias frame used')
+            image.header['L1IDBIAS'] = (master_bias_filename, 'ID of bias frame')
             image.header['L1STATBI'] = (1, "Status flag for bias frame correction")
             logging_tags = {'BIASLVL': image.header['BIASLVL'],
                             'L1IDBIAS': image.header['L1IDBIAS']}

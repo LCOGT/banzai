@@ -46,7 +46,7 @@ class DarkSubtractor(ApplyCalibration):
             logger.info('Subtracting dark', image=image, extra_tags=logging_tags)
             image.data -= master_dark_data * image.exptime
             image.bpm |= master_calibration_image.bpm
-            image.header['L1IDDARK'] = (master_dark_filename, 'ID of dark frame used')
+            image.header['L1IDDARK'] = (master_dark_filename, 'ID of dark frame')
             image.header['L1STATDA'] = (1, 'Status flag for dark frame correction')
         return images
 

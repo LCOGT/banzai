@@ -60,7 +60,7 @@ class FlatDivider(ApplyCalibration):
             image.data /= master_flat_data
             image.bpm |= master_calibration_image.bpm
             master_flat_filename = os.path.basename(master_flat_filename)
-            image.header['L1IDFLAT'] = (master_flat_filename, 'ID of flat frame used')
+            image.header['L1IDFLAT'] = (master_flat_filename, 'ID of flat frame')
             image.header['L1STATFL'] = (1, 'Status flag for flat field correction')
 
         return images
