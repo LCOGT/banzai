@@ -32,30 +32,22 @@ class Settings(abc.ABC):
     def CALIBRATION_SET_CRITERIA(self):
         pass
 
+    @property
+    @abc.abstractmethod
+    def CALIBRATION_IMAGE_TYPES(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def LAST_STAGE(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def EXTRA_STAGES(self):
+        pass
+
     SCHEDULABLE_CRITERIA = [InstrumentCriterion('schedulable', operator.eq, True)]
-
-    BIAS_IMAGE_TYPES = ['BIAS']
-    BIAS_SUFFIXES = ['b00.fits']
-
-    DARK_IMAGE_TYPES = ['DARK']
-    DARK_SUFFIXES = ['d00.fits']
-
-    FLAT_IMAGE_TYPES = ['SKYFLAT']
-    FLAT_SUFFIXES = ['f00.fits']
-
-    CALIBRATION_IMAGE_TYPES = BIAS_IMAGE_TYPES + DARK_IMAGE_TYPES + FLAT_IMAGE_TYPES
-
-    SCIENCE_IMAGE_TYPES = ['EXPOSE', 'STANDARD']
-    SCIENCE_SUFFIXES = ['e00.fits', 's00.fits']
-
-    TRAILED_IMAGE_TYPES = ['TRAILED']
-
-    EXPERIMENTAL_IMAGE_TYPES = ['EXPERIMENTAL']
-
-    SINISTRO_IMAGE_TYPES = SCIENCE_IMAGE_TYPES + BIAS_IMAGE_TYPES + DARK_IMAGE_TYPES + FLAT_IMAGE_TYPES +\
-        TRAILED_IMAGE_TYPES + EXPERIMENTAL_IMAGE_TYPES
-
-    PREVIEW_ELIGIBLE_SUFFIXES = SCIENCE_SUFFIXES + BIAS_SUFFIXES + DARK_SUFFIXES + FLAT_SUFFIXES
 
 
 class ImagingSettings(Settings):
@@ -82,28 +74,30 @@ class ImagingSettings(Settings):
                       astrometry.WCSSolver,
                       qc.pointing.PointingTest]
 
-    CALIBRATION_MIN_IMAGES = {
-        'BIAS': 5,
-        'DARK': 5,
-        'SKYFLAT': 5,
-    }
+    CALIBRATION_MIN_IMAGES = {'BIAS': 5,
+                              'DARK': 5,
+                              'SKYFLAT': 5}
 
-    CALIBRATION_SET_CRITERIA = {
-        'BIAS': ['ccdsum'],
-        'DARK': ['ccdsum'],
-        'SKYFLAT': ['ccdsum', 'filter']
-    }
+    CALIBRATION_SET_CRITERIA = {'BIAS': ['ccdsum'],
+                                'DARK': ['ccdsum'],
+                                'SKYFLAT': ['ccdsum', 'filter']}
+    LAST_STAGE = {'BIAS': trim.Trimmer, 'DARK': bias.BiasSubtractor, 'SKYFLAT': dark.DarkSubtractor,
+                  'SINISTRO': mosaic.MosaicCreator, 'STANDARD': None, 'EXPOSE': None}
 
-    BIAS_LAST_STAGE = trim.Trimmer
-    BIAS_EXTRA_STAGES = [bias.BiasMasterLevelSubtractor, bias.BiasComparer, bias.BiasMaker]
-    BIAS_EXTRA_STAGES_PREVIEW = [bias.BiasMasterLevelSubtractor, bias.BiasComparer]
+    EXTRA_STAGES = {'BIAS': [bias.BiasMasterLevelSubtractor, bias.BiasComparer, bias.BiasMaker],
+                    'DARK': [dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker],
+                    'SKYFLAT': [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker],
+                    'STANDARD': None,
+                    'EXPOSE': None}
 
-    DARK_LAST_STAGE = bias.BiasSubtractor
-    DARK_EXTRA_STAGES = [dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker]
-    DARK_EXTRA_STAGES_PREVIEW = [dark.DarkNormalizer, dark.DarkComparer]
+    EXTRA_STAGES_PREVIEW = {'BIAS': [bias.BiasMasterLevelSubtractor, bias.BiasComparer],
+                            'DARK': [dark.DarkNormalizer, dark.DarkComparer],
+                            'SKYFLAT': [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer],
+                            'STANDARD': None,
+                            'EXPOSE': None}
 
-    FLAT_LAST_STAGE = dark.DarkSubtractor
-    FLAT_EXTRA_STAGES = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker]
-    FLAT_EXTRA_STAGES_PREVIEW = [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer]
+    CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT']
 
-    SINISTRO_LAST_STAGE = mosaic.MosaicCreator
+    SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
+
+    PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']

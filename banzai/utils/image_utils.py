@@ -22,20 +22,26 @@ def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
     return passes
 
 
+def get_obstype(filename):
+    obstype = None
+    hdu_list = fits.open(filename)
+    for hdu in hdu_list:
+        if 'OBSTYPE' in hdu.header.keys():
+            obstype = hdu.header['OBSTYPE']
+
+    if obstype is None:
+        logger.error('Unable to get OBSTYPE', extra_tags={'filename': filename})
+
+    return obstype
+
+
 def select_images(image_list, image_types, instrument_criteria, db_address=dbs._DEFAULT_DB):
     images = []
     for filename in image_list:
         try:
             if not image_passes_criteria(filename, instrument_criteria, db_address=db_address):
                 continue
-            obstype = None
-            hdu_list = fits.open(filename)
-            for hdu in hdu_list:
-                if 'OBSTYPE' in hdu.header.keys():
-                    obstype = hdu.header['OBSTYPE']
-
-            if obstype is None:
-                logger.error('Unable to get OBSTYPE', extra_tags={'filename': filename})
+            obstype = get_obstype(filename)
 
             if obstype in image_types:
                 images.append(filename)
@@ -98,7 +104,7 @@ def save_images(pipeline_context, images, master_calibration=False, image_is_bad
             image_filename += '.fz'
             filepath += '.fz'
         if image.obstype in pipeline_context.CALIBRATION_IMAGE_TYPES:
-            image_attributes = pipeline_context.CALIBRATION_SET_CRITERIA.get(image.obstype, None)
+            image_attributes = pipeline_context.CALIBRATION_SET_CRITERIA.get(image.obstype, [])
             dbs.save_calibration_info(image.obstype, filepath, image, image_attributes=image_attributes,
                                       is_master=master_calibration, image_is_bad=image_is_bad,
                                       db_address=pipeline_context.db_address)

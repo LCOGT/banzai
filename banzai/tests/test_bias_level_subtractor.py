@@ -10,12 +10,6 @@ def set_random_seed():
     np.random.seed(9723492)
 
 
-class FakeBiasImage(FakeImage):
-    def __init__(self, bias_level=0.0):
-        super(FakeBiasImage, self).__init__(image_multiplier=bias_level)
-        self.header = {'BIASLVL': bias_level}
-
-
 def test_no_input_images():
     subtractor = BiasMasterLevelSubtractor(None)
     images = subtractor.do_stage([])

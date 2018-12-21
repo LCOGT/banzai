@@ -7,7 +7,6 @@ import numpy as np
 
 from banzai.stages import Stage
 from banzai import dbs, logs
-from banzai.images import Image
 from banzai.utils import image_utils, stats, fits_utils
 
 logger = logging.getLogger(__name__)
@@ -99,7 +98,7 @@ class CalibrationStacker(CalibrationMaker):
 
         # Save the master dark image with all of the combined images in the header
         master_header = fits_utils.create_master_calibration_header(images)
-        master_image = Image(self.pipeline_context, data=stacked_data, header=master_header)
+        master_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context, data=stacked_data, header=master_header)
         master_image.filename = master_calibration_filename
         master_image.bpm = master_bpm
 
@@ -156,8 +155,8 @@ class ApplyCalibration(Stage):
             if master_calibration_filename is None:
                 self.on_missing_master_calibration(images[0])
 
-            master_calibration_image = Image(self.pipeline_context,
-                                             filename=master_calibration_filename)
+            master_calibration_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context,
+                                                                         filename=master_calibration_filename)
             return self.apply_master_calibration(images, master_calibration_image)
 
     @abc.abstractmethod

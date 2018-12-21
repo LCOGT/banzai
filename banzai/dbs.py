@@ -357,16 +357,16 @@ def save_calibration_info(cal_type, output_file, image_config, image_attributes=
     # Check and see if the bias file is already in the database
     db_session = get_session(db_address=db_address)
     output_filename = os.path.basename(output_file)
-    record_attributes = { 'type': cal_type.upper(),
-                          'filename': output_filename,
-                          'filepath': os.path.dirname(output_file),
-                          'dateobs': image_config.dateobs,
-                          'instrument_id': image_config.instrument.id,
-                          'is_master': is_master,
-                          'is_bad': image_is_bad,
-                          'attributes': {}}
+    record_attributes = {'type': cal_type.upper(),
+                         'filename': output_filename,
+                         'filepath': os.path.dirname(output_file),
+                         'dateobs': image_config.dateobs,
+                         'instrument_id': image_config.instrument.id,
+                         'is_master': is_master,
+                         'is_bad': image_is_bad,
+                         'attributes': {}}
     for image_attribute in image_attributes:
-        record_attributes['attributes'][image_attribute] = getattr(image_config, image_attribute)
+        record_attributes['attributes'][image_attribute] = str(getattr(image_config, image_attribute))
 
     add_or_update_record(db_session, CalibrationImage, {'filename': output_filename}, record_attributes)
 
@@ -423,7 +423,7 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
 
     for criterion in master_selection_criteria:
         calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) ==\
-                                type_coerce(getattr(image, criterion), JSON)
+                                type_coerce(str(getattr(image, criterion)), JSON)
 
     # Only grab the last year. In principle we could go farther back, but this limits the number
     # of files we get back. And if we are using calibrations that are more than a year old
