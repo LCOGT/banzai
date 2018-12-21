@@ -65,7 +65,6 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, set_random_seed):
     flat_level = 10000.0
 
     context = make_context_with_master_flat(flat_level=1.0, master_flat_variation=master_flat_variation, nx=nx, ny=ny)
-    comparer = FlatComparer(context)
     images = [FakeFlatImage(flat_level=flat_level) for _ in range(6)]
     for image in images:
         image.data = np.random.poisson(flat_level * np.ones((ny, nx))).astype(float)

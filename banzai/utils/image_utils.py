@@ -31,6 +31,19 @@ def get_obstype(filename):
     return obstype
 
 
+def get_obstype(filename):
+    obstype = None
+    hdu_list = fits.open(filename)
+    for hdu in hdu_list:
+        if 'OBSTYPE' in hdu.header.keys():
+            obstype = hdu.header['OBSTYPE']
+
+    if obstype is None:
+        logger.error('Unable to get OBSTYPE', extra_tags={'filename': filename})
+
+    return obstype
+
+
 def select_images(image_list, image_types, instrument_criteria, db_address=dbs._DEFAULT_DB):
     images = []
     for filename in image_list:

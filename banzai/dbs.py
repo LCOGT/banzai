@@ -368,7 +368,7 @@ def save_calibration_info(cal_type, output_file, image_config, image_attributes=
                          'is_bad': image_is_bad,
                          'attributes': {}}
     for image_attribute in image_attributes:
-        record_attributes['attributes'][image_attribute] = getattr(image_config, image_attribute)
+        record_attributes['attributes'][image_attribute] = str(getattr(image_config, image_attribute))
 
     add_or_update_record(db_session, CalibrationImage, {'filename': output_filename}, record_attributes)
 

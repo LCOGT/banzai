@@ -11,6 +11,5 @@ class FakeBiasImage(FakeImage):
 
 
 def make_context_with_master_bias(bias_level=0.0, readnoise=10.0, nx=101, ny=103):
-    fake_master_bias = FakeBiasImage(bias_level=bias_level, nx=nx, ny=ny)
-    fake_master_bias.data = np.random.normal(0.0, readnoise, size=(ny, nx))
+    fake_master_bias = FakeBiasImage(data=np.random.normal(bias_level, readnoise, size=(ny, nx)), nx=nx, ny=ny)
     return FakeContext(frame_class=lambda *args, **kwargs: fake_master_bias)
