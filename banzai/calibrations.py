@@ -154,7 +154,7 @@ class ApplyCalibration(Stage):
 
             if master_calibration_filename is None:
                 self.on_missing_master_calibration(images[0])
-
+                return images
             master_calibration_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context,
                                                                          filename=master_calibration_filename)
             return self.apply_master_calibration(images, master_calibration_image)
