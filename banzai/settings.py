@@ -4,6 +4,7 @@ import abc
 from banzai.context import InstrumentCriterion
 from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, photometry, astrometry, images
 from banzai.utils.file_utils import ccdsum_to_filename, filter_to_filename
+from banzai.calibrations import get_calibration_filename
 
 
 class Settings(abc.ABC):
@@ -50,6 +51,11 @@ class Settings(abc.ABC):
     @property
     @abc.abstractmethod
     def EXTRA_STAGES(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def get_calibration_filename(self):
         pass
 
     SCHEDULABLE_CRITERIA = [InstrumentCriterion('schedulable', operator.eq, True)]
@@ -111,3 +117,5 @@ class ImagingSettings(Settings):
     SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
 
     PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
+
+    get_calibration_filename = get_calibration_filename

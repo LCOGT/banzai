@@ -55,19 +55,6 @@ class CalibrationMaker(Stage):
             image_utils.check_image_homogeneity(images, self.group_by_attributes)
             return [self.make_master_calibration_frame(images)]
 
-    def get_calibration_filename(self, image):
-        cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(
-            site=image.site,
-            telescop=image.header.get('TELESCOP').replace('-', ''),
-            camera=image.camera,
-            epoch=image.epoch,
-            cal_type=self.calibration_type.lower(),
-        )
-        for filename_function in self.pipeline_context.CALIBRATION_FILENAME_FUNCTIONS[self.calibration_type]:
-            cal_file += '-{}'.format(filename_function(image))
-        cal_file += '.fits'
-        return cal_file
-
 
 class CalibrationStacker(CalibrationMaker):
     def __init__(self, pipeline_context):
@@ -77,7 +64,8 @@ class CalibrationStacker(CalibrationMaker):
         data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
-        master_calibration_filename = self.get_calibration_filename(images[0])
+        master_calibration_filename = self.pipeline_context.get_calibration_filename(images[0], self.pipeline_context,
+                                                                                     self.calibration_type)
 
         for i, image in enumerate(images):
             logger.debug('Stacking Frames', image=image,
@@ -228,3 +216,13 @@ class CalibrationComparer(ApplyCalibration):
     @abc.abstractmethod
     def noise_model(self, image):
         return np.ones(image.data.size)
+
+
+def get_calibration_filename(image, pipeline_context, calibration_type):
+    name_components = {'site': image.site, 'telescop': image.header.get('TELESCOP', '').replace('-', ''),
+                       'camera': image.camera, 'epoch': image.epoch, 'cal_type': calibration_type.lower()}
+    cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
+    for filename_function in pipeline_context.CALIBRATION_FILENAME_FUNCTIONS[calibration_type]:
+        cal_file += '-{}'.format(filename_function(image))
+    cal_file += '.fits'
+    return cal_file

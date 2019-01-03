@@ -15,7 +15,7 @@ import datetime
 import numpy as np
 import requests
 from astropy.io import fits
-from sqlalchemy import create_engine, pool, desc, type_coerce
+from sqlalchemy import create_engine, pool, desc, type_coerce, cast
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON
 from sqlalchemy.ext.declarative import declarative_base
@@ -337,9 +337,9 @@ def get_instrument(header, db_address=_DEFAULT_DB):
 
 def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
-    bpm_query = db_session.query(CalibrationImage).filter(CalibrationImage.type == 'BPM',
-                                                          CalibrationImage.instrument_id == instrument_id,
-                                                          CalibrationImage.attributes['ccdsum'] == type_coerce(ccdsum, JSON))
+    criteria = (CalibrationImage.type == 'BPM', CalibrationImage.instrument_id == instrument_id,
+                cast(CalibrationImage.attributes['ccdsum'], String) == type_coerce(ccdsum, JSON))
+    bpm_query = db_session.query(CalibrationImage).filter(*criteria)
     bpm = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
     db_session.close()
 
@@ -421,7 +421,9 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     calibration_criteria &= CalibrationImage.is_master.is_(True)
 
     for criterion in master_selection_criteria:
-        calibration_criteria &= CalibrationImage.attributes[criterion] == type_coerce(getattr(image, criterion), JSON)
+        # We have to cast to strings according to the sqlalchemy docs for version 1.3:
+        # https://docs.sqlalchemy.org/en/latest/core/type_basics.html?highlight=json#sqlalchemy.types.JSON
+        calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) == type_coerce(getattr(image, criterion), JSON)
 
     # Only grab the last year. In principle we could go farther back, but this limits the number
     # of files we get back. And if we are using calibrations that are more than a year old
