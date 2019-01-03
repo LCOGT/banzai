@@ -3,10 +3,10 @@ import abc
 
 from banzai.context import InstrumentCriterion
 from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, photometry, astrometry, images
+from banzai.utils.file_utils import ccdsum_to_filename, filter_to_filename
 
 
 class Settings(abc.ABC):
-
     @property
     @abc.abstractmethod
     def FRAME_SELECTION_CRITERIA(self):
@@ -30,6 +30,11 @@ class Settings(abc.ABC):
     @property
     @abc.abstractmethod
     def CALIBRATION_SET_CRITERIA(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def CALIBRATION_FILENAME_FUNCTIONS(self):
         pass
 
     @property
@@ -81,6 +86,11 @@ class ImagingSettings(Settings):
     CALIBRATION_SET_CRITERIA = {'BIAS': ['ccdsum'],
                                 'DARK': ['ccdsum'],
                                 'SKYFLAT': ['ccdsum', 'filter']}
+
+    CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': [ccdsum_to_filename],
+                                      'DARK': [ccdsum_to_filename],
+                                      'SKYFLAT': [ccdsum_to_filename, filter_to_filename]}
+
     LAST_STAGE = {'BIAS': trim.Trimmer, 'DARK': bias.BiasSubtractor, 'SKYFLAT': dark.DarkSubtractor,
                   'SINISTRO': mosaic.MosaicCreator, 'STANDARD': None, 'EXPOSE': None}
 

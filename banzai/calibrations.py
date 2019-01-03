@@ -63,11 +63,8 @@ class CalibrationMaker(Stage):
             epoch=image.epoch,
             cal_type=self.calibration_type.lower(),
         )
-        for attribute in sorted(self.group_by_attributes):
-            attribute_value = getattr(image, attribute)
-            if attribute == 'ccdsum':
-                attribute_value = 'bin{ccdsum}'.format(ccdsum=attribute_value.replace(' ', 'x'))
-            cal_file += '-{attribute_value}'.format(attribute_value=attribute_value)
+        for filename_function in self.pipeline_context.CALIBRATION_FILENAME_FUNCTIONS:
+            cal_file += '-{}'.format(filename_function(image))
         cal_file += '.fits'
         return cal_file
 
