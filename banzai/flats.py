@@ -32,7 +32,7 @@ class FlatMaker(CalibrationStacker):
 
     @property
     def calibration_type(self):
-        return 'skyflat'
+        return 'SKYFLAT'
 
     def make_master_calibration_frame(self, images):
         master_image = super(FlatMaker, self).make_master_calibration_frame(images)
@@ -48,7 +48,7 @@ class FlatDivider(ApplyCalibration):
 
     @property
     def calibration_type(self):
-        return 'skyflat'
+        return 'SKYFLAT'
 
     def apply_master_calibration(self, images, master_calibration_image):
 
@@ -72,7 +72,7 @@ class FlatComparer(CalibrationComparer):
 
     @property
     def calibration_type(self):
-        return 'skyflat'
+        return 'SKYFLAT'
 
     @property
     def reject_images(self):

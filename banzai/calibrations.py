@@ -63,7 +63,7 @@ class CalibrationMaker(Stage):
             epoch=image.epoch,
             cal_type=self.calibration_type.lower(),
         )
-        for filename_function in self.pipeline_context.CALIBRATION_FILENAME_FUNCTIONS:
+        for filename_function in self.pipeline_context.CALIBRATION_FILENAME_FUNCTIONS[self.calibration_type]:
             cal_file += '-{}'.format(filename_function(image))
         cal_file += '.fits'
         return cal_file
