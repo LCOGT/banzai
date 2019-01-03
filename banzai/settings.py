@@ -4,7 +4,7 @@ import abc
 from banzai.context import InstrumentCriterion
 from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, photometry, astrometry, images
 from banzai.utils.file_utils import ccdsum_to_filename, filter_to_filename
-from banzai.calibrations import get_calibration_filename
+from banzai.calibrations import make_calibration_filename_function
 
 
 class Settings(abc.ABC):
@@ -53,12 +53,11 @@ class Settings(abc.ABC):
     def EXTRA_STAGES(self):
         pass
 
-    @property
-    @abc.abstractmethod
-    def get_calibration_filename(self):
-        pass
-
     SCHEDULABLE_CRITERIA = [InstrumentCriterion('schedulable', operator.eq, True)]
+
+
+def telescope_to_filename(image):
+    return image.header.get('TELESCOP', '').replace('-', '')
 
 
 class ImagingSettings(Settings):
@@ -93,10 +92,6 @@ class ImagingSettings(Settings):
                                 'DARK': ['ccdsum'],
                                 'SKYFLAT': ['ccdsum', 'filter']}
 
-    CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': [ccdsum_to_filename],
-                                      'DARK': [ccdsum_to_filename],
-                                      'SKYFLAT': [ccdsum_to_filename, filter_to_filename]}
-
     LAST_STAGE = {'BIAS': trim.Trimmer, 'DARK': bias.BiasSubtractor, 'SKYFLAT': dark.DarkSubtractor,
                   'SINISTRO': mosaic.MosaicCreator, 'STANDARD': None, 'EXPOSE': None}
 
@@ -118,4 +113,7 @@ class ImagingSettings(Settings):
 
     PREVIEW_ELIGIBLE_SUFFIXES = ['e00.fits', 's00.fits', 'b00.fits', 'd00.fits', 'f00.fits']
 
-    get_calibration_filename = get_calibration_filename
+    CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': make_calibration_filename_function('BIAS', [ccdsum_to_filename], telescope_to_filename),
+                                      'DARK': make_calibration_filename_function('DARK', [ccdsum_to_filename], telescope_to_filename),
+                                      'SKYFLAT': make_calibration_filename_function('SKYFLAT', [ccdsum_to_filename, filter_to_filename],
+                                                                                    telescope_to_filename)}

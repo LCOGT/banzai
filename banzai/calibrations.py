@@ -23,7 +23,7 @@ class CalibrationMaker(Stage):
         pass
 
     @abc.abstractmethod
-    def make_master_calibration_frame(self, images, image_config):
+    def make_master_calibration_frame(self, images):
         pass
 
     def get_grouping(self, image):
@@ -64,8 +64,9 @@ class CalibrationStacker(CalibrationMaker):
         data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
-        master_calibration_filename = self.pipeline_context.get_calibration_filename(images[0], self.pipeline_context,
-                                                                                     self.calibration_type)
+        make_calibration_name = self.pipeline_context.CALIBRATION_FILENAME_FUNCTIONS[self.calibration_type]
+
+        master_calibration_filename = make_calibration_name(images[0])
 
         for i, image in enumerate(images):
             logger.debug('Stacking Frames', image=image,
@@ -218,11 +219,14 @@ class CalibrationComparer(ApplyCalibration):
         return np.ones(image.data.size)
 
 
-def get_calibration_filename(image, pipeline_context, calibration_type):
-    name_components = {'site': image.site, 'telescop': image.header.get('TELESCOP', '').replace('-', ''),
-                       'camera': image.camera, 'epoch': image.epoch, 'cal_type': calibration_type.lower()}
-    cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
-    for filename_function in pipeline_context.CALIBRATION_FILENAME_FUNCTIONS[calibration_type]:
-        cal_file += '-{}'.format(filename_function(image))
-    cal_file += '.fits'
-    return cal_file
+def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):
+    def get_calibration_filename(image):
+        name_components = {'site': image.site, 'telescop': telescope_filename_function(image),
+                           'camera': image.header.get('INSTRUME', ''), 'epoch': image.epoch,
+                           'cal_type': calibration_type.lower()}
+        cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
+        for filename_function in attribute_filename_functions:
+            cal_file += '-{}'.format(filename_function(image))
+        cal_file += '.fits'
+        return cal_file
+    return get_calibration_filename
