@@ -15,7 +15,7 @@ import datetime
 import numpy as np
 import requests
 from astropy.io import fits
-from sqlalchemy import create_engine, pool, desc, cast, type_coerce
+from sqlalchemy import create_engine, pool, desc, type_coerce
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON
 from sqlalchemy.ext.declarative import declarative_base
@@ -337,10 +337,9 @@ def get_instrument(header, db_address=_DEFAULT_DB):
 
 def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
-    bpm_query = db_session.query(CalibrationImage).filter(
-                    CalibrationImage.type == 'BPM',
-                    CalibrationImage.instrument_id == instrument_id,
-                    CalibrationImage.attributes['ccdsum'] == cast(ccdsum, JSON))
+    bpm_query = db_session.query(CalibrationImage).filter(CalibrationImage.type == 'BPM',
+                                                          CalibrationImage.instrument_id == instrument_id,
+                                                          CalibrationImage.attributes['ccdsum'] == type_coerce(ccdsum, JSON))
     bpm = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
     db_session.close()
 
@@ -366,7 +365,7 @@ def save_calibration_info(cal_type, output_file, image_config, image_attributes=
                          'is_bad': image_is_bad,
                          'attributes': {}}
     for image_attribute in image_attributes:
-        record_attributes['attributes'][image_attribute] = str(getattr(image_config, image_attribute))
+        record_attributes['attributes'][image_attribute] = getattr(image_config, image_attribute)
 
     add_or_update_record(db_session, CalibrationImage, {'filename': output_filename}, record_attributes)
 
@@ -422,7 +421,7 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     calibration_criteria &= CalibrationImage.is_master.is_(True)
 
     for criterion in master_selection_criteria:
-        calibration_criteria &= CalibrationImage.attributes[criterion] == cast(getattr(image, criterion), JSON)
+        calibration_criteria &= CalibrationImage.attributes[criterion] == type_coerce(getattr(image, criterion), JSON)
 
     # Only grab the last year. In principle we could go farther back, but this limits the number
     # of files we get back. And if we are using calibrations that are more than a year old
