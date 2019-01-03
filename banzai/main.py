@@ -248,7 +248,7 @@ def preprocess_sinistro_frames(pipeline_context=None, raw_path=None):
                       last_stage=pipeline_context.LAST_STAGE['SINISTRO'])
 
 
-def reduce_night():
+def run_end_of_night(settings, commands):
     extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
                                {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs', 'default': None,
                                                                'help': 'Day-Obs to reduce (e.g. 20160201)'}},
@@ -256,7 +256,7 @@ def reduce_night():
                                 'kwargs': {'dest': 'rawpath_root', 'default': '/archive/engineering',
                                            'help': 'Top level directory with raw data.'}}]
 
-    pipeline_context = parse_args(banzai.settings.ImagingSettings(), extra_console_arguments=extra_console_arguments,
+    pipeline_context = parse_args(settings, extra_console_arguments=extra_console_arguments,
                                   parser_description='Reduce all the data from a site at the end of a night.')
 
     # Ping the configdb to get instruments
@@ -289,22 +289,16 @@ def reduce_night():
                                 instrument.camera, dayobs, 'raw')
 
         # Run the reductions on the given dayobs
-        try:
-            make_master_bias(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception:
-            logger.error(logs.format_exception())
-        try:
-            make_master_dark(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception:
-            logger.error(logs.format_exception())
-        try:
-            make_master_flat(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception:
-            logger.error(logs.format_exception())
-        try:
-            reduce_science_frames(pipeline_context=pipeline_context, raw_path=raw_path)
-        except Exception:
-            logger.error(logs.format_exception())
+        for command in commands:
+            try:
+                command(pipeline_context=pipeline_context, raw_path=raw_path)
+            except:
+                logger.error(logs.format_exception())
+
+
+def reduce_night():
+    run_end_of_night(banzai.settings.ImagingSettings(),
+                     [make_master_bias, make_master_dark, make_master_flat, reduce_science_frames])
 
 
 def get_preview_stages_todo(pipeline_context, image_path):
