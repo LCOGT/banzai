@@ -414,6 +414,14 @@ def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=
     return instruments
 
 
+def instrument_passes_criteria(instrument, criteria):
+    passes = True
+    for criterion in criteria:
+        if not criterion.instrument_passes(instrument):
+            passes = False
+    return passes
+
+
 def get_master_calibration_image(image, calibration_type, master_selection_criteria,
                                  db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()

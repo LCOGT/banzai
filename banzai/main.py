@@ -273,16 +273,17 @@ def run_end_of_night(settings, commands):
                      extra_tags={'site': pipeline_context.site})
         return
 
-    instruments = dbs.get_instruments_at_site(pipeline_context.site,
-                                              db_address=pipeline_context.db_address,
-                                              ignore_schedulability=pipeline_context.ignore_schedulability)
-
     # If no dayobs is given, calculate it.
     if pipeline_context.dayobs is None:
         dayobs = date_utils.get_dayobs(timezone=timezone)
     else:
         dayobs = pipeline_context.dayobs
 
+    instruments = dbs.get_instruments_at_site(pipeline_context.site,
+                                              db_address=pipeline_context.db_address,
+                                              ignore_schedulability=pipeline_context.ignore_schedulability)
+    instruments = [instrument for instrument in instruments
+                   if dbs.instrument_passes_criteria(instrument, pipeline_context.FRAME_SELECTION_CRITERIA)]
     # For each instrument at the given site
     for instrument in instruments:
         raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
