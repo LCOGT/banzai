@@ -94,6 +94,10 @@ class ImagingSettings(Settings):
                               'DARK': 5,
                               'SKYFLAT': 5}
 
+    CALIBRATION_DAYS_TO_STACK = {'BIAS': 1,
+                                 'DARK': 1,
+                                 'SKYFLAT': 1}
+
     CALIBRATION_SET_CRITERIA = {'BIAS': ['ccdsum'],
                                 'DARK': ['ccdsum'],
                                 'SKYFLAT': ['ccdsum', 'filter']}

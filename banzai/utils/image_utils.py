@@ -80,12 +80,13 @@ def make_image_path_list(raw_path):
     return image_path_list
 
 
-def get_grouped_calibration_image_path_lists(instrument, dayobs, calibration_type, selection_criteria,
-                                             db_address=dbs._DEFAULT_DB):
-    timezone = dbs.get_timezone(instrument.site, db_address=db_address)
+def get_grouped_calibration_image_path_lists(pipeline_context, instrument, dayobs, frame_type):
+    timezone = dbs.get_timezone(instrument.site, db_address=pipeline_context.db_address)
     midnight_at_site = date_utils.get_midnight(dayobs, timezone)
-    return dbs.get_individual_calibration_images(instrument, midnight_at_site, calibration_type, selection_criteria,
-                                                 db_address=db_address)
+    return dbs.get_individual_calibration_images(instrument, midnight_at_site,
+                                                 pipeline_context.CALIBRATION_DAYS_TO_STACK[frame_type], frame_type,
+                                                 pipeline_context.CALIBRATION_SET_CRITERIA[frame_type],
+                                                 db_address=pipeline_context.db_address)
 
 
 def check_image_homogeneity(images, group_by_attributes=None):

@@ -175,9 +175,8 @@ def process_single_frame(pipeline_context, raw_path, filename, log_message=''):
 def process_master_maker(pipeline_context, instrument, dayobs, frame_type):
     logger.info("Making masters", extra_tags={'instrument': instrument.camera, 'dayobs': dayobs,
                                               'obstype': frame_type})
-    image_path_lists = image_utils.get_grouped_calibration_image_path_lists(
-        instrument, dayobs, frame_type, pipeline_context.CALIBRATION_SET_CRITERIA[frame_type],
-        db_address=pipeline_context.db_address)
+    image_path_lists = image_utils.get_grouped_calibration_image_path_lists(pipeline_context, instrument, dayobs,
+                                                                            frame_type)
     for image_path_list in image_path_lists:
         try:
             run_master_maker(image_path_list, pipeline_context, frame_type)

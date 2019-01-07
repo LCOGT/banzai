@@ -460,14 +460,15 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     return calibration_file
 
 
-def get_individual_calibration_images(instrument, midnight_at_site, calibration_type, selection_criteria,
-                                      db_address=_DEFAULT_DB):
+def get_individual_calibration_images(instrument, midnight_at_site, days_to_stack, calibration_type,
+                                      selection_criteria, db_address=_DEFAULT_DB):
 
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.is_master.isnot(True)
-    calibration_criteria &= CalibrationImage.dateobs < midnight_at_site + datetime.timedelta(hours=12)
-    calibration_criteria &= CalibrationImage.dateobs > midnight_at_site - datetime.timedelta(hours=12)
+    calibration_criteria &= CalibrationImage.dateobs < midnight_at_site + datetime.timedelta(days=0.5)
+    calibration_criteria &= CalibrationImage.dateobs > midnight_at_site - datetime.timedelta(days=(
+        0.5 + days_to_stack-1))
 
     group_by_criteria = [CalibrationImage.attributes[criterion] for criterion in selection_criteria]
 
