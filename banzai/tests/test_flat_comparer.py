@@ -47,19 +47,19 @@ def test_raises_an_exception_if_ny_are_different(mock_cal, set_random_seed):
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
-def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_cal, set_random_seed):
+def test_flag_bad_if_no_master_calibration(mock_save_qc, mock_cal, set_random_seed):
     mock_cal.return_value = None
     context = make_context_with_master_flat(flat_level=10000.0)
     comparer = FlatComparer(context)
-    images = comparer.do_stage([FakeFlatImage(flat_level=10000.0) for x in range(6)])
-    assert len(images) == 6
+    images = comparer.do_stage([FakeFlatImage(10000.0) for x in range(6)])
+    assert all([image.is_bad for image in images])
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
-def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, set_random_seed):
+def test_does_not_flag_noisy_images(mock_save_qc, mock_cal, set_random_seed):
     mock_cal.return_value = 'test.fits'
-    master_flat_variation = 0.05
+    master_flat_variation = 0.025
     nx = 101
     ny = 103
     flat_level = 10000.0
@@ -70,10 +70,10 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, set_random_seed):
         image.data = np.random.poisson(flat_level * np.ones((ny, nx))).astype(float)
         image.data += np.random.normal(0.0, image.readnoise)
         image.data /= flat_level
-
+    comparer = FlatComparer(context)
     images = comparer.do_stage(images)
 
-    assert len(images) == 6
+    assert not any([image.is_bad for image in images])
 
 
 # Turn on image rejection for Flats. In the long term, this can be removed.
@@ -85,7 +85,7 @@ class FakeFlatComparer(FlatComparer):
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
-def test_does_reject_bad_images(mock_save_qc, mock_cal, set_random_seed):
+def test_does_flag_bad_images(mock_save_qc, mock_cal, set_random_seed):
     mock_cal.return_value = 'test.fits'
     nx = 101
     ny = 103
@@ -109,4 +109,4 @@ def test_does_reject_bad_images(mock_save_qc, mock_cal, set_random_seed):
             images[i].data[y, x] *= 1.2
     images = comparer.do_stage(images)
 
-    assert len(images) == 4
+    assert len([image for image in images if not image.is_bad]) == 4

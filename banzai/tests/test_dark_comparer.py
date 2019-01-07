@@ -47,18 +47,18 @@ def test_raises_an_exception_if_ny_are_different(mock_cal):
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
-def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_cal):
+def test_flags_bad_if_no_master_calibration(mock_save_qc, mock_cal):
     mock_cal.return_value = None
     context = FakeContext()
     context.FRAME_CLASS = FakeDarkImage
     comparer = DarkComparer(context)
     images = comparer.do_stage([FakeDarkImage(30.0) for x in range(6)])
-    assert len(images) == 6
+    assert all([image.is_bad for image in images])
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
-def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, set_random_seed):
+def test_does_not_flag_noisy_images(mock_save_qc, mock_cal, set_random_seed):
     mock_cal.return_value = 'test.fits'
     master_dark_fraction = 0.05
     nx = 101
@@ -77,12 +77,12 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, set_random_seed):
 
     images = comparer.do_stage(images)
 
-    assert len(images) == 6
+    assert not any([image.is_bad for image in images])
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.stages.Stage.save_qc_results')
-def test_does_reject_bad_images(mock_save_qc, mock_cal, set_random_seed):
+def test_does_flag_bad_images(mock_save_qc, mock_cal, set_random_seed):
     mock_cal.return_value = 'test.fits'
     master_dark_fraction = 0.05
     nx = 101
@@ -108,4 +108,4 @@ def test_does_reject_bad_images(mock_save_qc, mock_cal, set_random_seed):
             images[i].data[y, x] *= 10.0
     images = comparer.do_stage(images)
 
-    assert len(images) == 4
+    assert sum([image.is_bad for image in images]) == 2

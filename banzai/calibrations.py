@@ -93,10 +93,6 @@ class CalibrationStacker(CalibrationMaker):
         return master_image
 
 
-class MasterCalibrationDoesNotExist(Exception):
-    pass
-
-
 class ApplyCalibration(Stage):
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
@@ -108,9 +104,10 @@ class ApplyCalibration(Stage):
     def calibration_type(self):
         pass
 
-    def on_missing_master_calibration(self, image):
-        logger.error('Master Calibration file does not exist for {stage}'.format(stage=self.stage_name), image=image)
-        raise MasterCalibrationDoesNotExist
+    def on_missing_master_calibration(self, images):
+        logger.error('Master Calibration file does not exist for {stage}, flagging image as bad'.format(
+            stage=self.stage_name), image=images[0])
+        [image.flag_as_bad() for image in images]
 
     def get_grouping(self, image):
         grouping_criteria = [image.site, image.camera, image.epoch]
@@ -139,7 +136,7 @@ class ApplyCalibration(Stage):
             master_calibration_filename = self.get_calibration_filename(images[0])
 
             if master_calibration_filename is None:
-                self.on_missing_master_calibration(images[0])
+                self.on_missing_master_calibration(images)
                 return images
             master_calibration_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context,
                                                                          filename=master_calibration_filename)
@@ -164,16 +161,15 @@ class CalibrationComparer(ApplyCalibration):
     def reject_images(self):
         pass
 
-    def on_missing_master_calibration(self, image):
-        msg = 'No master {caltype} frame exists. Assuming these images are ok.'
-        logger.warning(msg.format(caltype=self.calibration_type), image=image)
+    def on_missing_master_calibration(self, images):
+        msg = 'No master {caltype} frame exists, flagging image as bad.'
+        [image.flag_as_bad() for image in images]
+        logger.error(msg.format(caltype=self.calibration_type), image=images[0])
 
     def apply_master_calibration(self, images, master_calibration_image):
         # Short circuit
         if master_calibration_image.data is None:
             return images
-
-        images_to_reject = []
 
         for image in images:
             # We assume the images have already been normalized before this stage is run.
@@ -201,17 +197,14 @@ class CalibrationComparer(ApplyCalibration):
             # they can't handle booleans
             qc_results["master_comparison.failed"] = frame_is_bad
             if frame_is_bad:
-                # Reject the image and log an error
-                images_to_reject.append(image)
+                # Flag the image as bad and log an error
+                image.flag_as_bad()
                 qc_results['rejected'] = True
-                msg = 'Rejecting {caltype} image because it deviates too much from the previous master'
+                msg = 'Flagging {caltype} as bad because it deviates too much from the previous master'
                 logger.error(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
 
             self.save_qc_results(qc_results, image)
 
-        if self.reject_images and not self.pipeline_context.preview_mode:
-            for image_to_reject in images_to_reject:
-                images.remove(image_to_reject)
         return images
 
     @abc.abstractmethod

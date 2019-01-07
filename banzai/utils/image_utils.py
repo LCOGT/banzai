@@ -83,8 +83,10 @@ def make_image_path_list(raw_path):
 def get_grouped_calibration_image_path_lists(pipeline_context, instrument, dayobs, frame_type):
     timezone = dbs.get_timezone(instrument.site, db_address=pipeline_context.db_address)
     midnight_at_site = date_utils.get_midnight(dayobs, timezone)
-    return dbs.get_individual_calibration_images(instrument, midnight_at_site,
-                                                 pipeline_context.CALIBRATION_DAYS_TO_STACK[frame_type], frame_type,
+    date_range = (midnight_at_site - timedelta(days=(0.5 + pipeline_context.CALIBRATION_DAYS_TO_STACK[frame_type]-1)),
+                  midnight_at_site + timedelta(days=0.5))
+
+    return dbs.get_individual_calibration_images(instrument, date_range, frame_type,
                                                  pipeline_context.CALIBRATION_SET_CRITERIA[frame_type],
                                                  db_address=pipeline_context.db_address)
 
@@ -106,7 +108,7 @@ class MissingCatalogException(Exception):
     pass
 
 
-def save_image(pipeline_context, image, master_calibration=False, image_is_bad=False):
+def save_image(pipeline_context, image, master_calibration=False):
     output_directory = file_utils.make_output_directory(pipeline_context, image)
     if not master_calibration:
         image.filename = image.filename.replace('00.fits',
@@ -122,7 +124,7 @@ def save_image(pipeline_context, image, master_calibration=False, image_is_bad=F
     if image.obstype in pipeline_context.CALIBRATION_IMAGE_TYPES:
         image_attributes = pipeline_context.CALIBRATION_SET_CRITERIA.get(image.obstype, None)
         dbs.save_calibration_info(image.obstype, filepath, image, image_attributes=image_attributes,
-                                  is_master=master_calibration, image_is_bad=image_is_bad,
+                                  is_master=master_calibration, image_is_bad=image.is_bad,
                                   db_address=pipeline_context.db_address)
 
     if pipeline_context.post_to_archive:

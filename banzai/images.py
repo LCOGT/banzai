@@ -90,6 +90,8 @@ class Image(object):
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE', 0.0))
 
+        self.is_bad = False
+
     def _init_instrument_info(self, pipeline_context):
         if len(self.header) > 0:
             instrument = dbs.get_instrument(self.header, db_address=pipeline_context.db_address)
@@ -98,6 +100,9 @@ class Image(object):
         else:
             instrument, site, camera = None, None, None
         return instrument, site, camera
+
+    def flag_as_bad(self):
+        self.is_bad = True
 
     def subtract(self, value):
         self.data -= value
@@ -137,6 +142,9 @@ class Image(object):
                 base_filename += '.fz'
                 self.filename += '.fz'
             shutil.move(os.path.join(temp_directory, base_filename), filename)
+
+    def flag_as_bad(self):
+        self.is_bad = True
 
     def _add_data_tables_to_hdu_list(self, hdu_list):
         """
