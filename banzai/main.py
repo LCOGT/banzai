@@ -292,16 +292,6 @@ def stack_calibrations():
             logger.error(logs.format_exception())
 
 
-def get_preview_stages_todo(pipeline_context, image_path):
-    obstype = image_utils.get_obstype(image_path)
-    if obstype is None:
-        stages = None
-    else:
-        stages = get_stages_todo(pipeline_context.ORDERED_STAGES, last_stage=pipeline_context.LAST_STAGE[obstype],
-                                 extra_stages=pipeline_context.EXTRA_STAGES[obstype])
-    return stages
-
-
 def run_preview_pipeline():
     extra_console_arguments = [{'args': ['--n-processes'],
                                 'kwargs': {'dest': 'n_processes', 'default': 12,
@@ -377,7 +367,6 @@ class PreviewModeListener(ConsumerMixin):
             if suffix in path:
                 is_eligible_for_preview = True
                 image_suffix = suffix
-                frame_type = self.pipeline_context.PREVIEW_ELIGIBLE_SUFFIXEX(image_suffix)
 
         if is_eligible_for_preview:
             try:
@@ -387,12 +376,10 @@ class PreviewModeListener(ConsumerMixin):
 
                     logger.info('Running preview reduction', extra_tags={'filename': os.path.basename(path)})
 
-                    stages_to_do = get_preview_stages_todo(self.pipeline_context, path)
-
                     # Increment the number of tries for this file
                     preview.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
 
-                    run(stages_to_do, [path], self.pipeline_context)
+                    run(path, self.pipeline_context)
                     preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
             except Exception:
