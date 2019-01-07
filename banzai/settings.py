@@ -90,7 +90,7 @@ class ImagingSettings(Settings):
                       astrometry.WCSSolver,
                       qc.pointing.PointingTest]
 
-    CALIBRATION_MIN_IMAGES = {'BIAS': 5,
+    CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                               'DARK': 5,
                               'SKYFLAT': 5}
 
