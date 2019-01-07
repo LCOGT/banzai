@@ -131,7 +131,7 @@ def run(image_path, pipeline_context):
     image = read_image(image_path, pipeline_context)
     stages_to_do = get_stages_todo(pipeline_context.ORDERED_STAGES,
                                    last_stage=pipeline_context.LAST_STAGE[image.obstype],
-                                   extra_stages=pipeline_context.EXTRA_STAGES_PREVIEW[image.obstype])
+                                   extra_stages=pipeline_context.EXTRA_STAGES[image.obstype])
     # TODO: Remove passing the image around in a list once stages take a single image
     images = [image]
     for stage in stages_to_do:

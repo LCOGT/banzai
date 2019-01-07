@@ -118,7 +118,7 @@ def save_image(pipeline_context, image, master_calibration=False, image_is_bad=F
     if pipeline_context.fpack:
         image_filename += '.fz'
         filepath += '.fz'
-    if image.obstype in pipeline_context.CALIBRATION_FRAME_TYPES:
+    if image.obstype in pipeline_context.CALIBRATION_IMAGE_TYPES:
         image_attributes = pipeline_context.CALIBRATION_SET_CRITERIA.get(image.obstype, None)
         dbs.save_calibration_info(image.obstype, filepath, image, image_attributes=image_attributes,
                                   is_master=master_calibration, image_is_bad=image_is_bad,
