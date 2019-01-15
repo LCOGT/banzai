@@ -180,7 +180,7 @@ def process_master_maker(pipeline_context, instrument, dayobs, frame_type):
     image_path_lists = image_utils.get_grouped_calibration_image_path_lists(pipeline_context, instrument, dayobs,
                                                                             frame_type)
     if len(image_path_lists) == 0:
-        logger.warning("No calibratoin frames found to stack")
+        logger.warning("No calibration frames found to stack")
 
     for image_path_list in image_path_lists:
         try:
