@@ -30,7 +30,7 @@ def run_end_to_end_tests():
     os.system(command.format(junit_file=args.junit_file, marker=args.marker))
 
 
-def run_banzai(entry_point, frame_type=None, calibration_maker=False):
+def run_banzai(entry_point, frame_type, calibration_maker=False):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         command = '{cmd} --raw-path {raw_path} --fpack --db-address={db_address} --frame-type={frame_type} '
