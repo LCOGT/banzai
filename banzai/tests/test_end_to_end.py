@@ -44,6 +44,14 @@ def run_banzai(entry_point, frame_type, calibration_maker=False):
         os.system(command)
 
 
+def mark_frames_as_good(raw_filenames):
+    for day_obs in DAYS_OBS:
+        for filename in glob(os.path.join(DATA_ROOT, day_obs, 'processed', raw_filenames)):
+            command = 'banzai_mark_frame_as_good --filename {filename} --db-address={db_address}'
+            command = command.format(filename=os.path.basename(filename), db_address=os.environ['DB_ADDRESS'])
+            os.system(command)
+
+
 def get_expected_number_of_calibrations(raw_filenames, calibration_type):
     number_of_stacks_that_should_have_been_created = 0
     for day_obs in DAYS_OBS:
@@ -99,6 +107,7 @@ class TestMasterBiasCreation:
     @pytest.fixture(autouse=True)
     def stack_bias_frames(self, init):
         run_banzai('banzai_reduce_directory', frame_type='bias')
+        mark_frames_as_good('*b91.fits*')
         run_banzai('banzai_stack_calibrations', frame_type='bias', calibration_maker=True)
 
     def test_if_stacked_bias_frame_was_created(self):
@@ -112,6 +121,7 @@ class TestMasterDarkCreation:
     @pytest.fixture(autouse=True)
     def stack_dark_frames(self):
         run_banzai('banzai_reduce_directory', frame_type='dark')
+        mark_frames_as_good('*d91.fits*')
         run_banzai('banzai_stack_calibrations', frame_type='dark', calibration_maker=True)
 
     def test_if_stacked_dark_frame_was_created(self):
@@ -129,6 +139,7 @@ class TestMasterFlatCreation:
 
     def test_if_stacked_flat_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*f00.fits*', 'skyflat')
+        mark_frames_as_good('*f91.fits*')
         run_check_if_stacked_calibrations_are_in_db('*f00.fits*', 'SKYFLAT')
 
 
