@@ -128,6 +128,7 @@ def run(image_path, pipeline_context):
     """
     Main driver script for banzai.
     """
+    logger.info("Starting reduction on frame", extra_tags={'filename': image_path})
     image = read_image(image_path, pipeline_context)
     stages_to_do = get_stages_todo(pipeline_context.ORDERED_STAGES,
                                    last_stage=pipeline_context.LAST_STAGE[image.obstype],
@@ -139,6 +140,7 @@ def run(image_path, pipeline_context):
         images = stage_to_run.run(images)
     if len(images):
         image_utils.save_image(pipeline_context, images[0])
+    logger.info("Finished reduction on frame", extra_tags={'filename': image_path})
 
 
 def run_master_maker(image_path_list, pipeline_context, frame_type):
@@ -177,11 +179,15 @@ def process_master_maker(pipeline_context, instrument, dayobs, frame_type):
                                               'obstype': frame_type})
     image_path_lists = image_utils.get_grouped_calibration_image_path_lists(pipeline_context, instrument, dayobs,
                                                                             frame_type)
+    if len(image_path_lists) == 0:
+        logger.warning("No calibratoin frames found to stack")
+
     for image_path_list in image_path_lists:
         try:
             run_master_maker(image_path_list, pipeline_context, frame_type)
         except Exception:
             logger.error(logs.format_exception())
+    logger.info("Finished")
 
 
 def parse_directory_args(pipeline_context=None, raw_path=None, settings=None, extra_console_arguments=None):
@@ -365,7 +371,6 @@ class PreviewModeListener(ConsumerMixin):
         for suffix in self.pipeline_context.PREVIEW_ELIGIBLE_SUFFIXES.keys():
             if suffix in path:
                 is_eligible_for_preview = True
-                image_suffix = suffix
 
         if is_eligible_for_preview:
             try:
@@ -384,3 +389,30 @@ class PreviewModeListener(ConsumerMixin):
             except Exception:
                 logger.error("Exception producing preview frame: {error}".format(error=logs.format_exception()),
                              extra_tags={'filename': os.path.basename(path)})
+
+
+def mark_frame(mark_as):
+    parser = argparse.ArgumentParser(description="Set the is_bad flag to mark the frame as {mark_as}"
+                                                 "for a calibration frame in the database ".format(mark_as=mark_as))
+    parser.add_argument('--filename', dest='filename', required=True,
+                        help='Name of calibration file to be marked')
+    parser.add_argument('--db-address', dest='db_address',
+                        default='mysql://cmccully:password@localhost/test',
+                        help='Database address: Should be in SQLAlchemy form')
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
+
+    args = parser.parse_args()
+    logs.set_log_level(args.log_level)
+
+    logger.info("Marking the frame {filename} as {mark_as}".format(filename=args.filename, mark_as=mark_as))
+    dbs.mark_frame(args.filename, mark_as, db_address=args.db_address)
+    logger.info("Finished")
+
+
+def mark_frame_as_good():
+    mark_frame("good")
+
+
+def mark_frame_as_bad():
+    mark_frame("bad")

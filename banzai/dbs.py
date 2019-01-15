@@ -490,3 +490,25 @@ def get_individual_calibration_images(instrument, date_range, calibration_type,
         image_path_list_groups.append([os.path.join(image.filepath, image.filename) for image in group])
 
     return image_path_list_groups
+
+
+def mark_frame(filename, mark_as, db_address=_DEFAULT_DB):
+    set_is_bad_to = True if mark_as == "bad" else False
+    logger.debug("Setting the is_bad parameter for {filename} to {set_is_bad_to}".format(
+        filename=filename, set_is_bad_to=set_is_bad_to))
+    db_session = get_session(db_address=db_address)
+    # First check to make sure the image is in the database
+    image = db_session.query(CalibrationImage).filter(CalibrationImage.filename == filename).first()
+    if image is None:
+        logger.error("Frame {filename} not found in database, exiting".format(filename=filename))
+        return
+    if image.is_bad is set_is_bad_to:
+        logger.error("The is_bad parameter for {filename} is already set to {is_bad}, exiting".format(
+            filename=filename, is_bad=image.is_bad))
+        return
+    equivalence_criteria = {'filename': filename}
+    record_attributes = {'filename': filename,
+                         'is_bad': set_is_bad_to}
+    add_or_update_record(db_session, CalibrationImage, equivalence_criteria, record_attributes)
+    db_session.commit()
+    db_session.close()
