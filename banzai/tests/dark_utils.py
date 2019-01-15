@@ -35,7 +35,6 @@ def make_context_with_realistic_master_dark(dark_pattern, nx=101, ny=103, dark_l
     master_dark_noise = np.random.poisson(dark_pattern * dark_exptime) - dark_pattern * dark_exptime
     fake_master_dark.data += dark_pattern + master_dark_noise / dark_exptime / 10.0
 
-    context = FakeContext()
-    context.FRAME_CLASS = lambda *args, **kwargs: fake_master_dark
+    context = FakeContext(frame_class=lambda *args, **kwargs: fake_master_dark)
     context.dark_pattern = dark_pattern
     return context

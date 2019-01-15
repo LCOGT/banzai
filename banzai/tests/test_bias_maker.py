@@ -71,9 +71,7 @@ def test_makes_a_sensible_master_bias():
         image.data = np.random.normal(loc=0.0, scale=expected_readnoise,
                                       size=(image.ny, image.nx))
 
-    context = FakeContext()
-    context.FRAME_CLASS = FakeBiasImage
-    maker = BiasMaker(context)
+    maker = BiasMaker(FakeContext(frame_class=FakeBiasImage))
     stacked_images = maker.do_stage(images)
     master_bias = stacked_images[0].data
     assert np.abs(np.mean(master_bias)) < 0.1

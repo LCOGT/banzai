@@ -51,8 +51,6 @@ def test_makes_a_sensible_master_dark():
 
     expected_master_dark = stats.sigma_clipped_mean(np.arange(nimages), 3.0)
 
-    context = FakeContext()
-    context.FRAME_CLASS = FakeDarkImage
-    maker = DarkMaker(context)
+    maker = DarkMaker(FakeContext(frame_class=FakeDarkImage))
     stacked_images = maker.do_stage(images)
     assert (stacked_images[0].data == expected_master_dark).all()

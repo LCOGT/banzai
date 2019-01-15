@@ -12,8 +12,8 @@ import banzai.settings
 
 
 class FakeImage(Image):
-    def __init__(self, nx=101, ny=103, image_multiplier=1.0,
-                 ccdsum='2 2', epoch='20160101', n_amps=1, filter='U'):
+    def __init__(self, pipeline_context=None, nx=101, ny=103, image_multiplier=1.0,
+                 ccdsum='2 2', epoch='20160101', n_amps=1, filter='U', data=None, header=None):
         self.nx = nx
         self.ny = ny
         self.instrument_id = -1
@@ -21,13 +21,17 @@ class FakeImage(Image):
         self.camera = 'kb76'
         self.ccdsum = ccdsum
         self.epoch = epoch
-        self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
+        if data is None:
+            data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
+        self.data = data
         if n_amps > 1:
             self.data = np.stack(n_amps*[self.data])
         self.filename = 'test.fits'
         self.filter = filter
         self.dateobs = datetime(2016, 1, 1)
-        self.header = Header()
+        if header is None:
+            header = Header()
+        self.header = header
         self.caltype = ''
         self.bpm = np.zeros((ny, nx), dtype=np.uint8)
         self.request_number = '0000331403'
@@ -50,20 +54,18 @@ class FakeImage(Image):
 
 
 class FakeContext(object):
-    def __init__(self, preview_mode=False, settings=banzai.settings.ImagingSettings()):
+    def __init__(self, preview_mode=False, settings=banzai.settings.ImagingSettings(), frame_class=FakeImage):
         self.processed_path = '/tmp'
         self.preview_mode = preview_mode
-        self.FRAME_CLASS = FakeImage
         for key, value in dict(inspect.getmembers(settings)).items():
             if not key.startswith('_'):
                 setattr(self, key, value)
+        self.FRAME_CLASS = frame_class
 
 
 class FakeStage(Stage):
     def do_stage(self, images):
         return images
-    def group_by_attributes(self):
-        return None
 
 
 def throws_inhomogeneous_set_exception(stagetype, context, keyword, value):
@@ -82,7 +84,7 @@ def gaussian2d(image_shape, x0, y0, brightness, fwhm):
     y = np.arange(image_shape[0])
     x2d, y2d = np.meshgrid(x, y)
 
-    sig = fwhm  / 2.35482
+    sig = fwhm / 2.35482
 
     normfactor = brightness / 2.0 / np.pi * sig ** -2.0
     exponent = -0.5 * sig ** -2.0

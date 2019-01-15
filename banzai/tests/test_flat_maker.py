@@ -61,8 +61,6 @@ def test_makes_a_sensible_master_flat():
     for i, image in enumerate(images):
         image.data = flat_pattern + np.random.normal(0.0, 0.02, size=(ny, nx))
 
-    context = FakeContext()
-    context.FRAME_CLASS = FakeFlatImage
-    maker = FlatMaker(context)
+    maker = FlatMaker(FakeContext(frame_class=FakeFlatImage))
     stacked_images = maker.do_stage(images)
     np.testing.assert_allclose(stacked_images[0].data, flat_pattern, atol=0.01, rtol=0.01)
