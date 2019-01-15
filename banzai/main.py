@@ -128,19 +128,19 @@ def run(image_path, pipeline_context):
     """
     Main driver script for banzai.
     """
-    logger.info("Starting reduction on frame", extra_tags={'filename': image_path})
     image = read_image(image_path, pipeline_context)
     stages_to_do = get_stages_todo(pipeline_context.ORDERED_STAGES,
                                    last_stage=pipeline_context.LAST_STAGE[image.obstype],
                                    extra_stages=pipeline_context.EXTRA_STAGES[image.obstype])
     # TODO: Remove passing the image around in a list once stages take a single image
+    logger.info("Starting to reduce frame", extra_tags={'filename': image.filename})
     images = [image]
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
     if len(images):
         image_utils.save_image(pipeline_context, images[0])
-    logger.info("Finished reduction on frame", extra_tags={'filename': image_path})
+    logger.info("Finished reducing frame", extra_tags={'filename': images[0].filename})
 
 
 def run_master_maker(image_path_list, pipeline_context, frame_type):
@@ -235,8 +235,18 @@ def make_master_flat(pipeline_context=None):
 
 
 def reduce_directory(pipeline_context=None, raw_path=None):
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
-    process_directory(pipeline_context, raw_path, log_message='Reducing all frames in directory')
+    extra_console_arguments = [{'args': ['--frame-type'],
+                                'kwargs': {
+                                    'dest': 'frame_type', 'default':  'all',
+                                    'help': 'Type of frames to process',
+                                    'choices': ['bias', 'dark', 'skyflat', 'science',
+                                                'experimental', 'trailed', 'all']}}]
+
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
+                                                      extra_console_arguments=extra_console_arguments)
+    image_types = None if pipeline_context.frame_type == 'all' else [pipeline_context.frame_type.upper()]
+    process_directory(pipeline_context, raw_path, image_types=image_types,
+                      log_message='Reducing all frames in directory')
 
 
 def reduce_single_frame(pipeline_context=None):
@@ -247,12 +257,28 @@ def reduce_single_frame(pipeline_context=None):
     process_single_frame(pipeline_context, raw_path, pipeline_context.filename)
 
 
-def stack_calibrations():
+def stack_calibrations(pipeline_context=None, raw_path=None):
+    extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
+                               {'args': ['--camera'], 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)'}},
+                               {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs',
+                                                                 'help': 'Day-Obs to reduce (e.g. 20160201)'}},
+                               {'args': ['--frame-type'], 'kwargs': {'dest': 'frame_type', 'default':  'all',
+                                                                     'help': 'Type of frames to process',
+                                                                     'choices': ['bias', 'dark', 'skyflat', 'all']}}]
+
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
+                                                      extra_console_arguments=extra_console_arguments)
+    instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera)
+    frame_type = None if pipeline_context.frame_type == 'all' else pipeline_context.frame_type.upper()
+    process_master_maker(pipeline_context, instrument, pipeline_context.dayobs, frame_type)
+
+
+def stack_nightly_calibrations():
     extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
                                {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs', 'default': None,
                                                                  'help': 'Day-Obs to reduce (e.g. 20160201)'}}]
 
-    pipeline_context = parse_args(settings, extra_console_arguments=extra_console_arguments,
+    pipeline_context = parse_args(banzai.settings.ImagingSettings, extra_console_arguments=extra_console_arguments,
                                   parser_description='Reduce all the data from a site at the end of a night.')
 
     # Ping the configdb to get instruments
