@@ -135,6 +135,7 @@ class TestMasterFlatCreation:
     @pytest.fixture(autouse=True)
     def stack_flat_frames(self):
         run_banzai('banzai_reduce_directory', frame_type='skyflat')
+        mark_frames_as_good('*f91.fits*')
         run_banzai('banzai_stack_calibrations', frame_type='skyflat', calibration_maker=True)
 
     def test_if_stacked_flat_frame_was_created(self):
