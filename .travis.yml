@@ -36,7 +36,7 @@ env:
         - MAIN_CMD='python setup.py'
         - RUN_TESTS=1
         - SETUP_CMD=''
-        - PIP_DEPENDENCIES='astropy>=3.0 sqlalchemy logutils numpy cython mysql-connector-python lcogt_logging sep kombu requests mock pytest>=3.5 elasticsearch pytest-cov<2.6.1'
+        - PIP_DEPENDENCIES='astropy>=3.0 sqlalchemy logutils numpy cython mysql-connector-python lcogt_logging sep kombu requests mock pytest>=3.6 elasticsearch'
         - EVENT_TYPE='pull_request push'
 
 
