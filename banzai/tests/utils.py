@@ -1,9 +1,11 @@
+import json
 from datetime import datetime
 import inspect
 
 import pytest
 import numpy as np
 from astropy.io.fits import Header
+from astropy.utils.data import get_pkg_data_filename
 
 from banzai.utils import image_utils
 from banzai.stages import Stage
@@ -91,3 +93,12 @@ def gaussian2d(image_shape, x0, y0, brightness, fwhm):
     exponent *= (x2d - x0) ** 2.0 + (y2d - y0) ** 2.0
 
     return normfactor * np.exp(exponent)
+
+
+class FakeResponse(object):
+    def __init__(self):
+        with open(get_pkg_data_filename('data/configdb_example.json')) as f:
+            self.data = json.load(f)
+
+    def json(self):
+        return self.data
