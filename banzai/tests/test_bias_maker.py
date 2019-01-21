@@ -20,7 +20,7 @@ def test_group_by_attributes():
 def test_header_cal_type_bias():
     nx = 101
     ny = 103
-    context = make_context_with_master_bias(0.0, 10.0, nx, ny)
+    context = make_context_with_master_bias(bias_level=0.0, readnoise=10.0, nx=nx, ny=ny)
     maker = BiasMaker(context)
 
     images = maker.do_stage([FakeBiasImage(nx=nx, ny=ny) for x in range(6)])

@@ -1,19 +1,13 @@
 from banzai.tests.utils import FakeImage, FakeContext
 import numpy as np
-from astropy.io import fits
 
 
 class FakeDarkImage(FakeImage):
 
-    def __init__(self, exptime=30.0, filename='', data=None, header=None, **kwargs):
+    def __init__(self, pipeline_context=None, exptime=30.0, filename='', data=None, header=None, **kwargs):
         self.exptime = exptime
-        super(FakeDarkImage, self).__init__(**kwargs)
-        if header is not None:
-            self.header = header
-        else:
-            self.header = fits.Header({'TELESCOP': '1m0-01', 'OBSTYPE': 'DARK'})
-        if data is not None:
-            self.data = data
+        super(FakeDarkImage, self).__init__(pipeline_context=pipeline_context, data=data, header=header, **kwargs)
+        self.header['OBSTYPE'] = 'DARK'
 
 
 def get_dark_pattern(nx, ny, master_dark_fraction):

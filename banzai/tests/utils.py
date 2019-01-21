@@ -32,7 +32,7 @@ class FakeImage(Image):
         self.filter = filter
         self.dateobs = datetime(2016, 1, 1)
         if header is None:
-            header = Header()
+            header = Header({'TELESCOP': '1m0-10'})
         self.header = header
         self.caltype = ''
         self.bpm = np.zeros((ny, nx), dtype=np.uint8)

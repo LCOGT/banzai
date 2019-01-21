@@ -24,7 +24,7 @@ def test_master_selection_criteria():
 def test_header_has_biaslevel(mock_cal):
     nx = 101
     ny = 103
-    context = make_context_with_master_bias(0.0, 10.0, nx, ny)
+    context = make_context_with_master_bias(nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
     images = subtractor.do_stage([FakeImage(nx=nx, ny=ny) for x in range(6)])
     for image in images:
@@ -35,7 +35,7 @@ def test_header_has_biaslevel(mock_cal):
 def test_header_biaslevel_is_1(mock_cal):
     nx = 101
     ny = 103
-    context = make_context_with_master_bias(1.0, 10.0, nx, ny)
+    context = make_context_with_master_bias(bias_level=1.0, readnoise=10.0, nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
     images = subtractor.do_stage([FakeImage(nx=nx, ny=ny) for x in range(6)])
     for image in images:
@@ -46,7 +46,7 @@ def test_header_biaslevel_is_1(mock_cal):
 def test_header_biaslevel_is_2(mock_cal):
     nx = 101
     ny = 103
-    context = make_context_with_master_bias(2.0, 10.0, nx, ny)
+    context = make_context_with_master_bias(bias_level=2.0, readnoise=10.0, nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
     images = subtractor.do_stage([FakeImage(nx=nx, ny=ny) for x in range(6)])
     for image in images:
@@ -80,7 +80,7 @@ def test_raises_exception_if_no_master_calibration(mock_cal):
     mock_cal.return_value = None
     nx = 101
     ny = 103
-    context = make_context_with_master_bias(0.0, 10.0, nx, ny)
+    context = make_context_with_master_bias(nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
     with pytest.raises(MasterCalibrationDoesNotExist):
         images = subtractor.do_stage([FakeImage(nx=nx, ny=ny) for x in range(6)])
@@ -95,7 +95,7 @@ def test_bias_subtraction_is_reasonable(mock_cal):
     nx = 101
     ny = 103
 
-    context = make_context_with_master_bias(input_bias, input_readnoise, nx, ny)
+    context = make_context_with_master_bias(bias_level=input_bias, readnoise=input_readnoise, nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
     images = [FakeImage(image_multiplier=input_level) for x in range(6)]
 

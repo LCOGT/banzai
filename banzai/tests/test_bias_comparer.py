@@ -51,7 +51,7 @@ def test_does_not_raise_exception_if_no_master_calibration(mock_save_qc, mock_ca
     mock_cal.return_value = None
     nx = 101
     ny = 103
-    context = make_context_with_master_bias(0.0, 10.0, nx, ny)
+    context = make_context_with_master_bias(nx=nx, ny=ny)
     comparer = BiasComparer(context)
     images = comparer.do_stage([FakeImage(nx=nx, ny=ny) for x in range(6)])
     assert len(images) == 6
@@ -65,7 +65,7 @@ def test_does_not_reject_noisy_images(mock_save_qc, mock_cal, set_random_seed):
     nx = 101
     ny = 103
 
-    context = make_context_with_master_bias(0.0, master_readnoise, nx, ny)
+    context = make_context_with_master_bias(readnoise=master_readnoise, nx=nx, ny=ny)
     comparer = BiasComparer(context)
     images = [FakeImage(image_multiplier=0.0) for x in range(6)]
     for image in images:
@@ -84,7 +84,7 @@ def test_does_reject_bad_images(mock_save_qc, mock_cal, set_random_seed):
     nx = 101
     ny = 103
 
-    context = make_context_with_master_bias(0.0, master_readnoise, nx, ny)
+    context = make_context_with_master_bias(readnoise=master_readnoise, nx=nx, ny=ny)
     comparer = BiasComparer(context)
     images = [FakeImage(image_multiplier=0.0) for x in range(6)]
     for image in images:
