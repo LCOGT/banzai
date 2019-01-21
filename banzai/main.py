@@ -239,7 +239,7 @@ def reduce_directory(pipeline_context=None, raw_path=None):
                                 'kwargs': {
                                     'dest': 'frame_type', 'default':  'all',
                                     'help': 'Type of frames to process',
-                                    'choices': ['bias', 'dark', 'skyflat', 'science',
+                                    'choices': ['bias', 'dark', 'skyflat', 'expose',
                                                 'experimental', 'trailed', 'all']}}]
 
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),

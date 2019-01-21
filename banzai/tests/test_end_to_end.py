@@ -149,7 +149,7 @@ class TestMasterFlatCreation:
 class TestScienceFileCreation:
     @pytest.fixture(autouse=True)
     def reduce_science_frames(self):
-        run_banzai('banzai_reduce_directory', frame_type='science')
+        run_banzai('banzai_reduce_directory', frame_type='expose')
 
     def test_if_science_frames_were_created(self):
         expected_files = []
