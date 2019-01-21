@@ -4,17 +4,27 @@
   - The `PreviewImage` table has been renamed to `ProcessedImage`
   - The `Telescope` table has been renamed to `Instrument`; the `instrument` 
     column is now `camera`; and the `camera_type` column is now `type`
+  - `enclosure` and `telescope` columns have been added to the `Instrument` table
   - The `BadPixelMask` table has been removed, and BPMs are now located in the 
     `CalibrationImage` table as type `BPM`
   - In the `CalibrationImage` table, `dayobs` has been changed to `dateobs` and
     provides the date and time the observation took place; `telescope_id` has 
-    been renamed to `instrument_id`; an `is_master` column has been added; and 
+    been renamed to `instrument_id`; an `is_master` column has been added; 
     a JSON formatted `attributes` column is now used to store parameters such 
-    as `ccdsum` and `filter` which no longer have their own dedicated columns
+    as `ccdsum` and `filter` which no longer have their own dedicated columns;
+    and an `is_bad` column has been added to mark bad calibration frames
 - To reflect the name change of the `Telescope` table to `Instrument`, all
   `telescope` instances are now named `intrument`
 - All calibration frames (individual and master) are saved to the 
   `CalibrationImage` table
+- The naming scheme for master calibration files has been changed from:
+  ```
+  {cal_type}_{instrument}_{epoch}_bin{bin}_{filter}.fits
+  ```
+  to:
+  ```
+  {site}{telescope}-{camera}-{epoch}-{cal_type}-bin{bin}-{filter}.fits
+  ```
 - Functionality for migrating from an old format to a new format database has
   been added to `/banzai/utils/db_migration.py`
 
