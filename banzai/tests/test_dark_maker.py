@@ -13,6 +13,7 @@ class FakeDarkImage(FakeImage):
         self.caltype = 'dark'
         self.header = fits.Header()
         self.header['OBSTYPE'] = 'DARK'
+        self.header['TELESCOP'] = '1m0-01'
 
 
 def test_min_images():

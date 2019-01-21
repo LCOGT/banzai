@@ -11,6 +11,7 @@ class FakeFlatImage(FakeImage):
         self.caltype = 'skyflat'
         self.header = fits.Header()
         self.header['OBSTYPE'] = 'SKYFLAT'
+        self.header['TELESCOP'] = '1m0-01'
 
 
 def test_min_images():
@@ -24,10 +25,10 @@ def test_group_by_attributes():
     assert maker.group_by_attributes == ['ccdsum', 'filter']
 
 
-@mock.patch('banzai.calibrations.Image._init_telescope_info')
-def test_header_cal_type_flat(mock_telescope_info):
+@mock.patch('banzai.calibrations.Image._init_instrument_info')
+def test_header_cal_type_flat(mock_instrument_info):
 
-    mock_telescope_info.return_value = None, None, None
+    mock_instrument_info.return_value = None, None, None
     fake_context = FakeContext()
     fake_context.db_address = ''
 

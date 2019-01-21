@@ -65,7 +65,7 @@ class Image(object):
         self.extension_headers = extension_headers
 
         self.request_number = header.get('REQNUM')
-        self.telescope, self.site, self.instrument = self._init_telescope_info(pipeline_context)
+        self.instrument, self.site, self.camera = self._init_instrument_info(pipeline_context)
 
         self.epoch = str(header.get('DAY-OBS'))
         self.nx = header.get('NAXIS1')
@@ -88,14 +88,14 @@ class Image(object):
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE', 0.0))
 
-    def _init_telescope_info(self, pipeline_context):
+    def _init_instrument_info(self, pipeline_context):
         if len(self.header) > 0:
-            telescope = dbs.get_telescope(self.header, db_address=pipeline_context.db_address)
-            site = telescope.site
-            instrument = telescope.instrument
+            instrument = dbs.get_instrument(self.header, db_address=pipeline_context.db_address)
+            site = instrument.site
+            camera = instrument.camera
         else:
-            telescope, site, instrument = None, None, None
-        return telescope, site, instrument
+            instrument, site, camera = None, None, None
+        return instrument, site, camera
 
     def subtract(self, value):
         self.data -= value
@@ -206,8 +206,8 @@ def read_images(image_list, pipeline_context):
     for filename in image_list:
         try:
             image = pipeline_context.FRAME_CLASS(pipeline_context, filename=filename)
-            if image.telescope is None:
-                logger.error("Image telescope attribute is None, removing from list", image=image)
+            if image.instrument is None:
+                logger.error("Image instrument attribute is None, removing from list", image=image)
                 continue
             munge(image)
             images.append(image)

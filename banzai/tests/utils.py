@@ -16,9 +16,9 @@ class FakeImage(Image):
                  ccdsum='2 2', epoch='20160101', n_amps=1, filter='U'):
         self.nx = nx
         self.ny = ny
-        self.telescope_id = -1
+        self.instrument_id = -1
         self.site = 'elp'
-        self.instrument = 'kb76'
+        self.camera = 'kb76'
         self.ccdsum = ccdsum
         self.epoch = epoch
         self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)

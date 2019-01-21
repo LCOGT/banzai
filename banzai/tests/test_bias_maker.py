@@ -13,6 +13,7 @@ class FakeBiasImage(FakeImage):
         self.header = fits.Header()
         self.header['OBSTYPE'] = 'BIAS'
         self.header['BIASLVL'] = bias_level
+        self.header['TELESCOP'] = '1m0-01'
 
 
 def test_min_images():
@@ -58,14 +59,14 @@ def test_raises_an_exception_if_ny_are_different(mock_images):
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ny', 107)
 
 
-@mock.patch('banzai.calibrations.Image._init_telescope_info')
-def test_bias_level_is_average_of_inputs(mock_telescope_info):
+@mock.patch('banzai.calibrations.Image._init_instrument_info')
+def test_bias_level_is_average_of_inputs(mock_instrument_info):
     nimages = 20
     bias_levels = np.arange(nimages, dtype=float)
 
     images = [FakeBiasImage(bias_level=i) for i in bias_levels]
 
-    mock_telescope_info.return_value = None, None, None
+    mock_instrument_info.return_value = None, None, None
     fake_context = FakeContext()
     fake_context.db_address = ''
 
