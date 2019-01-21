@@ -28,7 +28,7 @@ class CalibrationMaker(Stage):
         pass
 
     def get_grouping(self, image):
-        grouping_criteria = [image.site, image.instrument, image.epoch]
+        grouping_criteria = [image.site, image.camera, image.epoch]
         if self.group_by_attributes:
             grouping_criteria += [getattr(image, keyword) for keyword in self.group_by_attributes]
         return grouping_criteria
@@ -57,15 +57,19 @@ class CalibrationMaker(Stage):
             return [self.make_master_calibration_frame(images)]
 
     def get_calibration_filename(self, image):
-        cal_file = '{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
-        if 'filter' in self.group_by_attributes:
-            filter_str = '_{filter}'.format(filter=image.filter)
-        else:
-            filter_str = ''
-
-        cal_file = cal_file.format(instrument=image.instrument,
-                                   epoch=image.epoch, bin=image.ccdsum.replace(' ', 'x'),
-                                   cal_type=self.calibration_type.lower(), filter=filter_str)
+        cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(
+            site=image.site,
+            telescop=image.header.get('TELESCOP').replace('-', ''),
+            camera=image.camera,
+            epoch=image.epoch,
+            cal_type=self.calibration_type.lower(),
+        )
+        for attribute in sorted(self.group_by_attributes):
+            attribute_value = getattr(image, attribute)
+            if attribute == 'ccdsum':
+                attribute_value = 'bin{ccdsum}'.format(ccdsum=attribute_value.replace(' ', 'x'))
+            cal_file += '-{attribute_value}'.format(attribute_value=attribute_value)
+        cal_file += '.fits'
         return cal_file
 
 
@@ -124,7 +128,7 @@ class ApplyCalibration(Stage):
         raise MasterCalibrationDoesNotExist
 
     def get_grouping(self, image):
-        grouping_criteria = [image.site, image.instrument, image.epoch]
+        grouping_criteria = [image.site, image.camera, image.epoch]
         if self.master_selection_criteria:
             grouping_criteria += [getattr(image, keyword) for keyword in self.master_selection_criteria]
         return grouping_criteria

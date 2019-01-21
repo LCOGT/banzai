@@ -9,7 +9,7 @@ def test_format_qc_results_basic_info():
     image = FakeImage()
     filename, results = format_qc_results({}, image)
     assert results['site'] == image.site
-    assert results['instrument'] == image.instrument
+    assert results['instrument'] == image.camera
     assert results['dayobs'] == image.epoch
     assert results['@timestamp'] == image.dateobs
     assert results['obstype'] == image.obstype

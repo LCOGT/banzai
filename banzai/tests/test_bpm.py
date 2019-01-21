@@ -24,10 +24,10 @@ class FakeImageForBPM(FakeImage):
         self.data = np.random.normal(1, 1, size=data_shape)
         self.header['SATURATE'] = 10000
         self.bpm = None
-        self.telescope = FakeTelescope()
+        self.instrument = FakeInstrument()
 
 
-class FakeTelescope(object):
+class FakeInstrument(object):
     def __init__(self):
         self.id = 1
 

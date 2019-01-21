@@ -4,7 +4,7 @@ import argparse
 
 import pytest
 
-from banzai.dbs import populate_bpm_table, create_db, get_session, CalibrationImage
+from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage
 from banzai.utils import fits_utils
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
@@ -31,7 +31,7 @@ def run_end_to_end_tests():
 def run_banzai(entry_point):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
-        command = '{cmd} --raw-path {raw_path} --fpack --db-address={db_address}'
+        command = '{cmd} --raw-path {raw_path} --fpack --db-address={db_address} --ignore-schedulability'
         command = command.format(cmd=entry_point, raw_path=raw_path, db_address=os.environ['DB_ADDRESS'])
         os.system(command)
 
@@ -60,7 +60,7 @@ def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_ty
     number_of_stacks_that_should_have_been_created = get_expected_number_of_calibrations(raw_filenames, calibration_type)
     for day_obs in DAYS_OBS:
         created_stacked_calibrations += glob(os.path.join(DATA_ROOT, day_obs, 'processed',
-                                                          calibration_type.lower() + '*.fits*'))
+                                                          '*' + calibration_type.lower() + '*.fits*'))
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(created_stacked_calibrations) == number_of_stacks_that_should_have_been_created
 
@@ -68,7 +68,8 @@ def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_ty
 def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type):
     number_of_stacks_that_should_have_been_created = get_expected_number_of_calibrations(raw_filenames, calibration_type)
     db_session = get_session(os.environ['DB_ADDRESS'])
-    calibrations_in_db = db_session.query(CalibrationImage).filter(CalibrationImage.type == calibration_type).all()
+    calibrations_in_db = db_session.query(CalibrationImage).filter(CalibrationImage.type == calibration_type)
+    calibrations_in_db = calibrations_in_db.filter(CalibrationImage.is_master).all()
     db_session.close()
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(calibrations_in_db) == number_of_stacks_that_should_have_been_created
@@ -79,7 +80,8 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
 def init():
     create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
     for instrument in INSTRUMENTS:
-        populate_bpm_table(os.path.join(DATA_ROOT, instrument, 'bpm'), db_address=os.environ['DB_ADDRESS'])
+        populate_calibration_table_with_bpms(os.path.join(DATA_ROOT, instrument, 'bpm'),
+                                             db_address=os.environ['DB_ADDRESS'])
 
 
 @pytest.mark.e2e

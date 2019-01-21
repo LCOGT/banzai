@@ -44,7 +44,7 @@ class Stage(abc.ABC):
 
         Notes
         -----
-        File name, site, instrument, dayobs and timestamp are always saved in the database.
+        File name, site, camera, dayobs and timestamp are always saved in the database.
         """
 
         es_output = {}

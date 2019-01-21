@@ -36,7 +36,7 @@ def _create_logging_tags_dictionary(kwargs):
 def _image_to_tags(image_config):
     tags = {'filename': os.path.basename(image_config.filename),
             'site': image_config.site,
-            'instrument': image_config.instrument,
+            'instrument': image_config.camera,
             'epoch': date_utils.epoch_date_to_string(image_config.epoch),
             'request_num': image_config.request_number,
             'obstype': image_config.obstype,

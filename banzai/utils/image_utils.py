@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
-    telescope = dbs.get_telescope_for_file(filename, db_address=db_address)
+    instrument = dbs.get_instrument_for_file(filename, db_address=db_address)
     passes = True
     for criterion in criteria:
-        if not criterion.telescope_passes(telescope):
+        if not criterion.instrument_passes(instrument):
             passes = False
     return passes
 
@@ -65,7 +65,7 @@ def make_image_list(raw_path):
 
 
 def check_image_homogeneity(images, group_by_attributes=None):
-    attribute_list = ['nx', 'ny', 'ccdsum', 'epoch', 'site', 'instrument']
+    attribute_list = ['nx', 'ny', 'ccdsum', 'epoch', 'site', 'camera']
     if group_by_attributes is not None:
         attribute_list += group_by_attributes
     for attribute in attribute_list:
@@ -81,7 +81,7 @@ class MissingCatalogException(Exception):
     pass
 
 
-def save_images(pipeline_context, images, master_calibration=False):
+def save_images(pipeline_context, images, master_calibration=False, image_is_bad=False):
     output_files = []
     for image in images:
         output_directory = file_utils.make_output_directory(pipeline_context, image)
@@ -97,8 +97,10 @@ def save_images(pipeline_context, images, master_calibration=False):
         if pipeline_context.fpack:
             image_filename += '.fz'
             filepath += '.fz'
-        if master_calibration:
-            dbs.save_calibration_info(image.obstype, filepath, image,
+        if image.obstype in pipeline_context.CALIBRATION_IMAGE_TYPES:
+            image_attributes = pipeline_context.CALIBRATION_SET_CRITERIA.get(image.obstype, None)
+            dbs.save_calibration_info(image.obstype, filepath, image, image_attributes=image_attributes,
+                                      is_master=master_calibration, image_is_bad=image_is_bad,
                                       db_address=pipeline_context.db_address)
 
         if pipeline_context.post_to_archive:

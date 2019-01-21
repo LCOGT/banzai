@@ -1,15 +1,15 @@
 import inspect
 
 
-class TelescopeCriterion:
+class InstrumentCriterion:
     def __init__(self, attribute, comparison_operator, comparison_value, exclude=False):
         self.attribute = attribute
         self.comparison_operator = comparison_operator
         self.comparison_value = comparison_value
         self.exclude = exclude
 
-    def telescope_passes(self, telescope):
-        test = self.comparison_operator(getattr(telescope, self.attribute), self.comparison_value)
+    def instrument_passes(self, instrument):
+        test = self.comparison_operator(getattr(instrument, self.attribute), self.comparison_value)
         if self.exclude:
             test = not test
         return test

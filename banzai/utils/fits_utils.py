@@ -26,6 +26,9 @@ def sanitizeheader(header):
 
 
 def create_master_calibration_header(images):
+    # Sort images by timestamp, newest first
+    images = [images[i] for i in np.argsort([image.dateobs for image in images])[::-1]]
+
     header = fits.Header()
     for h in images[0].header.keys():
         try:
