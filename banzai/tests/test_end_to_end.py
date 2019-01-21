@@ -31,7 +31,7 @@ def run_end_to_end_tests():
 def run_banzai(entry_point):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
-        command = '{cmd} --raw-path {raw_path} --fpack --db-address={db_address}'
+        command = '{cmd} --raw-path {raw_path} --fpack --db-address={db_address} --ignore-schedulability'
         command = command.format(cmd=entry_point, raw_path=raw_path, db_address=os.environ['DB_ADDRESS'])
         os.system(command)
 
