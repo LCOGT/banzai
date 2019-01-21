@@ -78,7 +78,7 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
 @pytest.mark.e2e
 @pytest.fixture(scope='module')
 def init():
-    create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
+    create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdb.lco.gtn/sites/')
     for instrument in INSTRUMENTS:
         populate_calibration_table_with_bpms(os.path.join(DATA_ROOT, instrument, 'bpm'),
                                              db_address=os.environ['DB_ADDRESS'])
