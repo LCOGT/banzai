@@ -7,7 +7,6 @@ import numpy as np
 
 from banzai.stages import Stage
 from banzai import dbs, logs
-from banzai.images import Image
 from banzai.utils import image_utils, stats, fits_utils
 
 logger = logging.getLogger(__name__)
@@ -24,7 +23,7 @@ class CalibrationMaker(Stage):
         pass
 
     @abc.abstractmethod
-    def make_master_calibration_frame(self, images, image_config):
+    def make_master_calibration_frame(self, images):
         pass
 
     def get_grouping(self, image):
@@ -56,22 +55,6 @@ class CalibrationMaker(Stage):
             image_utils.check_image_homogeneity(images, self.group_by_attributes)
             return [self.make_master_calibration_frame(images)]
 
-    def get_calibration_filename(self, image):
-        cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(
-            site=image.site,
-            telescop=image.header.get('TELESCOP').replace('-', ''),
-            camera=image.camera,
-            epoch=image.epoch,
-            cal_type=self.calibration_type.lower(),
-        )
-        for attribute in sorted(self.group_by_attributes):
-            attribute_value = getattr(image, attribute)
-            if attribute == 'ccdsum':
-                attribute_value = 'bin{ccdsum}'.format(ccdsum=attribute_value.replace(' ', 'x'))
-            cal_file += '-{attribute_value}'.format(attribute_value=attribute_value)
-        cal_file += '.fits'
-        return cal_file
-
 
 class CalibrationStacker(CalibrationMaker):
     def __init__(self, pipeline_context):
@@ -81,7 +64,9 @@ class CalibrationStacker(CalibrationMaker):
         data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
-        master_calibration_filename = self.get_calibration_filename(images[0])
+        make_calibration_name = self.pipeline_context.CALIBRATION_FILENAME_FUNCTIONS[self.calibration_type]
+
+        master_calibration_filename = make_calibration_name(images[0])
 
         for i, image in enumerate(images):
             logger.debug('Stacking Frames', image=image,
@@ -99,7 +84,7 @@ class CalibrationStacker(CalibrationMaker):
 
         # Save the master dark image with all of the combined images in the header
         master_header = fits_utils.create_master_calibration_header(images)
-        master_image = Image(self.pipeline_context, data=stacked_data, header=master_header)
+        master_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context, data=stacked_data, header=master_header)
         master_image.filename = master_calibration_filename
         master_image.bpm = master_bpm
 
@@ -155,9 +140,9 @@ class ApplyCalibration(Stage):
 
             if master_calibration_filename is None:
                 self.on_missing_master_calibration(images[0])
-
-            master_calibration_image = Image(self.pipeline_context,
-                                             filename=master_calibration_filename)
+                return images
+            master_calibration_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context,
+                                                                         filename=master_calibration_filename)
             return self.apply_master_calibration(images, master_calibration_image)
 
     @abc.abstractmethod
@@ -232,3 +217,16 @@ class CalibrationComparer(ApplyCalibration):
     @abc.abstractmethod
     def noise_model(self, image):
         return np.ones(image.data.size)
+
+
+def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):
+    def get_calibration_filename(image):
+        name_components = {'site': image.site, 'telescop': telescope_filename_function(image),
+                           'camera': image.header.get('INSTRUME', ''), 'epoch': image.epoch,
+                           'cal_type': calibration_type.lower()}
+        cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
+        for filename_function in attribute_filename_functions:
+            cal_file += '-{}'.format(filename_function(image))
+        cal_file += '.fits'
+        return cal_file
+    return get_calibration_filename
