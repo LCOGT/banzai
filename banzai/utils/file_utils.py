@@ -44,3 +44,11 @@ def instantly_public(proposal_id):
     if 'epo' in proposal_id.lower():
         public_now = True
     return public_now
+
+
+def ccdsum_to_filename(image):
+    return 'bin{ccdsum}'.format(ccdsum=image.ccdsum.replace(' ', 'x'))
+
+
+def filter_to_filename(image):
+    return str(image.filter)

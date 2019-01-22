@@ -3,9 +3,11 @@ from glob import glob
 import argparse
 
 import pytest
+import mock
 
 from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage
 from banzai.utils import fits_utils
+from banzai.tests.utils import FakeResponse
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
 
@@ -77,7 +79,8 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
 
 @pytest.mark.e2e
 @pytest.fixture(scope='module')
-def init():
+@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse())
+def init(configdb):
     create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
     for instrument in INSTRUMENTS:
         populate_calibration_table_with_bpms(os.path.join(DATA_ROOT, instrument, 'bpm'),

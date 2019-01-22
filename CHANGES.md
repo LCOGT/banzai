@@ -1,3 +1,8 @@
+0.17.0 (2019-01-21)
+-------------------
+- Refactored settings.py to make it possible to override for BANZAI-NRES
+- Various refactors and generalizations, like FRAME_CLASS that can be overridden by BANZAI-NRES
+
 0.16.0 (2018-12-11)
 -------------------
 - Significant changes made to the database structure:

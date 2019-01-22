@@ -1,19 +1,9 @@
 import os
-import json
 
 import mock
-from astropy.utils.data import get_pkg_data_filename
 
 from banzai import dbs
-
-
-class FakeResponse(object):
-    def __init__(self):
-        with open(get_pkg_data_filename('data/configdb_example.json')) as f:
-            self.data = json.load(f)
-
-    def json(self):
-        return self.data
+from banzai.tests.utils import FakeResponse
 
 
 @mock.patch('banzai.dbs.requests.get', return_value=FakeResponse())
