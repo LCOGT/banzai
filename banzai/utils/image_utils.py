@@ -1,7 +1,7 @@
 import os
 from glob import glob
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from astropy.io import fits
 
@@ -119,6 +119,7 @@ def save_images(pipeline_context, images, master_calibration=False, image_is_bad
 def save_pipeline_metadata(image, pipeline_context):
     image.header['RLEVEL'] = (pipeline_context.rlevel, 'Reduction level')
     image.header['PIPEVER'] = (banzai.__version__, 'Pipeline version')
+    image.header['DATE-CRT'] = (date_utils.date_obs_to_string(datetime.utcnow()), '[UTC] Reduced image creation time')
 
     if file_utils.instantly_public(image.header['PROPID']):
         image.header['L1PUBDAT'] = (image.header['DATE-OBS'],
