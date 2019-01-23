@@ -170,7 +170,7 @@ class Image(object):
 
     def update_datecreated(self):
         self.datecreated = datetime.datetime.utcnow()
-        self.header['DATE'] = (date_utils.date_obs_to_string(self.datecreated), '[UTC] Frame creation time')
+        self.header['DATE'] = (date_utils.date_obs_to_string(self.datecreated), '[UTC] Date this FITS file was written')
 
     def data_is_3d(self):
         return len(self.data.shape) > 2
