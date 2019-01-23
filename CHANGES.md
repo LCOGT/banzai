@@ -1,3 +1,7 @@
+0.17.0 (2019-01-23)
+-------------------
+- Added a creation date column to the `CalibrationImage` table
+
 0.17.0 (2019-01-21)
 -------------------
 - Refactored settings.py to make it possible to override for BANZAI-NRES

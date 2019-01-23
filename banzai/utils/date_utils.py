@@ -79,6 +79,9 @@ def parse_epoch_string(epoch_string):
 
 
 def parse_date_obs(date_obs_string):
+    # Check if there are hours
+    if 'T' not in date_obs_string:
+        return datetime.datetime.strptime(date_obs_string, '%Y-%m-%d')
     # Check if there is fractional seconds in the time
     date_fractional_seconds_list = date_obs_string.split('.')
     if len(date_fractional_seconds_list) > 1:

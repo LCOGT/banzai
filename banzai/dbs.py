@@ -67,6 +67,7 @@ class CalibrationImage(Base):
     filename = Column(String(50), unique=True)
     filepath = Column(String(100))
     dateobs = Column(DateTime, index=True)
+    datecreated = Column(DateTime, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
     is_master = Column(Boolean)
     is_bad = Column(Boolean)
@@ -280,6 +281,7 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
                           'filename': os.path.basename(bpm_filename),
                           'filepath': os.path.abspath(directory),
                           'dateobs': dateobs,
+                          'datecreated': dateobs,
                           'instrument_id': instrument.id,
                           'is_master': True,
                           'is_bad': False,
@@ -360,6 +362,7 @@ def save_calibration_info(cal_type, output_file, image_config, image_attributes=
                          'filename': output_filename,
                          'filepath': os.path.dirname(output_file),
                          'dateobs': image_config.dateobs,
+                         'datecreated': image_config.datecreated,
                          'instrument_id': image_config.instrument.id,
                          'is_master': is_master,
                          'is_bad': image_is_bad,
