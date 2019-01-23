@@ -2,6 +2,7 @@ import os
 import logging
 import tempfile
 import shutil
+import datetime
 
 import numpy as np
 from astropy.io import fits
@@ -166,6 +167,9 @@ class Image(object):
 
     def add_history(self, msg):
         self.header.add_history(msg)
+
+    def upate_datecrt(self):
+        self.datecrt = datetime.datetime.utcnow()
 
     def data_is_3d(self):
         return len(self.data.shape) > 2
