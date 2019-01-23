@@ -212,7 +212,9 @@ def make_master_frame(pipeline_context, frame_type, raw_path=None):
     extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
                            {'args': ['--camera'], 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)'}},
                            {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs',
-                                                             'help': 'Day-Obs to reduce (e.g. 20160201)'}},]
+                                                             'help': 'Day-Obs to reduce (e.g. 20160201)'}},
+                           {'args': ['--ignore-master-comparison'], 'kwargs': {'action': 'store_true',
+                                                                               'default': False}}]
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
                                                       extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera)

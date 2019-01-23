@@ -461,14 +461,15 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
 
 
 def get_individual_calibration_images(instrument, date_range, calibration_type,
-                                      selection_criteria, db_address=_DEFAULT_DB):
+                                      selection_criteria, ignore_is_bad=False, db_address=_DEFAULT_DB):
 
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.is_master.isnot(True)
-    calibration_criteria &= CalibrationImage.is_bad.isnot(True)
     calibration_criteria &= CalibrationImage.dateobs < date_range[1]
     calibration_criteria &= CalibrationImage.dateobs > date_range[0]
+    if not ignore_is_bad:
+        calibration_criteria &= CalibrationImage.is_bad.isnot(True)
 
     group_by_criteria = [CalibrationImage.attributes[criterion] for criterion in selection_criteria]
 
