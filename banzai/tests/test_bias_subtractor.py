@@ -97,7 +97,6 @@ def test_bias_subtraction_is_reasonable(mock_cal):
     context = make_context_with_master_bias(bias_level=input_bias, readnoise=input_readnoise, nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
     images = [FakeImage(image_multiplier=input_level) for x in range(6)]
-
     images = subtractor.do_stage(images)
 
     for image in images:
