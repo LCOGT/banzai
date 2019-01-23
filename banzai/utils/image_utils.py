@@ -1,7 +1,7 @@
 import os
 from glob import glob
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from astropy.io import fits
 

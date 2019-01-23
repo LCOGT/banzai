@@ -426,7 +426,7 @@ def instrument_passes_criteria(instrument, criteria):
 
 
 def get_master_calibration_image(image, calibration_type, master_selection_criteria,
-                                 db_address=_DEFAULT_DB):
+                                 realtime_reduction=False, db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
@@ -436,11 +436,17 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
         # https://docs.sqlalchemy.org/en/latest/core/type_basics.html?highlight=json#sqlalchemy.types.JSON
         calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) == type_coerce(getattr(image, criterion), JSON)
 
-    # Only grab the last year. In principle we could go farther back, but this limits the number
-    # of files we get back. And if we are using calibrations that are more than a year old
-    # it is probably a bad idea anyway.
-
-    calibration_criteria &= CalibrationImage.dateobs < (image.dateobs + datetime.timedelta(days=365))
+    if realtime_reduction:
+        # We want to avoid using different master calibrations for the same block, therefore
+        # we make sure the the calibration frame used was created before the block start time
+        logger.debug("Realtime reduction mode is on, therefore we are only selecting master calibration"
+                     "frames with a creation date earlier than the block start date", image=image)
+        calibration_criteria &= CalibrationImage.datecrt < image.block_start
+    else:
+        # Only grab the last year. In principle we could go farther back, but this limits the number
+        # of files we get back. And if we are using calibrations that are more than a year old
+        # it is probably a bad idea anyway.
+        calibration_criteria &= CalibrationImage.dateobs < (image.dateobs + datetime.timedelta(days=365))
     calibration_criteria &= CalibrationImage.dateobs > (image.dateobs - datetime.timedelta(days=365))
 
     db_session = get_session(db_address=db_address)

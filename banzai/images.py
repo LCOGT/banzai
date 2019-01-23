@@ -72,6 +72,7 @@ class Image(object):
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
         self.block_id = header.get('BLKUID')
+        self.block_start = date_utils.parse_date_obs(header.get('BLKSDATE', '1900-01-01T00:00:00.00000'))
         self.molecule_id = header.get('MOLUID')
 
         if len(self.extension_headers) > 0 and 'GAIN' in self.extension_headers[0]:
