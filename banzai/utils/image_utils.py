@@ -119,7 +119,7 @@ def save_images(pipeline_context, images, master_calibration=False, image_is_bad
 def save_pipeline_metadata(image, pipeline_context):
     image.header['RLEVEL'] = (pipeline_context.rlevel, 'Reduction level')
     image.header['PIPEVER'] = (banzai.__version__, 'Pipeline version')
-    image.update_datecreated()
+    image.set_datecreated_to_now()
 
     if file_utils.instantly_public(image.header['PROPID']):
         image.header['L1PUBDAT'] = (image.header['DATE-OBS'],

@@ -168,7 +168,7 @@ class Image(object):
     def add_history(self, msg):
         self.header.add_history(msg)
 
-    def update_datecreated(self):
+    def set_datecreated_to_now(self):
         self.datecreated = datetime.datetime.utcnow()
         self.header['DATE'] = (date_utils.date_obs_to_string(self.datecreated), '[UTC] Date this FITS file was written')
 
