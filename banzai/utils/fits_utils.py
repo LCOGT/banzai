@@ -46,7 +46,7 @@ def create_master_calibration_header(images):
     mean_dateobs = date_utils.mean_date(observation_dates)
 
     header['DATE-OBS'] = (date_utils.date_obs_to_string(mean_dateobs), '[UTC] Mean observation start time')
-    header['DATE-CRT'] = (date_utils.date_obs_to_string(datetime.datetime.utcnow()), '[UTC] Master creation time')
+    header['DATE'] = (date_utils.date_obs_to_string(datetime.datetime.utcnow()), '[UTC] Frame creation time')
 
     header.add_history("Images combined to create master calibration image:")
     for image in images:

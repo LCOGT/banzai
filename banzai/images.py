@@ -85,7 +85,7 @@ class Image(object):
         self.obstype = header.get('OBSTYPE')
         self.exptime = float(header.get('EXPTIME', 0.0))
         self.dateobs = date_utils.parse_date_obs(header.get('DATE-OBS', '1900-01-01T00:00:00.00000'))
-        self.datecrt = date_utils.parse_date_obs(header.get('DATE-CRT', date_utils.date_obs_to_string(self.dateobs)))
+        self.datecreated = date_utils.parse_date_obs(header.get('DATE', date_utils.date_obs_to_string(self.dateobs)))
         self.readnoise = float(header.get('RDNOISE', 0.0))
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE', 0.0))
@@ -168,8 +168,9 @@ class Image(object):
     def add_history(self, msg):
         self.header.add_history(msg)
 
-    def upate_datecrt(self):
-        self.datecrt = datetime.datetime.utcnow()
+    def update_datecreated(self):
+        self.datecreated = datetime.datetime.utcnow()
+        self.header['DATE'] = (date_utils.date_obs_to_string(self.datecreated), '[UTC] Frame creation time')
 
     def data_is_3d(self):
         return len(self.data.shape) > 2
