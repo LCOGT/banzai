@@ -114,7 +114,7 @@ def init(configdb):
 class TestMasterBiasCreation:
     @pytest.fixture(autouse=True)
     def stack_bias_frames(self, init):
-        run_reduce_individual_frame('*b00.fits')
+        run_reduce_individual_frame('*b00.fits*')
         mark_frames_as_good('*b91.fits*')
         run_stack_calibrations('bias')
 
@@ -128,7 +128,7 @@ class TestMasterBiasCreation:
 class TestMasterDarkCreation:
     @pytest.fixture(autouse=True)
     def stack_dark_frames(self):
-        run_reduce_individual_frame('*d00.fits')
+        run_reduce_individual_frame('*d00.fits*')
         mark_frames_as_good('*d91.fits*')
         run_stack_calibrations('dark')
 
@@ -142,7 +142,7 @@ class TestMasterDarkCreation:
 class TestMasterFlatCreation:
     @pytest.fixture(autouse=True)
     def stack_flat_frames(self):
-        run_reduce_individual_frame('*f00.fits')
+        run_reduce_individual_frame('*f00.fits*')
         mark_frames_as_good('*f91.fits*')
         run_stack_calibrations('skyflat')
 
