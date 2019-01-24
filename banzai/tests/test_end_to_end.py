@@ -156,7 +156,7 @@ class TestMasterFlatCreation:
 class TestScienceFileCreation:
     @pytest.fixture(autouse=True)
     def reduce_science_frames(self):
-        run_reduce_individual_frame('*e00.fits')
+        run_reduce_individual_frame('*e00.fits*')
 
     def test_if_science_frames_were_created(self):
         expected_files = []
