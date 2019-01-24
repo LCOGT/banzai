@@ -43,9 +43,12 @@ def run_reduce_individual_frame(raw_filenames):
 def run_stack_calibrations(frame_type):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
+        site, camera, dayobs = day_obs.split('/')
         command = 'banzai_stack_calibrations --raw-path {raw_path} --frame-type {frame_type} ' \
+                  '--site {site} --camera {camera} --dayobs {dayobs}' \
                   '--db-address={db_address} --ignore-schedulability --fpack'
-        command = command.format(raw_path=raw_path, frame_type=frame_type, db_address=os.environ['DB_ADDRESS'])
+        command = command.format(raw_path=raw_path, frame_type=frame_type, site=site, camera=camera, dayobs=dayobs,
+                                 db_address=os.environ['DB_ADDRESS'])
         os.system(command)
 
 
