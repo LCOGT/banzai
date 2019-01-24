@@ -148,7 +148,6 @@ class TestMasterFlatCreation:
 
     def test_if_stacked_flat_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*f00.fits*', 'skyflat')
-        mark_frames_as_good('*f91.fits*')
         run_check_if_stacked_calibrations_are_in_db('*f00.fits*', 'SKYFLAT')
 
 
