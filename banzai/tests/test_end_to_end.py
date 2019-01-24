@@ -34,7 +34,7 @@ def run_reduce_individual_frame(raw_filenames):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
-            command = 'banzai_reduce_individual_frame --raw-path {raw_path} --filename {filename}' \
+            command = 'banzai_reduce_individual_frame --raw-path {raw_path} --filename {filename} ' \
                       '--db-address={db_address} --ignore-schedulability --fpack'
             command = command.format(raw_path=raw_path, filename=filename, db_address=os.environ['DB_ADDRESS'])
             os.system(command)
@@ -43,7 +43,7 @@ def run_reduce_individual_frame(raw_filenames):
 def run_stack_calibrations(frame_type):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
-        command = 'banzai_stack_calibrations --raw-path {raw_path} frame-type {frame_type}' \
+        command = 'banzai_stack_calibrations --raw-path {raw_path} --frame-type {frame_type} ' \
                   '--db-address={db_address} --ignore-schedulability --fpack'
         command = command.format(raw_path=raw_path, frame_type=frame_type, db_address=os.environ['DB_ADDRESS'])
         os.system(command)
