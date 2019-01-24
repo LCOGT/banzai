@@ -108,27 +108,22 @@ class MissingCatalogException(Exception):
     pass
 
 
-def save_image(pipeline_context, image, master_calibration=False):
+def save_image(pipeline_context, image):
     output_directory = file_utils.make_output_directory(pipeline_context, image)
-    if not master_calibration:
+    if not image.is_master:
         image.filename = image.filename.replace('00.fits',
                                                 '{:02d}.fits'.format(int(pipeline_context.rlevel)))
 
-    image_filename = os.path.basename(image.filename)
-    filepath = os.path.join(output_directory, image_filename)
+    filepath = os.path.join(output_directory, os.path.basename(image.filename))
     save_pipeline_metadata(image, pipeline_context)
     image.writeto(filepath, pipeline_context.fpack)
     if pipeline_context.fpack:
-        image_filename += '.fz'
         filepath += '.fz'
     if image.obstype in pipeline_context.CALIBRATION_IMAGE_TYPES:
-        image_attributes = pipeline_context.CALIBRATION_SET_CRITERIA.get(image.obstype, None)
-        dbs.save_calibration_info(image.obstype, filepath, image, image_attributes=image_attributes,
-                                  is_master=master_calibration, image_is_bad=image.is_bad,
-                                  db_address=pipeline_context.db_address)
+        dbs.save_calibration_info(filepath, image, db_address=pipeline_context.db_address)
 
     if pipeline_context.post_to_archive:
-        logger.info('Posting file to the archive', extra_tags={'filename': image_filename})
+        logger.info('Posting file to the archive', extra_tags={'filename': image.filename})
         try:
             file_utils.post_to_archive_queue(filepath)
         except Exception:

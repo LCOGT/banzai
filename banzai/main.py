@@ -149,7 +149,7 @@ def run_master_maker(image_path_list, pipeline_context, frame_type):
     # TODO: This should return a single image after the stages refactor
     images = stage_to_run.run(images)
     if len(images):
-        image_utils.save_image(pipeline_context, images[0], master_calibration=True)
+        image_utils.save_image(pipeline_context, images[0])
 
 
 def process_directory(pipeline_context, raw_path, image_types=None, log_message=''):

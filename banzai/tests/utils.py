@@ -58,13 +58,12 @@ class FakeImage(Image):
 
 class FakeContext(object):
     def __init__(self, preview_mode=False, settings=banzai.settings.ImagingSettings(), frame_class=FakeImage):
-        self.processed_path = '/tmp'
-        self.preview_mode = preview_mode
-        self.FRAME_CLASS = FakeImage
         for key, value in dict(inspect.getmembers(settings)).items():
             if not key.startswith('_'):
                 setattr(self, key, value)
         self.FRAME_CLASS = frame_class
+        self.preview_mode = preview_mode
+        self.processed_path = '/tmp'
 
 
 class FakeStage(Stage):

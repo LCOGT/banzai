@@ -352,23 +352,22 @@ def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     return bpm_path
 
 
-def save_calibration_info(cal_type, output_file, image_config, image_attributes=None, is_master=False,
-                          image_is_bad=False, db_address=_DEFAULT_DB):
+def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
     # Store the information into the calibration table
     # Check and see if the bias file is already in the database
     db_session = get_session(db_address=db_address)
     output_filename = os.path.basename(output_file)
-    record_attributes = {'type': cal_type.upper(),
+    record_attributes = {'type': image.obstype.upper(),
                          'filename': output_filename,
                          'filepath': os.path.dirname(output_file),
-                         'dateobs': image_config.dateobs,
-                         'datecreated': image_config.datecreated,
-                         'instrument_id': image_config.instrument.id,
-                         'is_master': is_master,
-                         'is_bad': image_is_bad,
+                         'dateobs': image.dateobs,
+                         'datecreated': image.datecreated,
+                         'instrument_id': image.instrument.id,
+                         'is_master': image.is_master,
+                         'is_bad': image.is_bad,
                          'attributes': {}}
-    for image_attribute in image_attributes:
-        record_attributes['attributes'][image_attribute] = str(getattr(image_config, image_attribute))
+    for attribute in image.attributes:
+        record_attributes['attributes'][attribute] = str(getattr(image, attribute))
 
     add_or_update_record(db_session, CalibrationImage, {'filename': output_filename}, record_attributes)
 
