@@ -1,4 +1,8 @@
-0.17.0 (2019-01-23)
+0.17.2 (2019-01-24)
+-------------------
+- Increased the character limit of string columns in the database
+
+0.17.1 (2019-01-23)
 -------------------
 - Added a creation date column to the `CalibrationImage` table
 
