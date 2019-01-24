@@ -434,7 +434,8 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     for criterion in master_selection_criteria:
         # We have to cast to strings according to the sqlalchemy docs for version 1.3:
         # https://docs.sqlalchemy.org/en/latest/core/type_basics.html?highlight=json#sqlalchemy.types.JSON
-        calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) == type_coerce(getattr(image, criterion), JSON)
+        calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) ==\
+                                type_coerce(getattr(image, criterion), JSON)
 
     if realtime_reduction:
         # We want to avoid using different master calibrations for the same block, therefore
@@ -466,16 +467,14 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     return calibration_file
 
 
-def get_individual_calibration_images(instrument, date_range, calibration_type,
-                                      selection_criteria, ignore_is_bad=False, db_address=_DEFAULT_DB):
+def get_individual_calibration_images(instrument, date_range, calibration_type, selection_criteria,
+                                      db_address=_DEFAULT_DB):
 
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.is_master.isnot(True)
     calibration_criteria &= CalibrationImage.dateobs < date_range[1]
     calibration_criteria &= CalibrationImage.dateobs > date_range[0]
-    if not ignore_is_bad:
-        calibration_criteria &= CalibrationImage.is_bad.isnot(True)
 
     group_by_criteria = [CalibrationImage.attributes[criterion] for criterion in selection_criteria]
 

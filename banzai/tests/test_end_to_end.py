@@ -30,17 +30,22 @@ def run_end_to_end_tests():
     os.system(command.format(junit_file=args.junit_file, marker=args.marker))
 
 
-def run_banzai(entry_point, frame_type, calibration_maker=False):
+def run_reduce_individual_frame(raw_filenames):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
-        command = '{cmd} --raw-path {raw_path} --fpack --db-address={db_address} --frame-type={frame_type} '
-        command += '--ignore-schedulability'
-        command = command.format(cmd=entry_point, raw_path=raw_path, db_address=os.environ['DB_ADDRESS'],
-                                 frame_type=frame_type)
-        if calibration_maker:
-            site, camera, dayobs = day_obs.split('/')
-            command += " --site {site} --camera {camera} --dayobs {dayobs}".format(
-                site=site, camera=camera, dayobs=dayobs)
+        for filename in glob(os.path.join(raw_path, raw_filenames)):
+            command = 'banzai_reduce_individual_frame --raw-path {raw_path} --filename {filename}' \
+                      '--db-address={db_address} --ignore-schedulability --fpack'
+            command = command.format(raw_path=raw_path, filename=filename, db_address=os.environ['DB_ADDRESS'])
+            os.system(command)
+
+
+def run_stack_calibrations(frame_type):
+    for day_obs in DAYS_OBS:
+        raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
+        command = 'banzai_stack_calibrations --raw-path {raw_path} frame-type {frame_type}' \
+                  '--db-address={db_address} --ignore-schedulability --fpack'
+        command = command.format(raw_path=raw_path, frame_type=frame_type, db_address=os.environ['DB_ADDRESS'])
         os.system(command)
 
 
@@ -106,9 +111,9 @@ def init(configdb):
 class TestMasterBiasCreation:
     @pytest.fixture(autouse=True)
     def stack_bias_frames(self, init):
-        run_banzai('banzai_reduce_directory', frame_type='bias')
+        run_reduce_individual_frame('*b00.fits')
         mark_frames_as_good('*b91.fits*')
-        run_banzai('banzai_stack_calibrations', frame_type='bias', calibration_maker=True)
+        run_stack_calibrations('bias')
 
     def test_if_stacked_bias_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*b00.fits*', 'bias')
@@ -120,9 +125,9 @@ class TestMasterBiasCreation:
 class TestMasterDarkCreation:
     @pytest.fixture(autouse=True)
     def stack_dark_frames(self):
-        run_banzai('banzai_reduce_directory', frame_type='dark')
+        run_reduce_individual_frame('*d00.fits')
         mark_frames_as_good('*d91.fits*')
-        run_banzai('banzai_stack_calibrations', frame_type='dark', calibration_maker=True)
+        run_stack_calibrations('dark')
 
     def test_if_stacked_dark_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*d00.fits*', 'dark')
@@ -134,9 +139,9 @@ class TestMasterDarkCreation:
 class TestMasterFlatCreation:
     @pytest.fixture(autouse=True)
     def stack_flat_frames(self):
-        run_banzai('banzai_reduce_directory', frame_type='skyflat')
+        run_reduce_individual_frame('*f00.fits')
         mark_frames_as_good('*f91.fits*')
-        run_banzai('banzai_stack_calibrations', frame_type='skyflat', calibration_maker=True)
+        run_stack_calibrations('skyflat')
 
     def test_if_stacked_flat_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*f00.fits*', 'skyflat')
@@ -149,7 +154,7 @@ class TestMasterFlatCreation:
 class TestScienceFileCreation:
     @pytest.fixture(autouse=True)
     def reduce_science_frames(self):
-        run_banzai('banzai_reduce_directory', frame_type='expose')
+        run_reduce_individual_frame('*e00.fits')
 
     def test_if_science_frames_were_created(self):
         expected_files = []

@@ -88,7 +88,6 @@ def get_grouped_calibration_image_path_lists(pipeline_context, instrument, dayob
 
     return dbs.get_individual_calibration_images(instrument, date_range, frame_type,
                                                  pipeline_context.CALIBRATION_SET_CRITERIA[frame_type],
-                                                 ignore_is_bad=pipeline_context.ignore_master_comparison,
                                                  db_address=pipeline_context.db_address)
 
 

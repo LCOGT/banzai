@@ -212,9 +212,7 @@ def make_master_frame(pipeline_context, frame_type, raw_path=None):
     extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
                            {'args': ['--camera'], 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)'}},
                            {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs',
-                                                             'help': 'Day-Obs to reduce (e.g. 20160201)'}},
-                           {'args': ['--ignore-master-comparison'], 'kwargs': {'action': 'store_true',
-                                                                               'default': False}}]
+                                                             'help': 'Day-Obs to reduce (e.g. 20160201)'}}]
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
                                                       extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera)
@@ -237,18 +235,8 @@ def make_master_flat(pipeline_context=None):
 
 
 def reduce_directory(pipeline_context=None, raw_path=None):
-    extra_console_arguments = [{'args': ['--frame-type'],
-                                'kwargs': {
-                                    'dest': 'frame_type', 'default':  'all',
-                                    'help': 'Type of frames to process',
-                                    'choices': ['bias', 'dark', 'skyflat', 'expose',
-                                                'experimental', 'trailed', 'all']}}]
-
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
-                                                      extra_console_arguments=extra_console_arguments)
-    image_types = None if pipeline_context.frame_type == 'all' else [pipeline_context.frame_type.upper()]
-    process_directory(pipeline_context, raw_path, image_types=image_types,
-                      log_message='Reducing all frames in directory')
+    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
+    process_directory(pipeline_context, raw_path, log_message='Reducing all frames in directory')
 
 
 def reduce_single_frame(pipeline_context=None):
@@ -264,15 +252,14 @@ def stack_calibrations(pipeline_context=None, raw_path=None):
                                {'args': ['--camera'], 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)'}},
                                {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs',
                                                                  'help': 'Day-Obs to reduce (e.g. 20160201)'}},
-                               {'args': ['--frame-type'], 'kwargs': {'dest': 'frame_type', 'default':  'all',
+                               {'args': ['--frame-type'], 'kwargs': {'dest': 'frame_type',
                                                                      'help': 'Type of frames to process',
-                                                                     'choices': ['bias', 'dark', 'skyflat', 'all']}}]
+                                                                     'choices': ['bias', 'dark', 'skyflat']}}]
 
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
                                                       extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera)
-    frame_type = None if pipeline_context.frame_type == 'all' else pipeline_context.frame_type.upper()
-    process_master_maker(pipeline_context, instrument, pipeline_context.dayobs, frame_type)
+    process_master_maker(pipeline_context, instrument, pipeline_context.dayobs, pipeline_context.frame_type.upper())
 
 
 def stack_nightly_calibrations():
