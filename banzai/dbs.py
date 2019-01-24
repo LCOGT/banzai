@@ -63,9 +63,9 @@ class CalibrationImage(Base):
     """
     __tablename__ = 'calimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    type = Column(String(30), index=True)
-    filename = Column(String(50), unique=True)
-    filepath = Column(String(100))
+    type = Column(String(50), index=True)
+    filename = Column(String(100), unique=True)
+    filepath = Column(String(150))
     dateobs = Column(DateTime, index=True)
     datecreated = Column(DateTime, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
@@ -82,11 +82,11 @@ class Instrument(Base):
     """
     __tablename__ = 'instruments'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    site = Column(String(10), ForeignKey('sites.id'), index=True)
+    site = Column(String(15), ForeignKey('sites.id'), index=True)
     enclosure = Column(String(20), index=True)
     telescope = Column(String(20), index=True)
-    camera = Column(String(20), index=True)
-    type = Column(String(50))
+    camera = Column(String(50), index=True)
+    type = Column(String(100))
     schedulable = Column(Boolean, default=False)
 
 
@@ -97,14 +97,14 @@ class Site(Base):
     This defines the sites table structure
     """
     __tablename__ = 'sites'
-    id = Column(String(3), primary_key=True)
+    id = Column(String(15), primary_key=True)
     timezone = Column(Integer)
 
 
 class ProcessedImage(Base):
     __tablename__ = 'processedimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    filename = Column(String(50), index=True)
+    filename = Column(String(100), index=True)
     checksum = Column(CHAR(32), index=True, default='0'*32)
     success = Column(Boolean, default=False)
     tries = Column(Integer, default=0)
