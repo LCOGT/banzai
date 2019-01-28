@@ -1,14 +1,13 @@
 import os
 from glob import glob
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from astropy.io import fits
 
-import banzai
 from banzai import logs
 from banzai import dbs
-from banzai.utils import file_utils, date_utils
+from banzai.utils import date_utils
 
 logger = logging.getLogger(__name__)
 
@@ -106,46 +105,3 @@ class InhomogeneousSetException(Exception):
 
 class MissingCatalogException(Exception):
     pass
-
-
-def save_image(pipeline_context, image):
-    output_directory = file_utils.make_output_directory(pipeline_context, image)
-    if not image.is_master:
-        image.filename = image.filename.replace('00.fits',
-                                                '{:02d}.fits'.format(int(pipeline_context.rlevel)))
-
-    filepath = os.path.join(output_directory, os.path.basename(image.filename))
-    save_pipeline_metadata(image, pipeline_context)
-    image.writeto(filepath, pipeline_context.fpack)
-    if pipeline_context.fpack:
-        filepath += '.fz'
-    if image.obstype in pipeline_context.CALIBRATION_IMAGE_TYPES:
-        dbs.save_calibration_info(filepath, image, db_address=pipeline_context.db_address)
-
-    if pipeline_context.post_to_archive:
-        logger.info('Posting file to the archive', extra_tags={'filename': image.filename})
-        try:
-            file_utils.post_to_archive_queue(filepath)
-        except Exception:
-            logger.error("Could not post to ingester: {error}".format(error=logs.format_exception()),
-                         extra_tags={'filename': filepath})
-
-
-def save_pipeline_metadata(image, pipeline_context):
-    image.header['RLEVEL'] = (pipeline_context.rlevel, 'Reduction level')
-    image.header['PIPEVER'] = (banzai.__version__, 'Pipeline version')
-    image.set_datecreated_to_now()
-
-    if file_utils.instantly_public(image.header['PROPID']):
-        image.header['L1PUBDAT'] = (image.header['DATE-OBS'],
-                                    '[UTC] Date the frame becomes public')
-    else:
-        # Wait a year
-        date_observed = date_utils.parse_date_obs(image.header['DATE-OBS'])
-        next_year = date_observed + timedelta(days=365)
-        image.header['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year),
-                                    '[UTC] Date the frame becomes public')
-    logging_tags = {'rlevel': int(image.header['RLEVEL']),
-                    'pipeline_version': image.header['PIPEVER'],
-                    'l1pubdat': image.header['L1PUBDAT'],}
-    logger.info('Updating header', image=image, extra_tags=logging_tags)

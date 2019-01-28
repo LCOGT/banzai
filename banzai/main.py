@@ -139,7 +139,7 @@ def run(image_path, pipeline_context):
         stage_to_run = stage(pipeline_context)
         images = stage_to_run.run(images)
     if len(images):
-        image_utils.save_image(pipeline_context, images[0])
+        images[0].write(pipeline_context)
     logger.info("Finished reducing frame", extra_tags={'filename': images[0].filename})
 
 
@@ -149,7 +149,7 @@ def run_master_maker(image_path_list, pipeline_context, frame_type):
     # TODO: This should return a single image after the stages refactor
     images = stage_to_run.run(images)
     if len(images):
-        image_utils.save_image(pipeline_context, images[0])
+        images[0].write(pipeline_context)
 
 
 def process_directory(pipeline_context, raw_path, image_types=None, log_message=''):
