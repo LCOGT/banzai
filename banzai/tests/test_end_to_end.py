@@ -5,8 +5,8 @@ import argparse
 import pytest
 import mock
 
-from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage
-from banzai.utils import fits_utils
+from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
+from banzai.utils import fits_utils, date_utils
 from banzai.tests.utils import FakeResponse
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
@@ -44,11 +44,13 @@ def run_stack_calibrations(frame_type):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         site, camera, dayobs = day_obs.split('/')
+        timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
+        min_date, max_date = date_utils.get_min_and_max_date(timezone, day_obs, return_string=True)
         command = 'banzai_stack_calibrations --raw-path {raw_path} --frame-type {frame_type} ' \
-                  '--site {site} --camera {camera} --dayobs {dayobs} ' \
+                  '--site {site} --camera {camera} --min-date {min_date} --max' \
                   '--db-address={db_address} --ignore-schedulability --fpack'
-        command = command.format(raw_path=raw_path, frame_type=frame_type, site=site, camera=camera, dayobs=dayobs,
-                                 db_address=os.environ['DB_ADDRESS'])
+        command = command.format(raw_path=raw_path, frame_type=frame_type, site=site, camera=camera, min_date=min_date,
+                                 max_date=max_date, db_address=os.environ['DB_ADDRESS'])
         os.system(command)
 
 

@@ -5,10 +5,13 @@ Author
 
 October 2015
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import datetime
+import argparse
+
 import numpy as np
+
+
+TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
 
 def epoch_string_to_date(epoch):
@@ -120,8 +123,27 @@ def get_dayobs(timezone):
     return epoch_date_to_string(yesterday.date())
 
 
-def get_midnight(dayobs, timezone):
+def valid_date(s):
+    try:
+        return datetime.strptime(s, TIMESTAMP_FORMAT)
+    except ValueError:
+        msg = "Not a valid date: '{0}'.".format(s)
+        raise argparse.ArgumentTypeError(msg)
+
+
+def get_min_and_max_dates(timezone, dayobs, return_string=False):
+    midnight_at_site = _get_midnight(timezone, dayobs)
+    min_date = midnight_at_site - datetime.timedelta(days=0.5)
+    max_date = midnight_at_site + datetime.timedelta(days=0.5)
+    if return_string:
+        min_date = min_date.strftime(TIMESTAMP_FORMAT)
+        max_date = max_date.strftime(TIMESTAMP_FORMAT)
+    return min_date, max_date
+
+
+def _get_midnight(timezone, dayobs):
     midnight_in_utc = datetime.datetime.combine(epoch_string_to_date(dayobs) + datetime.timedelta(days=1),
                                                 datetime.time(0, 0, 0))
     local_midnight = midnight_in_utc - datetime.timedelta(hours=timezone)
     return local_midnight
+

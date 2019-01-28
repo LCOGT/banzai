@@ -461,35 +461,22 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     return calibration_file
 
 
-def get_individual_calibration_images(instrument, date_range, calibration_type, selection_criteria,
+def get_individual_calibration_images(instrument, calibration_type, min_date, max_date,
                                       use_masters=False, db_address=_DEFAULT_DB):
 
-    calibration_criteria = CalibrationImage.type == calibration_type.upper()
-    calibration_criteria &= CalibrationImage.instrument_id == instrument.id
+    calibration_criteria = CalibrationImage.instrument_id == instrument.id
+    calibration_criteria &= CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.is_master.is_(use_masters)
-    calibration_criteria &= CalibrationImage.dateobs < date_range[1]
-    calibration_criteria &= CalibrationImage.dateobs > date_range[0]
+    calibration_criteria &= CalibrationImage.dateobs > min_date
+    calibration_criteria &= CalibrationImage.dateobs < max_date
 
-    group_by_criteria = [CalibrationImage.attributes[criterion] for criterion in selection_criteria]
-
-    # group_by seems to only return a single image per group. Use the attributes from each group image
-    # to perform another query to get the full group
-    image_groups = []
     db_session = get_session(db_address=db_address)
-    single_image_groups = db_session.query(CalibrationImage).filter(calibration_criteria).group_by(*group_by_criteria).all()
-    for group in single_image_groups:
-        group_calibration_criteria = calibration_criteria
-        for criterion in selection_criteria:
-            group_calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) == \
-                                          type_coerce(group.attributes[criterion], JSON)
-        image_groups.append(db_session.query(CalibrationImage).filter(group_calibration_criteria).all())
+    images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
     db_session.close()
 
-    image_path_list_groups = []
-    for group in image_groups:
-        image_path_list_groups.append([os.path.join(image.filepath, image.filename) for image in group])
+    image_paths = [os.path.join(image.filepath, image.filename) for image in images]
 
-    return image_path_list_groups
+    return image_paths
 
 
 def mark_frame(filename, mark_as, db_address=_DEFAULT_DB):

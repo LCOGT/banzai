@@ -146,10 +146,9 @@ def run(image_path, pipeline_context):
 def run_master_maker(image_path_list, pipeline_context, frame_type):
     images = [read_image(image_path, pipeline_context) for image_path in image_path_list]
     stage_to_run = pipeline_context.CALIBRATION_STACKER_STAGE[frame_type](pipeline_context)
-    # TODO: This should return a single image after the stages refactor
     images = stage_to_run.run(images)
-    if len(images):
-        images[0].write(pipeline_context)
+    for image in images:
+        image.write(pipeline_context)
 
 
 def process_directory(pipeline_context, raw_path, image_types=None, log_message=''):
@@ -174,19 +173,20 @@ def process_single_frame(pipeline_context, raw_path, filename, log_message=''):
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
 
 
-def process_master_maker(pipeline_context, instrument, dayobs, frame_type, use_masters=False):
-    logger.info("Making masters", extra_tags={'instrument': instrument.camera, 'dayobs': dayobs,
-                                              'obstype': frame_type})
-    image_path_lists = image_utils.get_grouped_calibration_image_path_lists(pipeline_context, instrument, dayobs,
-                                                                            frame_type, use_masters=use_masters)
-    if len(image_path_lists) == 0:
+def process_master_maker(pipeline_context, instrument, frame_type, min_date, max_date, use_masters=False):
+    logger.info("Making masters", extra_tags={'instrument': instrument.camera, 'obstype': frame_type,
+                                              'min_date': min_date.strftime(date_utils.TIMESTAMP_FORMAT),
+                                              'max_date': max_date.strftime(date_utils.TIMESTAMP_FORMAT)})
+    image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
+                                                            use_masters=use_masters,
+                                                            db_address=pipeline_context.db_address)
+    if len(image_path_list) == 0:
         logger.warning("No calibration frames found to stack")
 
-    for image_path_list in image_path_lists:
-        try:
-            run_master_maker(image_path_list, pipeline_context, frame_type)
-        except Exception:
-            logger.error(logs.format_exception())
+    try:
+        run_master_maker(image_path_list, pipeline_context, frame_type)
+    except Exception:
+        logger.error(logs.format_exception())
     logger.info("Finished")
 
 
@@ -209,16 +209,24 @@ def parse_directory_args(pipeline_context=None, raw_path=None, settings=None, ex
 
 
 def make_master_frame(pipeline_context, frame_type, raw_path=None):
-    extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
-                           {'args': ['--camera'], 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)'}},
-                           {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs',
-                                                             'help': 'Day-Obs to reduce (e.g. 20160201)'}}]
+    extra_console_arguments = [{'args': ['--site'],
+                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
+                               {'args': ['--camera'],
+                                'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)', 'required': True}},
+                               {'args': ['--dayobs'],
+                                'kwargs': {'dest': 'dayobs', 'help': 'Day-Obs to reduce (e.g. 20160201)',
+                                           'required': True}}]
+
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
                                                       extra_console_arguments=extra_console_arguments)
+
     instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera)
     process_directory(pipeline_context, raw_path, image_types=[frame_type],
                       log_message='Reducing all {frame_type} frames in directory'.format(frame_type=frame_type))
-    process_master_maker(pipeline_context, instrument, pipeline_context.dayobs, frame_type)
+
+    timezone = dbs.get_timezone(instrument.site, db_address=pipeline_context.db_address)
+    min_date, max_date = date_utils.get_min_and_max_dates(timezone, pipeline_context.dayobs)
+    process_master_maker(pipeline_context, instrument, frame_type, min_date, max_date)
     return pipeline_context, instrument
 
 
@@ -248,18 +256,27 @@ def reduce_single_frame(pipeline_context=None):
 
 
 def stack_calibrations(pipeline_context=None, raw_path=None):
-    extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
-                               {'args': ['--camera'], 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)'}},
-                               {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs',
-                                                                 'help': 'Day-Obs to reduce (e.g. 20160201)'}},
-                               {'args': ['--frame-type'], 'kwargs': {'dest': 'frame_type',
-                                                                     'help': 'Type of frames to process',
-                                                                     'choices': ['bias', 'dark', 'skyflat']}}]
+    extra_console_arguments = [{'args': ['--site'],
+                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
+                               {'args': ['--camera'],
+                                'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)', 'required': True}},
+                               {'args': ['--frame-type'],
+                                'kwargs': {'dest': 'frame_type', 'help': 'Type of frames to process',
+                                           'choices': ['bias', 'dark', 'skyflat'], 'required': True}},
+                               {'args': ['--min-date'],
+                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.valid_date,
+                                           'help': 'Earliest observation time of the individual calibration frames. '
+                                                   'Must be in the format "YYYY-MM-DDThh:mm:ss".'}},
+                               {'args': ['--max-date'],
+                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.valid_date,
+                                           'help': 'Latest observation time of the individual calibration frames. '
+                                                   'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
                                                       extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera)
-    process_master_maker(pipeline_context, instrument, pipeline_context.dayobs, pipeline_context.frame_type.upper())
+    process_master_maker(pipeline_context, instrument,  pipeline_context.frame_type.upper(),
+                         pipeline_context.min_date, pipeline_context.max_date)
 
 
 def stack_nightly_calibrations():
@@ -279,8 +296,8 @@ def stack_nightly_calibrations():
     try:
         timezone = dbs.get_timezone(pipeline_context.site, db_address=pipeline_context.db_address)
     except dbs.SiteMissingException:
-        logger.error("Site {site} not found in database {db}, exiting.".format(site=pipeline_context.site,
-                                                                               db=pipeline_context.db_address),
+        msg = "Site {site} not found in database {db}, exiting."
+        logger.error(msg.format(site=pipeline_context.site, db=pipeline_context.db_address),
                      extra_tags={'site': pipeline_context.site})
         return
 
@@ -289,6 +306,8 @@ def stack_nightly_calibrations():
         dayobs = date_utils.get_dayobs(timezone=timezone)
     else:
         dayobs = pipeline_context.dayobs
+
+    min_date, max_date = date_utils.get_min_and_max_dates(timezone, pipeline_context.dayobs)
 
     instruments = dbs.get_instruments_at_site(pipeline_context.site,
                                               db_address=pipeline_context.db_address,
@@ -299,15 +318,15 @@ def stack_nightly_calibrations():
     for instrument in instruments:
         # Run the reductions on the given dayobs
         try:
-            process_master_maker(pipeline_context, instrument, dayobs, 'BIAS')
+            process_master_maker(pipeline_context, instrument, 'BIAS', min_date, max_date)
         except Exception:
             logger.error(logs.format_exception())
         try:
-            process_master_maker(pipeline_context, instrument, dayobs, 'DARK')
+            process_master_maker(pipeline_context, instrument, 'DARK', min_date, max_date)
         except Exception:
             logger.error(logs.format_exception())
         try:
-            process_master_maker(pipeline_context, instrument, dayobs, 'SKYFLAT')
+            process_master_maker(pipeline_context, instrument, 'SKYFLAT', min_date, max_date)
         except Exception:
             logger.error(logs.format_exception())
 

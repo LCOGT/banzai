@@ -66,7 +66,6 @@ class Settings(abc.ABC):
     def CALIBRATION_STACKER_STAGE(self):
         pass
 
-
     SCHEDULABLE_CRITERIA = [InstrumentCriterion('schedulable', operator.eq, True)]
 
 
@@ -101,10 +100,6 @@ class ImagingSettings(Settings):
     CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                               'DARK': 5,
                               'SKYFLAT': 5}
-
-    CALIBRATION_DAYS_TO_STACK = {'BIAS': 1,
-                                 'DARK': 1,
-                                 'SKYFLAT': 1}
 
     CALIBRATION_SET_CRITERIA = {'BIAS': ['ccdsum'],
                                 'DARK': ['ccdsum'],
