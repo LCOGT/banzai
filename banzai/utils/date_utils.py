@@ -146,4 +146,3 @@ def _get_midnight(timezone, dayobs):
                                                 datetime.time(0, 0, 0))
     local_midnight = midnight_in_utc - datetime.timedelta(hours=timezone)
     return local_midnight
-
