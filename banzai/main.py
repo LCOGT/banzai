@@ -174,11 +174,11 @@ def process_single_frame(pipeline_context, raw_path, filename, log_message=''):
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
 
 
-def process_master_maker(pipeline_context, instrument, dayobs, frame_type):
+def process_master_maker(pipeline_context, instrument, dayobs, frame_type, use_masters=False):
     logger.info("Making masters", extra_tags={'instrument': instrument.camera, 'dayobs': dayobs,
                                               'obstype': frame_type})
     image_path_lists = image_utils.get_grouped_calibration_image_path_lists(pipeline_context, instrument, dayobs,
-                                                                            frame_type)
+                                                                            frame_type, use_masters=use_masters)
     if len(image_path_lists) == 0:
         logger.warning("No calibration frames found to stack")
 

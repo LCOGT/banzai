@@ -80,7 +80,7 @@ def make_image_path_list(raw_path):
     return image_path_list
 
 
-def get_grouped_calibration_image_path_lists(pipeline_context, instrument, dayobs, frame_type):
+def get_grouped_calibration_image_path_lists(pipeline_context, instrument, dayobs, frame_type, use_masters=False):
     timezone = dbs.get_timezone(instrument.site, db_address=pipeline_context.db_address)
     midnight_at_site = date_utils.get_midnight(dayobs, timezone)
     date_range = (midnight_at_site - timedelta(days=(0.5 + pipeline_context.CALIBRATION_DAYS_TO_STACK[frame_type]-1)),
@@ -88,7 +88,7 @@ def get_grouped_calibration_image_path_lists(pipeline_context, instrument, dayob
 
     return dbs.get_individual_calibration_images(instrument, date_range, frame_type,
                                                  pipeline_context.CALIBRATION_SET_CRITERIA[frame_type],
-                                                 db_address=pipeline_context.db_address)
+                                                 use_masters=use_masters, db_address=pipeline_context.db_address)
 
 
 def check_image_homogeneity(images, group_by_attributes=None):

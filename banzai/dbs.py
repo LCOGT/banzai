@@ -367,7 +367,7 @@ def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
                          'is_bad': image.is_bad,
                          'attributes': {}}
     for attribute in image.attributes:
-        record_attributes['attributes'][attribute] = str(getattr(image, attribute))
+        record_attributes['attributes'][attribute] = getattr(image, attribute)
 
     add_or_update_record(db_session, CalibrationImage, {'filename': output_filename}, record_attributes)
 
@@ -436,42 +436,37 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
         calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) ==\
                                 type_coerce(getattr(image, criterion), JSON)
 
+    # During real-time reduction, we want to avoid using different master calibrations for the same block,
+    # therefore we make sure the the calibration frame used was created before the block start time
     if realtime_reduction:
-        # We want to avoid using different master calibrations for the same block, therefore
-        # we make sure the the calibration frame used was created before the block start time
-        logger.debug("Realtime reduction mode is on, therefore we are only selecting master calibration"
-                     "frames with a creation date earlier than the block start date", image=image)
-        calibration_criteria &= CalibrationImage.datecrt < image.block_start
-    else:
-        # Only grab the last year. In principle we could go farther back, but this limits the number
-        # of files we get back. And if we are using calibrations that are more than a year old
-        # it is probably a bad idea anyway.
-        calibration_criteria &= CalibrationImage.dateobs < (image.dateobs + datetime.timedelta(days=365))
-    calibration_criteria &= CalibrationImage.dateobs > (image.dateobs - datetime.timedelta(days=365))
+        calibration_criteria &= CalibrationImage.datecreated < image.block_start
 
     db_session = get_session(db_address=db_address)
-
     calibration_images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
 
-    # Find the closest date
+    # Exit if no calibration file found
     if len(calibration_images) == 0:
-        calibration_file = None
-    else:
-        date_deltas = np.abs(np.array([i.dateobs - image.dateobs for i in calibration_images]))
-        closest_calibration_image = calibration_images[np.argmin(date_deltas)]
-        calibration_file = os.path.join(closest_calibration_image.filepath,
-                                        closest_calibration_image.filename)
+        return None
 
-    db_session.close()
+    # Find the closest date
+    date_deltas = np.abs(np.array([i.dateobs - image.dateobs for i in calibration_images]))
+    closest_calibration_image = calibration_images[np.argmin(date_deltas)]
+    calibration_file = os.path.join(closest_calibration_image.filepath, closest_calibration_image.filename)
+
+    if abs(min(date_deltas)) > datetime.timedelta(days=30):
+        msg = "The closest calibration file in the database was created more than 30 days before or after " \
+              "the image being reduced."
+        logger.warning(msg, image=image, extra_tags={'master_calibration': os.path.basename(calibration_file)})
+
     return calibration_file
 
 
 def get_individual_calibration_images(instrument, date_range, calibration_type, selection_criteria,
-                                      db_address=_DEFAULT_DB):
+                                      use_masters=False, db_address=_DEFAULT_DB):
 
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == instrument.id
-    calibration_criteria &= CalibrationImage.is_master.isnot(True)
+    calibration_criteria &= CalibrationImage.is_master.is_(use_masters)
     calibration_criteria &= CalibrationImage.dateobs < date_range[1]
     calibration_criteria &= CalibrationImage.dateobs > date_range[0]
 

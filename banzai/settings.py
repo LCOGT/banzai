@@ -1,3 +1,11 @@
+"""
+settings.py: Settings script for banzai.
+
+    Important note: due to the way that the parameters are read in,
+    variables that begin with an underscore will not be added to the
+    pipeline context.
+
+"""
 import operator
 import abc
 

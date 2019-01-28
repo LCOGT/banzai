@@ -104,9 +104,6 @@ class Image(object):
             instrument, site, camera = None, None, None
         return instrument, site, camera
 
-    def flag_as_bad(self):
-        self.is_bad = True
-
     def subtract(self, value):
         self.data -= value
 
@@ -145,9 +142,6 @@ class Image(object):
                 base_filename += '.fz'
                 self.filename += '.fz'
             shutil.move(os.path.join(temp_directory, base_filename), filename)
-
-    def flag_as_bad(self):
-        self.is_bad = True
 
     def _add_data_tables_to_hdu_list(self, hdu_list):
         """
