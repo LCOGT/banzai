@@ -174,14 +174,15 @@ def process_single_frame(pipeline_context, raw_path, filename, log_message=''):
 
 
 def process_master_maker(pipeline_context, instrument, frame_type, min_date, max_date, use_masters=False):
-    logger.info("Making masters", extra_tags={'instrument': instrument.camera, 'obstype': frame_type,
-                                              'min_date': min_date.strftime(date_utils.TIMESTAMP_FORMAT),
-                                              'max_date': max_date.strftime(date_utils.TIMESTAMP_FORMAT)})
+    extra_tags = {'instrument': instrument.camera, 'obstype': frame_type,
+                  'min_date': min_date.strftime(date_utils.TIMESTAMP_FORMAT),
+                  'max_date': max_date.strftime(date_utils.TIMESTAMP_FORMAT)}
+    logger.info("Making master frames", extra_tags=extra_tags)
     image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
                                                             use_masters=use_masters,
                                                             db_address=pipeline_context.db_address)
     if len(image_path_list) == 0:
-        logger.warning("No calibration frames found to stack")
+        logger.warning("No calibration frames found to stack", extra_tags=extra_tags)
 
     try:
         run_master_maker(image_path_list, pipeline_context, frame_type)
@@ -268,7 +269,7 @@ def stack_calibrations(pipeline_context=None, raw_path=None):
                                            'help': 'Earliest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}},
                                {'args': ['--max-date'],
-                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.valid_date,
+                                'kwargs': {'dest': 'max_date', 'required': True, 'type': date_utils.valid_date,
                                            'help': 'Latest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
