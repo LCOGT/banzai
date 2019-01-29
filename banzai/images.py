@@ -142,16 +142,17 @@ class Image(object):
         return os.path.join(output_directory, os.path.basename(self.filename))
 
     def _writeto(self, filepath, fpack=False):
-        logger.info("Writing file to {filepath}".format(filepath=filepath), image=self)
+        logger.info('Writing file to {filepath}'.format(filepath=filepath), image=self)
         hdu_list = self._get_hdu_list()
-        base_filename = os.path.basename(filepath)
+        base_filename = os.path.basename(filepath).split('.fz')[0]
         with tempfile.TemporaryDirectory() as temp_directory:
             hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True, output_verify='fix+warn')
             if fpack:
                 if os.path.exists(filepath):
                     os.remove(filepath)
-                os.system('fpack -q 64 {temp_directory}/{basename}'.format(temp_directory=temp_directory,
-                                                                           basename=base_filename.split('.fz')[0]))
+                command = 'fpack -q 64 {temp_directory}/{basename}'
+                os.system(command.format(temp_directory=temp_directory, basename=base_filename))
+                base_filename += '.fz'
             shutil.move(os.path.join(temp_directory, base_filename), filepath)
 
     def _get_hdu_list(self):
