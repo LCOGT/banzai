@@ -29,13 +29,15 @@ def sanitizeheader(header):
 def create_master_calibration_header(images):
     # Sort images by timestamp, newest first
     images = [images[i] for i in np.argsort([image.dateobs for image in images])[::-1]]
+    old_header = images[0].header
 
     header = fits.Header()
     for key in images[0].header.keys():
         try:
             # Dump empty header keywords
             if len(key) > 0:
-                header[key] = (images[0].header[key], images[0].header.comments[key])
+                for i in range(old_header.count(key)):
+                    header[key] = (old_header[(key, i)], old_header.comments[(key, i)])
         except ValueError as e:
             logger.error('Could not add keyword {key}: {error}'.format(key=key, error=e), image=images[0])
             continue
