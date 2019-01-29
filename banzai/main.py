@@ -209,43 +209,11 @@ def parse_directory_args(pipeline_context=None, raw_path=None, settings=None, ex
     return pipeline_context, raw_path
 
 
-def make_master_frame(pipeline_context, frame_type, raw_path=None):
-    extra_console_arguments = [{'args': ['--site'],
-                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
-                               {'args': ['--camera'],
-                                'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)', 'required': True}},
-                               {'args': ['--dayobs'],
-                                'kwargs': {'dest': 'dayobs', 'help': 'Day-Obs to reduce (e.g. 20160201)',
-                                           'required': True}}]
-
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
-                                                      extra_console_arguments=extra_console_arguments)
-
-    instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera)
-    process_directory(pipeline_context, raw_path, image_types=[frame_type],
-                      log_message='Reducing all {frame_type} frames in directory'.format(frame_type=frame_type))
-
-    timezone = dbs.get_timezone(instrument.site, db_address=pipeline_context.db_address)
-    min_date, max_date = date_utils.get_min_and_max_dates(timezone, pipeline_context.dayobs)
-    process_master_maker(pipeline_context, instrument, frame_type, min_date, max_date)
-    return pipeline_context, instrument
-
-
-def make_master_bias(pipeline_context=None):
-    make_master_frame(pipeline_context, 'BIAS')
-
-
-def make_master_dark(pipeline_context=None):
-    make_master_frame(pipeline_context, 'DARK')
-
-
-def make_master_flat(pipeline_context=None):
-    make_master_frame(pipeline_context, 'SKYFLAT')
-
-
-def reduce_directory(pipeline_context=None, raw_path=None):
+def reduce_directory(pipeline_context=None, raw_path=None, image_types=None):
+    # TODO: Remove image_types once reduce_night is not needed
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
-    process_directory(pipeline_context, raw_path, log_message='Reducing all frames in directory')
+    process_directory(pipeline_context, raw_path, image_types=image_types,
+                      log_message='Reducing all frames in directory')
 
 
 def reduce_single_frame(pipeline_context=None):
@@ -280,10 +248,16 @@ def stack_calibrations(pipeline_context=None, raw_path=None):
                          pipeline_context.min_date, pipeline_context.max_date)
 
 
-def stack_nightly_calibrations():
-    extra_console_arguments = [{'args': ['--site'], 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
-                               {'args': ['--dayobs'], 'kwargs': {'dest': 'dayobs', 'default': None,
-                                                                 'help': 'Day-Obs to reduce (e.g. 20160201)'}}]
+def run_end_of_night():
+    # TODO: Remove this method once we switch to real-time reduction only
+    extra_console_arguments = [{'args': ['--site'],
+                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
+                               {'args': ['--dayobs'],
+                                'kwargs': {'dest': 'dayobs', 'default': None,
+                                           'help': 'Day-Obs to reduce (e.g. 20160201)'}},
+                               {'args': ['--raw-path-root'],
+                                'kwargs': {'dest': 'rawpath_root', 'default': '/archive/engineering',
+                                           'help': 'Top level directory with raw data.'}}]
 
     pipeline_context = parse_args(banzai.settings.ImagingSettings, extra_console_arguments=extra_console_arguments,
                                   parser_description='Reduce all the data from a site at the end of a night.')
@@ -308,8 +282,6 @@ def stack_nightly_calibrations():
     else:
         dayobs = pipeline_context.dayobs
 
-    min_date, max_date = date_utils.get_min_and_max_dates(timezone, pipeline_context.dayobs)
-
     instruments = dbs.get_instruments_at_site(pipeline_context.site,
                                               db_address=pipeline_context.db_address,
                                               ignore_schedulability=pipeline_context.ignore_schedulability)
@@ -317,17 +289,10 @@ def stack_nightly_calibrations():
                    if dbs.instrument_passes_criteria(instrument, pipeline_context.FRAME_SELECTION_CRITERIA)]
     # For each instrument at the given site
     for instrument in instruments:
-        # Run the reductions on the given dayobs
+        raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
+                                instrument.camera, dayobs, 'raw')
         try:
-            process_master_maker(pipeline_context, instrument, 'BIAS', min_date, max_date)
-        except Exception:
-            logger.error(logs.format_exception())
-        try:
-            process_master_maker(pipeline_context, instrument, 'DARK', min_date, max_date)
-        except Exception:
-            logger.error(logs.format_exception())
-        try:
-            process_master_maker(pipeline_context, instrument, 'SKYFLAT', min_date, max_date)
+            reduce_directory(pipeline_context, raw_path, image_types=['EXPOSE', 'STANDARD'])
         except Exception:
             logger.error(logs.format_exception())
 
