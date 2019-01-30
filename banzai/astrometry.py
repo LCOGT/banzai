@@ -59,7 +59,7 @@ class WCSSolver(Stage):
             image.header['RA'], image.header['DEC'] = get_ra_dec_in_sexagesimal(image.header['CRVAL1'],
                                                                                 image.header['CRVAL2'])
 
-            add_ra_dec_to_catalog(image)
+            add_ra_dec_to_catalog(image, astrometry_response.json()['gaia_sources'])
 
             image.header['WCSERR'] = (0, 'Error status of WCS fit. 0 for no error')
 
@@ -68,11 +68,9 @@ class WCSSolver(Stage):
         return images
 
 
-def add_ra_dec_to_catalog(image):
-    image_wcs = WCS(image.header)
-    ras, decs = image_wcs.all_pix2world(image.data_tables['catalog']['x'], image.data_tables['catalog']['y'], 1)
-    image.data_tables['catalog']['ra'] = ras
-    image.data_tables['catalog']['dec'] = decs
+def add_ra_dec_to_catalog(image, sources):
+    image.data_tables['catalog']['ra'] = sources['ra']
+    image.data_tables['catalog']['dec'] = sources['dec']
     image.data_tables['catalog']['ra'].unit = 'degree'
     image.data_tables['catalog']['dec'].unit = 'degree'
     image.data_tables['catalog']['ra'].description = 'Right Ascension'
