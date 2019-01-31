@@ -48,6 +48,7 @@ class WCSSolver(Stage):
                 astrometry_response.raise_for_status()
             except HTTPError:
                 logger.error('Error from Astrometry service. WCS solution not completed.', image=image)
+                image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
                 continue
 
             header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
