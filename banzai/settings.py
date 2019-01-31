@@ -1,3 +1,11 @@
+"""
+settings.py: Settings script for banzai.
+
+    Important note: due to the way that the parameters are read in,
+    variables that begin with an underscore will not be added to the
+    pipeline context.
+
+"""
 import operator
 import abc
 
@@ -25,7 +33,7 @@ class Settings(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def CALIBRATION_MIN_IMAGES(self):
+    def CALIBRATION_MIN_FRAMES(self):
         pass
 
     @property
@@ -51,6 +59,11 @@ class Settings(abc.ABC):
     @property
     @abc.abstractmethod
     def EXTRA_STAGES(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def CALIBRATION_STACKER_STAGE(self):
         pass
 
     SCHEDULABLE_CRITERIA = [InstrumentCriterion('schedulable', operator.eq, True)]
@@ -84,7 +97,7 @@ class ImagingSettings(Settings):
                       astrometry.WCSSolver,
                       qc.pointing.PointingTest]
 
-    CALIBRATION_MIN_IMAGES = {'BIAS': 5,
+    CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                               'DARK': 5,
                               'SKYFLAT': 5}
 
@@ -95,17 +108,15 @@ class ImagingSettings(Settings):
     LAST_STAGE = {'BIAS': trim.Trimmer, 'DARK': bias.BiasSubtractor, 'SKYFLAT': dark.DarkSubtractor,
                   'SINISTRO': mosaic.MosaicCreator, 'STANDARD': None, 'EXPOSE': None}
 
-    EXTRA_STAGES = {'BIAS': [bias.BiasMasterLevelSubtractor, bias.BiasComparer, bias.BiasMaker],
-                    'DARK': [dark.DarkNormalizer, dark.DarkComparer, dark.DarkMaker],
-                    'SKYFLAT': [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer, flats.FlatMaker],
+    EXTRA_STAGES = {'BIAS': [bias.BiasMasterLevelSubtractor, bias.BiasComparer],
+                    'DARK': [dark.DarkNormalizer, dark.DarkComparer],
+                    'SKYFLAT': [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer],
                     'STANDARD': None,
                     'EXPOSE': None}
 
-    EXTRA_STAGES_PREVIEW = {'BIAS': [bias.BiasMasterLevelSubtractor, bias.BiasComparer],
-                            'DARK': [dark.DarkNormalizer, dark.DarkComparer],
-                            'SKYFLAT': [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer],
-                            'STANDARD': None,
-                            'EXPOSE': None}
+    CALIBRATION_STACKER_STAGE = {'BIAS': bias.BiasMaker,
+                                 'DARK': dark.DarkMaker,
+                                 'SKYFLAT': flats.FlatMaker}
 
     CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT']
 

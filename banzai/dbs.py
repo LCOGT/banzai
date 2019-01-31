@@ -297,7 +297,7 @@ class SiteMissingException(Exception):
     pass
 
 
-def _query_for_instrument(db_address, site, camera):
+def query_for_instrument(db_address, site, camera):
     # Short circuit
     if site is None or camera is None:
         return None
@@ -319,16 +319,16 @@ def _guess_instrument_values_from_header(header, db_address):
                           'schedulable': False})
     db_session.commit()
     db_session.close()
-    instrument = _query_for_instrument(db_address, site, camera)
+    instrument = query_for_instrument(db_address, site, camera)
     return instrument
 
 
 def get_instrument(header, db_address=_DEFAULT_DB):
     site = header.get('SITEID')
     camera = header.get('INSTRUME')
-    instrument_from_instrume_keyword = _query_for_instrument(db_address, site, camera)
+    instrument_from_instrume_keyword = query_for_instrument(db_address, site, camera)
     instrument = instrument_from_instrume_keyword if instrument_from_instrume_keyword is not None \
-        else _query_for_instrument(db_address, site, header.get('TELESCOP'))
+        else query_for_instrument(db_address, site, header.get('TELESCOP'))
     if instrument is None:
         logger.error('Instrument {site}/{camera} is not in the database, '
                      'extracting best-guess values from header'.format(site=site, camera=camera),
@@ -352,23 +352,22 @@ def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     return bpm_path
 
 
-def save_calibration_info(cal_type, output_file, image_config, image_attributes=None, is_master=False,
-                          image_is_bad=False, db_address=_DEFAULT_DB):
+def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
     # Store the information into the calibration table
     # Check and see if the bias file is already in the database
     db_session = get_session(db_address=db_address)
     output_filename = os.path.basename(output_file)
-    record_attributes = {'type': cal_type.upper(),
+    record_attributes = {'type': image.obstype.upper(),
                          'filename': output_filename,
                          'filepath': os.path.dirname(output_file),
-                         'dateobs': image_config.dateobs,
-                         'datecreated': image_config.datecreated,
-                         'instrument_id': image_config.instrument.id,
-                         'is_master': is_master,
-                         'is_bad': image_is_bad,
+                         'dateobs': image.dateobs,
+                         'datecreated': image.datecreated,
+                         'instrument_id': image.instrument.id,
+                         'is_master': image.is_master,
+                         'is_bad': image.is_bad,
                          'attributes': {}}
-    for image_attribute in image_attributes:
-        record_attributes['attributes'][image_attribute] = getattr(image_config, image_attribute)
+    for attribute in image.attributes:
+        record_attributes['attributes'][attribute] = getattr(image, attribute)
 
     add_or_update_record(db_session, CalibrationImage, {'filename': output_filename}, record_attributes)
 
@@ -426,7 +425,7 @@ def instrument_passes_criteria(instrument, criteria):
 
 
 def get_master_calibration_image(image, calibration_type, master_selection_criteria,
-                                 db_address=_DEFAULT_DB):
+                                 realtime_reduction=False, db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
@@ -434,27 +433,69 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     for criterion in master_selection_criteria:
         # We have to cast to strings according to the sqlalchemy docs for version 1.3:
         # https://docs.sqlalchemy.org/en/latest/core/type_basics.html?highlight=json#sqlalchemy.types.JSON
-        calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) == type_coerce(getattr(image, criterion), JSON)
+        calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) ==\
+                                type_coerce(getattr(image, criterion), JSON)
 
-    # Only grab the last year. In principle we could go farther back, but this limits the number
-    # of files we get back. And if we are using calibrations that are more than a year old
-    # it is probably a bad idea anyway.
-
-    calibration_criteria &= CalibrationImage.dateobs < (image.dateobs + datetime.timedelta(days=365))
-    calibration_criteria &= CalibrationImage.dateobs > (image.dateobs - datetime.timedelta(days=365))
+    # During real-time reduction, we want to avoid using different master calibrations for the same block,
+    # therefore we make sure the the calibration frame used was created before the block start time
+    if realtime_reduction:
+        calibration_criteria &= CalibrationImage.datecreated < image.block_start
 
     db_session = get_session(db_address=db_address)
-
     calibration_images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
 
-    # Find the closest date
+    # Exit if no calibration file found
     if len(calibration_images) == 0:
-        calibration_file = None
-    else:
-        date_deltas = np.abs(np.array([i.dateobs - image.dateobs for i in calibration_images]))
-        closest_calibration_image = calibration_images[np.argmin(date_deltas)]
-        calibration_file = os.path.join(closest_calibration_image.filepath,
-                                        closest_calibration_image.filename)
+        return None
 
-    db_session.close()
+    # Find the closest date
+    date_deltas = np.abs(np.array([i.dateobs - image.dateobs for i in calibration_images]))
+    closest_calibration_image = calibration_images[np.argmin(date_deltas)]
+    calibration_file = os.path.join(closest_calibration_image.filepath, closest_calibration_image.filename)
+
+    if abs(min(date_deltas)) > datetime.timedelta(days=30):
+        msg = "The closest calibration file in the database was created more than 30 days before or after " \
+              "the image being reduced."
+        logger.warning(msg, image=image, extra_tags={'master_calibration': os.path.basename(calibration_file)})
+
     return calibration_file
+
+
+def get_individual_calibration_images(instrument, calibration_type, min_date, max_date,
+                                      use_masters=False, db_address=_DEFAULT_DB):
+
+    calibration_criteria = CalibrationImage.instrument_id == instrument.id
+    calibration_criteria &= CalibrationImage.type == calibration_type.upper()
+    calibration_criteria &= CalibrationImage.is_master.is_(use_masters)
+    calibration_criteria &= CalibrationImage.dateobs > min_date
+    calibration_criteria &= CalibrationImage.dateobs < max_date
+
+    db_session = get_session(db_address=db_address)
+    images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
+    db_session.close()
+
+    image_paths = [os.path.join(image.filepath, image.filename) for image in images]
+
+    return image_paths
+
+
+def mark_frame(filename, mark_as, db_address=_DEFAULT_DB):
+    set_is_bad_to = True if mark_as == "bad" else False
+    logger.debug("Setting the is_bad parameter for {filename} to {set_is_bad_to}".format(
+        filename=filename, set_is_bad_to=set_is_bad_to))
+    db_session = get_session(db_address=db_address)
+    # First check to make sure the image is in the database
+    image = db_session.query(CalibrationImage).filter(CalibrationImage.filename == filename).first()
+    if image is None:
+        logger.error("Frame {filename} not found in database, exiting".format(filename=filename))
+        return
+    if image.is_bad is set_is_bad_to:
+        logger.error("The is_bad parameter for {filename} is already set to {is_bad}, exiting".format(
+            filename=filename, is_bad=image.is_bad))
+        return
+    equivalence_criteria = {'filename': filename}
+    record_attributes = {'filename': filename,
+                         'is_bad': set_is_bad_to}
+    add_or_update_record(db_session, CalibrationImage, equivalence_criteria, record_attributes)
+    db_session.commit()
+    db_session.close()

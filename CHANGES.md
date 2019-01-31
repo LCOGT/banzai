@@ -1,3 +1,13 @@
+0.18.0 (2019-01-29)
+-------------------
+- Calibration stacking is now separate from data reduction. Individual
+  calibration frames are reduced and added to the database. The stacking 
+  method then queries the database using a range of dates to determine
+  which frames should be stacked. 
+- It is now possible to mark frames as good or bad in the database
+- Individual calibration frames for which a previous good master to 
+  perform a comparison against does not exist are marked as bad
+  
 0.17.2 (2019-01-24)
 -------------------
 - Increased the character limit of string columns in the database

@@ -4,7 +4,6 @@ import numpy as np
 
 from banzai.bias import BiasSubtractor
 from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception, FakeContext
-from banzai.calibrations import MasterCalibrationDoesNotExist
 
 from banzai.tests.bias_utils import make_context_with_master_bias
 
@@ -76,14 +75,14 @@ def test_raises_an_exception_if_ny_are_different(mock_cal):
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_exception_if_no_master_calibration(mock_cal):
+def test_flags_image_if_no_master_calibration(mock_cal):
     mock_cal.return_value = None
     nx = 101
     ny = 103
     context = make_context_with_master_bias(nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
-    with pytest.raises(MasterCalibrationDoesNotExist):
-        images = subtractor.do_stage([FakeImage(nx=nx, ny=ny) for x in range(6)])
+    images = subtractor.do_stage([FakeImage(nx=nx, ny=ny) for x in range(6)])
+    assert all([image.is_bad for image in images])
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
@@ -98,7 +97,6 @@ def test_bias_subtraction_is_reasonable(mock_cal):
     context = make_context_with_master_bias(bias_level=input_bias, readnoise=input_readnoise, nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
     images = [FakeImage(image_multiplier=input_level) for x in range(6)]
-
     images = subtractor.do_stage(images)
 
     for image in images:

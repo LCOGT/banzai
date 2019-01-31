@@ -8,10 +8,9 @@ import numpy as np
 from astropy.io import fits
 from astropy.table import Table
 
+import banzai
 from banzai import dbs
-from banzai.utils import date_utils
-from banzai.utils import fits_utils
-from banzai.utils import image_utils
+from banzai.utils import date_utils, file_utils, fits_utils, image_utils
 from banzai.munge import munge
 from banzai import logs
 
@@ -72,6 +71,7 @@ class Image(object):
         self.nx = header.get('NAXIS1')
         self.ny = header.get('NAXIS2')
         self.block_id = header.get('BLKUID')
+        self.block_start = date_utils.parse_date_obs(header.get('BLKSDATE', '1900-01-01T00:00:00.00000'))
         self.molecule_id = header.get('MOLUID')
 
         if len(self.extension_headers) > 0 and 'GAIN' in self.extension_headers[0]:
@@ -90,6 +90,10 @@ class Image(object):
         self.ra, self.dec = fits_utils.parse_ra_dec(header)
         self.pixel_scale = float(header.get('PIXSCALE', 0.0))
 
+        self.is_bad = False
+        self.is_master = header.get('ISMASTER', False)
+        self.attributes = pipeline_context.CALIBRATION_SET_CRITERIA.get(self.obstype, {})
+
     def _init_instrument_info(self, pipeline_context):
         if len(self.header) > 0:
             instrument = dbs.get_instrument(self.header, db_address=pipeline_context.db_address)
@@ -99,10 +103,59 @@ class Image(object):
             instrument, site, camera = None, None, None
         return instrument, site, camera
 
-    def subtract(self, value):
-        self.data -= value
+    def write(self, pipeline_context):
+        self._save_pipeline_metadata(pipeline_context)
+        self._update_filename(pipeline_context)
+        filepath = self._get_filepath(pipeline_context)
+        self._writeto(filepath, fpack=pipeline_context.fpack)
+        if self.obstype in pipeline_context.CALIBRATION_IMAGE_TYPES:
+            dbs.save_calibration_info(filepath, self, db_address=pipeline_context.db_address)
+        if pipeline_context.post_to_archive:
+            self._post_to_archive(filepath)
 
-    def writeto(self, filename, fpack=False):
+    def _save_pipeline_metadata(self, pipeline_context):
+        self.datecreated = datetime.datetime.utcnow()
+        self.header['DATE'] = (date_utils.date_obs_to_string(self.datecreated), '[UTC] Date this FITS file was written')
+        self.header['RLEVEL'] = (pipeline_context.rlevel, 'Reduction level')
+        self.header['PIPEVER'] = (banzai.__version__, 'Pipeline version')
+
+        if file_utils.instantly_public(self.header['PROPID']):
+            self.header['L1PUBDAT'] = (self.header['DATE-OBS'], '[UTC] Date the frame becomes public')
+        else:
+            # Wait a year
+            date_observed = date_utils.parse_date_obs(self.header['DATE-OBS'])
+            next_year = date_observed + datetime.timedelta(days=365)
+            self.header['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year), '[UTC] Date the frame becomes public')
+        logging_tags = {'rlevel': int(self.header['RLEVEL']),
+                        'pipeline_version': self.header['PIPEVER'],
+                        'l1pubdat': self.header['L1PUBDAT'],}
+        logger.info('Adding pipeline metadata to the header', image=self, extra_tags=logging_tags)
+
+    def _update_filename(self, pipeline_context):
+        self.filename = self.filename.replace('00.fits',
+                                              '{:02d}.fits'.format(int(pipeline_context.rlevel)))
+        if pipeline_context.fpack and not self.filename.endswith('.fz'):
+            self.filename += '.fz'
+
+    def _get_filepath(self, pipeline_context):
+        output_directory = file_utils.make_output_directory(pipeline_context, self)
+        return os.path.join(output_directory, os.path.basename(self.filename))
+
+    def _writeto(self, filepath, fpack=False):
+        logger.info('Writing file to {filepath}'.format(filepath=filepath), image=self)
+        hdu_list = self._get_hdu_list()
+        base_filename = os.path.basename(filepath).split('.fz')[0]
+        with tempfile.TemporaryDirectory() as temp_directory:
+            hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True, output_verify='fix+warn')
+            if fpack:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                command = 'fpack -q 64 {temp_directory}/{basename}'
+                os.system(command.format(temp_directory=temp_directory, basename=base_filename))
+                base_filename += '.fz'
+            shutil.move(os.path.join(temp_directory, base_filename), filepath)
+
+    def _get_hdu_list(self):
         image_hdu = fits.PrimaryHDU(self.data.astype(np.float32), header=self.header)
         image_hdu.header['BITPIX'] = -32
         image_hdu.header['BSCALE'] = 1.0
@@ -110,10 +163,10 @@ class Image(object):
         image_hdu.header['SIMPLE'] = True
         image_hdu.header['EXTEND'] = True
         image_hdu.name = 'SCI'
+
         hdu_list = [image_hdu]
         hdu_list = self._add_data_tables_to_hdu_list(hdu_list)
         hdu_list = self._add_bpm_to_hdu_list(hdu_list)
-
         fits_hdu_list = fits.HDUList(hdu_list)
         try:
             fits_hdu_list.verify(option='exception')
@@ -123,20 +176,7 @@ class Image(object):
                 fits_hdu_list.verify(option='silentfix+exception')
             except fits.VerifyError as fix_attempt_error:
                 logger.error('Could not repair FITS header. {0}'.format(fix_attempt_error), image=self)
-
-        with tempfile.TemporaryDirectory() as temp_directory:
-            base_filename = os.path.basename(filename)
-            fits_hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True,
-                             output_verify='fix+warn')
-            if fpack:
-                filename += '.fz'
-                if os.path.exists(filename):
-                    os.remove(filename)
-                os.system('fpack -q 64 {temp_directory}/{basename}'.format(temp_directory=temp_directory,
-                                                                           basename=base_filename))
-                base_filename += '.fz'
-                self.filename += '.fz'
-            shutil.move(os.path.join(temp_directory, base_filename), filename)
+        return fits.HDUList(hdu_list)
 
     def _add_data_tables_to_hdu_list(self, hdu_list):
         """
@@ -155,9 +195,12 @@ class Image(object):
             hdu_list.append(bpm_hdu)
         return hdu_list
 
-    def update_shape(self, nx, ny):
-        self.nx = nx
-        self.ny = ny
+    def _post_to_archive(self, filepath):
+        logger.info('Posting file to the archive', image=self)
+        try:
+            file_utils.post_to_archive_queue(filepath)
+        except Exception:
+            logger.error("Could not post to ingester: {error}".format(error=logs.format_exception()), image=self)
 
     def write_catalog(self, filename, nsources=None):
         if self.data_tables.get('catalog') is None:
@@ -168,9 +211,12 @@ class Image(object):
     def add_history(self, msg):
         self.header.add_history(msg)
 
-    def set_datecreated_to_now(self):
-        self.datecreated = datetime.datetime.utcnow()
-        self.header['DATE'] = (date_utils.date_obs_to_string(self.datecreated), '[UTC] Date this FITS file was written')
+    def subtract(self, value):
+        self.data -= value
+
+    def update_shape(self, nx, ny):
+        self.nx = nx
+        self.ny = ny
 
     def data_is_3d(self):
         return len(self.data.shape) > 2
@@ -207,21 +253,17 @@ class Image(object):
         return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
 
 
-def read_images(image_list, pipeline_context):
-    images = []
-    for filename in image_list:
-        try:
-            image = pipeline_context.FRAME_CLASS(pipeline_context, filename=filename)
-            if image.instrument is None:
-                logger.error("Image instrument attribute is None, removing from list", image=image)
-                continue
-            munge(image)
-            images.append(image)
-        except Exception:
-            logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
-                         extra_tags={'filename': filename})
-            continue
-    return images
+def read_image(filename, pipeline_context):
+    try:
+        image = pipeline_context.FRAME_CLASS(pipeline_context, filename=filename)
+        if image.instrument is None:
+            logger.error("Image instrument attribute is None, aborting", image=image)
+            raise IOError
+        munge(image)
+        return image
+    except Exception:
+        logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
+                     extra_tags={'filename': filename})
 
 
 def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, input_dictionary=None):

@@ -5,8 +5,8 @@ import argparse
 import pytest
 import mock
 
-from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage
-from banzai.utils import fits_utils
+from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
+from banzai.utils import fits_utils, date_utils
 from banzai.tests.utils import FakeResponse
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
@@ -30,12 +30,36 @@ def run_end_to_end_tests():
     os.system(command.format(junit_file=args.junit_file, marker=args.marker))
 
 
-def run_banzai(entry_point):
+def run_reduce_individual_frame(raw_filenames):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
-        command = '{cmd} --raw-path {raw_path} --fpack --db-address={db_address} --ignore-schedulability'
-        command = command.format(cmd=entry_point, raw_path=raw_path, db_address=os.environ['DB_ADDRESS'])
+        for filename in glob(os.path.join(raw_path, raw_filenames)):
+            command = 'banzai_reduce_individual_frame --raw-path {raw_path} --filename {filename} ' \
+                      '--db-address={db_address} --ignore-schedulability --fpack'
+            command = command.format(raw_path=raw_path, filename=filename, db_address=os.environ['DB_ADDRESS'])
+            os.system(command)
+
+
+def run_stack_calibrations(frame_type):
+    for day_obs in DAYS_OBS:
+        raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
+        site, camera, dayobs = day_obs.split('/')
+        timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
+        min_date, max_date = date_utils.get_min_and_max_dates(timezone, dayobs, return_string=True)
+        command = 'banzai_stack_calibrations --raw-path {raw_path} --frame-type {frame_type} ' \
+                  '--site {site} --camera {camera} --min-date {min_date} --max-date {max_date} ' \
+                  '--db-address={db_address} --ignore-schedulability --fpack'
+        command = command.format(raw_path=raw_path, frame_type=frame_type, site=site, camera=camera, min_date=min_date,
+                                 max_date=max_date, db_address=os.environ['DB_ADDRESS'])
         os.system(command)
+
+
+def mark_frames_as_good(raw_filenames):
+    for day_obs in DAYS_OBS:
+        for filename in glob(os.path.join(DATA_ROOT, day_obs, 'processed', raw_filenames)):
+            command = 'banzai_mark_frame_as_good --filename {filename} --db-address={db_address}'
+            command = command.format(filename=os.path.basename(filename), db_address=os.environ['DB_ADDRESS'])
+            os.system(command)
 
 
 def get_expected_number_of_calibrations(raw_filenames, calibration_type):
@@ -92,7 +116,9 @@ def init(configdb):
 class TestMasterBiasCreation:
     @pytest.fixture(autouse=True)
     def stack_bias_frames(self, init):
-        run_banzai('banzai_bias_maker')
+        run_reduce_individual_frame('*b00.fits*')
+        mark_frames_as_good('*b91.fits*')
+        run_stack_calibrations('bias')
 
     def test_if_stacked_bias_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*b00.fits*', 'bias')
@@ -104,7 +130,9 @@ class TestMasterBiasCreation:
 class TestMasterDarkCreation:
     @pytest.fixture(autouse=True)
     def stack_dark_frames(self):
-        run_banzai('banzai_dark_maker')
+        run_reduce_individual_frame('*d00.fits*')
+        mark_frames_as_good('*d91.fits*')
+        run_stack_calibrations('dark')
 
     def test_if_stacked_dark_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*d00.fits*', 'dark')
@@ -116,7 +144,9 @@ class TestMasterDarkCreation:
 class TestMasterFlatCreation:
     @pytest.fixture(autouse=True)
     def stack_flat_frames(self):
-        run_banzai('banzai_flat_maker')
+        run_reduce_individual_frame('*f00.fits*')
+        mark_frames_as_good('*f91.fits*')
+        run_stack_calibrations('skyflat')
 
     def test_if_stacked_flat_frame_was_created(self):
         run_check_if_stacked_calibrations_were_created('*f00.fits*', 'skyflat')
@@ -128,7 +158,7 @@ class TestMasterFlatCreation:
 class TestScienceFileCreation:
     @pytest.fixture(autouse=True)
     def reduce_science_frames(self):
-        run_banzai('banzai_reduce_science_frames')
+        run_reduce_individual_frame('*e00.fits*')
 
     def test_if_science_frames_were_created(self):
         expected_files = []

@@ -10,6 +10,6 @@ class FakeFlatImage(FakeImage):
 
 
 def make_context_with_master_flat(flat_level=1.0, master_flat_variation=0.05, nx=101, ny=103):
-    fake_master_flat = FakeFlatImage(flat_level=flat_level, nx=nx, ny=ny)
-    fake_master_flat.data = np.random.normal(1.0, master_flat_variation, size=(ny, nx))
+    fake_master_flat = FakeFlatImage(data=np.random.normal(flat_level, master_flat_variation, size=(ny, nx)),
+                                     nx=nx, ny=ny)
     return FakeContext(frame_class=lambda *args, **kwargs: fake_master_flat)

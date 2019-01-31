@@ -42,6 +42,7 @@ class FakeImage(Image):
         self.molecule_id = '544562351'
         self.exptime = 30.0
         self.obstype = 'TEST'
+        self.is_bad = False
 
     def get_calibration_filename(self):
         return '/tmp/{0}_{1}_{2}_bin{3}.fits'.format(self.caltype, self.instrument,
@@ -57,12 +58,12 @@ class FakeImage(Image):
 
 class FakeContext(object):
     def __init__(self, preview_mode=False, settings=banzai.settings.ImagingSettings(), frame_class=FakeImage):
-        self.processed_path = '/tmp'
-        self.preview_mode = preview_mode
         for key, value in dict(inspect.getmembers(settings)).items():
             if not key.startswith('_'):
                 setattr(self, key, value)
         self.FRAME_CLASS = frame_class
+        self.preview_mode = preview_mode
+        self.processed_path = '/tmp'
 
 
 class FakeStage(Stage):
