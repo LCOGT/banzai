@@ -1,3 +1,7 @@
+0.18.1 (2019-01-31)
+-------------------
+- Breaking typo in Preview Pipeline removed 
+
 0.18.0 (2019-01-29)
 -------------------
 - Calibration stacking is now separate from data reduction. Individual
