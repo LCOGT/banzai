@@ -368,7 +368,7 @@ class PreviewModeListener(ConsumerMixin):
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
         is_eligible_for_preview = False
-        for suffix in self.pipeline_context.PREVIEW_ELIGIBLE_SUFFIXES.keys():
+        for suffix in self.pipeline_context.PREVIEW_ELIGIBLE_SUFFIXES:
             if suffix in path:
                 is_eligible_for_preview = True
 
