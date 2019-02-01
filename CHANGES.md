@@ -1,3 +1,7 @@
+0.18.2 (2019-02-01)
+-------------------
+- Added a catch for N/A in fits header dates
+
 0.18.1 (2019-01-31)
 -------------------
 - Breaking typo in Preview Pipeline removed 
