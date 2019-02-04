@@ -113,6 +113,9 @@ class ApplyCalibration(Stage):
 
         master_calibration_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context,
                                                                      filename=master_calibration_filename)
+
+        image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
+
         return self.apply_master_calibration(image, master_calibration_image)
 
     @abc.abstractmethod
