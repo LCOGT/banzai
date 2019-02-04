@@ -12,33 +12,32 @@ class MosaicCreator(Stage):
     def __init__(self, pipeline_context):
         super(MosaicCreator, self).__init__(pipeline_context)
 
-    def do_stage(self, images):
-        for image in images:
-            if image.data_is_3d():
-                logging_tags = {}
-                nx, ny = get_mosaic_size(image, image.get_n_amps())
-                mosaiced_data = np.zeros((ny, nx), dtype=np.float32)
-                mosaiced_bpm = np.zeros((ny, nx), dtype=np.uint8)
-                for i in range(image.get_n_amps()):
-                    datasec = image.extension_headers[i]['DATASEC']
-                    amp_slice = fits_utils.parse_region_keyword(datasec)
-                    logging_tags['DATASEC{0}'.format(i + 1)] = datasec
+    def do_stage(self, image):
+        if image.data_is_3d():
+            logging_tags = {}
+            nx, ny = get_mosaic_size(image, image.get_n_amps())
+            mosaiced_data = np.zeros((ny, nx), dtype=np.float32)
+            mosaiced_bpm = np.zeros((ny, nx), dtype=np.uint8)
+            for i in range(image.get_n_amps()):
+                datasec = image.extension_headers[i]['DATASEC']
+                amp_slice = fits_utils.parse_region_keyword(datasec)
+                logging_tags['DATASEC{0}'.format(i + 1)] = datasec
 
-                    detsec = image.extension_headers[i]['DETSEC']
-                    mosaic_slice = fits_utils.parse_region_keyword(detsec)
-                    logging_tags['DATASEC{0}'.format(i + 1)] = detsec
+                detsec = image.extension_headers[i]['DETSEC']
+                mosaic_slice = fits_utils.parse_region_keyword(detsec)
+                logging_tags['DATASEC{0}'.format(i + 1)] = detsec
 
-                    mosaiced_data[mosaic_slice] = image.data[i][amp_slice]
-                    mosaiced_bpm[mosaic_slice] = image.bpm[i][amp_slice]
+                mosaiced_data[mosaic_slice] = image.data[i][amp_slice]
+                mosaiced_bpm[mosaic_slice] = image.bpm[i][amp_slice]
 
-                image.data = mosaiced_data
-                image.bpm = mosaiced_bpm
-                # Flag any missing data
-                image.bpm[image.data == 0.0] = 1
-                image.update_shape(nx, ny)
-                update_naxis_keywords(image, nx, ny)
-                logger.info('Mosaiced image', image=image, extra_tags=logging_tags)
-        return images
+            image.data = mosaiced_data
+            image.bpm = mosaiced_bpm
+            # Flag any missing data
+            image.bpm[image.data == 0.0] = 1
+            image.update_shape(nx, ny)
+            update_naxis_keywords(image, nx, ny)
+            logger.info('Mosaiced image', image=image, extra_tags=logging_tags)
+        return image
 
 
 def update_naxis_keywords(image, nx, ny):
