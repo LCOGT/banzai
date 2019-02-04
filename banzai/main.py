@@ -140,7 +140,7 @@ def run(image_path, pipeline_context):
         images = stage_to_run.run(images)
     if len(images):
         images[0].write(pipeline_context)
-    logger.info("Finished reducing frame", extra_tags={'filename': images[0].filename})
+        logger.info("Finished reducing frame", extra_tags={'filename': images[0].filename})
 
 
 def run_master_maker(image_path_list, pipeline_context, frame_type):
