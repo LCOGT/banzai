@@ -3,6 +3,7 @@ import logging
 import numpy as np
 
 from banzai.stages import Stage
+from banzai.utils import qc
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ class ThousandsTest(Stage):
                 images_to_remove.append(image)
             else:
                 logger.info('Measuring fraction of 1000s.', image=image, extra_tags=logging_tags)
-            self.save_qc_results(qc_results, image)
+            qc.save_qc_results(self.pipeline_context, qc_results, image)
         for image in images_to_remove:
             images.remove(image)
 

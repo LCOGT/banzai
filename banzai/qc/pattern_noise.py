@@ -6,6 +6,7 @@ from itertools import groupby
 from operator import itemgetter
 
 from banzai.stages import Stage
+from banzai.utils import qc
 from banzai.utils.stats import robust_standard_deviation
 
 logger = logging.getLogger(__name__)
@@ -34,13 +35,12 @@ class PatternNoiseDetector(Stage):
                 logger.error('Image found to have pattern noise.', image=image, extra_tags=logging_tags)
             else:
                 logger.info('No pattern noise found.', image=image, extra_tags=logging_tags)
-            self.save_qc_results({'pattern_noise.failed': pattern_noise_is_bad,
-                                  'pattern_noise.snr_threshold': self.SNR_THRESHOLD,
-                                  'pattern_noise.min_fraction_pixels_above_threshold':
-                                      self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD,
-                                  'pattern_noise.min_adjacent_pixels': self.MIN_ADJACENT_PIXELS,
-                                  'patter_noise.fraction_pixels_above_threshold': fraction_pixels_above_threshold
-                                  }, image)
+            qc_results = {'pattern_noise.failed': pattern_noise_is_bad,
+                          'pattern_noise.snr_threshold': self.SNR_THRESHOLD,
+                          'pattern_noise.min_fraction_pixels_above_threshold': self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD,
+                          'pattern_noise.min_adjacent_pixels': self.MIN_ADJACENT_PIXELS,
+                          'patter_noise.fraction_pixels_above_threshold': fraction_pixels_above_threshold}
+            qc.save_qc_results(self.pipeline_context, qc_results, image)
         return images
 
     def check_for_pattern_noise(self, data):

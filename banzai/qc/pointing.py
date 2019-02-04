@@ -4,6 +4,7 @@ import astropy.units as u
 from astropy.coordinates import SkyCoord
 
 from banzai.stages import Stage
+from banzai.utils import qc
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +51,12 @@ class PointingTest(Stage):
                 logger.error('Pointing offset exceeds threshold', image=image, extra_tags=logging_tags)
             elif pointing_warning:
                 logger.warning('Pointing offset exceeds threshhold', image=image, extra_tags=logging_tags)
-            self.save_qc_results({'pointing.failed': pointing_severe,
-                                  'pointing.failed_threshold': self.SEVERE_THRESHOLD,
-                                  'pointing.warning': pointing_warning,
-                                  'pointing.warning_threshold': self.WARNING_THRESHOLD,
-                                  'pointing.offset': angular_separation},
-                                 image)
+            qc_results = {'pointing.failed': pointing_severe,
+                          'pointing.failed_threshold': self.SEVERE_THRESHOLD,
+                          'pointing.warning': pointing_warning,
+                          'pointing.warning_threshold': self.WARNING_THRESHOLD,
+                          'pointing.offset': angular_separation}
+            qc.save_qc_results(self.pipeline_context, qc_results, image)
 
             image.header['PNTOFST'] = (
                 angular_separation, '[arcsec] offset of requested and solved center'

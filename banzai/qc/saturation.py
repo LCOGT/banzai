@@ -1,6 +1,7 @@
 import logging
 
 from banzai.stages import Stage
+from banzai.utils import qc
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ class SaturationTest(Stage):
             else:
                 image.header['SATFRAC'] = (saturation_fraction,
                                            "Fraction of Pixels that are Saturated")
-            self.save_qc_results(qc_results, image)
+            qc.save_qc_results(self.pipeline_context, qc_results, image)
         for image in images_to_remove:
             images.remove(image)
 
