@@ -1,3 +1,8 @@
+0.18.3 (2019-02-05)
+-------------------
+- Fixed query for master calibration to work even when block start
+  time is null
+
 0.18.2 (2019-02-01)
 -------------------
 - Added a catch for N/A in fits header dates
