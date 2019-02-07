@@ -153,7 +153,8 @@ class ApplyCalibration(Stage):
 
     def get_calibration_filename(self, image):
         return dbs.get_master_calibration_image(image, self.calibration_type, self.master_selection_criteria,
-                                                realtime_reduction=self.pipeline_context.preview_mode, db_address=self.pipeline_context.db_address)
+                                                realtime_reduction=self.pipeline_context.realtime_reduction,
+                                                db_address=self.pipeline_context.db_address)
 
 
 class CalibrationComparer(ApplyCalibration):

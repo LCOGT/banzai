@@ -1,33 +1,24 @@
 import os
 from glob import glob
 import logging
-from datetime import timedelta
-
 from astropy.io import fits
 
 from banzai import logs
 from banzai import dbs
-from banzai.utils import date_utils
+from banzai.utils import fits_utils
 
 logger = logging.getLogger(__name__)
 
 
-def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
-    instrument = dbs.get_instrument_for_file(filename, db_address=db_address)
-    return dbs.instrument_passes_criteria(instrument, criteria)
-
-
-def get_obstype(filename):
-    obstype = None
-    hdu_list = fits.open(filename)
-    for hdu in hdu_list:
-        if 'OBSTYPE' in hdu.header.keys():
-            obstype = hdu.header['OBSTYPE']
-
-    if obstype is None:
-        logger.error('Unable to get OBSTYPE', extra_tags={'filename': filename})
-
-    return obstype
+def image_passes_criteria(filename, context, image_types=None, db_address=dbs._DEFAULT_DB):
+    data, header, bpm, extension_headers = fits_utils.open_image(filename)
+    instrument = dbs.get_instrument(header, db_address=db_address)
+    passes = dbs.instrument_passes_criteria(instrument, context.FRAME_SELECTION_CRITERIA)
+    obstype = get_obstype(header)
+    passes &= obstype in context.LAST_STAGE
+    if image_types is not None:
+        passes &= obstype in image_types
+    return passes
 
 
 def get_obstype(filename):
@@ -41,18 +32,11 @@ def get_obstype(filename):
     return obstype
 
 
-def image_is_correct_type(filename, image_types):
-    if image_types is None:
-        return True
-    return get_obstype(filename) in image_types
-
-
-def select_images(image_list, instrument_criteria, image_types=None, db_address=dbs._DEFAULT_DB):
+def select_images(image_list, context, image_types=None, db_address=dbs._DEFAULT_DB):
     images = []
     for filename in image_list:
         try:
-            if image_passes_criteria(filename, instrument_criteria, db_address=db_address) and \
-                    image_is_correct_type(filename, image_types):
+            if image_passes_criteria(filename, context, image_types=image_types, db_address=db_address):
                 images.append(filename)
         except Exception:
             logger.error(logs.format_exception(), extra_tags={'filename': filename})

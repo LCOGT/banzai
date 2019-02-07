@@ -18,7 +18,7 @@ from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 from lcogt_logging import LCOGTFormatter
 
-from banzai import dbs, preview, logs
+from banzai import dbs, realtime, logs
 from banzai.context import PipelineContext
 from banzai.utils import image_utils, date_utils
 from banzai.images import read_image
@@ -155,7 +155,7 @@ def process_directory(pipeline_context, raw_path, image_types=None, log_message=
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     image_path_list = image_utils.make_image_path_list(raw_path)
-    image_path_list = image_utils.select_images(image_path_list, pipeline_context.FRAME_SELECTION_CRITERIA,
+    image_path_list = image_utils.select_images(image_path_list, pipeline_context,
                                                 image_types=image_types, db_address=pipeline_context.db_address)
     for image_path in image_path_list:
         try:
@@ -297,7 +297,7 @@ def run_end_of_night():
             logger.error(logs.format_exception())
 
 
-def run_preview_pipeline():
+def run_realtime_pipeline():
     extra_console_arguments = [{'args': ['--n-processes'],
                                 'kwargs': {'dest': 'n_processes', 'default': 12,
                                            'help': 'Number of listener processes to spawn.', 'type': int}},
@@ -305,12 +305,15 @@ def run_preview_pipeline():
                                 'kwargs': {'dest': 'broker_url', 'default': 'amqp://guest:guest@rabbitmq.lco.gtn:5672/',
                                            'help': 'URL for the broker service.'}},
                                {'args': ['--queue-name'],
-                                'kwargs': {'dest': 'queue_name', 'default': 'preview_pipeline',
-                                           'help': 'Name of the queue to listen to from the fits exchange.'}}]
+                                'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
+                                           'help': 'Name of the queue to listen to from the fits exchange.'},
+                                'args': ['--preview-mode'],
+                                'kwargs': {'dest': 'preview_mode', 'default': False,
+                                           'help': 'Save the real-time reductions to the preview directory'}}]
 
     pipeline_context = parse_args(banzai.settings.ImagingSettings,
                                   parser_description='Reduce LCO imaging data in real time.',
-                                  extra_console_arguments=extra_console_arguments, preview_mode=True)
+                                  extra_console_arguments=extra_console_arguments, realtime_reduction=True)
 
     # Need to keep the amqp logger level at least as high as INFO,
     # or else it send heartbeat check messages every second
@@ -321,7 +324,7 @@ def run_preview_pipeline():
     except Exception:
         logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
 
-    logger.info('Starting pipeline preview mode listener')
+    logger.info('Starting pipeline listener')
 
     for i in range(pipeline_context.n_processes):
         p = multiprocessing.Process(target=run_individual_listener, args=(pipeline_context.broker_url,
@@ -333,7 +336,7 @@ def run_preview_pipeline():
 def run_individual_listener(broker_url, queue_name, pipeline_context):
 
     fits_exchange = Exchange('fits_files', type='fanout')
-    listener = PreviewModeListener(broker_url, pipeline_context)
+    listener = RealtimeModeListener(broker_url, pipeline_context)
 
     with Connection(listener.broker_url) as connection:
         listener.connection = connection.clone()
@@ -344,10 +347,10 @@ def run_individual_listener(broker_url, queue_name, pipeline_context):
             listener.connection = connection.clone()
             listener.ensure_connection(max_retries=10)
         except KeyboardInterrupt:
-            logger.info('Shutting down preview pipeline listener.')
+            logger.info('Shutting down pipeline listener.')
 
 
-class PreviewModeListener(ConsumerMixin):
+class RealtimeModeListener(ConsumerMixin):
     def __init__(self, broker_url, pipeline_context):
         self.broker_url = broker_url
         self.pipeline_context = pipeline_context
@@ -366,29 +369,22 @@ class PreviewModeListener(ConsumerMixin):
     def on_message(self, body, message):
         path = body.get('path')
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
+        try:
+            if realtime.need_to_process_image(path, self.pipeline_context,
+                                              db_address=self.pipeline_context.db_address,
+                                              max_tries=self.pipeline_context.max_tries):
 
-        is_eligible_for_preview = False
-        for suffix in self.pipeline_context.PREVIEW_ELIGIBLE_SUFFIXES:
-            if suffix in path:
-                is_eligible_for_preview = True
+                logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
 
-        if is_eligible_for_preview:
-            try:
-                if preview.need_to_make_preview(path, self.pipeline_context.FRAME_SELECTION_CRITERIA,
-                                                db_address=self.pipeline_context.db_address,
-                                                max_tries=self.pipeline_context.max_tries):
+                # Increment the number of tries for this file
+                realtime.increment_try_number(path, db_address=self.pipeline_context.db_address)
 
-                    logger.info('Running preview reduction', extra_tags={'filename': os.path.basename(path)})
+                run(path, self.pipeline_context)
+                realtime.set_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
-                    # Increment the number of tries for this file
-                    preview.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
-
-                    run(path, self.pipeline_context)
-                    preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
-
-            except Exception:
-                logger.error("Exception producing preview frame: {error}".format(error=logs.format_exception()),
-                             extra_tags={'filename': os.path.basename(path)})
+        except Exception:
+            logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
+                         extra_tags={'filename': os.path.basename(path)})
 
 
 def mark_frame(mark_as):

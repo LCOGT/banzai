@@ -375,9 +375,8 @@ def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
     db_session.close()
 
 
-def get_instrument_for_file(path, db_address=_DEFAULT_DB):
-    data, header, bpm, extension_headers = fits_utils.open_image(path)
-    return get_instrument(header, db_address=db_address)
+def get_instrument_for_file(header, db_address=_DEFAULT_DB):
+    return
 
 
 def get_processed_image(path, db_address=_DEFAULT_DB):
