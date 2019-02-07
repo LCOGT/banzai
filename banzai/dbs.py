@@ -438,7 +438,7 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
 
     # During real-time reduction, we want to avoid using different master calibrations for the same block,
     # therefore we make sure the the calibration frame used was created before the block start time
-    if realtime_reduction:
+    if realtime_reduction and image.block_start is not None:
         calibration_criteria &= CalibrationImage.datecreated < image.block_start
 
     db_session = get_session(db_address=db_address)
