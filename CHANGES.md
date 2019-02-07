@@ -1,3 +1,18 @@
+0.18.4 (2019-02-07)
+-------------------
+- Moved the function that adds quality control information to ElasticSearch
+  outside of Stage class and to the quality control utils
+
+0.18.3 (2019-02-05)
+-------------------
+- Fixed query for master calibration to work even when block start
+  time is null
+
+0.18.2 (2019-02-01)
+-------------------
+- Added a catch for N/A in fits header dates
+- Fixed a log message bug that causes a crash when a frame reduction fails
+
 0.18.1 (2019-01-31)
 -------------------
 - Breaking typo in Preview Pipeline removed 

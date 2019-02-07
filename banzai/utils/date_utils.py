@@ -82,6 +82,8 @@ def parse_epoch_string(epoch_string):
 
 
 def parse_date_obs(date_obs_string):
+    if date_obs_string == 'N/A':
+        return None
     # Check if there are hours
     if 'T' not in date_obs_string:
         return datetime.datetime.strptime(date_obs_string, '%Y-%m-%d')
