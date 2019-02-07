@@ -31,10 +31,6 @@ def test_raises_an_exception_if_ccdsums_are_different():
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
 
 
-def test_raises_an_exception_if_epochs_are_different():
-    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'epoch', '20160102', calibration_maker=True)
-
-
 def test_raises_an_exception_if_nx_are_different():
     throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'nx', 105, calibration_maker=True)
 

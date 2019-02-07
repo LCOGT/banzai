@@ -29,19 +29,12 @@ def test_raises_an_exception_if_ccdsums_are_different(mock_cal, set_random_seed)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_epochs_are_different(mock_cal, set_random_seed):
-    throws_inhomogeneous_set_exception(BiasComparer, FakeContext(), 'epoch', '20160102')
-
-
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_nx_are_different(mock_cal, set_random_seed):
-    mock_cal.return_value = 'test.fits'
     throws_inhomogeneous_set_exception(BiasComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_raises_an_exception_if_ny_are_different(mock_cal, set_random_seed):
-    mock_cal.return_value = 'test.fits'
     throws_inhomogeneous_set_exception(BiasComparer, FakeContext(), 'ny', 107)
 
 
