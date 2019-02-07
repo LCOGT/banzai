@@ -27,16 +27,16 @@ def test_header_cal_type_dark():
     assert images[0].header['OBSTYPE'].upper() == 'DARK'
 
 
-def test_raises_an_exception_if_ccdsums_are_different():
-    throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
+def test_raises_an_exception_if_ccdsums_are_different(caplog):
+    throws_inhomogeneous_set_exception(caplog, DarkMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
 
 
-def test_raises_an_exception_if_nx_are_different():
-    throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'nx', 105, calibration_maker=True)
+def test_raises_an_exception_if_nx_are_different(caplog):
+    throws_inhomogeneous_set_exception(caplog, DarkMaker, FakeContext(), 'nx', 105, calibration_maker=True)
 
 
-def test_raises_an_exception_if_ny_are_different():
-    throws_inhomogeneous_set_exception(DarkMaker, FakeContext(), 'ny', 107, calibration_maker=True)
+def test_raises_an_exception_if_ny_are_different(caplog):
+    throws_inhomogeneous_set_exception(caplog, DarkMaker, FakeContext(), 'ny', 107, calibration_maker=True)
 
 
 def test_makes_a_sensible_master_dark():

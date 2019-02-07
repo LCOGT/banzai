@@ -71,19 +71,19 @@ class FakeStage(Stage):
         return images
 
 
-def throws_inhomogeneous_set_exception(stagetype, context, keyword, value, calibration_maker=False):
+def throws_inhomogeneous_set_exception(caplog, stagetype, context, keyword, value, calibration_maker=False):
     stage = stagetype(context)
-
-    with pytest.raises(image_utils.InhomogeneousSetException) as exception_info:
-        kwargs = {keyword: value}
-        if calibration_maker:
-            images = [FakeImage(**kwargs)]
-            images += [FakeImage() for x in range(6)]
-            stage.do_stage(images)
-        else:
-            image = FakeImage(**kwargs)
-            stage.do_stage(image)
-    assert 'Images have different {0}s'.format(keyword) == str(exception_info.value)
+    kwargs = {keyword: value}
+    if calibration_maker:
+        images = [FakeImage(**kwargs)]
+        images += [FakeImage() for x in range(6)]
+        images = stage.do_stage(images)
+        assert len(images) == 0
+    else:
+        image = FakeImage(**kwargs)
+        image = stage.do_stage(image)
+        assert image is None
+    assert 'Images have different {0}s'.format(keyword) in caplog.text
 
 
 def gaussian2d(image_shape, x0, y0, brightness, fwhm):

@@ -27,16 +27,16 @@ def test_header_cal_type_bias():
     assert images[0].header['OBSTYPE'].upper() == 'BIAS'
 
 
-def test_raises_an_exception_if_ccdsums_are_different():
-    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
+def test_raises_an_exception_if_ccdsums_are_different(caplog):
+    throws_inhomogeneous_set_exception(caplog, BiasMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
 
 
-def test_raises_an_exception_if_nx_are_different():
-    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'nx', 105, calibration_maker=True)
+def test_raises_an_exception_if_nx_are_different(caplog):
+    throws_inhomogeneous_set_exception(caplog, BiasMaker, FakeContext(), 'nx', 105, calibration_maker=True)
 
 
-def test_raises_an_exception_if_ny_are_different():
-    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ny', 107, calibration_maker=True)
+def test_raises_an_exception_if_ny_are_different(caplog):
+    throws_inhomogeneous_set_exception(caplog, BiasMaker, FakeContext(), 'ny', 107, calibration_maker=True)
 
 
 @mock.patch('banzai.images.Image._init_instrument_info')

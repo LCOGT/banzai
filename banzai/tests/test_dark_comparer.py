@@ -24,18 +24,18 @@ def test_master_selection_criteria():
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ccdsums_are_different(mock_cal):
-    throws_inhomogeneous_set_exception(DarkComparer, FakeContext(), 'ccdsum', '1 1')
+def test_raises_an_exception_if_ccdsums_are_different(mock_cal, caplog):
+    throws_inhomogeneous_set_exception(caplog, DarkComparer, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_nx_are_different(mock_cal):
-    throws_inhomogeneous_set_exception(DarkComparer, FakeContext(), 'nx', 105)
+def test_raises_an_exception_if_nx_are_different(mock_cal, caplog):
+    throws_inhomogeneous_set_exception(caplog, DarkComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ny_are_different(mock_cal):
-    throws_inhomogeneous_set_exception(DarkComparer, FakeContext(), 'ny', 107)
+def test_raises_an_exception_if_ny_are_different(mock_cal, caplog):
+    throws_inhomogeneous_set_exception(caplog, DarkComparer, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')

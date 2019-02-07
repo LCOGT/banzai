@@ -18,24 +18,24 @@ def test_null_input_image():
     assert image is None
 
 
-def test_master_selection_criteria(set_random_seed):
+def test_master_selection_criteria():
     comparer = BiasComparer(FakeContext())
     assert comparer.master_selection_criteria == ['ccdsum']
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ccdsums_are_different(mock_cal, set_random_seed):
-    throws_inhomogeneous_set_exception(BiasComparer, FakeContext(), 'ccdsum', '1 1')
+def test_raises_an_exception_if_ccdsums_are_different(mock_cal, caplog):
+    throws_inhomogeneous_set_exception(caplog, BiasComparer, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_nx_are_different(mock_cal, set_random_seed):
-    throws_inhomogeneous_set_exception(BiasComparer, FakeContext(), 'nx', 105)
+def test_raises_an_exception_if_nx_are_different(mock_cal, caplog):
+    throws_inhomogeneous_set_exception(caplog, BiasComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ny_are_different(mock_cal, set_random_seed):
-    throws_inhomogeneous_set_exception(BiasComparer, FakeContext(), 'ny', 107)
+def test_raises_an_exception_if_ny_are_different(mock_cal, caplog):
+    throws_inhomogeneous_set_exception(caplog, BiasComparer, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')

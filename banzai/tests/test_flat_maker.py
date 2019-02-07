@@ -31,20 +31,20 @@ def test_header_cal_type_flat(mock_instrument_info):
     assert header['OBSTYPE'].upper() == 'SKYFLAT'
 
 
-def test_raises_an_exception_if_ccdsums_are_different():
-    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
+def test_raises_an_exception_if_ccdsums_are_different(caplog):
+    throws_inhomogeneous_set_exception(caplog, FlatMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
 
 
-def test_raises_an_exception_if_nx_are_different():
-    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'nx', 105, calibration_maker=True)
+def test_raises_an_exception_if_nx_are_different(caplog):
+    throws_inhomogeneous_set_exception(caplog, FlatMaker, FakeContext(), 'nx', 105, calibration_maker=True)
 
 
-def test_raises_an_exception_if_ny_are_different():
-    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'ny', 107, calibration_maker=True)
+def test_raises_an_exception_if_ny_are_different(caplog):
+    throws_inhomogeneous_set_exception(caplog, FlatMaker, FakeContext(), 'ny', 107, calibration_maker=True)
 
 
-def test_raises_an_exception_if_filters_are_different():
-    throws_inhomogeneous_set_exception(FlatMaker, FakeContext(), 'filter', 'w', calibration_maker=True)
+def test_raises_an_exception_if_filters_are_different(caplog):
+    throws_inhomogeneous_set_exception(caplog, FlatMaker, FakeContext(), 'filter', 'w', calibration_maker=True)
 
 
 def test_makes_a_sensible_master_flat():

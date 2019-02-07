@@ -49,18 +49,18 @@ def test_header_biaslevel_is_2(mock_cal):
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ccdsums_are_different(mock_cal):
-    throws_inhomogeneous_set_exception(BiasSubtractor, FakeContext(), 'ccdsum', '1 1')
+def test_raises_an_exception_if_ccdsums_are_different(mock_cal, caplog):
+    throws_inhomogeneous_set_exception(caplog, BiasSubtractor, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_nx_are_different(mock_cal):
-    throws_inhomogeneous_set_exception(BiasSubtractor, FakeContext(), 'nx', 105)
+def test_raises_an_exception_if_nx_are_different(mock_cal, caplog):
+    throws_inhomogeneous_set_exception(caplog, BiasSubtractor, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ny_are_different(mock_cal):
-    throws_inhomogeneous_set_exception(BiasSubtractor, FakeContext(), 'ny', 107)
+def test_raises_an_exception_if_ny_are_different(mock_cal, caplog):
+    throws_inhomogeneous_set_exception(caplog, BiasSubtractor, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
