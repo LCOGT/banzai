@@ -182,7 +182,7 @@ def process_master_maker(pipeline_context, instrument, frame_type, min_date, max
                                                             use_masters=use_masters,
                                                             db_address=pipeline_context.db_address)
     if len(image_path_list) == 0:
-        logger.warning("No calibration frames found to stack", extra_tags=extra_tags)
+        logger.info("No calibration frames found to stack", extra_tags=extra_tags)
 
     try:
         run_master_maker(image_path_list, pipeline_context, frame_type)
