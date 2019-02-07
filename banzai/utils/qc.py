@@ -1,4 +1,11 @@
+import logging
+
 import numpy as np
+import elasticsearch
+
+from banzai import logs
+
+logger = logging.getLogger(__name__)
 
 
 def format_qc_results(qc_results, image):
@@ -18,3 +25,37 @@ def format_qc_results(qc_results, image):
         results_to_save[key] = value
     filename = image.filename.replace('.fits', '').replace('.fz', '')
     return filename, results_to_save
+
+
+def save_qc_results(pipeline_context, qc_results, image, **kwargs):
+    """
+    Save the Quality Control results to ElasticSearch
+
+    Parameters
+    ----------
+    pipeline_context: object
+                      PipelineContext instance
+    qc_results : dict
+                 Dictionary of key value pairs to be saved to ElasticSearch
+    image : banzai.images.Image
+            Image that should be linked
+
+    Notes
+    -----
+    File name, site, camera, dayobs and timestamp are always saved in the database.
+    """
+
+    es_output = {}
+    if getattr(pipeline_context, 'post_to_elasticsearch', False):
+        filename, results_to_save = format_qc_results(qc_results, image)
+        es = elasticsearch.Elasticsearch(pipeline_context.elasticsearch_url)
+        try:
+            es_output = es.update(index=pipeline_context.elasticsearch_qc_index,
+                                  doc_type=pipeline_context.elasticsearch_doc_type,
+                                  id=filename, body={'doc': results_to_save, 'doc_as_upsert': True},
+                                  retry_on_conflict=5, timestamp=results_to_save['@timestamp'], **kwargs)
+        except Exception:
+            error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
+            logger.error(error_message.format(url=pipeline_context.elasticsearch_url,
+                                              exception=logs.format_exception()))
+    return es_output

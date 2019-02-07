@@ -7,7 +7,7 @@ import numpy as np
 
 from banzai.stages import Stage
 from banzai import dbs, logs
-from banzai.utils import image_utils, stats, fits_utils
+from banzai.utils import image_utils, stats, fits_utils, qc
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +208,7 @@ class CalibrationComparer(ApplyCalibration):
                 msg = 'Flagging {caltype} as bad because it deviates too much from the previous master'
                 logger.error(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
 
-            self.save_qc_results(qc_results, image)
+            qc.save_qc_results(self.pipeline_context, qc_results, image)
 
         return images
 

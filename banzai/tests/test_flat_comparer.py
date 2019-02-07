@@ -46,8 +46,7 @@ def test_raises_an_exception_if_ny_are_different(mock_cal, set_random_seed):
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-@mock.patch('banzai.stages.Stage.save_qc_results')
-def test_flag_bad_if_no_master_calibration(mock_save_qc, mock_cal, set_random_seed):
+def test_flag_bad_if_no_master_calibration( mock_cal, set_random_seed):
     mock_cal.return_value = None
     context = make_context_with_master_flat(flat_level=10000.0)
     comparer = FlatComparer(context)
@@ -56,8 +55,7 @@ def test_flag_bad_if_no_master_calibration(mock_save_qc, mock_cal, set_random_se
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-@mock.patch('banzai.stages.Stage.save_qc_results')
-def test_does_not_flag_noisy_images(mock_save_qc, mock_cal, set_random_seed):
+def test_does_not_flag_noisy_images(mock_cal, set_random_seed):
     mock_cal.return_value = 'test.fits'
     master_flat_variation = 0.025
     nx = 101
@@ -84,8 +82,7 @@ class FakeFlatComparer(FlatComparer):
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-@mock.patch('banzai.stages.Stage.save_qc_results')
-def test_does_flag_bad_images(mock_save_qc, mock_cal, set_random_seed):
+def test_does_flag_bad_images(mock_cal, set_random_seed):
     mock_cal.return_value = 'test.fits'
     nx = 101
     ny = 103
