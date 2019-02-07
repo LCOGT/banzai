@@ -1,6 +1,5 @@
 import logging
 import abc
-import itertools
 import os
 
 import numpy as np
@@ -85,8 +84,10 @@ class CalibrationStacker(CalibrationMaker):
 class ApplyCalibration(Stage):
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
-        self.master_selection_criteria = self.pipeline_context.CALIBRATION_SET_CRITERIA.get(
-            self.calibration_type.upper(), [])
+
+    @property
+    def master_selection_criteria(self):
+        return self.pipeline_context.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
 
     @property
     @abc.abstractmethod
@@ -113,7 +114,6 @@ class ApplyCalibration(Stage):
 
         master_calibration_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context,
                                                                      filename=master_calibration_filename)
-
         image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
 
         return self.apply_master_calibration(image, master_calibration_image)
