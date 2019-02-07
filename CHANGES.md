@@ -1,3 +1,10 @@
+0.19.1 (2019-02-07)
+-------------------
+- Removed `'epoch'` from list of parameters to check for image 
+  homogeneity 
+- Changed how image homogeneity is checked so that pipeline does
+  not continue to run after check fails
+
 0.19.0 (2019-02-07)
 -------------------
 - The `Stage` class and its inheritors have been changed to only process 
