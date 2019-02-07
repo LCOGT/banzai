@@ -1,13 +1,11 @@
 import os
 from glob import glob
 import logging
-from datetime import timedelta
 
 from astropy.io import fits
 
 from banzai import logs
 from banzai import dbs
-from banzai.utils import date_utils
 
 logger = logging.getLogger(__name__)
 
@@ -15,19 +13,6 @@ logger = logging.getLogger(__name__)
 def image_passes_criteria(filename, criteria, db_address=dbs._DEFAULT_DB):
     instrument = dbs.get_instrument_for_file(filename, db_address=db_address)
     return dbs.instrument_passes_criteria(instrument, criteria)
-
-
-def get_obstype(filename):
-    obstype = None
-    hdu_list = fits.open(filename)
-    for hdu in hdu_list:
-        if 'OBSTYPE' in hdu.header.keys():
-            obstype = hdu.header['OBSTYPE']
-
-    if obstype is None:
-        logger.error('Unable to get OBSTYPE', extra_tags={'filename': filename})
-
-    return obstype
 
 
 def get_obstype(filename):

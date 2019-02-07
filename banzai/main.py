@@ -132,15 +132,15 @@ def run(image_path, pipeline_context):
     stages_to_do = get_stages_todo(pipeline_context.ORDERED_STAGES,
                                    last_stage=pipeline_context.LAST_STAGE[image.obstype],
                                    extra_stages=pipeline_context.EXTRA_STAGES[image.obstype])
-    # TODO: Remove passing the image around in a list once stages take a single image
-    logger.info("Starting to reduce frame", extra_tags={'filename': image.filename})
-    images = [image]
+    logger.info("Starting to reduce frame", image=image)
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
-        images = stage_to_run.run(images)
-    if len(images):
-        images[0].write(pipeline_context)
-        logger.info("Finished reducing frame", extra_tags={'filename': images[0].filename})
+        image = stage_to_run.run(image)
+    if image is None:
+        logger.error('Reduction stopped', extra_tags={'filename': image_path})
+        return
+    image.write(pipeline_context)
+    logger.info("Finished reducing frame", image=image)
 
 
 def run_master_maker(image_path_list, pipeline_context, frame_type):

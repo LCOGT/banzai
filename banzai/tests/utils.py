@@ -15,7 +15,7 @@ import banzai.settings
 
 class FakeImage(Image):
     def __init__(self, pipeline_context=None, nx=101, ny=103, image_multiplier=1.0,
-                 ccdsum='2 2', epoch='20160101', n_amps=1, filter='U', data=None, header=None):
+                 ccdsum='2 2', epoch='20160101', n_amps=1, filter='U', data=None, header=None, **kwargs):
         self.nx = nx
         self.ny = ny
         self.instrument_id = -1
@@ -71,14 +71,18 @@ class FakeStage(Stage):
         return images
 
 
-def throws_inhomogeneous_set_exception(stagetype, context, keyword, value):
+def throws_inhomogeneous_set_exception(stagetype, context, keyword, value, calibration_maker=False):
     stage = stagetype(context)
 
     with pytest.raises(image_utils.InhomogeneousSetException) as exception_info:
         kwargs = {keyword: value}
-        images = [FakeImage(**kwargs)]
-        images += [FakeImage() for x in range(6)]
-        stage.do_stage(images)
+        if calibration_maker:
+            images = [FakeImage(**kwargs)]
+            images += [FakeImage() for x in range(6)]
+            stage.do_stage(images)
+        else:
+            image = FakeImage(**kwargs)
+            stage.do_stage(image)
     assert 'Images have different {0}s'.format(keyword) == str(exception_info.value)
 
 

@@ -14,7 +14,7 @@ def test_min_images():
 
 def test_group_by_attributes():
     maker = BiasMaker(FakeContext())
-    assert maker.group_by_attributes == ['ccdsum']
+    assert maker.group_by_attributes() == ['ccdsum']
 
 
 def test_header_cal_type_bias():
@@ -28,19 +28,19 @@ def test_header_cal_type_bias():
 
 
 def test_raises_an_exception_if_ccdsums_are_different():
-    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ccdsum', '1 1')
+    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
 
 
 def test_raises_an_exception_if_epochs_are_different():
-    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'epoch', '20160102')
+    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'epoch', '20160102', calibration_maker=True)
 
 
 def test_raises_an_exception_if_nx_are_different():
-    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'nx', 105)
+    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'nx', 105, calibration_maker=True)
 
 
 def test_raises_an_exception_if_ny_are_different():
-    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ny', 107)
+    throws_inhomogeneous_set_exception(BiasMaker, FakeContext(), 'ny', 107, calibration_maker=True)
 
 
 @mock.patch('banzai.images.Image._init_instrument_info')

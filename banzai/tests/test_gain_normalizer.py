@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 
 from banzai.gain import GainNormalizer, validate_gain
@@ -10,88 +11,85 @@ class FakeGainImage(FakeImage):
         self.gain = None
 
 
-def test_no_input_images():
+@pytest.fixture(scope='module')
+def set_random_seed():
+    np.random.seed(200)
+
+
+def test_null_input_image():
     gain_normalizer = GainNormalizer(None)
-    images = gain_normalizer.do_stage([])
-    assert len(images) == 0
+    image = gain_normalizer.run(None)
+    assert image is None
 
 
 def test_gain_header_missing():
     gain_normalizer = GainNormalizer(None)
-    images = gain_normalizer.do_stage([FakeGainImage() for x in range(6)])
-    assert len(images) == 0
+    image = gain_normalizer.do_stage(FakeGainImage())
+    assert image is None
 
 
 def test_gain_header_0():
     gain_normalizer = GainNormalizer(None)
-    fake_images = [FakeGainImage() for x in range(6)]
-    for image in fake_images:
-        image.gain = 0.0
-    images = gain_normalizer.do_stage(fake_images)
-    assert len(images) == 0
+    image = FakeGainImage()
+    image.gain = 0.0
+    image = gain_normalizer.do_stage(image)
+    assert image is None
 
 
 def test_gain_is_empty_list():
     gain_normalizer = GainNormalizer(None)
-    fake_images = [FakeGainImage() for x in range(6)]
-    for image in fake_images:
-        image.gain = []
-    images = gain_normalizer.do_stage(fake_images)
-    assert len(images) == 0
+    image = FakeGainImage()
+    image.gain = []
+    image = gain_normalizer.do_stage(image)
+    assert image is None
 
 
-def test_gain_1d():
+def test_gain_1d(set_random_seed):
     nx, ny = 101, 103
-    n_images = 6
     saturation = 65536
     max_linearity = 60000
-    input_gains = np.random.uniform(0.5, 2.5, size=n_images)
-    input_data = [np.random.normal(10, 1, size=(ny, nx)) for i in range(n_images)]
+    input_gains = np.random.uniform(0.5, 2.5)
+    input_data = np.random.normal(10, 1, size=(ny, nx))
 
-    fake_images = [FakeGainImage(nx=nx, ny=ny) for x in range(n_images)]
+    image = FakeGainImage(nx=nx, ny=ny)
 
-    for i, image in enumerate(fake_images):
-        image.gain = input_gains[i]
-        image.data = input_data[i].copy()
-        image.header['SATURATE'] = saturation
-        image.header['MAXLIN'] = max_linearity
+    image.gain = input_gains
+    image.data = input_data.copy()
+    image.header['SATURATE'] = saturation
+    image.header['MAXLIN'] = max_linearity
 
     gain_normalizer = GainNormalizer(None)
-    output_images = gain_normalizer.do_stage(fake_images)
+    image = gain_normalizer.do_stage(image)
 
-    for i, image in enumerate(output_images):
-        np.testing.assert_allclose(image.data, input_data[i] * input_gains[i])
-        np.testing.assert_allclose(image.header['SATURATE'], saturation * input_gains[i])
-        np.testing.assert_allclose(image.header['MAXLIN'], max_linearity * input_gains[i])
+    np.testing.assert_allclose(image.data, input_data * input_gains)
+    np.testing.assert_allclose(image.header['SATURATE'], saturation * input_gains)
+    np.testing.assert_allclose(image.header['MAXLIN'], max_linearity * input_gains)
 
 
-def test_gain_datacube():
+def test_gain_datacube(set_random_seed):
     n_amplifiers = 4
     nx, ny = 101, 103
-    n_images = 6
     saturation = 65536
     max_linearity = 60000
     # These tests will fail if the gain is a numpy array because it will try to check element by
     # element which raises and exception here.
-    input_gains = [list(np.random.uniform(0.5, 2.5, size=n_amplifiers)) for i in range(n_images)]
-    input_data = [np.random.normal(10, 1, size=(n_amplifiers, ny, nx)) for i in range(n_images)]
+    input_gains = list(np.random.uniform(0.5, 2.5, size=n_amplifiers))
+    input_data = np.random.normal(10, 1, size=(n_amplifiers, ny, nx))
 
-    fake_images = [FakeGainImage(nx=nx, ny=ny) for i in range(n_images)]
+    image = FakeGainImage(nx=nx, ny=ny)
 
-    for i, image in enumerate(fake_images):
-        image.gain = input_gains[i]
-        image.data = input_data[i].copy()
-        image.header['SATURATE'] = saturation
-        image.header['MAXLIN'] = max_linearity
+    image.gain = input_gains
+    image.data = input_data.copy()
+    image.header['SATURATE'] = saturation
+    image.header['MAXLIN'] = max_linearity
 
     gain_normalizer = GainNormalizer(None)
-    output_images = gain_normalizer.do_stage(fake_images)
+    image = gain_normalizer.do_stage(image)
 
-    for i, image in enumerate(output_images):
-        for j in range(n_amplifiers):
-            np.testing.assert_allclose(image.data[j], input_data[i][j] * input_gains[i][j])
-        np.testing.assert_allclose(image.header['SATURATE'], saturation * min(input_gains[i]))
-        np.testing.assert_allclose(image.header['MAXLIN'], max_linearity * min(input_gains[i]))
+    for i in range(n_amplifiers):
+        np.testing.assert_allclose(image.data[i], input_data[i] * input_gains[i])
+    np.testing.assert_allclose(image.header['SATURATE'], saturation * min(input_gains))
+    np.testing.assert_allclose(image.header['MAXLIN'], max_linearity * min(input_gains))
 
 
 def test_gain_missing():

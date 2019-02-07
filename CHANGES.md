@@ -1,3 +1,10 @@
+0.19.0 (2019-02-07)
+-------------------
+- The `Stage` class and its inheritors have been changed to only process 
+  one frame at a time
+- Stages that require multiple frames (i.e. the calibration
+  stackers) now inherit from the distinct `MultiFrameStage` class
+
 0.18.4 (2019-02-07)
 -------------------
 - Moved the function that adds quality control information to ElasticSearch
