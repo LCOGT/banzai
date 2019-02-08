@@ -161,6 +161,11 @@ def open_fits_file(filename):
     return hdulist
 
 
+def get_primary_header(filename):
+    hdulist = open_fits_file(filename)
+    return hdulist[0].header
+
+
 def open_image(filename):
     """
     Load an image from a FITS file

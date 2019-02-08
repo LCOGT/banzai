@@ -2,7 +2,8 @@ import logging
 
 from banzai import dbs
 from banzai.utils import file_utils
-from banzai.utils.image_utils import image_passes_criteria
+from banzai.utils.image_utils import image_can_be_processed
+from banzai.utils.fits_utils import get_primary_header
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,8 @@ def need_to_process_image(path, context, db_address=dbs._DEFAULT_DB, max_tries=5
     """
     logger.info("Checking if file needs to be processed", extra_tags={"filename": path})
 
-    if not image_passes_criteria(path, context, db_address=db_address):
+    header = get_primary_header(path)
+    if not image_can_be_processed(header, context):
         return False
 
     # Get the image in db. If it doesn't exist add it.

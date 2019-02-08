@@ -1,5 +1,5 @@
 import inspect
-
+from banzai.utils import image_utils
 
 class InstrumentCriterion:
     def __init__(self, attribute, comparison_operator, comparison_value, exclude=False):
@@ -47,3 +47,6 @@ class PipelineContext(object):
 
     def __setattr__(self, key, value):
         raise TypeError('Resetting attribute is not allowed. PipelineContext is immutable.')
+
+    def can_process(self, header):
+        return image_utils.get_obstype(header) in self.LAST_STAGE

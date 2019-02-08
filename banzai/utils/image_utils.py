@@ -1,42 +1,29 @@
 import os
 from glob import glob
 import logging
-from astropy.io import fits
 
 from banzai import logs
 from banzai import dbs
-from banzai.utils import fits_utils
+from banzai.utils.fits_utils import get_primary_header
 
 logger = logging.getLogger(__name__)
 
 
-def image_passes_criteria(filename, context, image_types=None, db_address=dbs._DEFAULT_DB):
-    data, header, bpm, extension_headers = fits_utils.open_image(filename)
-    instrument = dbs.get_instrument(header, db_address=db_address)
-    passes = dbs.instrument_passes_criteria(instrument, context.FRAME_SELECTION_CRITERIA)
-    obstype = get_obstype(header)
-    passes &= obstype in context.LAST_STAGE
-    if image_types is not None:
-        passes &= obstype in image_types
+def image_can_be_processed(header, context):
+    passes = dbs.instrument_passes_criteria(header, context.FRAME_SELECTION_CRITERIA)
+    passes &= context.can_process(header)
     return passes
 
 
-def get_obstype(filename):
-    obstype = None
-    hdu_list = fits.open(filename)
-    for hdu in hdu_list:
-        if 'OBSTYPE' in hdu.header.keys():
-            obstype = hdu.header['OBSTYPE']
-    if obstype is None:
-        logger.error('Unable to get OBSTYPE', extra_tags={'filename': filename})
-    return obstype
+def get_obstype(header):
+    return header.get('OBSTYPE', None)
 
 
-def select_images(image_list, context, image_types=None, db_address=dbs._DEFAULT_DB):
+def select_images(image_list, context):
     images = []
     for filename in image_list:
         try:
-            if image_passes_criteria(filename, context, image_types=image_types, db_address=db_address):
+            if image_can_be_processed(get_primary_header(filename), context):
                 images.append(filename)
         except Exception:
             logger.error(logs.format_exception(), extra_tags={'filename': filename})
