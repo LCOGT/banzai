@@ -10,10 +10,10 @@ def set_random_seed():
     np.random.seed(7298374)
 
 
-def test_no_input_images(set_random_seed):
+def test_null_input_images():
     normalizer = DarkNormalizer(None)
-    images = normalizer.do_stage([])
-    assert len(images) == 0
+    image = normalizer.run(None)
+    assert image is None
 
 
 def test_dark_normalization_is_reasonable(set_random_seed):
@@ -21,12 +21,9 @@ def test_dark_normalization_is_reasonable(set_random_seed):
     ny = 103
 
     normalizer = DarkNormalizer(None)
-    data = [np.random.normal(30.0, 10, size=(ny, nx)) for _ in range(6)]
-    images = [FakeImage() for _ in range(6)]
-    for i, image in enumerate(images):
-        image.data = data[i].copy()
+    data = np.random.normal(30.0, 10, size=(ny, nx))
+    image = FakeImage()
+    image.data = data.copy()
 
-    images = normalizer.do_stage(images)
-
-    for i, image in enumerate(images):
-        np.testing.assert_allclose(image.data, data[i] / image.exptime, 1e-5)
+    image = normalizer.do_stage(image)
+    np.testing.assert_allclose(image.data, data / image.exptime, 1e-5)

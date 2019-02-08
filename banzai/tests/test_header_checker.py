@@ -17,10 +17,10 @@ class FakeHeaderImage(FakeImage):
             self.header = header
 
 
-def test_no_input_images():
+def test_null_input_image():
     tester = header_checker.HeaderSanity(None)
-    images = tester.do_stage([])
-    assert len(images) == 0
+    image = tester.run(None)
+    assert image is None
 
 
 def test_all_keywords_missing():

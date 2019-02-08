@@ -4,6 +4,7 @@ import astropy.units as u
 from astropy.coordinates import SkyCoord
 
 from banzai.stages import Stage
+from banzai.utils import qc
 
 logger = logging.getLogger(__name__)
 
@@ -21,44 +22,43 @@ class PointingTest(Stage):
     def __init__(self, pipeline_context):
         super(PointingTest, self).__init__(pipeline_context)
 
-    def do_stage(self, images):
-        for image in images:
+    def do_stage(self, image):
+        try:
+            # OFST-RA/DEC is the same as CAT-RA/DEC but includes user requested offset
+            requested_coords = SkyCoord(image.header['OFST-RA'], image.header['OFST-DEC'],
+                                        unit=(u.hour, u.deg), frame='icrs')
+        except ValueError as e:
             try:
-                # OFST-RA/DEC is the same as CAT-RA/DEC but includes user requested offset
-                requested_coords = SkyCoord(image.header['OFST-RA'], image.header['OFST-DEC'],
+                # Fallback to CAT-RA and CAT-DEC
+                requested_coords = SkyCoord(image.header['CAT-RA'], image.header['CAT-DEC'],
                                             unit=(u.hour, u.deg), frame='icrs')
-            except ValueError as e:
-                try:
-                    # Fallback to CAT-RA and CAT-DEC
-                    requested_coords = SkyCoord(image.header['CAT-RA'], image.header['CAT-DEC'],
-                                                unit=(u.hour, u.deg), frame='icrs')
-                except:
-                    logger.error(e, image=image)
-                    continue
+            except:
+                logger.error(e, image=image)
+                return image
 
-            # This only works assuming CRPIX is at the center of the image
-            solved_coords = SkyCoord(image.header['CRVAL1'], image.header['CRVAL2'],
-                                     unit=(u.deg, u.deg), frame='icrs')
+        # This only works assuming CRPIX is at the center of the image
+        solved_coords = SkyCoord(image.header['CRVAL1'], image.header['CRVAL2'],
+                                 unit=(u.deg, u.deg), frame='icrs')
 
-            angular_separation = solved_coords.separation(requested_coords).arcsec
+        angular_separation = solved_coords.separation(requested_coords).arcsec
 
-            logging_tags = {'PNTOFST': angular_separation}
+        logging_tags = {'PNTOFST': angular_separation}
 
-            pointing_severe = abs(angular_separation) > self.SEVERE_THRESHOLD
-            pointing_warning = abs(angular_separation) > self.WARNING_THRESHOLD
-            if pointing_severe:
-                logger.error('Pointing offset exceeds threshold', image=image, extra_tags=logging_tags)
-            elif pointing_warning:
-                logger.warning('Pointing offset exceeds threshhold', image=image, extra_tags=logging_tags)
-            self.save_qc_results({'pointing.failed': pointing_severe,
-                                  'pointing.failed_threshold': self.SEVERE_THRESHOLD,
-                                  'pointing.warning': pointing_warning,
-                                  'pointing.warning_threshold': self.WARNING_THRESHOLD,
-                                  'pointing.offset': angular_separation},
-                                 image)
+        pointing_severe = abs(angular_separation) > self.SEVERE_THRESHOLD
+        pointing_warning = abs(angular_separation) > self.WARNING_THRESHOLD
+        if pointing_severe:
+            logger.error('Pointing offset exceeds threshold', image=image, extra_tags=logging_tags)
+        elif pointing_warning:
+            logger.warning('Pointing offset exceeds threshhold', image=image, extra_tags=logging_tags)
+        qc_results = {'pointing.failed': pointing_severe,
+                      'pointing.failed_threshold': self.SEVERE_THRESHOLD,
+                      'pointing.warning': pointing_warning,
+                      'pointing.warning_threshold': self.WARNING_THRESHOLD,
+                      'pointing.offset': angular_separation}
+        qc.save_qc_results(self.pipeline_context, qc_results, image)
 
-            image.header['PNTOFST'] = (
-                angular_separation, '[arcsec] offset of requested and solved center'
-            )
+        image.header['PNTOFST'] = (
+            angular_separation, '[arcsec] offset of requested and solved center'
+        )
 
-        return images
+        return image

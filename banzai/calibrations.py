@@ -5,17 +5,19 @@ import os
 
 import numpy as np
 
-from banzai.stages import Stage
+from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs
-from banzai.utils import image_utils, stats, fits_utils
+from banzai.utils import image_utils, stats, fits_utils, qc
 
 logger = logging.getLogger(__name__)
 
 
-class CalibrationMaker(Stage):
+class CalibrationMaker(MultiFrameStage):
     def __init__(self, pipeline_context):
         super(CalibrationMaker, self).__init__(pipeline_context)
-        self.group_by_attributes = self.pipeline_context.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
+
+    def group_by_attributes(self):
+        return self.pipeline_context.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
 
     @property
     @abc.abstractmethod
@@ -25,24 +27,6 @@ class CalibrationMaker(Stage):
     @abc.abstractmethod
     def make_master_calibration_frame(self, images):
         pass
-
-    def get_grouping(self, image):
-        grouping_criteria = [image.site, image.camera, image.epoch]
-        if self.group_by_attributes:
-            grouping_criteria += [getattr(image, keyword) for keyword in self.group_by_attributes]
-        return grouping_criteria
-
-    def run(self, images):
-        images.sort(key=self.get_grouping)
-        processed_images = []
-        for _, image_set in itertools.groupby(images, self.get_grouping):
-            try:
-                image_set = list(image_set)
-                logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
-                processed_images += self.do_stage(image_set)
-            except Exception:
-                logger.error(logs.format_exception())
-        return processed_images
 
     def do_stage(self, images):
         try:
@@ -57,7 +41,7 @@ class CalibrationMaker(Stage):
             msg = 'Number of images less than minimum requirement of {min_images}, not combining'
             logger.warning(msg.format(min_images=min_images))
             return []
-        image_utils.check_image_homogeneity(images, self.group_by_attributes)
+        image_utils.check_image_homogeneity(images, self.group_by_attributes())
         return [self.make_master_calibration_frame(images)]
 
 
@@ -109,10 +93,10 @@ class ApplyCalibration(Stage):
     def calibration_type(self):
         pass
 
-    def on_missing_master_calibration(self, images):
+    def on_missing_master_calibration(self, image):
         msg = 'Master Calibration file does not exist for {stage}, flagging image as bad'
-        logger.error(msg.format(stage=self.stage_name), image=images[0])
-        flag_images_as_bad(images)
+        logger.error(msg.format(stage=self.stage_name), image=image)
+        image.is_bad = True
 
     def get_grouping(self, image):
         grouping_criteria = [image.site, image.camera, image.epoch]
@@ -120,35 +104,22 @@ class ApplyCalibration(Stage):
             grouping_criteria += [getattr(image, keyword) for keyword in self.master_selection_criteria]
         return grouping_criteria
 
-    def run(self, images):
-        images.sort(key=self.get_grouping)
-        processed_images = []
-        for _, image_set in itertools.groupby(images, self.get_grouping):
-            try:
-                image_set = list(image_set)
-                logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
-                processed_images += self.do_stage(image_set)
-            except Exception:
-                logger.error(logs.format_exception())
-        return processed_images
+    def do_stage(self, image):
+        master_calibration_filename = self.get_calibration_filename(image)
 
-    def do_stage(self, images):
-        if len(images) == 0:
-            # Abort!
-            return []
-        else:
-            image_utils.check_image_homogeneity(images)
-            master_calibration_filename = self.get_calibration_filename(images[0])
+        if master_calibration_filename is None:
+            self.on_missing_master_calibration(image)
+            return image
 
-            if master_calibration_filename is None:
-                self.on_missing_master_calibration(images)
-                return images
-            master_calibration_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context,
-                                                                         filename=master_calibration_filename)
-            return self.apply_master_calibration(images, master_calibration_image)
+        master_calibration_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context,
+                                                                     filename=master_calibration_filename)
+
+        image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
+
+        return self.apply_master_calibration(image, master_calibration_image)
 
     @abc.abstractmethod
-    def apply_master_calibration(self, images, master_calibration_image):
+    def apply_master_calibration(self, image, master_calibration_image):
         pass
 
     def get_calibration_filename(self, image):
@@ -164,54 +135,53 @@ class CalibrationComparer(ApplyCalibration):
 
     @property
     @abc.abstractmethod
-    def reject_images(self):
+    def reject_image(self):
         pass
 
-    def on_missing_master_calibration(self, images):
+    def on_missing_master_calibration(self, image):
         msg = 'No master {caltype} frame exists, flagging image as bad.'
-        logger.error(msg.format(caltype=self.calibration_type), image=images[0])
-        flag_images_as_bad(images)
+        logger.error(msg.format(caltype=self.calibration_type), image=image)
+        image.is_bad = True
 
-    def apply_master_calibration(self, images, master_calibration_image):
+    def apply_master_calibration(self, image, master_calibration_image):
         # Short circuit
         if master_calibration_image.data is None:
-            return images
+            return image
 
-        for image in images:
-            # We assume the images have already been normalized before this stage is run.
-            bad_pixel_fraction = np.abs(image.data - master_calibration_image.data)
-            # Estimate the noise of the image
-            noise = self.noise_model(image)
-            bad_pixel_fraction /= noise
-            bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
-            bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
-            frame_is_bad = bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION
+        # We assume the image has already been normalized before this stage is run.
+        bad_pixel_fraction = np.abs(image.data - master_calibration_image.data)
+        # Estimate the noise of the image
+        noise = self.noise_model(image)
+        bad_pixel_fraction /= noise
+        bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
+        bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
+        frame_is_bad = bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION
 
-            qc_results = {"master_comparison.fraction": bad_pixel_fraction,
-                          "master_comparison.snr_threshold": self.SIGNAL_TO_NOISE_THRESHOLD,
-                          "master_comparison.pixel_threshold": self.ACCEPTABLE_PIXEL_FRACTION,
-                          "master_comparison.comparison_master_filename": master_calibration_image.filename}
+        qc_results = {"master_comparison.fraction": bad_pixel_fraction,
+                      "master_comparison.snr_threshold": self.SIGNAL_TO_NOISE_THRESHOLD,
+                      "master_comparison.pixel_threshold": self.ACCEPTABLE_PIXEL_FRACTION,
+                      "master_comparison.comparison_master_filename": master_calibration_image.filename}
 
-            logging_tags = {}
-            for qc_check, qc_result in qc_results.items():
-                logging_tags[qc_check] = qc_result
-            logging_tags['master_comparison_filename'] = master_calibration_image.filename
-            msg = "Performing comparison to last good master {caltype} frame"
-            logger.info(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
+        logging_tags = {}
+        for qc_check, qc_result in qc_results.items():
+            logging_tags[qc_check] = qc_result
+        logging_tags['master_comparison_filename'] = master_calibration_image.filename
+        msg = "Performing comparison to last good master {caltype} frame"
+        logger.info(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
 
-            # This needs to be added after the qc_results dictionary is used for the logging tags because
-            # they can't handle booleans
-            qc_results["master_comparison.failed"] = frame_is_bad
-            if frame_is_bad:
-                # Flag the image as bad and log an error
-                image.is_bad = True
-                qc_results['rejected'] = True
-                msg = 'Flagging {caltype} as bad because it deviates too much from the previous master'
-                logger.error(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
+        # This needs to be added after the qc_results dictionary is used for the logging tags because
+        # they can't handle booleans
+        qc_results["master_comparison.failed"] = frame_is_bad
+        if frame_is_bad:
+            # Flag the image as bad and log an error
+            image.is_bad = True
+            qc_results['rejected'] = True
+            msg = 'Flagging {caltype} as bad because it deviates too much from the previous master'
+            logger.error(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
 
-            self.save_qc_results(qc_results, image)
+        qc.save_qc_results(self.pipeline_context, qc_results, image)
 
-        return images
+        return image
 
     @abc.abstractmethod
     def noise_model(self, image):
@@ -229,8 +199,3 @@ def make_calibration_filename_function(calibration_type, attribute_filename_func
         cal_file += '.fits'
         return cal_file
     return get_calibration_filename
-
-
-def flag_images_as_bad(images):
-    for image in images:
-        image.is_bad = True
