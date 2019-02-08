@@ -104,12 +104,6 @@ class ApplyCalibration(Stage):
         logger.error(msg.format(stage=self.stage_name), image=image)
         image.is_bad = True
 
-    def get_grouping(self, image):
-        grouping_criteria = [image.site, image.camera, image.epoch]
-        if self.master_selection_criteria:
-            grouping_criteria += [getattr(image, keyword) for keyword in self.master_selection_criteria]
-        return grouping_criteria
-
     def do_stage(self, image):
         master_calibration_filename = self.get_calibration_filename(image)
 
