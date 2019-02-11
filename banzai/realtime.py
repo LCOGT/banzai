@@ -39,7 +39,7 @@ def need_to_process_image(path, context, db_address=dbs._DEFAULT_DB, max_tries=5
 
     Returns
     -------
-    need_preview: bool
+    need_to_process: bool
                   True if we should try to process the image
 
     Notes

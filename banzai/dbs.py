@@ -375,10 +375,6 @@ def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
     db_session.close()
 
 
-def get_instrument_for_file(header, db_address=_DEFAULT_DB):
-    return
-
-
 def get_processed_image(path, db_address=_DEFAULT_DB):
     filename = os.path.basename(path)
     db_session = get_session(db_address=db_address)

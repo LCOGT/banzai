@@ -20,7 +20,7 @@ from lcogt_logging import LCOGTFormatter
 
 from banzai import dbs, realtime, logs
 from banzai.context import PipelineContext
-from banzai.utils import image_utils, date_utils
+from banzai.utils import image_utils, date_utils, fits_utils
 from banzai.images import read_image
 import banzai.settings
 
@@ -155,9 +155,11 @@ def process_directory(pipeline_context, raw_path, image_types=None, log_message=
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     image_path_list = image_utils.make_image_path_list(raw_path)
-    image_path_list = image_utils.select_images(image_path_list, pipeline_context,
-                                                image_types=image_types, db_address=pipeline_context.db_address)
-    for image_path in image_path_list:
+    if image_types is None:
+        image_types = [None]
+    images_to_reduce = [image_utils.select_images(image_path_list, pipeline_context, image_type)
+                        for image_type in image_types]
+    for image_path in images_to_reduce:
         try:
             run(image_path, pipeline_context)
         except Exception:
@@ -167,8 +169,15 @@ def process_directory(pipeline_context, raw_path, image_types=None, log_message=
 def process_single_frame(pipeline_context, raw_path, filename, log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
+    full_path = os.path.join(raw_path, filename)
+    # Short circuit
+    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(full_path), pipeline_context):
+        logger.error('Image cannot be processed. Check to make sure the instrument '
+                     'is in the database and that the OBSTYPE is recognized by BANZAI',
+                     extra_tags={'raw_path': raw_path, 'filename': filename})
+        return
     try:
-        run(os.path.join(raw_path, filename), pipeline_context)
+        run(full_path, pipeline_context)
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
 
@@ -249,7 +258,6 @@ def stack_calibrations(pipeline_context=None, raw_path=None):
 
 
 def run_end_of_night():
-    # TODO: Remove this method once we switch to real-time reduction only
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
                                {'args': ['--dayobs'],

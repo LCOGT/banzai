@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 def image_can_be_processed(header, context):
-    passes = dbs.instrument_passes_criteria(header, context.FRAME_SELECTION_CRITERIA)
+    instrument = dbs.get_instrument(header, db_address=context.db_address)
+    passes = dbs.instrument_passes_criteria(instrument, context.FRAME_SELECTION_CRITERIA)
     passes &= context.can_process(header)
     return passes
 
