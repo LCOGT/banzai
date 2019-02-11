@@ -158,8 +158,9 @@ def process_directory(pipeline_context, raw_path, image_types=None, log_message=
     image_path_list = image_utils.make_image_path_list(raw_path)
     if image_types is None:
         image_types = [None]
-    images_to_reduce = [image_utils.select_images(image_path_list, pipeline_context, image_type)
-                        for image_type in image_types]
+    images_to_reduce = []
+    for image_type in image_types:
+        images_to_reduce += image_utils.select_images(image_path_list, pipeline_context, image_type)
     for image_path in images_to_reduce:
         try:
             run(image_path, pipeline_context)
