@@ -297,42 +297,53 @@ class SiteMissingException(Exception):
     pass
 
 
-def query_for_instrument(db_address, site, camera):
+def query_for_instrument(db_address, site, camera, enclosure=None, telescope=None, must_be_schedulable=False):
     # Short circuit
-    if site is None or camera is None:
+    if None in [site, camera]:
         return None
     db_session = get_session(db_address=db_address)
     criteria = (Instrument.site == site) & (Instrument.camera == camera)
-    instrument = db_session.query(Instrument).filter(criteria).first()
+    if enclosure is not None:
+        criteria &= Instrument.enclosure == enclosure
+    if telescope is not None:
+        criteria &= Instrument.telescope == telescope
+    if must_be_schedulable:
+        criteria &= Instrument.schedulable.is_(True)
+    instrument = db_session.query(Instrument).filter(criteria).order_by(Instrument.id.desc()).first()
     db_session.close()
     return instrument
 
 
 def _guess_instrument_values_from_header(header, db_address):
     site = header.get('SITEID')
+    enclosure = header.get('ENCID')
+    telescope = header.get('TELID')
     camera = header.get('INSTRUME')
+    equivalence_criteria = {'site': site, 'enclosure': enclosure, 'telescope': telescope, 'camera': camera}
     db_session = get_session(db_address=db_address)
-    add_or_update_record(db_session, Instrument,
-                         {'site': site, 'camera': camera},
-                         {'site': site, 'camera': camera,
-                          'type': 'unknown',
-                          'schedulable': False})
+    add_or_update_record(db_session, Instrument, equivalence_criteria,
+                         {**equivalence_criteria, 'type': 'unknown', 'schedulable': False})
     db_session.commit()
     db_session.close()
-    instrument = query_for_instrument(db_address, site, camera)
+    instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
     return instrument
 
 
 def get_instrument(header, db_address=_DEFAULT_DB):
     site = header.get('SITEID')
+    enclosure = header.get('ENCID')
+    telescope = header.get('TELID')
     camera = header.get('INSTRUME')
-    instrument_from_instrume_keyword = query_for_instrument(db_address, site, camera)
-    instrument = instrument_from_instrume_keyword if instrument_from_instrume_keyword is not None \
-        else query_for_instrument(db_address, site, header.get('TELESCOP'))
+    instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
     if instrument is None:
-        logger.error('Instrument {site}/{camera} is not in the database, '
-                     'extracting best-guess values from header'.format(site=site, camera=camera),
-                     extra_tags={'site': site, 'instrument': instrument})
+        camera = header.get('TELESCOP')
+        instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+    if instrument is None:
+        msg = 'Instrument {site}/{enclosure}/{telescope}/{camera} is not in the database, '\
+              'extracting best-guess values from header'
+        logger.error(msg.format(site=site, enclosure=enclosure, telescope=telescope, camera=camera),
+                     extra_tags={'site': site, 'enclosure': enclosure,
+                                 'telescope': telescope, 'instrument': instrument})
         instrument = _guess_instrument_values_from_header(header, db_address)
     return instrument
 
