@@ -3,8 +3,7 @@ import operator
 
 import mock
 
-from banzai.context import InstrumentCriterion
-from banzai.dbs import instrument_passes_criteria
+from banzai.context import InstrumentCriterion, instrument_passes_criteria
 
 FakeInstrument = namedtuple('FakeInstrument', ['schedulable', 'type'])
 

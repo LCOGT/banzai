@@ -18,6 +18,7 @@ from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 from lcogt_logging import LCOGTFormatter
 
+import banzai.context
 from banzai import dbs, realtime, logs
 from banzai.context import PipelineContext
 from banzai.utils import image_utils, date_utils, fits_utils
@@ -294,7 +295,7 @@ def run_end_of_night():
                                               db_address=pipeline_context.db_address,
                                               ignore_schedulability=pipeline_context.ignore_schedulability)
     instruments = [instrument for instrument in instruments
-                   if dbs.instrument_passes_criteria(instrument, pipeline_context.FRAME_SELECTION_CRITERIA)]
+                   if banzai.context.instrument_passes_criteria(instrument, pipeline_context.FRAME_SELECTION_CRITERIA)]
     # For each instrument at the given site
     for instrument in instruments:
         raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,

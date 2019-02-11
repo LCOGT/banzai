@@ -19,6 +19,14 @@ class InstrumentCriterion:
         return self.__dict__ == other.__dict__
 
 
+def instrument_passes_criteria(instrument, criteria):
+    passes = True
+    for criterion in criteria:
+        if not criterion.instrument_passes(instrument):
+            passes = False
+    return passes
+
+
 class PipelineContext(object):
     def __init__(self, command_line_args, settings,
                  processed_path='/archive/engineering/', post_to_archive=False, fpack=True, rlevel=91,

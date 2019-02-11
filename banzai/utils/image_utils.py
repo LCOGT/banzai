@@ -2,6 +2,7 @@ import os
 from glob import glob
 import logging
 
+import banzai.context
 from banzai import logs
 from banzai import dbs
 from banzai.utils.fits_utils import get_primary_header
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def image_can_be_processed(header, context):
     instrument = dbs.get_instrument(header, db_address=context.db_address)
-    passes = dbs.instrument_passes_criteria(instrument, context.FRAME_SELECTION_CRITERIA)
+    passes = banzai.context.instrument_passes_criteria(instrument, context.FRAME_SELECTION_CRITERIA)
     passes &= context.can_process(header)
     return passes
 
@@ -20,11 +21,12 @@ def get_obstype(header):
     return header.get('OBSTYPE', None)
 
 
-def select_images(image_list, context):
+def select_images(image_list, context, image_type):
     images = []
     for filename in image_list:
         try:
-            if image_can_be_processed(get_primary_header(filename), context):
+            header = get_primary_header(filename)
+            if image_can_be_processed(header, context) and get_obstype(header) == image_type:
                 images.append(filename)
         except Exception:
             logger.error(logs.format_exception(), extra_tags={'filename': filename})

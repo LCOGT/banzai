@@ -22,7 +22,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 
 from banzai.utils import date_utils
-from banzai.utils import fits_utils
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
@@ -409,14 +408,6 @@ def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=
     instruments = db_session.query(Instrument).filter(query).all()
     db_session.close()
     return instruments
-
-
-def instrument_passes_criteria(instrument, criteria):
-    passes = True
-    for criterion in criteria:
-        if not criterion.instrument_passes(instrument):
-            passes = False
-    return passes
 
 
 def get_master_calibration_image(image, calibration_type, master_selection_criteria,
