@@ -2,7 +2,7 @@ import mock
 import numpy as np
 
 from banzai.flats import FlatMaker
-from banzai.tests.utils import FakeContext, throws_inhomogeneous_set_exception
+from banzai.tests.utils import FakeContext, handles_inhomogeneous_set
 from banzai.tests.flat_utils import FakeFlatImage
 
 
@@ -31,20 +31,20 @@ def test_header_cal_type_flat(mock_instrument_info):
     assert header['OBSTYPE'].upper() == 'SKYFLAT'
 
 
-def test_raises_an_exception_if_ccdsums_are_different(caplog):
-    throws_inhomogeneous_set_exception(caplog, FlatMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
+def test_raises_an_exception_if_ccdsums_are_different():
+    handles_inhomogeneous_set(FlatMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
 
 
-def test_raises_an_exception_if_nx_are_different(caplog):
-    throws_inhomogeneous_set_exception(caplog, FlatMaker, FakeContext(), 'nx', 105, calibration_maker=True)
+def test_raises_an_exception_if_nx_are_different():
+    handles_inhomogeneous_set(FlatMaker, FakeContext(), 'nx', 105, calibration_maker=True)
 
 
-def test_raises_an_exception_if_ny_are_different(caplog):
-    throws_inhomogeneous_set_exception(caplog, FlatMaker, FakeContext(), 'ny', 107, calibration_maker=True)
+def test_raises_an_exception_if_ny_are_different():
+    handles_inhomogeneous_set(FlatMaker, FakeContext(), 'ny', 107, calibration_maker=True)
 
 
-def test_raises_an_exception_if_filters_are_different(caplog):
-    throws_inhomogeneous_set_exception(caplog, FlatMaker, FakeContext(), 'filter', 'w', calibration_maker=True)
+def test_raises_an_exception_if_filters_are_different():
+    handles_inhomogeneous_set(FlatMaker, FakeContext(), 'filter', 'w', calibration_maker=True)
 
 
 def test_makes_a_sensible_master_flat():

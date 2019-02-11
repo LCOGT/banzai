@@ -2,7 +2,7 @@ import mock
 import numpy as np
 
 from banzai.bias import BiasMaker
-from banzai.tests.utils import FakeContext, throws_inhomogeneous_set_exception
+from banzai.tests.utils import FakeContext, handles_inhomogeneous_set
 from banzai.tests.bias_utils import FakeBiasImage, make_context_with_master_bias
 
 
@@ -27,16 +27,16 @@ def test_header_cal_type_bias():
     assert images[0].header['OBSTYPE'].upper() == 'BIAS'
 
 
-def test_raises_an_exception_if_ccdsums_are_different(caplog):
-    throws_inhomogeneous_set_exception(caplog, BiasMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
+def test_raises_an_exception_if_ccdsums_are_different():
+    handles_inhomogeneous_set(BiasMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
 
 
-def test_raises_an_exception_if_nx_are_different(caplog):
-    throws_inhomogeneous_set_exception(caplog, BiasMaker, FakeContext(), 'nx', 105, calibration_maker=True)
+def test_raises_an_exception_if_nx_are_different():
+    handles_inhomogeneous_set(BiasMaker, FakeContext(), 'nx', 105, calibration_maker=True)
 
 
-def test_raises_an_exception_if_ny_are_different(caplog):
-    throws_inhomogeneous_set_exception(caplog, BiasMaker, FakeContext(), 'ny', 107, calibration_maker=True)
+def test_raises_an_exception_if_ny_are_different():
+    handles_inhomogeneous_set(BiasMaker, FakeContext(), 'ny', 107, calibration_maker=True)
 
 
 @mock.patch('banzai.images.Image._init_instrument_info')

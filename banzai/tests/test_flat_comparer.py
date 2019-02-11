@@ -3,7 +3,7 @@ import mock
 import numpy as np
 
 from banzai.flats import FlatComparer
-from banzai.tests.utils import throws_inhomogeneous_set_exception, FakeContext
+from banzai.tests.utils import handles_inhomogeneous_set, FakeContext
 from banzai.tests.flat_utils import FakeFlatImage, make_context_with_master_flat
 
 
@@ -24,23 +24,23 @@ def test_master_selection_criteria():
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ccdsums_are_different(mock_cal, caplog):
-    throws_inhomogeneous_set_exception(caplog, FlatComparer, FakeContext(), 'ccdsum', '1 1')
+def test_raises_an_exception_if_ccdsums_are_different(mock_cal):
+    handles_inhomogeneous_set(FlatComparer, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_nx_are_different(mock_cal, caplog):
-    throws_inhomogeneous_set_exception(caplog, FlatComparer, FakeContext(), 'nx', 105)
+def test_raises_an_exception_if_nx_are_different(mock_cal):
+    handles_inhomogeneous_set(FlatComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ny_are_different(mock_cal, caplog):
-    throws_inhomogeneous_set_exception(caplog, FlatComparer, FakeContext(), 'ny', 107)
+def test_raises_an_exception_if_ny_are_different(mock_cal):
+    handles_inhomogeneous_set(FlatComparer, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_filters_are_different(mock_cal, caplog):
-    throws_inhomogeneous_set_exception(caplog, FlatComparer, FakeContext(), 'filter', 'w')
+def test_raises_an_exception_if_filters_are_different(mock_cal):
+    handles_inhomogeneous_set(FlatComparer, FakeContext(), 'filter', 'w')
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')

@@ -71,7 +71,7 @@ class FakeStage(Stage):
         return images
 
 
-def throws_inhomogeneous_set_exception(caplog, stagetype, context, keyword, value, calibration_maker=False):
+def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_maker=False):
     stage = stagetype(context)
     kwargs = {keyword: value}
     if calibration_maker:
@@ -83,7 +83,6 @@ def throws_inhomogeneous_set_exception(caplog, stagetype, context, keyword, valu
         image = FakeImage(**kwargs)
         image = stage.do_stage(image)
         assert image is None
-    assert 'Images have different {0}s'.format(keyword) in caplog.text
 
 
 def gaussian2d(image_shape, x0, y0, brightness, fwhm):
