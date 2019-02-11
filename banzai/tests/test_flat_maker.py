@@ -31,19 +31,19 @@ def test_header_cal_type_flat(mock_instrument_info):
     assert header['OBSTYPE'].upper() == 'SKYFLAT'
 
 
-def test_raises_an_exception_if_ccdsums_are_different():
+def test_returns_null_if_ccdsums_are_different():
     handles_inhomogeneous_set(FlatMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
 
 
-def test_raises_an_exception_if_nx_are_different():
+def test_returns_null_if_nx_are_different():
     handles_inhomogeneous_set(FlatMaker, FakeContext(), 'nx', 105, calibration_maker=True)
 
 
-def test_raises_an_exception_if_ny_are_different():
+def test_returns_null_if_ny_are_different():
     handles_inhomogeneous_set(FlatMaker, FakeContext(), 'ny', 107, calibration_maker=True)
 
 
-def test_raises_an_exception_if_filters_are_different():
+def test_returns_null_if_filters_are_different():
     handles_inhomogeneous_set(FlatMaker, FakeContext(), 'filter', 'w', calibration_maker=True)
 
 

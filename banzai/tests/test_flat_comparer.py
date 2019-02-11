@@ -24,22 +24,22 @@ def test_master_selection_criteria():
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ccdsums_are_different(mock_cal):
+def test_returns_null_if_ccdsums_are_different(mock_cal):
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_nx_are_different(mock_cal):
+def test_returns_null_if_nx_are_different(mock_cal):
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ny_are_different(mock_cal):
+def test_returns_null_if_ny_are_different(mock_cal):
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_filters_are_different(mock_cal):
+def test_returns_null_if_filters_are_different(mock_cal):
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'filter', 'w')
 
 
