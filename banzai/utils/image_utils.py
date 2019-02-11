@@ -26,7 +26,7 @@ def select_images(image_list, context, image_type):
     for filename in image_list:
         try:
             header = get_primary_header(filename)
-            if image_can_be_processed(header, context) and get_obstype(header) == image_type:
+            if image_can_be_processed(header, context) and (image_type is None or get_obstype(header) == image_type):
                 images.append(filename)
         except Exception:
             logger.error(logs.format_exception(), extra_tags={'filename': filename})
