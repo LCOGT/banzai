@@ -9,8 +9,8 @@ RUN yum -y install epel-release gcc mariadb-devel \
 
 ENV PATH /opt/astrometry.net/bin:$PATH
 
-RUN conda install -y pip numpy\>=1.13 cython scipy astropy pytest\>=3.6,\<4.0 mock requests ipython coverage\
-        && conda install -y -c conda-forge kombu elasticsearch pytest-astropy mysql-connector-python\
+RUN conda install -y pip numpy\>=1.13 cython scipy astropy pytest\>=3.6,\<4.0 mock requests ipython coverage pyyaml\
+        && conda install -y -c conda-forge kombu elasticsearch\<6.0.0,\>=5.0.0 pytest-astropy mysql-connector-python\
         && conda clean -y --all
 
 RUN pip install --no-cache-dir logutils lcogt_logging sqlalchemy\>=1.3.0b1 psycopg2-binary git+https://github.com/kbarbary/sep.git@master
@@ -19,11 +19,9 @@ RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
         && /usr/sbin/useradd -g 10000 -d /home/archive -M -N -u 10087 archive \
         && chown -R archive:domainusers /home/archive
 
-WORKDIR /lco/banzai
+COPY --chown=10087:10000 . /lco/banzai
 
-COPY . /lco/banzai
-
-RUN python /lco/banzai/setup.py install
+RUN pip install --global-option=build_ext /lco/banzai/ --no-cache-dir
 
 USER archive
 

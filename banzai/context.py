@@ -1,4 +1,5 @@
 import inspect
+from banzai.utils import image_utils
 
 
 class InstrumentCriterion:
@@ -18,12 +19,20 @@ class InstrumentCriterion:
         return self.__dict__ == other.__dict__
 
 
+def instrument_passes_criteria(instrument, criteria):
+    passes = True
+    for criterion in criteria:
+        if not criterion.instrument_passes(instrument):
+            passes = False
+    return passes
+
+
 class PipelineContext(object):
     def __init__(self, command_line_args, settings,
                  processed_path='/archive/engineering/', post_to_archive=False, fpack=True, rlevel=91,
                  db_address='mysql://cmccully:password@localhost/test', log_level='INFO', preview_mode=False,
                  max_tries=5, post_to_elasticsearch=False, elasticsearch_url='http://elasticsearch.lco.gtn:9200',
-                 elasticsearch_doc_type='qc', elasticsearch_qc_index='banzai_qc', **kwargs):
+                 elasticsearch_doc_type='qc', elasticsearch_qc_index='banzai_qc', realtime_reduction=False, **kwargs):
         # TODO: preview_mode will be removed once we start processing everything in real time.
         # TODO: no_bpm can also be removed once we are in "do our best" mode
         local_variables = locals()
@@ -47,3 +56,6 @@ class PipelineContext(object):
 
     def __setattr__(self, key, value):
         raise TypeError('Resetting attribute is not allowed. PipelineContext is immutable.')
+
+    def can_process(self, header):
+        return image_utils.get_obstype(header) in self.LAST_STAGE

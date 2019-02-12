@@ -3,8 +3,7 @@ import operator
 
 import mock
 
-from banzai.context import InstrumentCriterion
-from banzai.utils.image_utils import image_passes_criteria
+from banzai.context import InstrumentCriterion, instrument_passes_criteria
 
 FakeInstrument = namedtuple('FakeInstrument', ['schedulable', 'type'])
 
@@ -29,33 +28,25 @@ def test_instrument_criterion_should_pass_with_exclude():
     assert criterion.instrument_passes(FakeInstrument(schedulable=True, type='SciCam'))
 
 
-@mock.patch('banzai.dbs.get_instrument_for_file')
-def test_image_passes_multiple_criteria_should_fail(mock_instrument):
-    mock_instrument.return_value = FakeInstrument(schedulable=False, type='SciCam')
+def test_image_passes_multiple_criteria_should_fail():
     criteria = [InstrumentCriterion('schedulable', operator.eq, True),
                 InstrumentCriterion('type', operator.contains, 'NRES', exclude=True)]
-    assert not image_passes_criteria('test.fits', criteria)
+    assert not instrument_passes_criteria(FakeInstrument(schedulable=False, type='SciCam'), criteria)
 
 
-@mock.patch('banzai.dbs.get_instrument_for_file')
-def test_image_passes_multiple_criteria_should_pass(mock_instrument):
-    mock_instrument.return_value = FakeInstrument(schedulable=True, type='SciCam')
+def test_image_passes_multiple_criteria_should_pass():
     criteria = [InstrumentCriterion('schedulable', operator.eq, True),
                 InstrumentCriterion('type', operator.contains, 'NRES', exclude=True)]
-    assert image_passes_criteria('test.fits', criteria)
+    assert instrument_passes_criteria(FakeInstrument(schedulable=True, type='SciCam'), criteria)
 
 
-@mock.patch('banzai.dbs.get_instrument_for_file')
-def test_image_passes_multiple_criteria_should_fail_with_exclude(mock_instrument):
-    mock_instrument.return_value = FakeInstrument(schedulable=True, type='SciCam-NRES')
+def test_image_passes_multiple_criteria_should_fail_with_exclude():
     criteria = [InstrumentCriterion('schedulable', operator.eq, True),
                 InstrumentCriterion('type', operator.contains, 'NRES', exclude=True)]
-    assert not image_passes_criteria('test.fits', criteria)
+    assert not instrument_passes_criteria(FakeInstrument(schedulable=True, type='SciCam-NRES'), criteria)
 
 
-@mock.patch('banzai.dbs.get_instrument_for_file')
-def test_image_passes_multiple_criteria_should_pass_with_exclude(mock_instrument):
-    mock_instrument.return_value = FakeInstrument(schedulable=True, type='SciCam')
+def test_image_passes_multiple_criteria_should_pass_with_exclude():
     criteria = [InstrumentCriterion('schedulable', operator.eq, True),
                 InstrumentCriterion('type', operator.contains, 'NRES', exclude=True)]
-    assert image_passes_criteria('test.fits', criteria)
+    assert instrument_passes_criteria(FakeInstrument(schedulable=True, type='SciCam'), criteria)
