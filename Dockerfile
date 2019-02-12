@@ -21,11 +21,9 @@ RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
 
 COPY --chown=10087:10000 . /lco/banzai
 
-WORKDIR /lco/banzai
+RUN pip install /lco/banzai/ --no-cache-dir
 
 USER archive
-
-RUN python /lco/banzai/setup.py install
 
 ENV HOME /home/archive
 
