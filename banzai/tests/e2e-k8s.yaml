@@ -13,7 +13,7 @@ spec:
         sizeLimit: 15Gi
     - name: banzai-data
       emptyDir:
-        sizeLimit: 2Gi
+        sizeLimit: 10Gi
 
   initContainers:
     # When the Pod is initialized, copy all files within the container at path
