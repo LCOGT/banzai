@@ -72,6 +72,3 @@ spec:
 
   dnsPolicy: ClusterFirst
   restartPolicy: Never
-  nodeSelector:
-    kubernetes.io/hostname: ip-10-100-11-41.aws.lco.gtn
-

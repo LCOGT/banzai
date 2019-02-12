@@ -10,7 +10,7 @@ RUN yum -y install epel-release gcc mariadb-devel \
 ENV PATH /opt/astrometry.net/bin:$PATH
 
 RUN conda install -y pip numpy\>=1.13 cython scipy astropy pytest\>=3.6,\<4.0 mock requests ipython coverage pyyaml\
-        && conda install -y -c conda-forge kombu elasticsearch pytest-astropy mysql-connector-python\
+        && conda install -y -c conda-forge kombu elasticsearch\<6.0.0,\>=5.0.0 pytest-astropy mysql-connector-python\
         && conda clean -y --all
 
 RUN pip install --no-cache-dir logutils lcogt_logging sqlalchemy\>=1.3.0b1 psycopg2-binary git+https://github.com/kbarbary/sep.git@master
