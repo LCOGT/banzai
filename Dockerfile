@@ -9,7 +9,7 @@ RUN yum -y install epel-release gcc mariadb-devel \
 
 ENV PATH /opt/astrometry.net/bin:$PATH
 
-RUN conda install -y pip numpy\>=1.13 cython scipy astropy pytest\>=3.6,\<4.0 mock requests ipython coverage\
+RUN conda install -y pip numpy\>=1.13 cython scipy astropy pytest\>=3.6,\<4.0 mock requests ipython coverage pyyaml\
         && conda install -y -c conda-forge kombu elasticsearch pytest-astropy mysql-connector-python\
         && conda clean -y --all
 
@@ -21,7 +21,7 @@ RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
 
 COPY --chown=10087:10000 . /lco/banzai
 
-RUN pip install /lco/banzai/ --no-cache-dir
+RUN pip install --global-option=build_ext /lco/banzai/ --no-cache-dir
 
 USER archive
 

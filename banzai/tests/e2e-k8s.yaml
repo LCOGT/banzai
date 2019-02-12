@@ -36,6 +36,9 @@ spec:
     - name: banzai-data
       image: docker.lco.global/banzai-e2e-data:1.0.1
       imagePullPolicy: IfNotPresent
+      securityContext:
+        runAsUser: 10087
+        runAsGroup: 10000
       volumeMounts:
         - name: banzai-data
           mountPath: /data
