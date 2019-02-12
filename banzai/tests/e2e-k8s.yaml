@@ -69,6 +69,13 @@ spec:
         - /bin/tail
         - -f
         - /dev/null
+      resources:
+        requests:
+          cpu: 2
+          memory: 4Gi
+        limits:
+          cpu: 4
+          memory: 8Gi
 
   dnsPolicy: ClusterFirst
   restartPolicy: Never
