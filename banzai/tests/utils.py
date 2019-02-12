@@ -2,25 +2,23 @@ import json
 from datetime import datetime
 import inspect
 
-import pytest
 import numpy as np
 from astropy.io.fits import Header
 from astropy.utils.data import get_pkg_data_filename
 
-from banzai.utils import image_utils
 from banzai.stages import Stage
 from banzai.images import Image
 import banzai.settings
 
 
 class FakeImage(Image):
-    def __init__(self, pipeline_context=None, nx=101, ny=103, image_multiplier=1.0,
+    def __init__(self, pipeline_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',
                  ccdsum='2 2', epoch='20160101', n_amps=1, filter='U', data=None, header=None, **kwargs):
         self.nx = nx
         self.ny = ny
         self.instrument_id = -1
-        self.site = 'elp'
-        self.camera = 'kb76'
+        self.site = site
+        self.camera = camera
         self.ccdsum = ccdsum
         self.epoch = epoch
         if data is None:
@@ -71,19 +69,18 @@ class FakeStage(Stage):
         return images
 
 
-def throws_inhomogeneous_set_exception(stagetype, context, keyword, value, calibration_maker=False):
+def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_maker=False):
     stage = stagetype(context)
-
-    with pytest.raises(image_utils.InhomogeneousSetException) as exception_info:
-        kwargs = {keyword: value}
-        if calibration_maker:
-            images = [FakeImage(**kwargs)]
-            images += [FakeImage() for x in range(6)]
-            stage.do_stage(images)
-        else:
-            image = FakeImage(**kwargs)
-            stage.do_stage(image)
-    assert 'Images have different {0}s'.format(keyword) == str(exception_info.value)
+    kwargs = {keyword: value}
+    if calibration_maker:
+        images = [FakeImage(**kwargs)]
+        images += [FakeImage() for x in range(6)]
+        images = stage.do_stage(images)
+        assert len(images) == 0
+    else:
+        image = FakeImage(**kwargs)
+        image = stage.do_stage(image)
+        assert image is None
 
 
 def gaussian2d(image_shape, x0, y0, brightness, fwhm):

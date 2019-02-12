@@ -1,6 +1,5 @@
 import logging
 import abc
-import itertools
 import os
 
 import numpy as np
@@ -41,7 +40,12 @@ class CalibrationMaker(MultiFrameStage):
             msg = 'Number of images less than minimum requirement of {min_images}, not combining'
             logger.warning(msg.format(min_images=min_images))
             return []
-        image_utils.check_image_homogeneity(images, self.group_by_attributes())
+        try:
+            image_utils.check_image_homogeneity(images, self.group_by_attributes())
+        except image_utils.InhomogeneousSetException:
+            logger.error(logs.format_exception())
+            return []
+
         return [self.make_master_calibration_frame(images)]
 
 
@@ -85,8 +89,10 @@ class CalibrationStacker(CalibrationMaker):
 class ApplyCalibration(Stage):
     def __init__(self, pipeline_context):
         super(ApplyCalibration, self).__init__(pipeline_context)
-        self.master_selection_criteria = self.pipeline_context.CALIBRATION_SET_CRITERIA.get(
-            self.calibration_type.upper(), [])
+
+    @property
+    def master_selection_criteria(self):
+        return self.pipeline_context.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
 
     @property
     @abc.abstractmethod
@@ -98,12 +104,6 @@ class ApplyCalibration(Stage):
         logger.error(msg.format(stage=self.stage_name), image=image)
         image.is_bad = True
 
-    def get_grouping(self, image):
-        grouping_criteria = [image.site, image.camera, image.epoch]
-        if self.master_selection_criteria:
-            grouping_criteria += [getattr(image, keyword) for keyword in self.master_selection_criteria]
-        return grouping_criteria
-
     def do_stage(self, image):
         master_calibration_filename = self.get_calibration_filename(image)
 
@@ -113,8 +113,11 @@ class ApplyCalibration(Stage):
 
         master_calibration_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context,
                                                                      filename=master_calibration_filename)
-
-        image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
+        try:
+            image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
+        except image_utils.InhomogeneousSetException:
+            logger.error(logs.format_exception(), image=image)
+            return None
 
         return self.apply_master_calibration(image, master_calibration_image)
 

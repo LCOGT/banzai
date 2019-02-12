@@ -4,7 +4,7 @@ import numpy as np
 
 from banzai.tests.bias_utils import make_context_with_master_bias
 from banzai.bias import BiasComparer
-from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception, FakeContext
+from banzai.tests.utils import FakeImage, handles_inhomogeneous_set, FakeContext
 
 
 @pytest.fixture(scope='module')
@@ -18,31 +18,24 @@ def test_null_input_image():
     assert image is None
 
 
-def test_master_selection_criteria(set_random_seed):
+def test_master_selection_criteria():
     comparer = BiasComparer(FakeContext())
     assert comparer.master_selection_criteria == ['ccdsum']
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ccdsums_are_different(mock_cal, set_random_seed):
-    throws_inhomogeneous_set_exception(BiasComparer, FakeContext(), 'ccdsum', '1 1')
+def test_returns_null_if_ccdsums_are_different(mock_cal):
+    handles_inhomogeneous_set(BiasComparer, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_epochs_are_different(mock_cal, set_random_seed):
-    throws_inhomogeneous_set_exception(BiasComparer, FakeContext(), 'epoch', '20160102')
+def test_returns_null_if_nx_are_different(mock_cal):
+    handles_inhomogeneous_set(BiasComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_nx_are_different(mock_cal, set_random_seed):
-    mock_cal.return_value = 'test.fits'
-    throws_inhomogeneous_set_exception(BiasComparer, FakeContext(), 'nx', 105)
-
-
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ny_are_different(mock_cal, set_random_seed):
-    mock_cal.return_value = 'test.fits'
-    throws_inhomogeneous_set_exception(BiasComparer, FakeContext(), 'ny', 107)
+def test_returns_null_if_ny_are_different(mock_cal):
+    handles_inhomogeneous_set(BiasComparer, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')

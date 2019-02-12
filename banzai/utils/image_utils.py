@@ -59,7 +59,7 @@ def get_calibration_image_path_list(pipeline_context, instrument, frame_type, mi
 
 
 def check_image_homogeneity(images, group_by_attributes=None):
-    attribute_list = ['nx', 'ny', 'ccdsum', 'epoch', 'site', 'camera']
+    attribute_list = ['nx', 'ny', 'site', 'camera']
     if group_by_attributes is not None:
         attribute_list += group_by_attributes
     for attribute in attribute_list:

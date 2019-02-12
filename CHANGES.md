@@ -1,5 +1,9 @@
 0.19.1 (2019-02-11)
 -------------------
+- Removed `'epoch'` from list of parameters to check for image 
+  homogeneity 
+- Changed how image homogeneity is checked so that pipeline does
+  not continue to run after check fails
 - Refactored "preview" to "realtime" processing so that reduced files are placed in
   the correct directories
 
