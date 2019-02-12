@@ -316,8 +316,8 @@ def run_realtime_pipeline():
                                            'help': 'URL for the broker service.'}},
                                {'args': ['--queue-name'],
                                 'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
-                                           'help': 'Name of the queue to listen to from the fits exchange.'},
-                                'args': ['--preview-mode'],
+                                           'help': 'Name of the queue to listen to from the fits exchange.'}},
+                               {'args': ['--preview-mode'],
                                 'kwargs': {'dest': 'preview_mode', 'default': False,
                                            'help': 'Save the real-time reductions to the preview directory'}}]
 
