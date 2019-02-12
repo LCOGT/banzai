@@ -9,8 +9,7 @@ pipeline {
 		PROJ_NAME = projName()
 		GIT_DESCRIPTION = gitDescribe()
 		DOCKER_IMG = dockerImageName("${LCO_DOCK_REG}", "${PROJ_NAME}", "${GIT_DESCRIPTION}")
-		RANCHERDEV_CREDS = credentials('rancher-cli-dev')
-		SSH_CREDS = credentials('jenkins-rancher-ssh-userpass')
+		KUBERNETES_CREDS = credentials('jenkins-kubeconfig')
 	}
 	options {
 		timeout(time: 8, unit: 'HOURS')
@@ -34,7 +33,7 @@ pipeline {
 		stage('Unit Tests') {
 			steps {
 				script {
-					sh 'docker run --rm -w=/lco/banzai/ --user=root "${DOCKER_IMG}" python setup.py test -a "-m \'not e2e\'"'
+					sh 'docker run --rm -w=/lco/banzai/ "${DOCKER_IMG}" python setup.py test -a "-m \'not e2e\'"'
 				}
 			}
 		}
@@ -47,15 +46,14 @@ pipeline {
 			}
 			steps {
 				script {
-					withCredentials([usernamePassword(
-							credentialsId: 'rabbit-mq',
-							usernameVariable: 'RABBITMQ_USER',
-							passwordVariable: 'RABBITMQ_PASSWORD')]) {
-						sh('rancher -c ${RANCHERDEV_CREDS} rm --stop --type stack BANZAITest || true')
-						sh('rancher -c ${RANCHERDEV_CREDS} up --stack BANZAITest --force-upgrade --confirm-upgrade -d')
-					}
-					CONTAINER_ID = getContainerId('BANZAITest-BANZAITest-1')
-					CONTAINER_HOST = getContainerHostName('BANZAITest-BANZAITest-1')
+					// delete previous run if the previous failed somehow
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev delete pod banzai-e2e-test || true')
+					// we will be testing the image that we just built
+					sh('sed -i -e "s^@BANZAI_IMAGE@^${DOCKER_IMG}^g" banzai/tests/e2e-k8s.yaml')
+					// deploy the test pod to the cluster
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev apply -f banzai/tests/e2e-k8s.yaml')
+					// wait for the test pod to be running
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev wait --for=condition=Ready --timeout=60m pod/banzai-e2e-test')
 				}
 			}
 		}
@@ -68,19 +66,13 @@ pipeline {
 			}
 			steps {
 				script {
-					sshagent(credentials: ['jenkins-rancher-ssh']) {
-						executeOnRancher('banzai_run_end_to_end_tests --marker=master_bias ' +
-						    '--junit-file=/archive/engineering/pytest-master-bias.xml --code-path=/lco/banzai',
-						    CONTAINER_HOST, CONTAINER_ID, 'root:root')
-					}
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -- banzai_run_end_to_end_tests --marker=master_bias --junit-file=/archive/engineering/pytest-master-bias.xml --code-path=/lco/banzai')
 				}
 			}
 			post {
 				always {
-					script{
-						sshagent(credentials: ['jenkins-rancher-ssh']) {
-							copyFromRancherContainer('/archive/engineering/pytest-master-bias.xml', '.', CONTAINER_HOST, CONTAINER_ID)
-						}
+					script {
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp banzai-e2e-test:/archive/engineering/pytest-master-bias.xml .')
 						junit 'pytest-master-bias.xml'
 					}
 				}
@@ -95,19 +87,13 @@ pipeline {
 			}
 			steps {
 				script {
-					sshagent(credentials: ['jenkins-rancher-ssh']) {
-						executeOnRancher('banzai_run_end_to_end_tests --marker=master_dark ' +
-						    '--junit-file=/archive/engineering/pytest-master-dark.xml --code-path=/lco/banzai',
-							CONTAINER_HOST, CONTAINER_ID, 'root:root')
-					}
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -- banzai_run_end_to_end_tests --marker=master_dark --junit-file=/archive/engineering/pytest-master-dark.xml --code-path=/lco/banzai')
 				}
 			}
 			post {
 				always {
-					script{
-						sshagent(credentials: ['jenkins-rancher-ssh']) {
-							copyFromRancherContainer('/archive/engineering/pytest-master-dark.xml', '.', CONTAINER_HOST, CONTAINER_ID)
-						}
+					script {
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp banzai-e2e-test:/archive/engineering/pytest-master-dark.xml .')
 						junit 'pytest-master-dark.xml'
 					}
 				}
@@ -122,19 +108,13 @@ pipeline {
 			}
 			steps {
 				script {
-					sshagent(credentials: ['jenkins-rancher-ssh']) {
-						executeOnRancher('banzai_run_end_to_end_tests --marker=master_flat ' +
-						    '--junit-file=/archive/engineering/pytest-master-flat.xml --code-path=/lco/banzai',
-							CONTAINER_HOST, CONTAINER_ID, 'root:root')
-					}
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -- banzai_run_end_to_end_tests --marker=master_flat --junit-file=/archive/engineering/pytest-master-flat.xml --code-path=/lco/banzai')
 				}
 			}
 			post {
 				always {
-					script{
-						sshagent(credentials: ['jenkins-rancher-ssh']) {
-							copyFromRancherContainer('/archive/engineering/pytest-master-flat.xml', '.', CONTAINER_HOST, CONTAINER_ID)
-						}
+					script {
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp banzai-e2e-test:/archive/engineering/pytest-master-flat.xml .')
 						junit 'pytest-master-flat.xml'
 					}
 				}
@@ -149,25 +129,19 @@ pipeline {
 			}
 			steps {
 				script {
-					sshagent(credentials: ['jenkins-rancher-ssh']) {
-						executeOnRancher('banzai_run_end_to_end_tests --marker=science_files ' +
-						    '--junit-file=/archive/engineering/pytest-science-files.xml --code-path=/lco/banzai',
-							CONTAINER_HOST, CONTAINER_ID, 'root:root')
-					}
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -- banzai_run_end_to_end_tests --marker=science_files --junit-file=/archive/engineering/pytest-science-files.xml --code-path=/lco/banzai')
 				}
 			}
 			post {
 				always {
-					script{
-						sshagent(credentials: ['jenkins-rancher-ssh']) {
-							copyFromRancherContainer('/archive/engineering/pytest-science-files.xml', '.', CONTAINER_HOST, CONTAINER_ID)
-						}
+					script {
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp banzai-e2e-test:/archive/engineering/pytest-science-files.xml .')
 						junit 'pytest-science-files.xml'
 					}
 				}
 				success {
 					script {
-						sh('rancher -c ${RANCHERDEV_CREDS} rm --stop --type stack BANZAITest')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev delete pod banzai-e2e-test || true')
 					}
 				}
 			}
