@@ -49,7 +49,7 @@ pipeline {
 					// delete previous run if the previous failed somehow
 					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev delete pod banzai-e2e-test || true')
 					// we will be testing the image that we just built
-					sh('sed -i -e "s/@BANZAI_IMAGE@/${DOCKER_IMG}/g" banzai/tests/e2e-k8s.yaml')
+					sh('sed -i -e "s^@BANZAI_IMAGE@^${DOCKER_IMG}^g" banzai/tests/e2e-k8s.yaml')
 					// deploy the test pod to the cluster
 					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev apply -f banzai/tests/e2e-k8s.yaml')
 					// wait for the test pod to be running
