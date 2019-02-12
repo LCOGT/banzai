@@ -19,13 +19,13 @@ RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
         && /usr/sbin/useradd -g 10000 -d /home/archive -M -N -u 10087 archive \
         && chown -R archive:domainusers /home/archive
 
+COPY --chown=10087:10000 . /lco/banzai
+
 WORKDIR /lco/banzai
 
-COPY . /lco/banzai
+USER archive
 
 RUN python /lco/banzai/setup.py install
-
-USER archive
 
 ENV HOME /home/archive
 
