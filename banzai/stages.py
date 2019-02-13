@@ -56,9 +56,7 @@ class MultiFrameStage(abc.ABC):
         processed_images = []
         for _, image_set in itertools.groupby(images, self.get_grouping):
             try:
-                # Sort the images by reverse observation date, so that the most recent one
-                # is used to create the filename and select the day directory
-                image_set = sorted(list(image_set), key=lambda image: image.dateobs, reverse=True)
+                image_set = list(image_set)
                 logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
                 processed_images += self.do_stage(image_set)
             except Exception:
