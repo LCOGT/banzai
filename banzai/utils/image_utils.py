@@ -10,15 +10,12 @@ from banzai.utils.fits_utils import get_primary_header
 logger = logging.getLogger(__name__)
 
 
-def image_can_be_processed(header, context):
-    instrument = dbs.get_instrument(header, db_address=context.db_address)
-    passes = banzai.context.instrument_passes_criteria(instrument, context.FRAME_SELECTION_CRITERIA)
-    passes &= context.can_process(header)
-    return passes
-
-
 def get_obstype(header):
     return header.get('OBSTYPE', None)
+
+
+def get_reduction_level(header):
+    return header.get('RLEVEL', '00')
 
 
 def select_images(image_list, context, image_type):
@@ -26,7 +23,7 @@ def select_images(image_list, context, image_type):
     for filename in image_list:
         try:
             header = get_primary_header(filename)
-            if image_can_be_processed(header, context) and (image_type is None or get_obstype(header) == image_type):
+            if context.image_can_be_processed(header) and (image_type is None or get_obstype(header) == image_type):
                 images.append(filename)
         except Exception:
             logger.error(logs.format_exception(), extra_tags={'filename': filename})
