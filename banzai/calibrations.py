@@ -3,10 +3,11 @@ import abc
 import os
 
 import numpy as np
+from astropy.io import fits
 
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs
-from banzai.utils import image_utils, stats, fits_utils, qc
+from banzai.utils import image_utils, stats, fits_utils, qc, date_utils
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class CalibrationStacker(CalibrationMaker):
     def make_master_calibration_frame(self, images):
         # Sort the images by reverse observation date, so that the most recent one
         # is used to create the filename and select the day directory
-        images = images.sort(key=lambda image: image.dateobs, reverse=True)
+        images.sort(key=lambda image: image.dateobs, reverse=True)
 
         data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
@@ -80,7 +81,7 @@ class CalibrationStacker(CalibrationMaker):
         master_bpm = np.array(stacked_data == 0.0, dtype=np.uint8)
 
         # Save the master dark image with all of the combined images in the header
-        master_header = fits_utils.create_master_calibration_header(images)
+        master_header = create_master_calibration_header(images[0].header, images)
         master_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context, data=stacked_data, header=master_header)
         master_image.filename = master_calibration_filename
         master_image.bpm = master_bpm
@@ -206,3 +207,29 @@ def make_calibration_filename_function(calibration_type, attribute_filename_func
         cal_file += '.fits'
         return cal_file
     return get_calibration_filename
+
+
+def create_master_calibration_header(old_header, images):
+    header = fits.Header()
+    for key in old_header.keys():
+        try:
+            # Dump empty header keywords
+            if len(key) > 0:
+                for i in range(old_header.count(key)):
+                    header[key] = (old_header[(key, i)], old_header.comments[(key, i)])
+        except ValueError as e:
+            logger.error('Could not add keyword {key}: {error}'.format(key=key, error=e))
+            continue
+
+    header = fits_utils.sanitizeheader(header)
+
+    observation_dates = [image.dateobs for image in images]
+    mean_dateobs = date_utils.mean_date(observation_dates)
+
+    header['DATE-OBS'] = (date_utils.date_obs_to_string(mean_dateobs), '[UTC] Mean observation start time')
+    header['ISMASTER'] = (True, 'Is this a master calibration frame')
+
+    header.add_history("Images combined to create master calibration image:")
+    for image in images:
+        header.add_history(image.filename)
+    return header
