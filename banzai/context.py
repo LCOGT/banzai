@@ -1,5 +1,6 @@
 import inspect
 from banzai.utils import image_utils
+from banzai import dbs
 
 
 class InstrumentCriterion:
@@ -57,5 +58,9 @@ class PipelineContext(object):
     def __setattr__(self, key, value):
         raise TypeError('Resetting attribute is not allowed. PipelineContext is immutable.')
 
-    def can_process(self, header):
-        return image_utils.get_obstype(header) in self.LAST_STAGE
+    def image_can_be_processed(self, header):
+        instrument = dbs.get_instrument(header, db_address=self.db_address)
+        passes = instrument_passes_criteria(instrument, self.FRAME_SELECTION_CRITERIA)
+        passes &= image_utils.get_obstype(header) in self.LAST_STAGE
+        passes &= image_utils.get_reduction_level(header) == '00'
+        return passes
