@@ -1,3 +1,7 @@
+0.19.2 (2019-02-13)
+-------------------
+- Fixed bug where master calibrations had wrong daydir in filename
+
 0.19.1 (2019-02-11)
 -------------------
 - Removed `'epoch'` from list of parameters to check for image 
