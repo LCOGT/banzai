@@ -1,3 +1,7 @@
+0.19.3 (2019-02-13)
+-------------------
+- Require enclosure and telescope for instrument query
+
 0.19.2 (2019-02-12)
 -------------------
 - Bugfix in parsing arguments for the real-time processing
