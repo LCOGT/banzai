@@ -21,13 +21,13 @@ DAYS_OBS = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrume
 ENCLOSURE_DICT = {
     'fl11': 'domb',
     'kb27': 'clma',
-    'fs01': 'clma',
+    'fs02': 'clma',
 }
 
 TELESCOPE_DICT = {
     'fl11': '1m0a',
     'kb27': '0m4b',
-    'fs01': '2m0a',
+    'fs02': '2m0a',
 }
 
 
