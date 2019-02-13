@@ -63,6 +63,9 @@ class FakeContext(object):
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
 
+    def image_can_be_processed(self, header):
+        return True
+
 
 class FakeStage(Stage):
     def do_stage(self, images):
