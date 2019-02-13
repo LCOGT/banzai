@@ -296,16 +296,13 @@ class SiteMissingException(Exception):
     pass
 
 
-def query_for_instrument(db_address, site, camera, enclosure=None, telescope=None, must_be_schedulable=False):
+def query_for_instrument(db_address, site, camera, enclosure, telescope, must_be_schedulable=False):
     # Short circuit
     if None in [site, camera]:
         return None
     db_session = get_session(db_address=db_address)
     criteria = (Instrument.site == site) & (Instrument.camera == camera)
-    if enclosure is not None:
-        criteria &= Instrument.enclosure == enclosure
-    if telescope is not None:
-        criteria &= Instrument.telescope == telescope
+    criteria &= (Instrument.enclosure == enclosure) & (Instrument.telescope == telescope)
     if must_be_schedulable:
         criteria &= Instrument.schedulable.is_(True)
     instrument = db_session.query(Instrument).filter(criteria).order_by(Instrument.id.desc()).first()

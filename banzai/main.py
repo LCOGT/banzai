@@ -238,6 +238,10 @@ def reduce_single_frame(pipeline_context=None):
 def stack_calibrations(pipeline_context=None, raw_path=None):
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
+                               {'args': ['--enclosure'],
+                                'kwargs': {'dest': 'enclosure', 'help': 'Enclosure code (e.g. clma)', 'required': True}},
+                               {'args': ['--telescope'],
+                                'kwargs': {'dest': 'telescope', 'help': 'Telescope code (e.g. 0m4a)', 'required': True}},
                                {'args': ['--camera'],
                                 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)', 'required': True}},
                                {'args': ['--frame-type'],
@@ -254,7 +258,8 @@ def stack_calibrations(pipeline_context=None, raw_path=None):
 
     pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
                                                       extra_console_arguments=extra_console_arguments)
-    instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera)
+    instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera,
+                                          pipeline_context.enclosure, pipeline_context.telescope)
     process_master_maker(pipeline_context, instrument,  pipeline_context.frame_type.upper(),
                          pipeline_context.min_date, pipeline_context.max_date)
 
