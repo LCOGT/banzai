@@ -18,9 +18,10 @@ from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 from lcogt_logging import LCOGTFormatter
 
-from banzai import dbs, preview, logs
+import banzai.context
+from banzai import dbs, realtime, logs
 from banzai.context import PipelineContext
-from banzai.utils import image_utils, date_utils
+from banzai.utils import image_utils, date_utils, fits_utils
 from banzai.images import read_image
 import banzai.settings
 
@@ -155,9 +156,12 @@ def process_directory(pipeline_context, raw_path, image_types=None, log_message=
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     image_path_list = image_utils.make_image_path_list(raw_path)
-    image_path_list = image_utils.select_images(image_path_list, pipeline_context.FRAME_SELECTION_CRITERIA,
-                                                image_types=image_types, db_address=pipeline_context.db_address)
-    for image_path in image_path_list:
+    if image_types is None:
+        image_types = [None]
+    images_to_reduce = []
+    for image_type in image_types:
+        images_to_reduce += image_utils.select_images(image_path_list, pipeline_context, image_type)
+    for image_path in images_to_reduce:
         try:
             run(image_path, pipeline_context)
         except Exception:
@@ -167,8 +171,15 @@ def process_directory(pipeline_context, raw_path, image_types=None, log_message=
 def process_single_frame(pipeline_context, raw_path, filename, log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
+    full_path = os.path.join(raw_path, filename)
+    # Short circuit
+    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(full_path), pipeline_context):
+        logger.error('Image cannot be processed. Check to make sure the instrument '
+                     'is in the database and that the OBSTYPE is recognized by BANZAI',
+                     extra_tags={'raw_path': raw_path, 'filename': filename})
+        return
     try:
-        run(os.path.join(raw_path, filename), pipeline_context)
+        run(full_path, pipeline_context)
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
 
@@ -182,7 +193,7 @@ def process_master_maker(pipeline_context, instrument, frame_type, min_date, max
                                                             use_masters=use_masters,
                                                             db_address=pipeline_context.db_address)
     if len(image_path_list) == 0:
-        logger.warning("No calibration frames found to stack", extra_tags=extra_tags)
+        logger.info("No calibration frames found to stack", extra_tags=extra_tags)
 
     try:
         run_master_maker(image_path_list, pipeline_context, frame_type)
@@ -249,7 +260,6 @@ def stack_calibrations(pipeline_context=None, raw_path=None):
 
 
 def run_end_of_night():
-    # TODO: Remove this method once we switch to real-time reduction only
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
                                {'args': ['--dayobs'],
@@ -286,7 +296,7 @@ def run_end_of_night():
                                               db_address=pipeline_context.db_address,
                                               ignore_schedulability=pipeline_context.ignore_schedulability)
     instruments = [instrument for instrument in instruments
-                   if dbs.instrument_passes_criteria(instrument, pipeline_context.FRAME_SELECTION_CRITERIA)]
+                   if banzai.context.instrument_passes_criteria(instrument, pipeline_context.FRAME_SELECTION_CRITERIA)]
     # For each instrument at the given site
     for instrument in instruments:
         raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
@@ -297,7 +307,7 @@ def run_end_of_night():
             logger.error(logs.format_exception())
 
 
-def run_preview_pipeline():
+def run_realtime_pipeline():
     extra_console_arguments = [{'args': ['--n-processes'],
                                 'kwargs': {'dest': 'n_processes', 'default': 12,
                                            'help': 'Number of listener processes to spawn.', 'type': int}},
@@ -305,12 +315,15 @@ def run_preview_pipeline():
                                 'kwargs': {'dest': 'broker_url', 'default': 'amqp://guest:guest@rabbitmq.lco.gtn:5672/',
                                            'help': 'URL for the broker service.'}},
                                {'args': ['--queue-name'],
-                                'kwargs': {'dest': 'queue_name', 'default': 'preview_pipeline',
-                                           'help': 'Name of the queue to listen to from the fits exchange.'}}]
+                                'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
+                                           'help': 'Name of the queue to listen to from the fits exchange.'},
+                                'args': ['--preview-mode'],
+                                'kwargs': {'dest': 'preview_mode', 'default': False,
+                                           'help': 'Save the real-time reductions to the preview directory'}}]
 
     pipeline_context = parse_args(banzai.settings.ImagingSettings,
                                   parser_description='Reduce LCO imaging data in real time.',
-                                  extra_console_arguments=extra_console_arguments, preview_mode=True)
+                                  extra_console_arguments=extra_console_arguments, realtime_reduction=True)
 
     # Need to keep the amqp logger level at least as high as INFO,
     # or else it send heartbeat check messages every second
@@ -321,7 +334,7 @@ def run_preview_pipeline():
     except Exception:
         logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
 
-    logger.info('Starting pipeline preview mode listener')
+    logger.info('Starting pipeline listener')
 
     for i in range(pipeline_context.n_processes):
         p = multiprocessing.Process(target=run_individual_listener, args=(pipeline_context.broker_url,
@@ -333,7 +346,7 @@ def run_preview_pipeline():
 def run_individual_listener(broker_url, queue_name, pipeline_context):
 
     fits_exchange = Exchange('fits_files', type='fanout')
-    listener = PreviewModeListener(broker_url, pipeline_context)
+    listener = RealtimeModeListener(broker_url, pipeline_context)
 
     with Connection(listener.broker_url) as connection:
         listener.connection = connection.clone()
@@ -344,10 +357,10 @@ def run_individual_listener(broker_url, queue_name, pipeline_context):
             listener.connection = connection.clone()
             listener.ensure_connection(max_retries=10)
         except KeyboardInterrupt:
-            logger.info('Shutting down preview pipeline listener.')
+            logger.info('Shutting down pipeline listener.')
 
 
-class PreviewModeListener(ConsumerMixin):
+class RealtimeModeListener(ConsumerMixin):
     def __init__(self, broker_url, pipeline_context):
         self.broker_url = broker_url
         self.pipeline_context = pipeline_context
@@ -366,29 +379,22 @@ class PreviewModeListener(ConsumerMixin):
     def on_message(self, body, message):
         path = body.get('path')
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
+        try:
+            if realtime.need_to_process_image(path, self.pipeline_context,
+                                              db_address=self.pipeline_context.db_address,
+                                              max_tries=self.pipeline_context.max_tries):
 
-        is_eligible_for_preview = False
-        for suffix in self.pipeline_context.PREVIEW_ELIGIBLE_SUFFIXES:
-            if suffix in path:
-                is_eligible_for_preview = True
+                logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
 
-        if is_eligible_for_preview:
-            try:
-                if preview.need_to_make_preview(path, self.pipeline_context.FRAME_SELECTION_CRITERIA,
-                                                db_address=self.pipeline_context.db_address,
-                                                max_tries=self.pipeline_context.max_tries):
+                # Increment the number of tries for this file
+                realtime.increment_try_number(path, db_address=self.pipeline_context.db_address)
 
-                    logger.info('Running preview reduction', extra_tags={'filename': os.path.basename(path)})
+                run(path, self.pipeline_context)
+                realtime.set_file_as_processed(path, db_address=self.pipeline_context.db_address)
 
-                    # Increment the number of tries for this file
-                    preview.increment_preview_try_number(path, db_address=self.pipeline_context.db_address)
-
-                    run(path, self.pipeline_context)
-                    preview.set_preview_file_as_processed(path, db_address=self.pipeline_context.db_address)
-
-            except Exception:
-                logger.error("Exception producing preview frame: {error}".format(error=logs.format_exception()),
-                             extra_tags={'filename': os.path.basename(path)})
+        except Exception:
+            logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
+                         extra_tags={'filename': os.path.basename(path)})
 
 
 def mark_frame(mark_as):

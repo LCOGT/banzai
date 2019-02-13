@@ -22,7 +22,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 
 from banzai.utils import date_utils
-from banzai.utils import fits_utils
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
@@ -386,11 +385,6 @@ def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
     db_session.close()
 
 
-def get_instrument_for_file(path, db_address=_DEFAULT_DB):
-    data, header, bpm, extension_headers = fits_utils.open_image(path)
-    return get_instrument(header, db_address=db_address)
-
-
 def get_processed_image(path, db_address=_DEFAULT_DB):
     filename = os.path.basename(path)
     db_session = get_session(db_address=db_address)
@@ -425,14 +419,6 @@ def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=
     instruments = db_session.query(Instrument).filter(query).all()
     db_session.close()
     return instruments
-
-
-def instrument_passes_criteria(instrument, criteria):
-    passes = True
-    for criterion in criteria:
-        if not criterion.instrument_passes(instrument):
-            passes = False
-    return passes
 
 
 def get_master_calibration_image(image, calibration_type, master_selection_criteria,

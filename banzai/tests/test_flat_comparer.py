@@ -3,7 +3,7 @@ import mock
 import numpy as np
 
 from banzai.flats import FlatComparer
-from banzai.tests.utils import throws_inhomogeneous_set_exception, FakeContext
+from banzai.tests.utils import handles_inhomogeneous_set, FakeContext
 from banzai.tests.flat_utils import FakeFlatImage, make_context_with_master_flat
 
 
@@ -18,35 +18,33 @@ def test_null_input_image():
     assert image is None
 
 
-def test_master_selection_criteria(set_random_seed):
+def test_master_selection_criteria():
     comparer = FlatComparer(FakeContext())
     assert comparer.master_selection_criteria == ['ccdsum', 'filter']
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ccdsums_are_different(mock_cal, set_random_seed):
-    throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'ccdsum', '1 1')
+def test_returns_null_if_ccdsums_are_different(mock_cal):
+    handles_inhomogeneous_set(FlatComparer, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_epochs_are_different(mock_cal, set_random_seed):
-    throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'epoch', '20160102')
+def test_returns_null_if_nx_are_different(mock_cal):
+    handles_inhomogeneous_set(FlatComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_nx_are_different(mock_cal, set_random_seed):
-    mock_cal.return_value = 'test.fits'
-    throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'nx', 105)
+def test_returns_null_if_ny_are_different(mock_cal):
+    handles_inhomogeneous_set(FlatComparer, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ny_are_different(mock_cal, set_random_seed):
-    mock_cal.return_value = 'test.fits'
-    throws_inhomogeneous_set_exception(FlatComparer, FakeContext(), 'ny', 107)
+def test_returns_null_if_filters_are_different(mock_cal):
+    handles_inhomogeneous_set(FlatComparer, FakeContext(), 'filter', 'w')
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_flag_bad_if_no_master_calibration( mock_cal, set_random_seed):
+def test_flag_bad_if_no_master_calibration(mock_cal, set_random_seed):
     mock_cal.return_value = None
     context = make_context_with_master_flat(flat_level=10000.0)
     comparer = FlatComparer(context)

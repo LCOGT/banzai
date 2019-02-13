@@ -2,7 +2,7 @@ import mock
 import numpy as np
 
 from banzai.bias import BiasSubtractor
-from banzai.tests.utils import FakeImage, throws_inhomogeneous_set_exception, FakeContext
+from banzai.tests.utils import FakeImage, handles_inhomogeneous_set, FakeContext
 
 from banzai.tests.bias_utils import make_context_with_master_bias
 
@@ -49,25 +49,18 @@ def test_header_biaslevel_is_2(mock_cal):
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ccdsums_are_different(mock_cal):
-    throws_inhomogeneous_set_exception(BiasSubtractor, FakeContext(), 'ccdsum', '1 1')
+def test_returns_null_if_ccdsums_are_different(mock_cal):
+    handles_inhomogeneous_set(BiasSubtractor, FakeContext(), 'ccdsum', '1 1')
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_epochs_are_different(mock_cal):
-    throws_inhomogeneous_set_exception(BiasSubtractor, FakeContext(), 'epoch', '20160102')
+def test_returns_null_if_nx_are_different(mock_cal):
+    handles_inhomogeneous_set(BiasSubtractor, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_nx_are_different(mock_cal):
-    mock_cal.return_value = 'test.fits'
-    throws_inhomogeneous_set_exception(BiasSubtractor, FakeContext(), 'nx', 105)
-
-
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_raises_an_exception_if_ny_are_different(mock_cal):
-    mock_cal.return_value = 'test.fits'
-    throws_inhomogeneous_set_exception(BiasSubtractor, FakeContext(), 'ny', 107)
+def test_returns_null_if_ny_are_different(mock_cal):
+    handles_inhomogeneous_set(BiasSubtractor, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')

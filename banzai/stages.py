@@ -46,7 +46,7 @@ class MultiFrameStage(abc.ABC):
         return []
 
     def get_grouping(self, image):
-        grouping_criteria = [image.site, image.camera, image.epoch]
+        grouping_criteria = [image.site, image.camera]
         if self.group_by_attributes:
             grouping_criteria += [getattr(image, keyword) for keyword in self.group_by_attributes()]
         return grouping_criteria
