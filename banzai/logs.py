@@ -2,6 +2,7 @@ import logging
 import os
 import traceback
 import sys
+import multiprocessing
 
 from banzai.utils import date_utils
 
@@ -26,6 +27,7 @@ def _create_logging_tags_dictionary(kwargs):
             tags.update(_image_to_tags(image))
         if extra_tags:
             tags.update(extra_tags)
+        tags['processName'] = multiprocessing.current_process().name
         kwargs['extra'] = {'tags': tags}
     except Exception:
         logger.error(format_exception())
