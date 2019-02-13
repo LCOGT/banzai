@@ -71,7 +71,7 @@ spec:
         - /dev/null
       resources:
         requests:
-          cpu: 2
+          cpu: 1
           memory: 4Gi
         limits:
           cpu: 4
