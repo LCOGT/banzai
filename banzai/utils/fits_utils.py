@@ -26,36 +26,6 @@ def sanitizeheader(header):
     return header
 
 
-def create_master_calibration_header(images):
-    # Sort images by timestamp, newest first
-    images = [images[i] for i in np.argsort([image.dateobs for image in images])[::-1]]
-    old_header = images[0].header
-
-    header = fits.Header()
-    for key in images[0].header.keys():
-        try:
-            # Dump empty header keywords
-            if len(key) > 0:
-                for i in range(old_header.count(key)):
-                    header[key] = (old_header[(key, i)], old_header.comments[(key, i)])
-        except ValueError as e:
-            logger.error('Could not add keyword {key}: {error}'.format(key=key, error=e), image=images[0])
-            continue
-
-    header = sanitizeheader(header)
-
-    observation_dates = [image.dateobs for image in images]
-    mean_dateobs = date_utils.mean_date(observation_dates)
-
-    header['DATE-OBS'] = (date_utils.date_obs_to_string(mean_dateobs), '[UTC] Mean observation start time')
-    header['ISMASTER'] = (True, 'Is this a master calibration frame')
-
-    header.add_history("Images combined to create master calibration image:")
-    for image in images:
-        header.add_history(image.filename)
-    return header
-
-
 def split_slice(pixel_section):
     pixels = pixel_section.split(':')
     if int(pixels[1]) > int(pixels[0]):

@@ -1,3 +1,7 @@
+0.19.3 (2019-02-13)
+-------------------
+- Fixed bug where master calibrations had wrong daydir in filename
+
 0.19.2 (2019-02-12)
 -------------------
 - Bugfix in parsing arguments for the real-time processing
