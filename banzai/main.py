@@ -173,7 +173,7 @@ def process_single_frame(pipeline_context, raw_path, filename, log_message=''):
         logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
     full_path = os.path.join(raw_path, filename)
     # Short circuit
-    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(full_path), pipeline_context):
+    if not pipeline_context.image_can_be_processed(fits_utils.get_primary_header(full_path)):
         logger.error('Image cannot be processed. Check to make sure the instrument '
                      'is in the database and that the OBSTYPE is recognized by BANZAI',
                      extra_tags={'raw_path': raw_path, 'filename': filename})
