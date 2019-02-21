@@ -118,6 +118,10 @@ class ImagingSettings(Settings):
                                  'DARK': dark.DarkMaker,
                                  'SKYFLAT': flats.FlatMaker}
 
+    CALIBRATION_STACK_DELAY = {'BIAS': 300000,
+                               'DARK': 300000,
+                               'SKYFLAT': 300000}
+
     CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT']
 
     SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']

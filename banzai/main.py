@@ -13,10 +13,12 @@ import os
 import logging
 import copy
 import sys
+import dramatiq
 
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 from lcogt_logging import LCOGTFormatter
+from dramatiq.brokers.redis import RedisBroker
 
 import banzai.context
 from banzai import dbs, realtime, logs
@@ -39,6 +41,9 @@ root_logger.addHandler(root_handler)
 
 
 logger = logging.getLogger(__name__)
+
+redis_broker = RedisBroker(host="redis", port=6537)
+dramatiq.set_broker(redis_broker)
 
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
