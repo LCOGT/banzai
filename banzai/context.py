@@ -59,6 +59,8 @@ class PipelineContext(object):
         raise TypeError('Resetting attribute is not allowed. PipelineContext is immutable.')
 
     def image_can_be_processed(self, header):
+        if header is None:
+            return False
         instrument = dbs.get_instrument(header, db_address=self.db_address)
         passes = instrument_passes_criteria(instrument, self.FRAME_SELECTION_CRITERIA)
         passes &= image_utils.get_obstype(header) in self.LAST_STAGE
