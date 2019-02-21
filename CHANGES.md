@@ -1,3 +1,7 @@
+0.19.3 (2019-02-14)
+-------------------
+- Avoid trying to reduce files that don't have fits extension in filename
+
 0.19.3 (2019-02-13)
 -------------------
 - Fixed bug where master calibrations had wrong daydir in filename
