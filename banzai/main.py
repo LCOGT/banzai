@@ -189,7 +189,7 @@ def process_single_frame(pipeline_context, raw_path, filename, log_message=''):
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
 
 
-def process_master_maker(pipeline_context, instrument, frame_type, min_date, max_date, use_masters=False):
+def process_master_maker(pipeline_context, instrument, frame_type, min_date, max_date, use_masters=False, expected_frame_num=None):
     extra_tags = {'instrument': instrument.camera, 'obstype': frame_type,
                   'min_date': min_date.strftime(date_utils.TIMESTAMP_FORMAT),
                   'max_date': max_date.strftime(date_utils.TIMESTAMP_FORMAT)}
@@ -197,7 +197,7 @@ def process_master_maker(pipeline_context, instrument, frame_type, min_date, max
     image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
                                                             use_masters=use_masters,
                                                             db_address=pipeline_context.db_address)
-    if len(image_path_list) == 0:
+    if len(image_path_list) == 0 or (expected_frame_num and len(image_path_list) != expected_frame_num):
         logger.info("No calibration frames found to stack", extra_tags=extra_tags)
 
     try:
