@@ -60,35 +60,6 @@ class CalibrationStacker(CalibrationMaker):
     def __init__(self, pipeline_context):
         super(CalibrationStacker, self).__init__(pipeline_context)
 
-
-    @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY)
-    def schedule_stack(block_id, calibration_type, instrument):
-        block = lake_utils.get_block_by_id(block_id)
-        start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        end_date = start_date + timedelta(days=1)
-        for molecule in block.get('molecules', []):
-            reported_calibration_images = molecule.get('events', []).get('completed_exposures', None)
-            if (molecule['completed'] or molecule['failed']):
-                banzai.main.process_master_maker(pipeline_context, instrument, calibration_type, start_date,    end_date, expected_frame_num=reported_calibration_images)
-            else:
-                raise Exception
-
-
-    def schedule_stacking_checks(site):
-        now = datetime.utcnow()
-        calibration_blocks = lake_utils.get_next_calibration_blocks(site, now, now+timedelta(days=1))
-        instruments = dbs.get_instruments_at_site(site=site, db_address=self.pipeline_context.db_address)
-        for instrument in instruments:
-            for calibration_type in self.pipeline_context.CALIBRATION_IMAGE_TYPES:
-                block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
-                if block_for_calibration is not None:
-                    block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
-                    stack_delay = timedelta(milliseconds=pipeline_context.CALIBRATION_STACK_DELAYS  ['calibration_type'])
-                    message_delay = now - block_end + stack_delay
-                    schedule_stack.send_with_options(args=(block_for_calibration['id'],
-                        calibration_type, instrument), delay=message_delay)
-
-
     def make_master_calibration_frame(self, images):
         # Sort the images by reverse observation date, so that the most recent one
         # is used to create the filename and select the day directory

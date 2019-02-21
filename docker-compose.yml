@@ -26,16 +26,47 @@ services:
       options:
         max-size: '100m'
         max-file: '3'
-  BANZAITest:
+  BANZAIRedis:
+    image: redis:5.0.3
+    labels:
+      io.rancher.container.pull_image: always
+  BANZAIWorkers:
     image: ${DOCKER_IMG}
-    entrypoint:
-    - tail
-    command: ["-f", "/dev/null"]
+    entrypoint: ["dramatiq", "banzai:main", "-p", "12"]
+    volumes_from:
+      - BANZAIpipelineE2EData
+      - AstrometryCatalogs
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.sidekicks: BANZAIpipelineE2EData,AstrometryCatalogs
+    logging:
+      options:
+        max-size: '100m'
+        max-file: '3'
+  BANZAIListener:
+    image: ${DOCKER_IMG}
+    entrypoint: ["banzai_run_realtime_pipeline", "--db-address=sqlite:////archive/engineering/test.db"]
     environment:
       DB_ADDRESS: sqlite:////archive/engineering/test.db
     volumes_from:
     - BANZAIpipelineE2EData
     - AstrometryCatalogs
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.sidekicks: BANZAIpipelineE2EData,AstrometryCatalogs
+    logging:
+      options:
+        max-size: '100m'
+        max-file: '3'
+  BANZAITestRunner:
+    image: ${DOCKER_IMG}
+    entrypoint: ["tail", "-f", "/dev/null"]
+    environment:
+      DB_ADDRESS: sqlite:////archive/engineering/test.db
+      FITS_BROKER: 127.0.0.1
+    volumes_from:
+      - BANZAIpipelineE2EData
+      - AstrometryCatalogs
     labels:
       io.rancher.container.pull_image: always
       io.rancher.sidekicks: BANZAIpipelineE2EData,AstrometryCatalogs

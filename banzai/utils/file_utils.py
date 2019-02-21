@@ -7,9 +7,9 @@ from kombu import Connection, Exchange
 logger = logging.getLogger(__name__)
 
 
-def post_to_archive_queue(image_path):
-    exchange = Exchange('fits_files', type='fanout')
-    with Connection('amqp://guest:guest@rabbitmq.lco.gtn:5672//?heartbeat=10') as conn:
+def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):
+    exchange = Exchange(exchange_name, type='fanout')
+    with Connection(broker_url) as conn:
         producer = conn.Producer(exchange=exchange)
         producer.publish({'path': image_path})
         producer.release()

@@ -8,10 +8,8 @@ Author
 October 2015
 """
 import argparse
-import multiprocessing
 import os
 import logging
-import copy
 import sys
 import dramatiq
 
@@ -42,7 +40,7 @@ root_logger.addHandler(root_handler)
 
 logger = logging.getLogger(__name__)
 
-redis_broker = RedisBroker(host="redis", port=6537)
+redis_broker = RedisBroker(host=os.getenv('REDIS_HOST', '127.0.0.1'))
 dramatiq.set_broker(redis_broker)
 
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
@@ -96,7 +94,7 @@ def parse_args(settings, extra_console_arguments=None,
                         default=False)
     parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
                         default=False)
-    parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
+    parser.add_argument('--fpack', dest='fpack', action='store_true', default=True,
                         help='Fpack the output files?')
     parser.add_argument('--rlevel', dest='rlevel', default=91, type=int, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',
@@ -317,7 +315,7 @@ def run_realtime_pipeline():
                                 'kwargs': {'dest': 'n_processes', 'default': 12,
                                            'help': 'Number of listener processes to spawn.', 'type': int}},
                                {'args': ['--broker-url'],
-                                'kwargs': {'dest': 'broker_url', 'default': 'amqp://guest:guest@rabbitmq.lco.gtn:5672/',
+                                'kwargs': {'dest': 'broker_url', 'default': '127.0.0.1',
                                            'help': 'URL for the broker service.'}},
                                {'args': ['--queue-name'],
                                 'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
@@ -341,21 +339,12 @@ def run_realtime_pipeline():
 
     logger.info('Starting pipeline listener')
 
-    for i in range(pipeline_context.n_processes):
-        p = multiprocessing.Process(target=run_individual_listener, args=(pipeline_context.broker_url,
-                                                                          pipeline_context.queue_name,
-                                                                          copy.deepcopy(pipeline_context)))
-        p.start()
-
-
-def run_individual_listener(broker_url, queue_name, pipeline_context):
-
     fits_exchange = Exchange('fits_files', type='fanout')
-    listener = RealtimeModeListener(broker_url, pipeline_context)
+    listener = RealtimeModeListener(pipeline_context.broker_url, pipeline_context)
 
     with Connection(listener.broker_url) as connection:
         listener.connection = connection.clone()
-        listener.queue = Queue(queue_name, fits_exchange)
+        listener.queue = Queue(pipeline_context.queue_name, fits_exchange)
         try:
             listener.run()
         except listener.connection.connection_errors:
@@ -383,23 +372,27 @@ class RealtimeModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         path = body.get('path')
+        process_image.send(path, self.pipeline_context)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
-        try:
-            if realtime.need_to_process_image(path, self.pipeline_context,
-                                              db_address=self.pipeline_context.db_address,
-                                              max_tries=self.pipeline_context.max_tries):
 
-                logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
 
-                # Increment the number of tries for this file
-                realtime.increment_try_number(path, db_address=self.pipeline_context.db_address)
+@dramatiq.actor()
+def process_image(path, pipeline_context):
+    try:
+        if realtime.need_to_process_image(path, pipeline_context,
+                                          db_address=pipeline_context.db_address,
+                                          max_tries=pipeline_context.max_tries):
+            logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
 
-                run(path, self.pipeline_context)
-                realtime.set_file_as_processed(path, db_address=self.pipeline_context.db_address)
+            # Increment the number of tries for this file
+            realtime.increment_try_number(path, db_address=pipeline_context.db_address)
 
-        except Exception:
-            logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
-                         extra_tags={'filename': os.path.basename(path)})
+            run(path, pipeline_context)
+            realtime.set_file_as_processed(path, db_address=pipeline_context.db_address)
+
+    except Exception:
+        logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
+                     extra_tags={'filename': os.path.basename(path)})
 
 
 def mark_frame(mark_as):
@@ -427,3 +420,32 @@ def mark_frame_as_good():
 
 def mark_frame_as_bad():
     mark_frame("bad")
+
+
+
+@dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY)
+def schedule_stack(block_id, calibration_type, instrument):
+    block = lake_utils.get_block_by_id(block_id)
+    start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    end_date = start_date + timedelta(days=1)
+    for molecule in block.get('molecules', []):
+        reported_calibration_images = molecule.get('events', []).get('completed_exposures', None)
+        if (molecule['completed'] or molecule['failed']):
+            banzai.main.process_master_maker(pipeline_context, instrument, calibration_type, start_date,    end_date, expected_frame_num=reported_calibration_images)
+        else:
+            raise Exception
+
+
+def schedule_stacking_checks(site):
+    now = datetime.utcnow()
+    calibration_blocks = lake_utils.get_next_calibration_blocks(site, now, now+timedelta(days=1))
+    instruments = dbs.get_instruments_at_site(site=site, db_address=self.pipeline_context.db_address)
+    for instrument in instruments:
+        for calibration_type in self.pipeline_context.CALIBRATION_IMAGE_TYPES:
+            block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
+            if block_for_calibration is not None:
+                block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
+                stack_delay = timedelta(milliseconds=pipeline_context.CALIBRATION_STACK_DELAYS  ['calibration_type'])
+                message_delay = now - block_end + stack_delay
+                schedule_stack.send_with_options(args=(block_for_calibration['id'],
+                    calibration_type, instrument), delay=message_delay)

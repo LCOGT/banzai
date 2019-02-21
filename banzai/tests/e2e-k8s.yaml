@@ -50,7 +50,27 @@ spec:
         - /data/
 
   containers:
-    - name: banzai
+    - name: banzai_redis
+        image: redis:5.0.3
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1
+            memory: 500M
+          limits:
+            cpu: 2
+            memory: 1Gi
+    - name: banzai_fits_exchange
+        image: rabbitmq:3.7.9
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1
+            memory: 500M
+          limits:
+            cpu: 2
+            memory: 1Gi
+    - name: banzai_workers
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
       volumeMounts:
@@ -76,6 +96,34 @@ spec:
         limits:
           cpu: 4
           memory: 8Gi
+    - name: banzai_listener
+      image: @BANZAI_IMAGE@
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: astrometry-catalogs
+          mountPath: /opt/astrometry.net/data
+          subPath: data
+          readOnly: true
+        - name: banzai-data
+          mountPath: /archive/engineering
+          subPath: engineering
+          readOnly: false
+      env:
+        - name: DB_ADDRESS
+          value: "sqlite:////archive/engineering/test.db"
+      command:
+        - banzai_run_realtime_pipeline
+        - "--db-address=sqlite:////archive/engineering/test.db"
+      resources:
+        requests:
+          cpu: 1
+          memory: 500M
+        limits:
+          cpu: 1
+          memory: 1Gi
+
+
+
 
   dnsPolicy: ClusterFirst
   restartPolicy: Never

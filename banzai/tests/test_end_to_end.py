@@ -6,7 +6,7 @@ import pytest
 import mock
 
 from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
-from banzai.utils import fits_utils, date_utils
+from banzai.utils import fits_utils, date_utils, file_utils
 from banzai.tests.utils import FakeResponse
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
@@ -34,10 +34,7 @@ def run_reduce_individual_frame(raw_filenames):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
-            command = 'banzai_reduce_individual_frame --raw-path {raw_path} --filename {filename} ' \
-                      '--db-address={db_address} --ignore-schedulability --fpack'
-            command = command.format(raw_path=raw_path, filename=filename, db_address=os.environ['DB_ADDRESS'])
-            os.system(command)
+            file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
 
 
 def run_stack_calibrations(frame_type):

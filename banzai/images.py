@@ -195,10 +195,10 @@ class Image(object):
             hdu_list.append(bpm_hdu)
         return hdu_list
 
-    def _post_to_archive(self, filepath):
+    def _post_to_archive(self, filepath, pipeline_context):
         logger.info('Posting file to the archive', image=self)
         try:
-            file_utils.post_to_archive_queue(filepath)
+            file_utils.post_to_archive_queue(filepath, pipeline_context.broker_url)
         except Exception:
             logger.error("Could not post to ingester: {error}".format(error=logs.format_exception()), image=self)
 

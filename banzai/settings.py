@@ -8,6 +8,7 @@ settings.py: Settings script for banzai.
 """
 import operator
 import abc
+import os
 
 from banzai.context import InstrumentCriterion
 from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, photometry, astrometry, images
@@ -130,3 +131,6 @@ class ImagingSettings(Settings):
                                       'DARK': make_calibration_filename_function('DARK', [ccdsum_to_filename], telescope_to_filename),
                                       'SKYFLAT': make_calibration_filename_function('SKYFLAT', [ccdsum_to_filename, filter_to_filename],
                                                                                     telescope_to_filename)}
+
+    # We should probably put the redis url here at some point, but we currently can't because dramatiq needs to be
+    # configured before one of these objects is instantiated. Should fix.
