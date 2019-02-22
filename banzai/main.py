@@ -422,6 +422,8 @@ def mark_frame_as_bad():
     mark_frame("bad")
 
 
+RETRY_DELAY = 1000*60*10
+
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY)
 def schedule_stack(block_id, calibration_type, instrument):
