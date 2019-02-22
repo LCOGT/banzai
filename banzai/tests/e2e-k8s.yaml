@@ -51,25 +51,25 @@ spec:
 
   containers:
     - name: banzai_redis
-        image: redis:5.0.3
-        imagePullPolicy: IfNotPresent
-        resources:
-          requests:
-            cpu: 1
-            memory: 500M
-          limits:
-            cpu: 2
-            memory: 1Gi
+      image: redis:5.0.3
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          cpu: 1
+          memory: 500M
+        limits:
+          cpu: 2
+          memory: 1Gi
     - name: banzai_fits_exchange
-        image: rabbitmq:3.7.9
-        imagePullPolicy: IfNotPresent
-        resources:
-          requests:
-            cpu: 1
-            memory: 500M
-          limits:
-            cpu: 2
-            memory: 1Gi
+      image: rabbitmq:3.7.9
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          cpu: 1
+          memory: 500M
+        limits:
+          cpu: 2
+          memory: 1Gi
     - name: banzai_workers
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
@@ -121,9 +121,6 @@ spec:
         limits:
           cpu: 1
           memory: 1Gi
-
-
-
 
   dnsPolicy: ClusterFirst
   restartPolicy: Never
