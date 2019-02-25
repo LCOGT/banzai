@@ -29,7 +29,7 @@ def instrument_passes_criteria(instrument, criteria):
 
 
 class PipelineContext(object):
-    def __init__(self, command_line_args, settings,
+    def __init__(self, command_line_args=None, settings=None,
                  processed_path='/archive/engineering/', post_to_archive=False, fpack=True, rlevel=91,
                  db_address='mysql://cmccully:password@localhost/test', log_level='INFO', preview_mode=False,
                  max_tries=5, post_to_elasticsearch=False, elasticsearch_url='http://elasticsearch.lco.gtn:9200',
@@ -45,12 +45,14 @@ class PipelineContext(object):
             elif variable != 'command_line_args':
                 super(PipelineContext, self).__setattr__(variable, local_variables[variable])
 
-        for key, value in dict(inspect.getmembers(settings)).items():
-            if not key.startswith('_'):
-                super(PipelineContext, self).__setattr__(key, value)
+        if settings is not None:
+            for key, value in dict(inspect.getmembers(settings)).items():
+                if not key.startswith('_'):
+                    super(PipelineContext, self).__setattr__(key, value)
 
-        for keyword in vars(command_line_args):
-            super(PipelineContext, self).__setattr__(keyword, getattr(command_line_args, keyword))
+        if command_line_args is not None:
+            for keyword in vars(command_line_args):
+                super(PipelineContext, self).__setattr__(keyword, getattr(command_line_args, keyword))
 
     def __delattr__(self, item):
         raise TypeError('Deleting attribute is not allowed. PipelineContext is immutable')
