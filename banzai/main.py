@@ -372,12 +372,14 @@ class RealtimeModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         path = body.get('path')
+        logger.info('Got message.' + path + self.pipeline_context)
         process_image.send(path, self.pipeline_context)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
 @dramatiq.actor()
 def process_image(path, pipeline_context_json):
+    logger.info('Got into actor.')
     try:
         pipeline_context = PipelineContext.from_dict(pipeline_context_json)
         if realtime.need_to_process_image(path, pipeline_context,
