@@ -64,3 +64,13 @@ class PipelineContext(object):
         passes &= image_utils.get_obstype(header) in self.LAST_STAGE
         passes &= image_utils.get_reduction_level(header) == '00'
         return passes
+
+    def to_json(self):
+        json_dict = self.__dict__.copy()
+        json_dict.pop('self')
+        json_dict.pop('settings')
+        return json_dict
+
+    @classmethod
+    def from_dict(cls, json_dict):
+        return cls(**json_dict)
