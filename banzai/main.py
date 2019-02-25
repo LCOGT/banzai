@@ -357,7 +357,7 @@ def run_realtime_pipeline():
 class RealtimeModeListener(ConsumerMixin):
     def __init__(self, broker_url, pipeline_context):
         self.broker_url = broker_url
-        self.pipeline_context = pipeline_context
+        self.pipeline_context = pipeline_context.to_json()
 
     def on_connection_error(self, exc, interval):
         logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
@@ -372,7 +372,7 @@ class RealtimeModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         path = body.get('path')
-        process_image.send(path, self.pipeline_context.to_json())
+        process_image.send(path, self.pipeline_context)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
