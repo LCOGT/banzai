@@ -9,7 +9,7 @@ from astropy.io import fits
 from astropy.table import Table
 
 import banzai
-from banzai import dbs
+from banzai import dbs, settings
 from banzai.utils import date_utils, file_utils, fits_utils, image_utils
 from banzai.munge import munge
 from banzai import logs
@@ -253,9 +253,9 @@ class Image(object):
         return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
 
 
-def read_image(filename, pipeline_context):
+def read_image(filename):
     try:
-        image = pipeline_context.FRAME_CLASS(pipeline_context, filename=filename)
+        image = settings.FRAME_CLASS(filename=filename)
         if image.instrument is None:
             logger.error("Image instrument attribute is None, aborting", image=image)
             raise IOError

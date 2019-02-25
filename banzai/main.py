@@ -20,10 +20,10 @@ from lcogt_logging import LCOGTFormatter
 
 import banzai.context
 from banzai import dbs, realtime, logs
-from banzai.context import PipelineContext
+from banzai.context import Context
 from banzai.utils import image_utils, date_utils, fits_utils
 from banzai.images import read_image
-import banzai.settings
+from banzai import settings
 
 
 # Logger set up
@@ -43,6 +43,8 @@ logger = logging.getLogger(__name__)
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
                                         'help': 'Top level directory where the raw data is stored'}}
+
+PIPELINE_CONTEXT = Context()
 
 
 def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
@@ -117,10 +119,11 @@ def parse_args(settings, extra_console_arguments=None,
 
     logs.set_log_level(args.log_level)
 
-    if not args.ignore_schedulability:
-        settings.FRAME_SELECTION_CRITERIA += settings.SCHEDULABLE_CRITERIA
+    # TODO:
+    # if not args.ignore_schedulability:
+    #     settings.FRAME_SELECTION_CRITERIA += settings.SCHEDULABLE_CRITERIA
 
-    pipeline_context = PipelineContext(args, settings, **kwargs)
+    pipeline_context = Context(args)
 
     return pipeline_context
 
@@ -129,10 +132,10 @@ def run(image_path, pipeline_context):
     """
     Main driver script for banzai.
     """
-    image = read_image(image_path, pipeline_context)
-    stages_to_do = get_stages_todo(pipeline_context.ORDERED_STAGES,
-                                   last_stage=pipeline_context.LAST_STAGE[image.obstype],
-                                   extra_stages=pipeline_context.EXTRA_STAGES[image.obstype])
+    image = read_image(image_path)
+    stages_to_do = get_stages_todo(settings.ORDERED_STAGES,
+                                   last_stage=settings.LAST_STAGE[image.obstype],
+                                   extra_stages=settings.EXTRA_STAGES[image.obstype])
     logger.info("Starting to reduce frame", image=image)
     for stage in stages_to_do:
         stage_to_run = stage(pipeline_context)
@@ -146,7 +149,7 @@ def run(image_path, pipeline_context):
 
 def run_master_maker(image_path_list, pipeline_context, frame_type):
     images = [read_image(image_path, pipeline_context) for image_path in image_path_list]
-    stage_to_run = pipeline_context.CALIBRATION_STACKER_STAGE[frame_type](pipeline_context)
+    stage_to_run = settings.CALIBRATION_STACKER_STAGE[frame_type](pipeline_context)
     images = stage_to_run.run(images)
     for image in images:
         image.write(pipeline_context)
