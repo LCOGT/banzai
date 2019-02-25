@@ -2,6 +2,9 @@ import inspect
 from banzai.utils import image_utils
 from banzai import dbs
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class InstrumentCriterion:
@@ -72,6 +75,7 @@ class PipelineContext(object):
         json_dict = self.__dict__.copy()
         json_dict.pop('self')
         json_dict.pop('settings')
+        logger.info(json_dict)
         return json.dumps(json_dict)
 
     @classmethod
