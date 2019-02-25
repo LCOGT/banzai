@@ -1,6 +1,7 @@
 import inspect
 from banzai.utils import image_utils
 from banzai import dbs
+import json
 
 
 class InstrumentCriterion:
@@ -71,7 +72,7 @@ class PipelineContext(object):
         json_dict = self.__dict__.copy()
         json_dict.pop('self')
         json_dict.pop('settings')
-        return json_dict
+        return json.dumps(json_dict)
 
     @classmethod
     def from_dict(cls, json_dict):
