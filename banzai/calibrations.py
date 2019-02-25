@@ -1,21 +1,15 @@
 import logging
 import abc
 import os
-import dramatiq
-import time
-
-from datetime import datetime, timedelta
 
 import numpy as np
 from astropy.io import fits
 
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs
-from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, lake_utils
+from banzai.utils import image_utils, stats, fits_utils, qc, date_utils
 
 logger = logging.getLogger(__name__)
-
-RETRY_DELAY = 1000*60*10
 
 
 class CalibrationMaker(MultiFrameStage):
