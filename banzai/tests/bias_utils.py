@@ -4,7 +4,7 @@ import numpy as np
 
 class FakeBiasImage(FakeImage):
     def __init__(self, runtime_context=None, data=None, bias_level=0.0, nx=101, ny=103, header=None):
-        super(FakeBiasImage, self).__init__(image_multiplier=0.0, nx=nx, ny=ny, runtime_context=context,
+        super(FakeBiasImage, self).__init__(image_multiplier=0.0, nx=nx, ny=ny, runtime_context=runtime_context,
                                             data=data, header=header)
         for key, value in {'BIASLVL': bias_level, 'OBSTYPE': 'BIAS'}.items():
             self.header[key] = value

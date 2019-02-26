@@ -6,6 +6,7 @@ from banzai.tests.utils import FakeContext, handles_inhomogeneous_set
 from banzai.tests.dark_utils import FakeDarkImage
 
 
+
 def test_min_images():
     dark_maker = DarkMaker(FakeContext())
     processed_images = dark_maker.do_stage([])

@@ -1,6 +1,5 @@
 import json
 from datetime import datetime
-import inspect
 
 import numpy as np
 from astropy.io.fits import Header
@@ -8,7 +7,8 @@ from astropy.utils.data import get_pkg_data_filename
 
 from banzai.stages import Stage
 from banzai.images import Image
-import banzai.settings
+import logging
+logger = logging.getLogger(__name__)
 
 
 class FakeImage(Image):
@@ -22,8 +22,10 @@ class FakeImage(Image):
         self.ccdsum = ccdsum
         self.epoch = epoch
         if data is None:
-            data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
-        self.data = data
+            self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
+        else:
+            self.data = data
+        logger.info(self.data)
         if n_amps > 1:
             self.data = np.stack(n_amps*[self.data])
         self.filename = 'test.fits'
