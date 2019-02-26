@@ -9,7 +9,7 @@ from astropy.io import fits
 from astropy.table import Table
 
 import banzai
-from banzai import dbs, settings
+from banzai import dbs, settings, exceptions
 from banzai.utils import date_utils, file_utils, fits_utils, image_utils
 from banzai.munge import munge
 from banzai import logs
@@ -204,7 +204,7 @@ class Image(object):
 
     def write_catalog(self, filename, nsources=None):
         if self.data_tables.get('catalog') is None:
-            raise image_utils.MissingCatalogException
+            raise exceptions.MissingCatalogException
         else:
             self.data_tables.get('catalog')[:nsources].write(filename, format='fits', overwrite=True)
 

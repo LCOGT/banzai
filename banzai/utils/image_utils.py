@@ -60,14 +60,6 @@ def check_image_homogeneity(images, group_by_attributes=None):
             raise InhomogeneousSetException('Images have different {0}s'.format(attribute))
 
 
-class InhomogeneousSetException(Exception):
-    pass
-
-
-class MissingCatalogException(Exception):
-    pass
-
-
 def image_can_be_processed(db_address, header):
     instrument = dbs.get_instrument(header, db_address=db_address)
     passes = instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
