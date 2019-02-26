@@ -12,7 +12,7 @@ import banzai.settings
 
 
 class FakeImage(Image):
-    def __init__(self, pipeline_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',
+    def __init__(self, runtime_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',
                  ccdsum='2 2', epoch='20160101', n_amps=1, filter='U', data=None, header=None, **kwargs):
         self.nx = nx
         self.ny = ny
@@ -55,10 +55,7 @@ class FakeImage(Image):
 
 
 class FakeContext(object):
-    def __init__(self, preview_mode=False, settings=banzai.settings.ImagingSettings(), frame_class=FakeImage):
-        for key, value in dict(inspect.getmembers(settings)).items():
-            if not key.startswith('_'):
-                setattr(self, key, value)
+    def __init__(self, preview_mode=False, frame_class=FakeImage):
         self.FRAME_CLASS = frame_class
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'

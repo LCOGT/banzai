@@ -44,8 +44,6 @@ RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
                                         'help': 'Top level directory where the raw data is stored'}}
 
-PIPELINE_CONTEXT = Context()
-
 
 def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
     """
@@ -123,9 +121,9 @@ def parse_args(settings, extra_console_arguments=None,
     # if not args.ignore_schedulability:
     #     settings.FRAME_SELECTION_CRITERIA += settings.SCHEDULABLE_CRITERIA
 
-    pipeline_context = Context(args)
+    runtime_context = Context(args)
 
-    return pipeline_context
+    return runtime_context
 
 
 def run(image_path, pipeline_context):

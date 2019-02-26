@@ -29,8 +29,8 @@ def _trim_image(image):
 
 
 class Trimmer(Stage):
-    def __init__(self, pipeline_context):
-        super(Trimmer, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(Trimmer, self).__init__(runtime_context)
 
     def do_stage(self, image):
         logger.info('Trimming image', image=image, extra_tags={'trimsec': image.header['TRIMSEC']})
