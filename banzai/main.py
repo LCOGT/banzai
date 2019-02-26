@@ -366,7 +366,6 @@ class RealtimeModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         path = body.get('path')
-        logger.info('Got message.' + path + self.runtime_context)
         process_image.send(path, self.runtime_context)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
