@@ -5,6 +5,7 @@ import argparse
 import pytest
 import mock
 
+from banzai.main import redis_broker
 from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
 from banzai.utils import fits_utils, date_utils, file_utils
 from banzai.tests.utils import FakeResponse
@@ -84,6 +85,7 @@ def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_ty
     for day_obs in DAYS_OBS:
         created_stacked_calibrations += glob(os.path.join(DATA_ROOT, day_obs, 'processed',
                                                           '*' + calibration_type.lower() + '*.fits*'))
+    redis_broker.join('default')
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(created_stacked_calibrations) == number_of_stacks_that_should_have_been_created
 
