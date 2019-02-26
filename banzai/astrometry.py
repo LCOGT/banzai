@@ -25,8 +25,8 @@ class WCSSolver(Stage):
           '--solved none --match none --rdls none --wcs {wcs_name} --corr none --overwrite ' \
           '-X X -Y Y -s FLUX --width {nx} --height {ny} {catalog_name}'
 
-    def __init__(self, pipeline_context):
-        super(WCSSolver, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(WCSSolver, self).__init__(runtime_context)
 
     def do_stage(self, image):
 

@@ -51,11 +51,6 @@ def make_image_path_list(raw_path):
     return image_path_list
 
 
-def get_calibration_image_path_list(pipeline_context, instrument, frame_type, min_date, max_date, use_masters=False):
-    return dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
-                                                 use_masters=use_masters, db_address=pipeline_context.db_address)
-
-
 def check_image_homogeneity(images, group_by_attributes=None):
     attribute_list = ['nx', 'ny', 'site', 'camera']
     if group_by_attributes is not None:

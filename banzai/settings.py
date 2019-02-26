@@ -14,11 +14,11 @@ from banzai.utils.file_utils import ccdsum_to_filename, filter_to_filename
 from banzai.calibrations import make_calibration_filename_function
 
 
-SCHEDULABLE_CRITERIA = [InstrumentCriterion('schedulable', operator.eq, True)]
-
-
 def telescope_to_filename(image):
     return image.header.get('TELESCOP', '').replace('-', '')
+
+
+SCHEDULABLE_CRITERIA = [InstrumentCriterion('schedulable', operator.eq, True)]
 
 FRAME_SELECTION_CRITERIA = [InstrumentCriterion('type', operator.contains, 'FLOYDS', exclude=True),
                             InstrumentCriterion('type', operator.contains, 'NRES', exclude=True)]

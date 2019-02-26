@@ -34,7 +34,7 @@ def test_format_qc_results_numpy_bool():
 
 def test_save_qc_results_no_post_to_elasticsearch_attribute():
     stage = FakeStage(FakeContext())
-    assert qc.save_qc_results(stage.pipeline_context, {}, FakeImage()) == {}
+    assert qc.save_qc_results(stage.runtime_context, {}, FakeImage()) == {}
 
 
 @mock.patch('banzai.utils.qc.elasticsearch.Elasticsearch')
@@ -43,5 +43,5 @@ def test_save_qc_results(mock_es):
     context.post_to_elasticsearch = True
     context.elasticsearch_url = '/'
     stage = FakeStage(context)
-    qc.save_qc_results(stage.pipeline_context, {}, FakeImage())
+    qc.save_qc_results(stage.runtime_context, {}, FakeImage())
     assert mock_es.called
