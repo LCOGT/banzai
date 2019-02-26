@@ -128,7 +128,7 @@ def run(image_path, runtime_context):
     """
     Main driver script for banzai.
     """
-    image = read_image(image_path)
+    image = read_image(image_path, runtime_context)
     stages_to_do = get_stages_todo(settings.ORDERED_STAGES,
                                    last_stage=settings.LAST_STAGE[image.obstype],
                                    extra_stages=settings.EXTRA_STAGES[image.obstype])
@@ -144,7 +144,7 @@ def run(image_path, runtime_context):
 
 
 def run_master_maker(image_path_list, runtime_context, frame_type):
-    images = [read_image(image_path) for image_path in image_path_list]
+    images = [read_image(image_path, runtime_context) for image_path in image_path_list]
     stage_to_run = settings.CALIBRATION_STACKER_STAGE[frame_type](runtime_context)
     images = stage_to_run.run(images)
     for image in images:

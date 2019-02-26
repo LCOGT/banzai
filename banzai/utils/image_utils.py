@@ -81,9 +81,9 @@ def image_can_be_processed(header, db_address):
     return passes
 
 
-def read_image(filename):
+def read_image(filename, runtime_context):
     try:
-        image = FRAME_CLASS(filename=filename)
+        image = FRAME_CLASS(runtime_context, filename=filename)
         if image.instrument is None:
             logger.error("Image instrument attribute is None, aborting", image=image)
             raise IOError
