@@ -1,7 +1,7 @@
 import logging
 
 from banzai import dbs
-from banzai.utils import file_utils
+from banzai.utils import file_utils, image_utils
 from banzai.utils.fits_utils import get_primary_header
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ def increment_try_number(path, db_address=dbs._DEFAULT_DB):
     dbs.commit_processed_image(image, db_address=db_address)
 
 
-def need_to_process_image(path, context, db_address=dbs._DEFAULT_DB, max_tries=5):
+def need_to_process_image(path, ignore_schedulability, db_address=dbs._DEFAULT_DB, max_tries=5):
     """
     Figure out if we need to try to make a process a given file.
 
@@ -29,8 +29,8 @@ def need_to_process_image(path, context, db_address=dbs._DEFAULT_DB, max_tries=5
     ----------
     path: str
           Full path to the image possibly needing to be processed
-    context: iterable
-             A pipeline context with FRAME_SELECTION_CRITERIA
+    ignore_schedulability: bool
+             Process non-schedulable instruments
     db_address: str
                 SQLAlchemy style URL to the database with the status of previous reductions
     max_tries: int
@@ -49,7 +49,10 @@ def need_to_process_image(path, context, db_address=dbs._DEFAULT_DB, max_tries=5
     logger.info("Checking if file needs to be processed", extra_tags={"filename": path})
 
     header = get_primary_header(path)
-    if not context.image_can_be_processed(header):
+    if not image_utils.image_can_be_processed(header, db_address):
+        return False
+
+    if not ignore_schedulability and not dbs.get_instrument(header, db_address=db_address).schedulable:
         return False
 
     # Get the image in db. If it doesn't exist add it.

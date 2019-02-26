@@ -18,11 +18,9 @@ class InstrumentCriterion:
         return self.__dict__ == other.__dict__
 
 
-def instrument_passes_criteria(instrument, ignore_schedulability):
+def instrument_passes_criteria(instrument, criteria):
     passes = True
-    for criterion in settings.FRAME_SELECTION_CRITERIA:
+    for criterion in criteria:
         if not criterion.instrument_passes(instrument):
             passes = False
-    if not ignore_schedulability:
-        settings.SchedulableCriterion.instrument_passes(instrument)
     return passes

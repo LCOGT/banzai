@@ -27,12 +27,17 @@ def get_reduction_level(header):
     return header.get('RLEVEL', '00')
 
 
-def select_images(image_list, db_address, image_type):
+def select_images(image_list, image_type, db_address, ignore_schedulability):
     images = []
     for filename in image_list:
         try:
             header = get_primary_header(filename)
-            if image_can_be_processed(header, db_address) and (image_type is None or get_obstype(header) == image_type):
+            should_process = image_can_be_processed(header, db_address)
+            should_process &= (image_type is None or get_obstype(header) == image_type)
+            if not ignore_schedulability:
+                instrument = dbs.get_instrument(header, db_address=db_address)
+                should_process &= instrument.schedulable
+            if should_process:
                 images.append(filename)
         except Exception:
             logger.error(logs.format_exception(), extra_tags={'filename': filename})
@@ -68,7 +73,7 @@ def check_image_homogeneity(images, group_by_attributes=None):
             raise InhomogeneousSetException('Images have different {0}s'.format(attribute))
 
 
-def image_can_be_processed(db_address, header):
+def image_can_be_processed(header, db_address):
     instrument = dbs.get_instrument(header, db_address=db_address)
     passes = instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
     passes &= get_obstype(header) in settings.LAST_STAGE

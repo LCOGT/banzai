@@ -172,7 +172,7 @@ def process_single_frame(runtime_context, raw_path, filename, log_message=''):
         logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
     full_path = os.path.join(raw_path, filename)
     # Short circuit
-    if not image_utils.image_can_be_processed(runtime_context.db_address, fits_utils.get_primary_header(full_path)):
+    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(full_path), runtime_context.db_address):
         logger.error('Image cannot be processed. Check to make sure the instrument '
                      'is in the database and that the OBSTYPE is recognized by BANZAI',
                      extra_tags={'raw_path': raw_path, 'filename': filename})
@@ -374,7 +374,7 @@ class RealtimeModeListener(ConsumerMixin):
         path = body.get('path')
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
         try:
-            if realtime.need_to_process_image(path, self.runtime_context,
+            if realtime.need_to_process_image(path, self.runtime_context.ignore_schedulability,
                                               db_address=self.runtime_context.db_address,
                                               max_tries=self.runtime_context.max_tries):
 

@@ -106,3 +106,8 @@ class FakeResponse(object):
 
     def json(self):
         return self.data
+
+
+class FakeInstrument(object):
+    def __init__(self, schedulable=True):
+        self.schedulable = schedulable
