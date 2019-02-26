@@ -9,9 +9,7 @@ settings.py: Settings script for banzai.
 import operator
 
 from banzai.utils.instrument_utils import InstrumentCriterion
-from banzai import qc, bias, crosstalk, gain, mosaic, bpm, trim, dark, flats, photometry, astrometry, images
 from banzai.utils.file_utils import ccdsum_to_filename, filter_to_filename
-from banzai.calibrations import make_calibration_filename_function
 
 
 def telescope_to_filename(image):
@@ -23,24 +21,24 @@ SCHEDULABLE_CRITERIA = [InstrumentCriterion('schedulable', operator.eq, True)]
 FRAME_SELECTION_CRITERIA = [InstrumentCriterion('type', operator.contains, 'FLOYDS', exclude=True),
                             InstrumentCriterion('type', operator.contains, 'NRES', exclude=True)]
 
-FRAME_CLASS = images.Image
+FRAME_CLASS = 'banzai.images.Image'
 
-ORDERED_STAGES = [bpm.BPMUpdater,
-                  qc.HeaderSanity,
-                  qc.ThousandsTest,
-                  qc.SaturationTest,
-                  bias.OverscanSubtractor,
-                  crosstalk.CrosstalkCorrector,
-                  gain.GainNormalizer,
-                  mosaic.MosaicCreator,
-                  trim.Trimmer,
-                  bias.BiasSubtractor,
-                  dark.DarkSubtractor,
-                  flats.FlatDivider,
-                  qc.PatternNoiseDetector,
-                  photometry.SourceDetector,
-                  astrometry.WCSSolver,
-                  qc.pointing.PointingTest]
+ORDERED_STAGES = ['banzai.bpm.BPMUpdater',
+                  'banzai.qc.HeaderSanity',
+                  'banzai.qc.ThousandsTest',
+                  'banzai.qc.SaturationTest',
+                  'banzai.bias.OverscanSubtractor',
+                  'banzai.crosstalk.CrosstalkCorrector',
+                  'banzai.gain.GainNormalizer',
+                  'banzai.mosaic.MosaicCreator',
+                  'banzai.trim.Trimmer',
+                  'banzai.bias.BiasSubtractor',
+                  'banzai.dark.DarkSubtractor',
+                  'banzai.flats.FlatDivider',
+                  'banzai.qc.PatternNoiseDetector',
+                  'banzai.photometry.SourceDetector',
+                  'banzai.astrometry.WCSSolver',
+                  'banzai.qc.pointing.PointingTest']
 
 CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,
@@ -50,22 +48,36 @@ CALIBRATION_SET_CRITERIA = {'BIAS': ['ccdsum'],
                             'DARK': ['ccdsum'],
                             'SKYFLAT': ['ccdsum', 'filter']}
 
-LAST_STAGE = {'BIAS': trim.Trimmer, 'DARK': bias.BiasSubtractor, 'SKYFLAT': dark.DarkSubtractor,
-              'SINISTRO': mosaic.MosaicCreator, 'STANDARD': None, 'EXPOSE': None}
+LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer', 'DARK': 'banzai.bias.BiasSubtractor', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
+              'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None}
 
-EXTRA_STAGES = {'BIAS': [bias.BiasMasterLevelSubtractor, bias.BiasComparer],
-                'DARK': [dark.DarkNormalizer, dark.DarkComparer],
-                'SKYFLAT': [flats.FlatNormalizer, qc.PatternNoiseDetector, flats.FlatComparer],
+EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
+                'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkComparer'],
+                'SKYFLAT': ['banzai.flats.FlatNormalizer', 'banzai.qc.PatternNoiseDetector', 'banzai.flats.FlatComparer'],
                 'STANDARD': None,
                 'EXPOSE': None}
 
-CALIBRATION_STACKER_STAGE = {'BIAS': bias.BiasMaker,
-                             'DARK': dark.DarkMaker,
-                             'SKYFLAT': flats.FlatMaker}
+CALIBRATION_STACKER_STAGE = {'BIAS': 'banzai.bias.BiasMaker',
+                             'DARK': 'banzai.dark.DarkMaker',
+                             'SKYFLAT': 'banzai.flats.FlatMaker'}
 
 CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT']
 
 SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
+
+
+def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):
+    def get_calibration_filename(image):
+        name_components = {'site': image.site, 'telescop': telescope_filename_function(image),
+                           'camera': image.header.get('INSTRUME', ''), 'epoch': image.epoch,
+                           'cal_type': calibration_type.lower()}
+        cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
+        for filename_function in attribute_filename_functions:
+            cal_file += '-{}'.format(filename_function(image))
+        cal_file += '.fits'
+        return cal_file
+    return get_calibration_filename
+
 
 CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': make_calibration_filename_function('BIAS', [ccdsum_to_filename], telescope_to_filename),
                                   'DARK': make_calibration_filename_function('DARK', [ccdsum_to_filename], telescope_to_filename),

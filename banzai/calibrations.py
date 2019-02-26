@@ -7,7 +7,9 @@ from astropy.io import fits
 
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs, settings
-from banzai.utils import image_utils, stats, fits_utils, qc, date_utils
+from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, import_utils
+
+FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +84,7 @@ class CalibrationStacker(CalibrationMaker):
 
         # Save the master dark image with all of the combined images in the header
         master_header = create_master_calibration_header(images[0].header, images)
-        master_image = settings.FRAME_CLASS(self.runtime_context, data=stacked_data, header=master_header)
+        master_image = FRAME_CLASS(self.runtime_context, data=stacked_data, header=master_header)
         master_image.filename = master_calibration_filename
         master_image.bpm = master_bpm
 
@@ -116,8 +118,7 @@ class ApplyCalibration(Stage):
             self.on_missing_master_calibration(image)
             return image
 
-        master_calibration_image = settings.FRAME_CLASS(self.runtime_context,
-                                                                     filename=master_calibration_filename)
+        master_calibration_image = FRAME_CLASS(self.runtime_context, filename=master_calibration_filename)
         try:
             image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
         except image_utils.InhomogeneousSetException:
@@ -194,19 +195,6 @@ class CalibrationComparer(ApplyCalibration):
     @abc.abstractmethod
     def noise_model(self, image):
         return np.ones(image.data.size)
-
-
-def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):
-    def get_calibration_filename(image):
-        name_components = {'site': image.site, 'telescop': telescope_filename_function(image),
-                           'camera': image.header.get('INSTRUME', ''), 'epoch': image.epoch,
-                           'cal_type': calibration_type.lower()}
-        cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
-        for filename_function in attribute_filename_functions:
-            cal_file += '-{}'.format(filename_function(image))
-        cal_file += '.fits'
-        return cal_file
-    return get_calibration_filename
 
 
 def create_master_calibration_header(old_header, images):

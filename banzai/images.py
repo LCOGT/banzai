@@ -10,8 +10,7 @@ from astropy.table import Table
 
 import banzai
 from banzai import dbs, settings, exceptions
-from banzai.utils import date_utils, file_utils, fits_utils, image_utils
-from banzai.munge import munge
+from banzai.utils import date_utils, file_utils, fits_utils
 from banzai import logs
 
 logger = logging.getLogger(__name__)
@@ -251,19 +250,6 @@ class Image(object):
         inner_nx = round(self.nx * inner_edge_width)
         inner_ny = round(self.ny * inner_edge_width)
         return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
-
-
-def read_image(filename):
-    try:
-        image = settings.FRAME_CLASS(filename=filename)
-        if image.instrument is None:
-            logger.error("Image instrument attribute is None, aborting", image=image)
-            raise IOError
-        munge(image)
-        return image
-    except Exception:
-        logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
-                     extra_tags={'filename': filename})
 
 
 def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, input_dictionary=None):

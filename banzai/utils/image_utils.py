@@ -2,13 +2,21 @@ import os
 from glob import glob
 import logging
 
-from banzai import settings
+from banzai import settings, logs
 from banzai import logs
 from banzai import dbs
+from banzai.images import logger
+from banzai.munge import munge
 from banzai.utils.fits_utils import get_primary_header
 from banzai.utils.instrument_utils import instrument_passes_criteria
+from banzai.utils import import_utils
+from banzai.exceptions import InhomogeneousSetException
+
 
 logger = logging.getLogger(__name__)
+
+
+FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
 
 
 def get_obstype(header):
@@ -66,3 +74,16 @@ def image_can_be_processed(db_address, header):
     passes &= get_obstype(header) in settings.LAST_STAGE
     passes &= get_reduction_level(header) == '00'
     return passes
+
+
+def read_image(filename):
+    try:
+        image = FRAME_CLASS(filename=filename)
+        if image.instrument is None:
+            logger.error("Image instrument attribute is None, aborting", image=image)
+            raise IOError
+        munge(image)
+        return image
+    except Exception:
+        logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
+                     extra_tags={'filename': filename})

@@ -18,11 +18,10 @@ from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 from lcogt_logging import LCOGTFormatter
 
-import banzai.context
 from banzai import dbs, realtime, logs
 from banzai.context import Context
-from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils
-from banzai.images import read_image
+from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils, import_utils
+from banzai.utils.image_utils import read_image
 from banzai import settings
 
 
@@ -72,7 +71,9 @@ def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
     else:
         last_index = ordered_stages.index(last_stage) + 1
 
-    stages_todo = ordered_stages[:last_index] + extra_stages
+    stages_todo = [import_utils.import_attribute(stage) for stage in ordered_stages[:last_index]]
+
+    stages_todo += [import_utils.import_attribute(stage) for stage in extra_stages]
 
     return stages_todo
 
