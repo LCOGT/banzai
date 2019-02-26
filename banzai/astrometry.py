@@ -10,8 +10,8 @@ from astropy.coordinates import SkyCoord
 from astropy import units
 import numpy as np
 
+from banzai.exceptions import MissingCatalogException
 from banzai.stages import Stage
-from banzai.utils import image_utils
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,8 @@ class WCSSolver(Stage):
           '--solved none --match none --rdls none --wcs {wcs_name} --corr none --overwrite ' \
           '-X X -Y Y -s FLUX --width {nx} --height {ny} {catalog_name}'
 
-    def __init__(self, pipeline_context):
-        super(WCSSolver, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(WCSSolver, self).__init__(runtime_context)
 
     def do_stage(self, image):
 
@@ -40,7 +40,7 @@ class WCSSolver(Stage):
             catalog_name = os.path.join(tmpdirname, filename.replace('.fits', '.cat.fits'))
             try:
                 image.write_catalog(catalog_name, nsources=40)
-            except image_utils.MissingCatalogException:
+            except MissingCatalogException:
                 image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
                 logger.error('No source catalog. Not attempting WCS solution', image=image)
                 return image

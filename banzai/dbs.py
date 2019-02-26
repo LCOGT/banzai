@@ -411,7 +411,7 @@ def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=
 
 
 def get_master_calibration_image(image, calibration_type, master_selection_criteria,
-                                 realtime_reduction=False, db_address=_DEFAULT_DB):
+                                 use_older_calibrations=False, db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
@@ -424,7 +424,7 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
 
     # During real-time reduction, we want to avoid using different master calibrations for the same block,
     # therefore we make sure the the calibration frame used was created before the block start time
-    if realtime_reduction and image.block_start is not None:
+    if use_older_calibrations and image.block_start is not None:
         calibration_criteria &= CalibrationImage.datecreated < image.block_start
 
     db_session = get_session(db_address=db_address)

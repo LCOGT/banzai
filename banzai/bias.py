@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 
 class BiasMaker(CalibrationStacker):
 
-    def __init__(self, pipeline_context):
-        super(BiasMaker, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(BiasMaker, self).__init__(runtime_context)
 
     @property
     def calibration_type(self):
@@ -27,8 +27,8 @@ class BiasMaker(CalibrationStacker):
 
 
 class BiasSubtractor(ApplyCalibration):
-    def __init__(self, pipeline_context):
-        super(BiasSubtractor, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(BiasSubtractor, self).__init__(runtime_context)
 
     @property
     def calibration_type(self):
@@ -61,8 +61,8 @@ class BiasSubtractor(ApplyCalibration):
 
 
 class OverscanSubtractor(Stage):
-    def __init__(self, pipeline_context):
-        super(OverscanSubtractor, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(OverscanSubtractor, self).__init__(runtime_context)
 
     def do_stage(self, image):
         # Subtract the overscan if it exists
@@ -80,8 +80,8 @@ class OverscanSubtractor(Stage):
 
 
 class BiasMasterLevelSubtractor(Stage):
-    def __init__(self, pipeline_context):
-        super(BiasMasterLevelSubtractor, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(BiasMasterLevelSubtractor, self).__init__(runtime_context)
 
     def do_stage(self, image):
         bias_level = stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm)
@@ -92,8 +92,8 @@ class BiasMasterLevelSubtractor(Stage):
 
 
 class BiasComparer(CalibrationComparer):
-    def __init__(self, pipeline_context):
-        super(BiasComparer, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(BiasComparer, self).__init__(runtime_context)
 
     @property
     def calibration_type(self):

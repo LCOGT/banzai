@@ -6,18 +6,20 @@ import numpy as np
 from astropy.io import fits
 
 from banzai.stages import Stage, MultiFrameStage
-from banzai import dbs, logs
-from banzai.utils import image_utils, stats, fits_utils, qc, date_utils
+from banzai import dbs, logs, settings
+from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, import_utils
+
+FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
 
 logger = logging.getLogger(__name__)
 
 
 class CalibrationMaker(MultiFrameStage):
-    def __init__(self, pipeline_context):
-        super(CalibrationMaker, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(CalibrationMaker, self).__init__(runtime_context)
 
     def group_by_attributes(self):
-        return self.pipeline_context.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
+        return settings.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
 
     @property
     @abc.abstractmethod
@@ -30,7 +32,7 @@ class CalibrationMaker(MultiFrameStage):
 
     def do_stage(self, images):
         try:
-            min_images = self.pipeline_context.CALIBRATION_MIN_FRAMES[self.calibration_type.upper()]
+            min_images = settings.CALIBRATION_MIN_FRAMES[self.calibration_type.upper()]
         except KeyError:
             msg = 'The minimum number of frames required to create a master calibration of type ' \
                   '{calibration_type} has not been specified in the settings.'
@@ -51,8 +53,8 @@ class CalibrationMaker(MultiFrameStage):
 
 
 class CalibrationStacker(CalibrationMaker):
-    def __init__(self, pipeline_context):
-        super(CalibrationStacker, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(CalibrationStacker, self).__init__(runtime_context)
 
     def make_master_calibration_frame(self, images):
         # Sort the images by reverse observation date, so that the most recent one
@@ -62,7 +64,7 @@ class CalibrationStacker(CalibrationMaker):
         data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
-        make_calibration_name = self.pipeline_context.CALIBRATION_FILENAME_FUNCTIONS[self.calibration_type]
+        make_calibration_name = settings.CALIBRATION_FILENAME_FUNCTIONS[self.calibration_type]
 
         master_calibration_filename = make_calibration_name(images[0])
 
@@ -82,7 +84,7 @@ class CalibrationStacker(CalibrationMaker):
 
         # Save the master dark image with all of the combined images in the header
         master_header = create_master_calibration_header(images[0].header, images)
-        master_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context, data=stacked_data, header=master_header)
+        master_image = FRAME_CLASS(self.runtime_context, data=stacked_data, header=master_header)
         master_image.filename = master_calibration_filename
         master_image.bpm = master_bpm
 
@@ -92,12 +94,12 @@ class CalibrationStacker(CalibrationMaker):
 
 
 class ApplyCalibration(Stage):
-    def __init__(self, pipeline_context):
-        super(ApplyCalibration, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(ApplyCalibration, self).__init__(runtime_context)
 
     @property
     def master_selection_criteria(self):
-        return self.pipeline_context.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
+        return settings.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
 
     @property
     @abc.abstractmethod
@@ -116,8 +118,7 @@ class ApplyCalibration(Stage):
             self.on_missing_master_calibration(image)
             return image
 
-        master_calibration_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context,
-                                                                     filename=master_calibration_filename)
+        master_calibration_image = FRAME_CLASS(self.runtime_context, filename=master_calibration_filename)
         try:
             image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
         except image_utils.InhomogeneousSetException:
@@ -132,8 +133,8 @@ class ApplyCalibration(Stage):
 
     def get_calibration_filename(self, image):
         return dbs.get_master_calibration_image(image, self.calibration_type, self.master_selection_criteria,
-                                                realtime_reduction=self.pipeline_context.realtime_reduction,
-                                                db_address=self.pipeline_context.db_address)
+                                                use_older_calibrations=self.runtime_context.use_older_calibrations,
+                                                db_address=self.runtime_context.db_address)
 
 
 class CalibrationComparer(ApplyCalibration):
@@ -187,26 +188,13 @@ class CalibrationComparer(ApplyCalibration):
             msg = 'Flagging {caltype} as bad because it deviates too much from the previous master'
             logger.error(msg.format(caltype=self.calibration_type), image=image, extra_tags=logging_tags)
 
-        qc.save_qc_results(self.pipeline_context, qc_results, image)
+        qc.save_qc_results(self.runtime_context, qc_results, image)
 
         return image
 
     @abc.abstractmethod
     def noise_model(self, image):
         return np.ones(image.data.size)
-
-
-def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):
-    def get_calibration_filename(image):
-        name_components = {'site': image.site, 'telescop': telescope_filename_function(image),
-                           'camera': image.header.get('INSTRUME', ''), 'epoch': image.epoch,
-                           'cal_type': calibration_type.lower()}
-        cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
-        for filename_function in attribute_filename_functions:
-            cal_file += '-{}'.format(filename_function(image))
-        cal_file += '.fits'
-        return cal_file
-    return get_calibration_filename
 
 
 def create_master_calibration_header(old_header, images):

@@ -23,18 +23,21 @@ def test_master_selection_criteria():
     assert comparer.master_selection_criteria == ['ccdsum']
 
 
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_returns_null_if_ccdsums_are_different(mock_cal):
+def test_returns_null_if_ccdsums_are_different(mock_cal, mock_frame):
     handles_inhomogeneous_set(DarkComparer, FakeContext(), 'ccdsum', '1 1')
 
 
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_returns_null_if_nx_are_different(mock_cal):
+def test_returns_null_if_nx_are_different(mock_cal, mock_frame):
     handles_inhomogeneous_set(DarkComparer, FakeContext(), 'nx', 105)
 
 
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_returns_null_if_ny_are_different(mock_cal):
+def test_returns_null_if_ny_are_different(mock_cal, mock_frame):
     handles_inhomogeneous_set(DarkComparer, FakeContext(), 'ny', 107)
 
 
@@ -49,7 +52,8 @@ def test_flags_bad_if_no_master_calibration(mock_cal):
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_does_not_flag_noisy_images(mock_cal, set_random_seed):
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
+def test_does_not_flag_noisy_images(mock_frame, mock_cal, set_random_seed):
     mock_cal.return_value = 'test.fits'
     master_dark_fraction = 0.05
     nx = 101
@@ -71,7 +75,8 @@ def test_does_not_flag_noisy_images(mock_cal, set_random_seed):
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_does_flag_bad_images( mock_cal, set_random_seed):
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
+def test_does_flag_bad_images(mock_frame, mock_cal, set_random_seed):
     mock_cal.return_value = 'test.fits'
     master_dark_fraction = 0.05
     nx = 101

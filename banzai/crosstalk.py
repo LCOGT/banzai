@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 
 
 class CrosstalkCorrector(Stage):
-    def __init__(self, pipeline_context):
-        super(CrosstalkCorrector, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(CrosstalkCorrector, self).__init__(runtime_context)
 
     def do_stage(self, image):
         if image.data_is_3d():
