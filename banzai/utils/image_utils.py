@@ -2,10 +2,11 @@ import os
 from glob import glob
 import logging
 
-import banzai.context
+from banzai import settings
 from banzai import logs
 from banzai import dbs
 from banzai.utils.fits_utils import get_primary_header
+from banzai.utils.instrument_utils import instrument_passes_criteria
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +19,12 @@ def get_reduction_level(header):
     return header.get('RLEVEL', '00')
 
 
-def select_images(image_list, context, image_type):
+def select_images(image_list, db_address, image_type):
     images = []
     for filename in image_list:
         try:
             header = get_primary_header(filename)
-            if context.image_can_be_processed(header) and (image_type is None or get_obstype(header) == image_type):
+            if image_can_be_processed(header, db_address) and (image_type is None or get_obstype(header) == image_type):
                 images.append(filename)
         except Exception:
             logger.error(logs.format_exception(), extra_tags={'filename': filename})
@@ -70,3 +71,11 @@ class InhomogeneousSetException(Exception):
 
 class MissingCatalogException(Exception):
     pass
+
+
+def image_can_be_processed(db_address, header):
+    instrument = dbs.get_instrument(header, db_address=db_address)
+    passes = instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
+    passes &= get_obstype(header) in settings.LAST_STAGE
+    passes &= get_reduction_level(header) == '00'
+    return passes
