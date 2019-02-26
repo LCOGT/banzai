@@ -221,8 +221,8 @@ def parse_directory_args(runtime_context=None, raw_path=None, extra_console_argu
 
 def reduce_directory(runtime_context=None, raw_path=None, image_types=None):
     # TODO: Remove image_types once reduce_night is not needed
-    pipeline_context, raw_path = parse_directory_args(runtime_context, raw_path)
-    process_directory(pipeline_context, raw_path, image_types=image_types,
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
+    process_directory(runtime_context, raw_path, image_types=image_types,
                       log_message='Reducing all frames in directory')
 
 
@@ -334,11 +334,11 @@ def run_realtime_pipeline():
     logger.info('Starting pipeline listener')
 
     fits_exchange = Exchange('fits_files', type='fanout')
-    listener = RealtimeModeListener(pipeline_context.broker_url, pipeline_context)
+    listener = RealtimeModeListener(runtime_context.broker_url, runtime_context)
 
     with Connection(listener.broker_url) as connection:
         listener.connection = connection.clone()
-        listener.queue = Queue(pipeline_context.queue_name, fits_exchange)
+        listener.queue = Queue(runtime_context.queue_name, fits_exchange)
         try:
             listener.run()
         except listener.connection.connection_errors:
@@ -351,7 +351,7 @@ def run_realtime_pipeline():
 class RealtimeModeListener(ConsumerMixin):
     def __init__(self, broker_url, runtime_context):
         self.broker_url = broker_url
-        self.pipeline_context = runtime_context
+        self.runtime_context = runtime_context
 
     def on_connection_error(self, exc, interval):
         logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
@@ -366,26 +366,26 @@ class RealtimeModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         path = body.get('path')
-        logger.info('Got message.' + path + self.pipeline_context)
-        process_image.send(path, self.pipeline_context)
+        logger.info('Got message.' + path + self.runtime_context)
+        process_image.send(path, self.runtime_context)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
 @dramatiq.actor()
-def process_image(path, pipeline_context_json):
+def process_image(path, runtime_context):
     logger.info('Got into actor.')
     try:
-        pipeline_context = PipelineContext.from_dict(pipeline_context_json)
-        if realtime.need_to_process_image(path, pipeline_context,
-                                          db_address=pipeline_context.db_address,
-                                          max_tries=pipeline_context.max_tries):
+        # pipeline_context = PipelineContext.from_dict(pipeline_context_json)
+        if realtime.need_to_process_image(path, runtime_context,
+                                          db_address=runtime_context.db_address,
+                                          max_tries=runtime_context.max_tries):
             logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
 
             # Increment the number of tries for this file
-            realtime.increment_try_number(path, db_address=pipeline_context.db_address)
+            realtime.increment_try_number(path, db_address=runtime_context.db_address)
 
-            run(path, pipeline_context)
-            realtime.set_file_as_processed(path, db_address=pipeline_context.db_address)
+            run(path, runtime_context)
+            realtime.set_file_as_processed(path, db_address=runtime_context.db_address)
 
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
@@ -430,7 +430,7 @@ def schedule_stack(block_id, calibration_type, instrument):
     for molecule in block.get('molecules', []):
         reported_calibration_images = molecule.get('events', []).get('completed_exposures', None)
         if (molecule['completed'] or molecule['failed']):
-            banzai.main.process_master_maker(pipeline_context, instrument, calibration_type, start_date,    end_date, expected_frame_num=reported_calibration_images)
+            banzai.main.process_master_maker(runtime_context, instrument, calibration_type, start_date,    end_date, expected_frame_num=reported_calibration_images)
         else:
             raise Exception
 
@@ -438,13 +438,13 @@ def schedule_stack(block_id, calibration_type, instrument):
 def schedule_stacking_checks(site):
     now = datetime.utcnow()
     calibration_blocks = lake_utils.get_next_calibration_blocks(site, now, now+timedelta(days=1))
-    instruments = dbs.get_instruments_at_site(site=site, db_address=self.pipeline_context.db_address)
+    instruments = dbs.get_instruments_at_site(site=site, db_address=self.runtime_context.db_address)
     for instrument in instruments:
-        for calibration_type in self.pipeline_context.CALIBRATION_IMAGE_TYPES:
+        for calibration_type in settings.CALIBRATION_IMAGE_TYPES:
             block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
             if block_for_calibration is not None:
                 block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
-                stack_delay = timedelta(milliseconds=pipeline_context.CALIBRATION_STACK_DELAYS  ['calibration_type'])
+                stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS['calibration_type'])
                 message_delay = now - block_end + stack_delay
                 schedule_stack.send_with_options(args=(block_for_calibration['id'],
                     calibration_type, instrument), delay=message_delay)
