@@ -60,7 +60,7 @@ def test_bias_level_is_average_of_inputs(mock_instrument_info):
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
-def test_makes_a_sensible_master_bias(mock_fream):
+def test_makes_a_sensible_master_bias(mock_frame):
     nimages = 20
     expected_readnoise = 15.0
 
