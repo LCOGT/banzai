@@ -49,6 +49,10 @@ def run_stack_calibrations(frame_type):
                   '--db-address={db_address} --ignore-schedulability --fpack'
         command = command.format(raw_path=raw_path, frame_type=frame_type, site=site, camera=camera, min_date=min_date,
                                  max_date=max_date, db_address=os.environ['DB_ADDRESS'])
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(command)
+        assert False
         os.system(command)
 
 
