@@ -110,6 +110,8 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
                         help='Relax requirement that the instrument be schedulable')
     parser.add_argument('--use-older-calibrations', dest='use_older_calibrations', default=True, type=bool,
                         help='Only use calibrations that were created before the start of the block?')
+    parser.add_argument('--preview-mode', dest=preview_mode, default=False,
+                        help='Save the reductions to the preview directory')
 
     if extra_console_arguments is None:
         extra_console_arguments = []
@@ -145,7 +147,8 @@ def run(image_path, runtime_context):
 
 def run_master_maker(image_path_list, runtime_context, frame_type):
     images = [read_image(image_path, runtime_context) for image_path in image_path_list]
-    stage_to_run = settings.CALIBRATION_STACKER_STAGE[frame_type](runtime_context)
+    stage_constructor = import_utils.import_attribute(settings.CALIBRATION_STACKER_STAGE[frame_type])
+    stage_to_run = stage_constructor(runtime_context)
     images = stage_to_run.run(images)
     for image in images:
         image.write(runtime_context)
@@ -311,10 +314,7 @@ def run_realtime_pipeline():
                                            'help': 'URL for the broker service.'}},
                                {'args': ['--queue-name'],
                                 'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
-                                           'help': 'Name of the queue to listen to from the fits exchange.'}},
-                               {'args': ['--preview-mode'],
-                                'kwargs': {'dest': 'preview_mode', 'default': False,
-                                           'help': 'Save the real-time reductions to the preview directory'}}]
+                                           'help': 'Name of the queue to listen to from the fits exchange.'}}]
 
     runtime_context = parse_args(parser_description='Reduce LCO imaging data in real time.',
                                  extra_console_arguments=extra_console_arguments)
