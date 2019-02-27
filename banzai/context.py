@@ -7,4 +7,4 @@ def Context(args):
     else:
         args_dict = args
     constructor = namedtuple('Context', args_dict.keys())
-    return constructor(**args_dict(args))
+    return constructor(**args_dict)
