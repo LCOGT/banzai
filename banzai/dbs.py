@@ -310,37 +310,24 @@ def query_for_instrument(db_address, site, camera, enclosure, telescope, must_be
     return instrument
 
 
-def _guess_instrument_values_from_header(header, db_address):
-    site = header.get('SITEID')
-    enclosure = header.get('ENCID')
-    telescope = header.get('TELID')
-    camera = header.get('INSTRUME')
-    equivalence_criteria = {'site': site, 'enclosure': enclosure, 'telescope': telescope, 'camera': camera}
-    db_session = get_session(db_address=db_address)
-    add_or_update_record(db_session, Instrument, equivalence_criteria,
-                         {**equivalence_criteria, 'type': 'unknown', 'schedulable': False})
-    db_session.commit()
-    db_session.close()
-    instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
-    return instrument
-
-
-def get_instrument(header, db_address=_DEFAULT_DB):
+def get_instrument(header, db_address=_DEFAULT_DB, configdb_address='http://configdb.lco.gtn/sites/'):
     site = header.get('SITEID')
     enclosure = header.get('ENCID')
     telescope = header.get('TELID')
     camera = header.get('INSTRUME')
     instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+    # if instrument is missing, try to check the configdb
+    if instrument is None:
+        populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
+        instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
     if instrument is None:
         camera = header.get('TELESCOP')
         instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
     if instrument is None:
-        msg = 'Instrument {site}/{enclosure}/{telescope}/{camera} is not in the database, '\
-              'extracting best-guess values from header'
-        logger.error(msg.format(site=site, enclosure=enclosure, telescope=telescope, camera=camera),
-                     extra_tags={'site': site, 'enclosure': enclosure,
-                                 'telescope': telescope, 'instrument': instrument})
-        instrument = _guess_instrument_values_from_header(header, db_address)
+        msg = 'Instrument is not in the database, Please add it before reducing this data.'
+        logger.error(msg, extra_tags={'site': site, 'enclosure': enclosure,
+                                      'telescope': telescope, 'instrument': instrument})
+        raise ValueError('Instrument is missing from the database.')
     return instrument
 
 
