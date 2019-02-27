@@ -1,3 +1,8 @@
+0.19.4 (2019-02-27)
+-------------------
+- Added entrypoint to update instruments table in database
+- Removed defunct entrypoint to reduce night by site
+
 0.19.3 (2019-02-13)
 -------------------
 - Fixed bug where master calibrations had wrong daydir in filename
