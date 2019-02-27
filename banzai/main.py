@@ -421,6 +421,28 @@ def mark_frame(mark_as):
     logger.info("Finished")
 
 
+def add_instrument():
+    parser = argparse.ArgumentParser(description="Add a new instrument to the database")
+    parser.add_argument("--site", help='Site code (e.g. ogg)', required=True)
+    parser.add_argument('--enclosure', help= 'Enclosure code (e.g. clma)', required=True)
+    parser.add_argument('--telescope', help='Telescope code (e.g. 0m4a)', required=True)
+    parser.add_argument("--camera", help='Camera (e.g. kb95)', required=True)
+    parser.add_argument("--camera-type", dest='camera_type',
+                        help="Camera type (e.g. 1m0-SciCam-Sinistro)", required=True)
+    parser.add_argument("--schedulable", help="Mark the instrument as schedulable", action='store_true',
+                        dest='schedulable', default=False)
+    parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
+                        help='Database address: Should be in SQLAlchemy format')
+    args = parser.parse_args()
+    instrument = {'site': args.site,
+                  'enclosure': args.enclosure,
+                  'telescope': args.telescope,
+                  'camera': args.camera,
+                  'type': args.camera_type,
+                  'schedulable': args.schedulable}
+    dbs.add_instrument(instrument, db_address=args.db_address)
+
+
 def mark_frame_as_good():
     mark_frame("good")
 

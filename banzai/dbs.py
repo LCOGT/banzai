@@ -17,7 +17,7 @@ import requests
 from astropy.io import fits
 from sqlalchemy import create_engine, pool, desc, type_coerce, cast
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 
@@ -82,11 +82,12 @@ class Instrument(Base):
     __tablename__ = 'instruments'
     id = Column(Integer, primary_key=True, autoincrement=True)
     site = Column(String(15), ForeignKey('sites.id'), index=True)
-    enclosure = Column(String(20), index=True)
-    telescope = Column(String(20), index=True)
-    camera = Column(String(50), index=True)
+    enclosure = Column(String(20), index=True, nullable=False)
+    telescope = Column(String(20), index=True, nullable=False)
+    camera = Column(String(50), index=True, nullable=False)
     type = Column(String(100))
     schedulable = Column(Boolean, default=False)
+    __table_args__ = [UniqueConstraint('site', 'enclosure', 'telescope', 'camera', name='instrument_constraint')]
 
 
 class Site(Base):
@@ -198,21 +199,31 @@ def populate_instrument_tables(db_address=_DEFAULT_DB,
     db_session.commit()
 
     for instrument in instruments:
-        equivalence_criteria = {'site': instrument['site'],
-                                'enclosure': instrument['enclosure'],
-                                'telescope': instrument['telescope'],
-                                'camera': instrument['camera']}
-        record_attributes = {'site': instrument['site'],
-                             'enclosure': instrument['enclosure'],
-                             'telescope': instrument['telescope'],
-                             'camera': instrument['camera'],
-                             'type': instrument['type'],
-                             'schedulable': instrument['schedulable']}
-
-        add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
-
-    db_session.commit()
+        add_instrument(instrument, db_address=db_address, db_session=db_session)
     db_session.close()
+
+
+def add_instrument(instrument, db_address=_DEFAULT_DB, db_session=None):
+    if db_session is None:
+        existing_session = False
+        db_session = get_session(db_address)
+    else:
+        existing_session = True
+    equivalence_criteria = {'site': instrument['site'],
+                            'enclosure': instrument['enclosure'],
+                            'telescope': instrument['telescope'],
+                            'camera': instrument['camera']}
+    record_attributes = {'site': instrument['site'],
+                         'enclosure': instrument['enclosure'],
+                         'telescope': instrument['telescope'],
+                         'camera': instrument['camera'],
+                         'type': instrument['type'],
+                         'schedulable': instrument['schedulable']}
+
+    add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
+    db_session.commit()
+    if not existing_session:
+        db_session.close()
 
 
 def add_or_update_record(db_session, table_model, equivalence_criteria, record_attributes):
@@ -298,7 +309,7 @@ class SiteMissingException(Exception):
 
 def query_for_instrument(db_address, site, camera, enclosure, telescope, must_be_schedulable=False):
     # Short circuit
-    if None in [site, camera]:
+    if None in [site, camera, telescope, enclosure]:
         return None
     db_session = get_session(db_address=db_address)
     criteria = (Instrument.site == site) & (Instrument.camera == camera)
