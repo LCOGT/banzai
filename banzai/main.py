@@ -113,7 +113,7 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
                         help='Relax requirement that the instrument be schedulable')
     parser.add_argument('--use-older-calibrations', dest='use_older_calibrations', default=True, type=bool,
                         help='Only use calibrations that were created before the start of the block?')
-    parser.add_argument('--preview-mode', dest=preview_mode, default=False,
+    parser.add_argument('--preview-mode', dest='preview_mode', default=False,
                         help='Save the reductions to the preview directory')
 
     if extra_console_arguments is None:
