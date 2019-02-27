@@ -87,10 +87,10 @@ spec:
           value: "sqlite:////archive/engineering/test.db"
       command:
         - dramatiq
-        - -p
-        - 4
-        - -t
-        - 1
+        - --processes
+        - "4"
+        - --threads
+        - "1"
         - banzai.main
       resources:
         requests:
