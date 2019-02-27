@@ -87,7 +87,7 @@ class Instrument(Base):
     camera = Column(String(50), index=True, nullable=False)
     type = Column(String(100))
     schedulable = Column(Boolean, default=False)
-    __table_args__ = [UniqueConstraint('site', 'enclosure', 'telescope', 'camera', name='instrument_constraint')]
+    __table_args__ = (UniqueConstraint('site', 'enclosure', 'telescope', 'camera', name='instrument_constraint'),)
 
 
 class Site(Base):
