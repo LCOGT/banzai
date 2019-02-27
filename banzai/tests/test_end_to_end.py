@@ -10,6 +10,10 @@ from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_sess
 from banzai.utils import fits_utils, date_utils, file_utils
 from banzai.tests.utils import FakeResponse
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
 
 SITES = [os.path.basename(site_path) for site_path in glob(os.path.join(DATA_ROOT, '???'))]
@@ -31,11 +35,12 @@ def run_end_to_end_tests():
     os.system(command.format(junit_file=args.junit_file, marker=args.marker))
 
 
-def run_reduce_individual_frame(raw_filenames):
+def run_reduce_individual_frames(raw_filenames):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
             file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
+    redis_broker.join('default')
 
 
 def run_stack_calibrations(frame_type):
@@ -49,6 +54,7 @@ def run_stack_calibrations(frame_type):
                   '--db-address={db_address} --ignore-schedulability --fpack'
         command = command.format(raw_path=raw_path, frame_type=frame_type, site=site, camera=camera, min_date=min_date,
                                  max_date=max_date, db_address=os.environ['DB_ADDRESS'])
+        logger.info('Running the following stacking command: {command}'.format(command=command))
         os.system(command)
 
 
@@ -115,7 +121,7 @@ def init(configdb):
 class TestMasterBiasCreation:
     @pytest.fixture(autouse=True)
     def stack_bias_frames(self, init):
-        run_reduce_individual_frame('*b00.fits*')
+        run_reduce_individual_frames('*b00.fits*')
         mark_frames_as_good('*b91.fits*')
         run_stack_calibrations('bias')
 
@@ -129,7 +135,7 @@ class TestMasterBiasCreation:
 class TestMasterDarkCreation:
     @pytest.fixture(autouse=True)
     def stack_dark_frames(self):
-        run_reduce_individual_frame('*d00.fits*')
+        run_reduce_individual_frames('*d00.fits*')
         mark_frames_as_good('*d91.fits*')
         run_stack_calibrations('dark')
 
@@ -143,7 +149,7 @@ class TestMasterDarkCreation:
 class TestMasterFlatCreation:
     @pytest.fixture(autouse=True)
     def stack_flat_frames(self):
-        run_reduce_individual_frame('*f00.fits*')
+        run_reduce_individual_frames('*f00.fits*')
         mark_frames_as_good('*f91.fits*')
         run_stack_calibrations('skyflat')
 
@@ -157,7 +163,7 @@ class TestMasterFlatCreation:
 class TestScienceFileCreation:
     @pytest.fixture(autouse=True)
     def reduce_science_frames(self):
-        run_reduce_individual_frame('*e00.fits*')
+        run_reduce_individual_frames('*e00.fits*')
 
     def test_if_science_frames_were_created(self):
         expected_files = []
