@@ -23,7 +23,6 @@ from banzai.context import Context
 from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils, import_utils
 from banzai.utils.image_utils import read_image
 from banzai import settings
-import json
 
 
 # Logger set up
@@ -369,14 +368,14 @@ class RealtimeModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         path = body.get('path')
-        process_image.send(path, json.dumps(self.runtime_context._asdict()))
+        process_image.send(path, self.runtime_context._asdict())
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
 @dramatiq.actor()
-def process_image(path, runtime_context_json):
+def process_image(path, runtime_context_dict):
     logger.info('Got into actor.')
-    runtime_context = Context(json.loads(runtime_context_json))
+    runtime_context = Context(runtime_context_dict)
     try:
         # pipeline_context = PipelineContext.from_dict(pipeline_context_json)
         if realtime.need_to_process_image(path, runtime_context,
