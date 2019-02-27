@@ -271,7 +271,7 @@ def run_end_of_night():
                                            'help': 'Top level directory with raw data.'}}]
 
     runtime_context = parse_args(extra_console_arguments=extra_console_arguments,
-                                  parser_description='Reduce all the data from a site at the end of a night.')
+                                 parser_description='Reduce all the data from a site at the end of a night.')
 
     # Ping the configdb to get instruments
     try:
@@ -366,13 +366,14 @@ class RealtimeModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         path = body.get('path')
-        process_image.send(path, self.runtime_context)
+        process_image.send(path, self.runtime_context._asdict())
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
 @dramatiq.actor()
-def process_image(path, runtime_context):
+def process_image(path, runtime_context_dict):
     logger.info('Got into actor.')
+    runtime_context = Context(runtime_context_dict)
     try:
         # pipeline_context = PipelineContext.from_dict(pipeline_context_json)
         if realtime.need_to_process_image(path, runtime_context,
