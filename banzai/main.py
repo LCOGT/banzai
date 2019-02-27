@@ -116,6 +116,8 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
                         help='Only use calibrations that were created before the start of the block?')
     parser.add_argument('--preview-mode', dest='preview_mode', default=False,
                         help='Save the reductions to the preview directory')
+    parser.add_argument('--max-tries', dest='max_tries', default=5,
+                        help='Maximum number of times to try to process a frame')
 
     if extra_console_arguments is None:
         extra_console_arguments = []
