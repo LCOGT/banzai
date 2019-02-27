@@ -87,8 +87,7 @@ spec:
           value: "sqlite:////archive/engineering/test.db"
       command:
         - dramatiq
-        - process_image
-        - schedule_stack
+        - banzai.main
       resources:
         requests:
           cpu: 0.7
