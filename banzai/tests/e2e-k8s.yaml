@@ -86,9 +86,9 @@ spec:
         - name: DB_ADDRESS
           value: "sqlite:////archive/engineering/test.db"
       command:
-        - /bin/tail
-        - -f
-        - /dev/null
+        - dramatiq
+        - process_image
+        - schedule_stack
       resources:
         requests:
           cpu: 0.7
