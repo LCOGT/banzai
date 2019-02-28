@@ -432,7 +432,7 @@ def schedule_stack(runtime_context, block_id, calibration_type, instrument):
     for molecule in block.get('molecules', []):
         reported_calibration_images = molecule.get('events', []).get('completed_exposures', None)
         if (molecule['completed'] or molecule['failed']):
-            process_master_maker(runtime_context, instrument, calibration_type, start_date,    end_date, expected_frame_num=reported_calibration_images)
+            process_master_maker(runtime_context, instrument, calibration_type, start_date, end_date, expected_frame_num=reported_calibration_images)
         else:
             raise Exception
 
@@ -444,10 +444,10 @@ def schedule_stacking_checks(runtime_context):
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
         for calibration_type in settings.CALIBRATION_IMAGE_TYPES:
-            block_for_calibration = lake_utils.get_next_block(runtime_context, instrument, calibration_type, calibration_blocks)
+            block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
             if block_for_calibration is not None:
                 block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
                 stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS['calibration_type'])
                 message_delay = now - block_end + stack_delay
-                schedule_stack.send_with_options(args=(block_for_calibration['id'],
+                schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
                     calibration_type, instrument), delay=message_delay)
