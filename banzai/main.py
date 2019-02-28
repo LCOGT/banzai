@@ -21,7 +21,7 @@ from dramatiq.brokers.redis import RedisBroker
 
 from banzai import dbs, realtime, logs
 from banzai.context import Context
-from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils, import_utils
+from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils, import_utils, lake_utils
 from banzai.utils.image_utils import read_image
 from banzai import settings
 
