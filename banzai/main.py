@@ -259,8 +259,6 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                                      extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera)
     schedule_stacking_checks(runtime_context.site)
-    process_master_maker(runtime_context, instrument,  runtime_context.frame_type.upper(),
-                         runtime_context.min_date, runtime_context.max_date)
 
 
 def run_end_of_night():
@@ -433,11 +431,12 @@ def schedule_stack(block_id, calibration_type, instrument):
     for molecule in block.get('molecules', []):
         reported_calibration_images = molecule.get('events', []).get('completed_exposures', None)
         if (molecule['completed'] or molecule['failed']):
-            banzai.main.process_master_maker(runtime_context, instrument, calibration_type, start_date,    end_date, expected_frame_num=reported_calibration_images)
+            process_master_maker(runtime_context, instrument, calibration_type, start_date,    end_date, expected_frame_num=reported_calibration_images)
         else:
             raise Exception
 
 
+@dramatiq.actor()
 def schedule_stacking_checks(site):
     now = datetime.utcnow()
     calibration_blocks = lake_utils.get_next_calibration_blocks(site, now, now+timedelta(days=1))

@@ -56,6 +56,7 @@ def run_stack_calibrations(frame_type):
                                  max_date=max_date, db_address=os.environ['DB_ADDRESS'])
         logger.info('Running the following stacking command: {command}'.format(command=command))
         os.system(command)
+    redis_broker.join('default')
 
 
 def mark_frames_as_good(raw_filenames):
