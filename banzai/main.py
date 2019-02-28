@@ -259,7 +259,7 @@ def stack_calibrations(runtime_context=None, raw_path=None):
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
                                                      extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera)
-    schedule_stacking_checks(runtime_context.site)
+    schedule_stacking_checks(runtime_context)
 
 
 def run_end_of_night():
@@ -425,7 +425,7 @@ RETRY_DELAY = 1000*60*10
 
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY)
-def schedule_stack(block_id, calibration_type, instrument):
+def schedule_stack(runtime_context, block_id, calibration_type, instrument):
     block = lake_utils.get_block_by_id(block_id)
     start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = start_date + timedelta(days=1)
@@ -438,13 +438,13 @@ def schedule_stack(block_id, calibration_type, instrument):
 
 
 @dramatiq.actor()
-def schedule_stacking_checks(site):
+def schedule_stacking_checks(runtime_context):
     now = datetime.utcnow()
-    calibration_blocks = lake_utils.get_next_calibration_blocks(site, now, now+timedelta(days=1))
-    instruments = dbs.get_instruments_at_site(site=site, db_address=self.runtime_context.db_address)
+    calibration_blocks = lake_utils.get_next_calibration_blocks(runtime_context.site, now, now+timedelta(days=1))
+    instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
         for calibration_type in settings.CALIBRATION_IMAGE_TYPES:
-            block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
+            block_for_calibration = lake_utils.get_next_block(runtime_context, instrument, calibration_type, calibration_blocks)
             if block_for_calibration is not None:
                 block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
                 stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS['calibration_type'])
