@@ -103,6 +103,7 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
     calibrations_in_db = db_session.query(CalibrationImage).filter(CalibrationImage.type == calibration_type)
     calibrations_in_db = calibrations_in_db.filter(CalibrationImage.is_master).all()
     db_session.close()
+    redis_broker.join('default')
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(calibrations_in_db) == number_of_stacks_that_should_have_been_created
 
