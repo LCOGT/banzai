@@ -40,7 +40,6 @@ def run_reduce_individual_frames(raw_filenames):
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
             file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
-    redis_broker.join('default')
 
 
 def run_stack_calibrations(frame_type):

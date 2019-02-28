@@ -258,7 +258,6 @@ def stack_calibrations(runtime_context=None, raw_path=None):
 
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
                                                      extra_console_arguments=extra_console_arguments)
-    instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera)
     schedule_stacking_checks(runtime_context)
 
 
@@ -426,13 +425,14 @@ RETRY_DELAY = 1000*60*10
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY)
 def schedule_stack(runtime_context, block_id, calibration_type, instrument):
+    logger.debug('scheduling stack for block_id: ' + block_id)
     block = lake_utils.get_block_by_id(block_id)
     start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = start_date + timedelta(days=1)
     for molecule in block.get('molecules', []):
         reported_calibration_images = molecule.get('events', []).get('completed_exposures', None)
         if (molecule['completed'] or molecule['failed']):
-            process_master_maker(runtime_context, instrument, calibration_type, start_date, end_date, expected_frame_num=reported_calibration_images)
+            process_master_maker(runtime_context, instrument, calibration_type, start_date, end_date)
         else:
             raise Exception
 
