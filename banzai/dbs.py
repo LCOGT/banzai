@@ -335,9 +335,11 @@ def get_instrument(header, db_address=_DEFAULT_DB, configdb_address='http://conf
         camera = header.get('TELESCOP')
         instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
     if instrument is None:
+        # Change the camera in the logs back to the default keyword INSTRUME
+        camera = header.get('INSTRUME')
         msg = 'Instrument is not in the database, Please add it before reducing this data.'
         logger.error(msg, extra_tags={'site': site, 'enclosure': enclosure,
-                                      'telescope': telescope, 'instrument': instrument})
+                                      'telescope': telescope, 'camera': camera})
         raise ValueError('Instrument is missing from the database.')
     return instrument
 
