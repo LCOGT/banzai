@@ -458,4 +458,4 @@ def schedule_stacking_checks(runtime_context):
                 message_delay = now - block_end + stack_delay
                 logger.info('before send schedule_stack')
                 schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
-                    calibration_type, instrument), delay=max(message_delay, 0))
+                    calibration_type, instrument), delay=max(message_delay, timedelta(milliseconds=0)))
