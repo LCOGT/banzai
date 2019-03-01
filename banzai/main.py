@@ -439,13 +439,13 @@ def schedule_stack(runtime_context, block_id, calibration_type, instrument):
             raise Exception
 
 
-@dramatiq.actor()
+# @dramatiq.actor()
 def schedule_stacking_checks(runtime_context):
     calibration_blocks = lake_utils.get_next_calibration_blocks(runtime_context.site, runtime_context.max_date, runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     logger.info('got {0} instruments'.format(len(instruments)))
     for instrument in instruments:
-        logger.info('instrument: ' + instrument.camera)
+        logger.info('instrument: ' + instrument.camera + ' type: ' + instrument.type)
         for calibration_type in settings.CALIBRATION_IMAGE_TYPES:
             logger.info(calibration_type)
             block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
