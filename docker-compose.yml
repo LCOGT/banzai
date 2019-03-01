@@ -24,6 +24,7 @@ services:
     - BANZAIpipelineE2EData
     labels:
       io.rancher.container.pull_image: always
+      io.rancher.sidekicks: BANZAIpipelineE2EData
     logging:
       options:
         max-size: '100m'
