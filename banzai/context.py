@@ -10,6 +10,6 @@ def Context(args):
     return constructor(**args_dict)
 
 
-def ContextJSONEncoder(JSONEncoder):
+class ContextJSONEncoder(JSONEncoder):
     def encode(self, data):
         return json.dumps(data, separators=(",", ":"), default=str).encode("utf-8")
