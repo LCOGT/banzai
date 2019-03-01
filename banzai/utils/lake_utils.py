@@ -22,7 +22,7 @@ def get_next_block(instrument, calibration_type, blocks):
     logger.info(blocks)
     logger.info(instrument.type)
     logger.info(instrument.camera)
-    logger.inf0(calibration_type)
+    logger.info(calibration_type)
     for block in blocks:
         if instrument.type == block['instrument_class']:
             for molecule in block['molecules']:
