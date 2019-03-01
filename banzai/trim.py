@@ -32,12 +32,8 @@ class Trimmer(Stage):
     def __init__(self, pipeline_context):
         super(Trimmer, self).__init__(pipeline_context)
 
-    def do_stage(self, images):
-
-        for image in images:
-
-            logger.info('Trimming image', image=image, extra_tags={'trimsec': image.header['TRIMSEC']})
-
-            nx, ny = _trim_image(image)
-            image.update_shape(nx, ny)
-        return images
+    def do_stage(self, image):
+        logger.info('Trimming image', image=image, extra_tags={'trimsec': image.header['TRIMSEC']})
+        nx, ny = _trim_image(image)
+        image.update_shape(nx, ny)
+        return image

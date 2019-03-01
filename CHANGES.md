@@ -1,3 +1,56 @@
+0.19.3 (2019-02-13)
+-------------------
+- Fixed bug where master calibrations had wrong daydir in filename
+
+0.19.2 (2019-02-12)
+-------------------
+- Bugfix in parsing arguments for the real-time processing
+
+0.19.1 (2019-02-11)
+-------------------
+- Removed `'epoch'` from list of parameters to check for image 
+  homogeneity 
+- Changed how image homogeneity is checked so that pipeline does
+  not continue to run after check fails
+- Refactored "preview" to "realtime" processing so that reduced files are placed in
+  the correct directories
+
+0.19.0 (2019-02-07)
+-------------------
+- The `Stage` class and its inheritors have been changed to only process 
+  one frame at a time
+- Stages that require multiple frames (i.e. the calibration
+  stackers) now inherit from the distinct `MultiFrameStage` class
+
+0.18.4 (2019-02-07)
+-------------------
+- Moved the function that adds quality control information to ElasticSearch
+  outside of Stage class and to the quality control utils
+
+0.18.3 (2019-02-05)
+-------------------
+- Fixed query for master calibration to work even when block start
+  time is null
+
+0.18.2 (2019-02-01)
+-------------------
+- Added a catch for N/A in fits header dates
+- Fixed a log message bug that causes a crash when a frame reduction fails
+
+0.18.1 (2019-01-31)
+-------------------
+- Breaking typo in Preview Pipeline removed 
+
+0.18.0 (2019-01-29)
+-------------------
+- Calibration stacking is now separate from data reduction. Individual
+  calibration frames are reduced and added to the database. The stacking 
+  method then queries the database using a range of dates to determine
+  which frames should be stacked. 
+- It is now possible to mark frames as good or bad in the database
+- Individual calibration frames for which a previous good master to 
+  perform a comparison against does not exist are marked as bad
+  
 0.17.2 (2019-01-24)
 -------------------
 - Increased the character limit of string columns in the database

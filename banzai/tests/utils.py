@@ -2,25 +2,23 @@ import json
 from datetime import datetime
 import inspect
 
-import pytest
 import numpy as np
 from astropy.io.fits import Header
 from astropy.utils.data import get_pkg_data_filename
 
-from banzai.utils import image_utils
 from banzai.stages import Stage
 from banzai.images import Image
 import banzai.settings
 
 
 class FakeImage(Image):
-    def __init__(self, pipeline_context=None, nx=101, ny=103, image_multiplier=1.0,
-                 ccdsum='2 2', epoch='20160101', n_amps=1, filter='U', data=None, header=None):
+    def __init__(self, pipeline_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',
+                 ccdsum='2 2', epoch='20160101', n_amps=1, filter='U', data=None, header=None, **kwargs):
         self.nx = nx
         self.ny = ny
         self.instrument_id = -1
-        self.site = 'elp'
-        self.camera = 'kb76'
+        self.site = site
+        self.camera = camera
         self.ccdsum = ccdsum
         self.epoch = epoch
         if data is None:
@@ -42,6 +40,7 @@ class FakeImage(Image):
         self.molecule_id = '544562351'
         self.exptime = 30.0
         self.obstype = 'TEST'
+        self.is_bad = False
 
     def get_calibration_filename(self):
         return '/tmp/{0}_{1}_{2}_bin{3}.fits'.format(self.caltype, self.instrument,
@@ -57,12 +56,15 @@ class FakeImage(Image):
 
 class FakeContext(object):
     def __init__(self, preview_mode=False, settings=banzai.settings.ImagingSettings(), frame_class=FakeImage):
-        self.processed_path = '/tmp'
-        self.preview_mode = preview_mode
         for key, value in dict(inspect.getmembers(settings)).items():
             if not key.startswith('_'):
                 setattr(self, key, value)
         self.FRAME_CLASS = frame_class
+        self.preview_mode = preview_mode
+        self.processed_path = '/tmp'
+
+    def image_can_be_processed(self, header):
+        return True
 
 
 class FakeStage(Stage):
@@ -70,15 +72,18 @@ class FakeStage(Stage):
         return images
 
 
-def throws_inhomogeneous_set_exception(stagetype, context, keyword, value):
+def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_maker=False):
     stage = stagetype(context)
-
-    with pytest.raises(image_utils.InhomogeneousSetException) as exception_info:
-        kwargs = {keyword: value}
+    kwargs = {keyword: value}
+    if calibration_maker:
         images = [FakeImage(**kwargs)]
         images += [FakeImage() for x in range(6)]
-        stage.do_stage(images)
-    assert 'Images have different {0}s'.format(keyword) == str(exception_info.value)
+        images = stage.do_stage(images)
+        assert len(images) == 0
+    else:
+        image = FakeImage(**kwargs)
+        image = stage.do_stage(image)
+        assert image is None
 
 
 def gaussian2d(image_shape, x0, y0, brightness, fwhm):
