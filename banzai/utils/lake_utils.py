@@ -24,7 +24,7 @@ def get_next_block(instrument, calibration_type, blocks):
     logger.info(instrument.camera)
     logger.info(calibration_type)
     for block in blocks:
-        if instrument.type == block['instrument_class']:
+        if instrument.type.upper() == block['instrument_class']:
             for molecule in block['molecules']:
                 if calibration_type == molecule['type'] and instrument.camera == molecule['inst_name']:
                     return block
