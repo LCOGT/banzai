@@ -12,6 +12,7 @@ import os
 import logging
 import sys
 import dramatiq
+import json
 
 from datetime import datetime, timedelta
 from kombu import Exchange, Connection, Queue
@@ -450,7 +451,7 @@ def schedule_stacking_checks(runtime_context):
             logger.info(calibration_type)
             block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
             if block_for_calibration is not None:
-                logger.info('block for calibration: ' + block_for_calibration)
+                logger.info('block for calibration: ' + json.dumps(block_for_calibration))
                 block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
                 stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS['calibration_type'])
                 message_delay = now - block_end + stack_delay
