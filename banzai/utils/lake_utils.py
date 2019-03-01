@@ -26,7 +26,7 @@ def get_next_block(instrument, calibration_type, blocks):
 
 
 def get_block_by_id(block_id):
-    response = requests.get(LAKE_URL + block_id)
+    response = requests.get(LAKE_URL + str(block_id))
     response.raise_for_status()
 
     return response.json()
