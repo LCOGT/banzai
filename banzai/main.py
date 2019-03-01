@@ -427,8 +427,9 @@ RETRY_DELAY = 1000*60*10
 
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY)
-def schedule_stack(runtime_context_json, block_id, calibration_type, instrument):
-    runtime_context = json.loads(runtime_context_json)
+def schedule_stack(runtime_context_json, block_id, calibration_type, instrument_site, instrument_camera):
+    runtime_context = Context(runtime_context_json)
+    instrument = dbs.query_for_instrument(runtime_context.db_address, instrument_site, instrument_camera)
     logger.debug('scheduling stack for block_id: ' + block_id)
     block = lake_utils.get_block_by_id(block_id)
     start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -445,21 +446,17 @@ def schedule_stack(runtime_context_json, block_id, calibration_type, instrument)
 def schedule_stacking_checks(runtime_context):
     calibration_blocks = lake_utils.get_next_calibration_blocks(runtime_context.site, runtime_context.max_date, runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
-    logger.info('got {0} instruments'.format(len(instruments)))
     for instrument in instruments:
-        logger.info('instrument: ' + instrument.camera + ' type: ' + instrument.type)
         for calibration_type in settings.CALIBRATION_IMAGE_TYPES:
-            logger.info(calibration_type)
             block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
             if block_for_calibration is not None:
                 logger.info('block for calibration: ' + json.dumps(block_for_calibration))
                 block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
                 stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[calibration_type])
                 now = datetime.utcnow()
-                runtime_context_json = json.dumps(runtime_context, default=str)
                 #message_delay = now - block_end + stack_delay
                 logger.info('before send schedule_stack')
                 # schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
                 #     calibration_type, instrument), delay=max(message_delay.microseconds*1000, 0))
-                schedule_stack.send_with_options(args=(runtime_context_json, block_for_calibration['id'],
-                    calibration_type, instrument))
+                schedule_stack.send_with_options(args=(runtime_context._asdict(), block_for_calibration['id'],
+                    calibration_type, instrument.site, instrument.camera))

@@ -18,11 +18,6 @@ def get_next_calibration_blocks(site, start_before, start_after):
 
 
 def get_next_block(instrument, calibration_type, blocks):
-    logger.info('get_next_block')
-    logger.info(blocks)
-    logger.info(instrument.type)
-    logger.info(instrument.camera)
-    logger.info(calibration_type)
     for block in blocks:
         if instrument.type.upper() == block['instrument_class']:
             for molecule in block['molecules']:

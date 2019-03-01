@@ -325,8 +325,8 @@ def _guess_instrument_values_from_header(header, db_address):
 def get_instrument(header, db_address=_DEFAULT_DB):
     site = header.get('SITEID')
     camera = header.get('INSTRUME')
-    instrument_from_instrume_keyword = query_for_instrument(db_address, site, camera)
-    instrument = instrument_from_instrume_keyword if instrument_from_instrume_keyword is not None \
+    instrument_from_instrument_keyword = query_for_instrument(db_address, site, camera)
+    instrument = instrument_from_instrument_keyword if instrument_from_instrument_keyword is not None \
         else query_for_instrument(db_address, site, header.get('TELESCOP'))
     if instrument is None:
         logger.error('Instrument {site}/{camera} is not in the database, '
