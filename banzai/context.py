@@ -1,5 +1,5 @@
 from collections import namedtuple
-from dramatiq import Encoder
+from dramatiq import JSONEncoder
 
 def Context(args):
     if type(args) != dict:
