@@ -21,7 +21,7 @@ from lcogt_logging import LCOGTFormatter
 from dramatiq.brokers.redis import RedisBroker
 
 from banzai import dbs, realtime, logs
-from banzai.context import Context
+from banzai.context import Context, ContextJSONEncoder
 from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils, import_utils, lake_utils
 from banzai.utils.image_utils import read_image
 from banzai import settings
@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 redis_broker = RedisBroker(host=os.getenv('REDIS_HOST', '127.0.0.1'))
 dramatiq.set_broker(redis_broker)
+dramatiq.set_encoder(ContextJSONEncoder())
 
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
