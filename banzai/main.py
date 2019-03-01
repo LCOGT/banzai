@@ -431,7 +431,7 @@ RETRY_DELAY = 1000*60*10
 def schedule_stack(runtime_context_json, block_id, calibration_type, instrument_site, instrument_camera):
     runtime_context = Context(runtime_context_json)
     instrument = dbs.query_for_instrument(runtime_context.db_address, instrument_site, instrument_camera)
-    logger.debug('scheduling stack for block_id: ' + block_id)
+    logger.debug('scheduling stack for block_id: ' + str(block_id))
     block = lake_utils.get_block_by_id(block_id)
     start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = start_date + timedelta(days=1)
