@@ -1,5 +1,6 @@
 import requests
 import json
+from banzai.main import logger
 
 LAKE_URL = 'http://lake.lco.gtn/blocks/'
 CALIBRATE_PROPOSAL_ID = 'calibrate'
@@ -15,7 +16,11 @@ def get_next_calibration_blocks(site, start_before, start_after):
 
 
 def get_next_block(instrument, calibration_type, blocks):
+    logger.info('get_next_block')
     logger.info(blocks)
+    logger.info(instrument.type)
+    logger.info(instrument.camera)
+    logger.inf0(calibration_type)
     for block in blocks:
         if instrument.type == block['instrument_class']:
             for molecule in block['molecules']:
