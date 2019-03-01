@@ -145,4 +145,4 @@ def get_min_and_max_dates(timezone, dayobs, return_string=False):
 
 # Returns previous midnight relative to date of observation
 def _get_midnight(timezone, dayobs):
-    return datetime.datetime.strptime(dayobs, '%Y%m%d') + datetime.timedelta(hours=timezone)
+    return datetime.datetime.strptime(dayobs, '%Y%m%d') - datetime.timedelta(hours=timezone)

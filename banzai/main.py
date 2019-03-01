@@ -440,7 +440,7 @@ def schedule_stack(runtime_context, block_id, calibration_type, instrument):
 
 @dramatiq.actor()
 def schedule_stacking_checks(runtime_context):
-    calibration_blocks = lake_utils.get_next_calibration_blocks(runtime_context.site, runtime_context.min_date, runtime_context.max_date)
+    calibration_blocks = lake_utils.get_next_calibration_blocks(runtime_context.site, runtime_context.max_date, runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
         for calibration_type in settings.CALIBRATION_IMAGE_TYPES:
