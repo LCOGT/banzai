@@ -449,8 +449,8 @@ def schedule_stacking_checks(runtime_context):
         for calibration_type in settings.CALIBRATION_IMAGE_TYPES:
             logger.info(calibration_type)
             block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
-            logger.info('block for calibration: ' + block_for_calibration)
             if block_for_calibration is not None:
+                logger.info('block for calibration: ' + block_for_calibration)
                 block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
                 stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS['calibration_type'])
                 message_delay = now - block_end + stack_delay
