@@ -1,3 +1,5 @@
+import json
+
 from collections import namedtuple
 from dramatiq import JSONEncoder
 
