@@ -12,6 +12,7 @@ import os
 import logging
 import sys
 import dramatiq
+import json
 
 from datetime import datetime, timedelta
 from kombu import Exchange, Connection, Queue
@@ -20,7 +21,7 @@ from lcogt_logging import LCOGTFormatter
 from dramatiq.brokers.redis import RedisBroker
 
 from banzai import dbs, realtime, logs
-from banzai.context import Context
+from banzai.context import Context, ContextJSONEncoder
 from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils, import_utils, lake_utils
 from banzai.utils.image_utils import read_image
 from banzai import settings
@@ -42,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 redis_broker = RedisBroker(host=os.getenv('REDIS_HOST', '127.0.0.1'))
 dramatiq.set_broker(redis_broker)
+dramatiq.set_encoder(ContextJSONEncoder())
 
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
@@ -426,34 +428,39 @@ RETRY_DELAY = 1000*60*10
 
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY)
-def schedule_stack(runtime_context, block_id, calibration_type, instrument):
-    logger.debug('scheduling stack for block_id: ' + block_id)
+def schedule_stack(runtime_context_json, block_id, calibration_type, instrument_site, instrument_camera):
+    runtime_context = Context(runtime_context_json)
+    instrument = dbs.query_for_instrument(runtime_context.db_address, instrument_site, instrument_camera)
+    logger.debug('scheduling stack for block_id: ' + str(block_id))
     block = lake_utils.get_block_by_id(block_id)
     start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = start_date + timedelta(days=1)
     for molecule in block.get('molecules', []):
-        reported_calibration_images = molecule.get('events', []).get('completed_exposures', None)
+        reported_calibration_images = 0
+        for event in molecule.get('events', []):
+            reported_calibration_images += event.get('completed_exposures', 0)
         if (molecule['completed'] or molecule['failed']):
-            process_master_maker(runtime_context, instrument, calibration_type, start_date, end_date)
+            process_master_maker(runtime_context, instrument, calibration_type, runtime_context.min_date, runtime_context.max_date)
         else:
             raise Exception
 
 
-@dramatiq.actor()
+# @dramatiq.actor()
 def schedule_stacking_checks(runtime_context):
     calibration_blocks = lake_utils.get_next_calibration_blocks(runtime_context.site, runtime_context.max_date, runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
-    logger.info('got {0} instruments'.format(len(instruments)))
     for instrument in instruments:
-        logger.info('instrument: ' + instrument.camera)
         for calibration_type in settings.CALIBRATION_IMAGE_TYPES:
-            logger.info(calibration_type)
             block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
-            logger.info('block for calibration: ' + block_for_calibration)
             if block_for_calibration is not None:
+                logger.info('block for calibration: ' + json.dumps(block_for_calibration))
                 block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
-                stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS['calibration_type'])
-                message_delay = now - block_end + stack_delay
+                stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[calibration_type])
+                now = datetime.utcnow()
+                #message_delay = now - block_end + stack_delay
                 logger.info('before send schedule_stack')
-                schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
-                    calibration_type, instrument), delay=max(message_delay, 0))
+                # schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
+                #     calibration_type, instrument), delay=max(message_delay.microseconds*1000, 0))
+                logger.info(runtime_context._asdict())
+                schedule_stack.send_with_options(args=(runtime_context._asdict(), block_for_calibration['id'],
+                    calibration_type, instrument.site, instrument.camera))

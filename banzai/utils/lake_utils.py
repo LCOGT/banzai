@@ -1,5 +1,8 @@
 import requests
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 LAKE_URL = 'http://lake.lco.gtn/blocks/'
 CALIBRATE_PROPOSAL_ID = 'calibrate'
@@ -16,14 +19,14 @@ def get_next_calibration_blocks(site, start_before, start_after):
 
 def get_next_block(instrument, calibration_type, blocks):
     for block in blocks:
-        if instrument.type == block['instrument_class']:
+        if instrument.type.upper() == block['instrument_class']:
             for molecule in block['molecules']:
                 if calibration_type == molecule['type'] and instrument.camera == molecule['inst_name']:
                     return block
 
 
 def get_block_by_id(block_id):
-    response = requests.get(LAKE_URL + block_id)
+    response = requests.get(LAKE_URL + str(block_id))
     response.raise_for_status()
 
     return response.json()
