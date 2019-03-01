@@ -32,7 +32,9 @@ def run_end_to_end_tests():
     args = parser.parse_args()
     os.chdir(args.code_path)
     command = 'python setup.py test -a "--durations=0 --junitxml={junit_file} -m {marker}"'
-    return os.system(command.format(junit_file=args.junit_file, marker=args.marker))
+
+    # Bitshift by 8 because Python encodes exit status in the leftmost 8 bits
+    return os.system(command.format(junit_file=args.junit_file, marker=args.marker)) >> 8
 
 
 def run_reduce_individual_frames(raw_filenames):
