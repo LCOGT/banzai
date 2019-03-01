@@ -5,7 +5,7 @@ Author
 
 October 2015
 """
-import datetime
+from datetime import datetime
 import argparse
 
 import numpy as np
@@ -135,16 +135,14 @@ def valid_date(s):
 
 def get_min_and_max_dates(timezone, dayobs, return_string=False):
     midnight_at_site = _get_midnight(timezone, dayobs)
-    min_date = midnight_at_site - datetime.timedelta(days=0.5)
-    max_date = midnight_at_site + datetime.timedelta(days=0.5)
+    min_date = midnight_at_site + datetime.timedelta(days=0.5)
+    max_date = midnight_at_site + datetime.timedelta(days=1.5)
     if return_string:
         min_date = min_date.strftime(TIMESTAMP_FORMAT)
         max_date = max_date.strftime(TIMESTAMP_FORMAT)
     return min_date, max_date
 
 
+# Returns previous midnight relative to date of observation
 def _get_midnight(timezone, dayobs):
-    midnight_in_utc = datetime.datetime.combine(epoch_string_to_date(dayobs) + datetime.timedelta(days=1),
-                                                datetime.time(0, 0, 0))
-    local_midnight = midnight_in_utc - datetime.timedelta(hours=timezone)
-    return local_midnight
+    return datetime.strptime(dayobs, '%Y%m%d') + timedelta(hours=timezone)
