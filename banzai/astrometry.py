@@ -23,50 +23,47 @@ class WCSSolver(Stage):
     def __init__(self, pipeline_context):
         super(WCSSolver, self).__init__(pipeline_context)
 
-    def do_stage(self, images):
+    def do_stage(self, image):
 
-        for image in images:
+        # Skip the image if we don't have some kind of initial RA and Dec guess
+        if np.isnan(image.ra) or np.isnan(image.dec):
+            logger.error('Skipping WCS solution. No initial pointing guess from header.', image=image)
+            continue
 
-            # Skip the image if we don't have some kind of initial RA and Dec guess
-            if np.isnan(image.ra) or np.isnan(image.dec):
-                logger.error('Skipping WCS solution. No initial pointing guess from header.', image=image)
-                continue
+        image_catalog = image.data_tables.get('catalog')
 
-            image_catalog = image.data_tables.get('catalog')
+        catalog_payload = {'X': list(image_catalog['x']),
+                           'Y': list(image_catalog['y']),
+                           'FLUX': list(image_catalog['flux']),
+                           'pixel_scale': image.pixel_scale,
+                           'naxis': 2,
+                           'naxis1': image.nx,
+                           'naxis2': image.ny,
+                           'ra': image.ra,
+                           'dec': image.dec}
+        try:
+            astrometry_response = requests.post(_ASTROMETRY_SERVICE_URL, json=catalog_payload)
+            astrometry_response.raise_for_status()
+        except HTTPError:
+            logger.error('Error from Astrometry service. WCS solve not completed.', image=image)
+            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+            return
 
-            catalog_payload = {'X': list(image_catalog['x']),
-                               'Y': list(image_catalog['y']),
-                               'FLUX': list(image_catalog['flux']),
-                               'pixel_scale': image.pixel_scale,
-                               'naxis': 2,
-                               'naxis1': image.nx,
-                               'naxis2': image.ny,
-                               'ra': image.ra,
-                               'dec': image.dec}
-            try:
-                astrometry_response = requests.post(_ASTROMETRY_SERVICE_URL, json=catalog_payload)
-                astrometry_response.raise_for_status()
-            except HTTPError:
-                logger.error('Error from Astrometry service. WCS solve not completed.', image=image)
-                image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
-                continue
+        header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
+                                     'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
 
-            header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
-                                         'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
+        for keyword in header_keywords_to_update:
+            image.header[keyword] = astrometry_response.json()[keyword]
 
-            for keyword in header_keywords_to_update:
-                image.header[keyword] = astrometry_response.json()[keyword]
+        image.header['RA'], image.header['DEC'] = get_ra_dec_in_sexagesimal(image.header['CRVAL1'],
+                                                                            image.header['CRVAL2'])
 
-            image.header['RA'], image.header['DEC'] = get_ra_dec_in_sexagesimal(image.header['CRVAL1'],
-                                                                                image.header['CRVAL2'])
+        add_ra_dec_to_catalog(image)
 
-            add_ra_dec_to_catalog(image)
+        image.header['WCSERR'] = (0, 'Error status of WCS fit. 0 for no error')
 
-            image.header['WCSERR'] = (0, 'Error status of WCS fit. 0 for no error')
-
-            logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.header['WCSERR']})
-
-        return images
+        logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.header['WCSERR']})
+        return image
 
 
 def add_ra_dec_to_catalog(image):
