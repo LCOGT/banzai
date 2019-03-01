@@ -427,7 +427,8 @@ RETRY_DELAY = 1000*60*10
 
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY)
-def schedule_stack(runtime_context, block_id, calibration_type, instrument):
+def schedule_stack(runtime_context_json, block_id, calibration_type, instrument):
+    runtime_context = json.loads(runtime_context_json)
     logger.debug('scheduling stack for block_id: ' + block_id)
     block = lake_utils.get_block_by_id(block_id)
     start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -455,11 +456,10 @@ def schedule_stacking_checks(runtime_context):
                 block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
                 stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[calibration_type])
                 now = datetime.utcnow()
-                runtime_context.min_date = datetime.strftime(runtime_context.min_date, '%Y-%m-%dT%H:%M:%S')
-                runtime_context.max_date = datetime.strftime(runtime_context.max_date, '%Y-%m-%dT%H:%M:%S')
+                runtime_context_json = json.dumps(runtime_context, default=str)
                 #message_delay = now - block_end + stack_delay
                 logger.info('before send schedule_stack')
                 # schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
                 #     calibration_type, instrument), delay=max(message_delay.microseconds*1000, 0))
-                schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
+                schedule_stack.send_with_options(args=(runtime_context_json, block_for_calibration['id'],
                     calibration_type, instrument))
