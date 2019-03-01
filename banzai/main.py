@@ -458,5 +458,6 @@ def schedule_stacking_checks(runtime_context):
                 logger.info('before send schedule_stack')
                 # schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
                 #     calibration_type, instrument), delay=max(message_delay.microseconds*1000, 0))
+                logger.info('runtime_context: ' + runtime_context._asdict())
                 schedule_stack.send_with_options(args=(runtime_context._asdict(), block_for_calibration['id'],
                     calibration_type, instrument.site, instrument.camera))
