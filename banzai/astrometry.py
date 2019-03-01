@@ -44,27 +44,27 @@ class WCSSolver(Stage):
         try:
             astrometry_response = requests.post(_ASTROMETRY_SERVICE_URL, json=catalog_payload)
             astrometry_response.raise_for_status()
+
+            header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
+                                         'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
+
+            for keyword in header_keywords_to_update:
+                image.header[keyword] = astrometry_response.json()[keyword]
+
+            image.header['RA'], image.header['DEC'] = get_ra_dec_in_sexagesimal(image.header['CRVAL1'],
+                                                                                image.header['CRVAL2'])
+
+            add_ra_dec_to_catalog(image)
+
+            image.header['WCSERR'] = (0, 'Error status of WCS fit. 0 for no error')
+
+            logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.header['WCSERR']})
         except HTTPError:
             logger.error('Error from Astrometry service. WCS solve not completed.', image=image)
             image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
-            return
 
-        header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
-                                     'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
-
-        for keyword in header_keywords_to_update:
-            image.header[keyword] = astrometry_response.json()[keyword]
-
-        image.header['RA'], image.header['DEC'] = get_ra_dec_in_sexagesimal(image.header['CRVAL1'],
-                                                                            image.header['CRVAL2'])
-
-        add_ra_dec_to_catalog(image)
-
-        image.header['WCSERR'] = (0, 'Error status of WCS fit. 0 for no error')
-
-        logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.header['WCSERR']})
         return image
-
+        
 
 def add_ra_dec_to_catalog(image):
     image_wcs = WCS(image.header)
