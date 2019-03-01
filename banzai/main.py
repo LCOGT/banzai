@@ -454,6 +454,7 @@ def schedule_stacking_checks(runtime_context):
                 logger.info('block for calibration: ' + json.dumps(block_for_calibration))
                 block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
                 stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[calibration_type])
+                now = datetime.utcnow()
                 message_delay = now - block_end + stack_delay
                 logger.info('before send schedule_stack')
                 schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
