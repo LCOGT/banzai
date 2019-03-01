@@ -257,6 +257,7 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                            'help': 'Latest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
+    logger.info('starting stack calibrations')
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
                                                      extra_console_arguments=extra_console_arguments)
     schedule_stacking_checks(runtime_context)
@@ -442,17 +443,17 @@ def schedule_stack(runtime_context, block_id, calibration_type, instrument):
 def schedule_stacking_checks(runtime_context):
     calibration_blocks = lake_utils.get_next_calibration_blocks(runtime_context.site, runtime_context.max_date, runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
-    logger.debug('got {0} instruments'.format(len(instruments)))
+    logger.info('got {0} instruments'.format(len(instruments)))
     for instrument in instruments:
-        logger.debug('instrument: ' + instrument.camera)
+        logger.info('instrument: ' + instrument.camera)
         for calibration_type in settings.CALIBRATION_IMAGE_TYPES:
-            logger.debug(calibration_type)
+            logger.info(calibration_type)
             block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
-            logger.debug('block for calibration: ' + block_for_calibration)
+            logger.info('block for calibration: ' + block_for_calibration)
             if block_for_calibration is not None:
                 block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
                 stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS['calibration_type'])
                 message_delay = now - block_end + stack_delay
-                logger.debug('before send schedule_stack')
+                logger.info('before send schedule_stack')
                 schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
                     calibration_type, instrument), delay=max(message_delay, 0))
