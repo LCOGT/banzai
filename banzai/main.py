@@ -436,9 +436,9 @@ def schedule_stack(runtime_context_json, block_id, calibration_type, instrument_
     start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = start_date + timedelta(days=1)
     for molecule in block.get('molecules', []):
-	reported_calibration_images = 0
-	for event in molecule.get('events', []):
-		reported_calibration_images += event.get('completed_exposures', 0)
+        reported_calibration_images = 0
+        for event in molecule.get('events', []):
+            reported_calibration_images += event.get('completed_exposures', 0)
         if (molecule['completed'] or molecule['failed']):
             process_master_maker(runtime_context, instrument, calibration_type, start_date, end_date)
         else:
