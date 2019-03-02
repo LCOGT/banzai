@@ -440,7 +440,11 @@ def schedule_stack(runtime_context_json, block_id, calibration_type, instrument_
         for event in molecule.get('events', []):
             reported_calibration_images += event.get('completed_exposures', 0)
         if (molecule['completed'] or molecule['failed']):
-            process_master_maker(runtime_context, instrument, calibration_type, runtime_context.min_date, runtime_context.max_date)
+            process_master_maker(runtime_context, 
+                                instrument, 
+                                calibration_type,
+                                datetime.strptime(runtime_context.min_date, date_utils.TIMESTAMP_FORMAT),
+                                datetime.strptime(runtime_context.max_date, date_utils.TIMESTAMP_FORMAT))
         else:
             raise Exception
 
@@ -454,7 +458,7 @@ def schedule_stacking_checks(runtime_context):
             block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
             if block_for_calibration is not None:
                 logger.info('block for calibration: ' + json.dumps(block_for_calibration))
-                block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
+                block_end = datetime.strptime(block_for_calibration['end'], date_utils.TIMESTAMP_FORMAT)
                 stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[calibration_type])
                 now = datetime.utcnow()
                 #message_delay = now - block_end + stack_delay
