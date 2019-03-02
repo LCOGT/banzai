@@ -440,7 +440,7 @@ def schedule_stack(runtime_context_json, block_id, calibration_type, instrument_
         for event in molecule.get('events', []):
             reported_calibration_images += event.get('completed_exposures', 0)
         if (molecule['completed'] or molecule['failed']):
-            process_master_maker(runtime_context, instrument, calibration_type, runtime_context.start_date, runtime_context.end_date)
+            process_master_maker(runtime_context, instrument, calibration_type, runtime_context.min_date, runtime_context.maq_date)
         else:
             raise Exception
 
