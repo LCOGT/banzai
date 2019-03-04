@@ -52,7 +52,7 @@ spec:
         limits:
           cpu: 1
           memory: 1Gi
-    - name: banzai-workers
+    - name: banzai-workers-schedule-stack
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
       volumeMounts:
@@ -66,9 +66,38 @@ spec:
       command:
         - dramatiq
         - --processes
-        - "1"
+        - "2"
         - --threads
         - "1"
+        - --queues
+        - schedule_stack
+        - banzai.main
+      resources:
+        requests:
+          cpu: 0.7
+          memory: 4Gi
+        limits:
+          cpu: 4
+          memory: 8Gi
+    - name: banzai-workers-process-image
+      image: @BANZAI_IMAGE@
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: banzai-data
+          mountPath: /archive/engineering
+          subPath: engineering
+          readOnly: false
+      env:
+        - name: DB_ADDRESS
+          value: "sqlite:////archive/engineering/test.db"
+      command:
+        - dramatiq
+        - --processes
+        - "4"
+        - --threads
+        - "1"
+        - --queues
+        - process_image
         - banzai.main
       resources:
         requests:
