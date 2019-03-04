@@ -336,6 +336,19 @@ def get_instrument(header, db_address=_DEFAULT_DB):
     return instrument
 
 
+def get_instrument_by_camera(camera, db_address=_DEFAULT_DB):
+    if camera is None:
+        return None
+    db_session = get_session(db_address=db_address)
+    criteria = (Instrument.camera == camera) & (Instrument.schedulable .is_(True))
+    instrument = db_session.query(Instrument).filter(criteria)
+    db_session.close()
+    if instrument.count() > 1:
+        logger.error("There are multiple schedulable entries for {camera} in the database".format(camera=camera))
+        return None
+    return instrument.first()
+
+
 def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     db_session = get_session(db_address=db_address)
     criteria = (CalibrationImage.type == 'BPM', CalibrationImage.instrument_id == instrument_id,
