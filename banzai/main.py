@@ -162,7 +162,8 @@ def process_directory(runtime_context, raw_path, image_types=None, log_message='
         image_types = [None]
     images_to_reduce = []
     for image_type in image_types:
-        images_to_reduce += image_utils.select_images(image_path_list, runtime_context.db_address, image_type)
+        images_to_reduce += image_utils.select_images(image_path_list, image_type, runtime_context.db_address,
+                                                      runtime_context.ignore_schedulability)
     for image_path in images_to_reduce:
         try:
             run(image_path, runtime_context)
@@ -258,17 +259,37 @@ def stack_calibrations(runtime_context=None, raw_path=None):
 
 
 def run_end_of_night():
-    extra_console_arguments = [{'args': ['--site'],
-                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
-                               {'args': ['--dayobs'],
-                                'kwargs': {'dest': 'dayobs', 'default': None,
-                                           'help': 'Day-Obs to reduce (e.g. 20160201)'}},
-                               {'args': ['--raw-path-root'],
-                                'kwargs': {'dest': 'rawpath_root', 'default': '/archive/engineering',
-                                           'help': 'Top level directory with raw data.'}}]
 
-    runtime_context = parse_args(extra_console_arguments=extra_console_arguments,
-                                  parser_description='Reduce all the data from a site at the end of a night.')
+    parser = argparse.ArgumentParser(description="Reprocess a night of data given either a site or camera code")
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--site', help='Site code (e.g. ogg)')
+    group.add_argument('--camera', help='Camera code (e.g. kb95)')
+
+    parser.add_argument('--dayobs', default=None, help='Day-Obs to reduce (e.g. 20160201)')
+
+    parser.add_argument('--db-address', dest='db_address', required=True,
+                        help='Database address: Should be in SQLAlchemy form')
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
+
+    args = parser.parse_args()
+
+    args.post_to_archive = True
+    args.processed_path = '/archive/engineering'
+    args.rawpath_root = '/archive/engineering'
+    args.fpack = True
+    args.rlevel = 91
+    args.post_to_elasticsearch = True
+    args.elasticsearch_url = 'http://elasticsearch.lco.gtn:9200'
+    args.elasticsearch_qc_index = 'banzai_qc'
+    args.elasticsearch_doc_type = 'qc'
+    args.no_bpm = False
+    args.ignore_schedulability = False
+
+    logs.set_log_level(args.log_level)
+
+    runtime_context = Context(args)
 
     # Ping the configdb to get instruments
     try:
@@ -276,29 +297,36 @@ def run_end_of_night():
     except Exception:
         logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
 
-    try:
-        timezone = dbs.get_timezone(runtime_context.site, db_address=runtime_context.db_address)
-    except dbs.SiteMissingException:
-        msg = "Site {site} not found in database {db}, exiting."
-        logger.error(msg.format(site=runtime_context.site, db=runtime_context.db_address),
-                     extra_tags={'site': runtime_context.site})
-        return
+    if args.site is not None:
+        site = args.site
+        instruments = dbs.get_instruments_at_site(site, db_address=runtime_context.db_address)
+        instruments = [instrument for instrument in instruments
+                       if instrument_utils.instrument_passes_criteria(instrument, runtime_context.ignore_schedulability)]
+    else:
+        instruments = [dbs.get_instrument_by_camera(args.camera, db_address=runtime_context.db_address)]
+        site = instruments[0].site
 
+    timezone = dbs.get_timezone(site, db_address=runtime_context.db_address)
     # If no dayobs is given, calculate it.
     if runtime_context.dayobs is None:
         dayobs = date_utils.get_dayobs(timezone=timezone)
     else:
         dayobs = runtime_context.dayobs
+    min_date, max_date = date_utils.get_min_and_max_dates(timezone, dayobs)
 
-    instruments = dbs.get_instruments_at_site(runtime_context.site,
-                                              db_address=runtime_context.db_address,
-                                              ignore_schedulability=runtime_context.ignore_schedulability)
-    instruments = [instrument for instrument in instruments
-                   if instrument_utils.instrument_passes_criteria(instrument, runtime_context.ignore_schedulability)]
     # For each instrument at the given site
     for instrument in instruments:
-        raw_path = os.path.join(runtime_context.rawpath_root, runtime_context.site,
+        raw_path = os.path.join(runtime_context.rawpath_root, instrument.site,
                                 instrument.camera, dayobs, 'raw')
+        for image_type in ['BIAS', 'DARK', 'SKYFLAT']:
+            try:
+                reduce_directory(runtime_context, raw_path, image_types=[image_type])
+            except Exception:
+                logger.error(logs.format_exception())
+            try:
+                process_master_maker(runtime_context, instrument, image_type.upper(), min_date, max_date)
+            except Exception:
+                logger.error(logs.format_exception())
         try:
             reduce_directory(runtime_context, raw_path, image_types=['EXPOSE', 'STANDARD'])
         except Exception:
