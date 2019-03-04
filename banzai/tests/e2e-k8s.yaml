@@ -65,13 +65,13 @@ spec:
           value: "sqlite:////archive/engineering/test.db"
       command:
         - dramatiq
+        - banzai.main
         - --processes
         - "2"
         - --threads
         - "1"
         - --queues
         - "schedule_stack"
-        - banzai.main
       resources:
         requests:
           cpu: 0.7
@@ -92,13 +92,13 @@ spec:
           value: "sqlite:////archive/engineering/test.db"
       command:
         - dramatiq
+        - banzai.main
         - --processes
         - "4"
         - --threads
         - "1"
         - --queues
         - "process_image"
-        - banzai.main
       resources:
         requests:
           cpu: 0.7
