@@ -273,18 +273,35 @@ def run_end_of_night():
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
 
+    parser.add_argument("--raw-path", default='/archive/engineering', dest='rawpath_root',
+                        help='Top level directory to search for data')
+    parser.add_argument("--processed-path", default='/archive/engineering',
+                        help='Top level directory where the processed data will be stored')
+    parser.add_argument('--no-post-to-archive', dest='no_post_to_archive', action='store_true',
+                        default=False)
+    parser.add_argument('--no-post-to-elasticsearch', dest='no_post_to_elasticsearch', action='store_true',
+                        default=False)
+    parser.add_argument('--no-fpack', dest='no_fpack', action='store_true', default=False,
+                        help='Don\'t fpack the output files?')
+    parser.add_argument('--rlevel', dest='rlevel', default=91, type=int, help='Reduction level')
+    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
+                        default='http://elasticsearch.lco.gtn:9200')
+    parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
+                        help='ElasticSearch index to use for QC results')
+    parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
+                        help='Elasticsearch document type for QC records')
+    parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
+                        help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
+    parser.add_argument('--use-older-calibrations', dest='use_older_calibrations', default=True, type=bool,
+                        help='Only use calibrations that were created before the start of the block?')
+    parser.add_argument('--preview-mode', dest='preview_mode', default=False,
+                        help='Save the reductions to the preview directory')
+
     args = parser.parse_args()
 
-    args.post_to_archive = True
-    args.processed_path = '/archive/engineering'
-    args.rawpath_root = '/archive/engineering'
-    args.fpack = True
-    args.rlevel = 91
-    args.post_to_elasticsearch = True
-    args.elasticsearch_url = 'http://elasticsearch.lco.gtn:9200'
-    args.elasticsearch_qc_index = 'banzai_qc'
-    args.elasticsearch_doc_type = 'qc'
-    args.no_bpm = False
+    args.post_to_archive = not args.no_post_to_archive
+    args.post_to_elasticsearch = not args.no_post_to_elasticsearch
+    args.fpack = not args.no_fpack
     args.ignore_schedulability = False
 
     logs.set_log_level(args.log_level)
