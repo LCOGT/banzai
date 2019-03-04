@@ -27,7 +27,7 @@ def get_reduction_level(header):
     return header.get('RLEVEL', '00')
 
 
-def select_images(image_list, image_type, db_address, ignore_schedulability):
+def select_images(image_list, image_type, db_address, ignore_schedulability=False):
     images = []
     for filename in image_list:
         try:
