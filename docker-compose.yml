@@ -22,10 +22,9 @@ services:
     entrypoint: ["dramatiq", "banzai:main", "-p", "12"]
     volumes_from:
       - BANZAIpipelineE2EData
-      - AstrometryCatalogs
     labels:
       io.rancher.container.pull_image: always
-      io.rancher.sidekicks: BANZAIpipelineE2EData,AstrometryCatalogs
+      io.rancher.sidekicks: BANZAIpipelineE2EData
     logging:
       options:
         max-size: '100m'
@@ -52,10 +51,9 @@ services:
       FITS_BROKER: 127.0.0.1
     volumes_from:
       - BANZAIpipelineE2EData
-      - AstrometryCatalogs
     labels:
       io.rancher.container.pull_image: always
-      io.rancher.sidekicks: BANZAIpipelineE2EData,AstrometryCatalogs
+      io.rancher.sidekicks: BANZAIpipelineE2EData
     logging:
       options:
         max-size: '100m'
