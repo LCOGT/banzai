@@ -8,29 +8,11 @@ metadata:
 spec:
   # Create some empty directories to be mounted within the Pod
   volumes:
-    - name: astrometry-catalogs
-      emptyDir:
-        sizeLimit: 15Gi
     - name: banzai-data
       emptyDir:
         sizeLimit: 10Gi
 
   initContainers:
-    # When the Pod is initialized, copy all files within the container at path
-    # /opt/astrometry.net/data into the empty data volume mounted at /data
-    - name: astrometry-catalogs
-      image: docker.lco.global/astrometry.net-catalogs:1.0.0
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: astrometry-catalogs
-          mountPath: /data
-          readOnly: false
-      command:
-        - /bin/cp
-        - -a
-        - /opt/astrometry.net/data
-        - /data/
-
     # When the Pod is initialized, copy all files within the container at path
     # /archive/engineering into the empty data volume mounted at /data
     - name: banzai-data
@@ -74,10 +56,6 @@ spec:
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
       volumeMounts:
-        - name: astrometry-catalogs
-          mountPath: /opt/astrometry.net/data
-          subPath: data
-          readOnly: true
         - name: banzai-data
           mountPath: /archive/engineering
           subPath: engineering

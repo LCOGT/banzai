@@ -4,10 +4,7 @@ MAINTAINER Las Cumbres Observatory <webmaster@lco.global>
 
 RUN yum -y install epel-release gcc mariadb-devel \
         && yum -y install fpack \
-        && yum -y install "http://packagerepo.lco.gtn/repos/lcogt/7/astrometry.net-0.72-1.lcogt.el7.x86_64.rpm" \
         && yum -y clean all
-
-ENV PATH /opt/astrometry.net/bin:$PATH
 
 RUN conda install -y pip numpy\>=1.13 cython scipy astropy pytest\>=3.6,\<4.0 mock requests ipython coverage pyyaml\
         && conda install -y -c conda-forge kombu elasticsearch\<6.0.0,\>=5.0.0 pytest-astropy mysql-connector-python\
