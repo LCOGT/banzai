@@ -27,6 +27,8 @@ from banzai.utils import date_utils
 # Note that we need to encode the database password outside of the code base
 _DEFAULT_DB = 'mysql://cmccully:password@localhost/test'
 
+_CONFIGDB_ADDRESS = 'http://configdb.lco.gtn/sites/'
+
 Base = declarative_base()
 
 logger = logging.getLogger(__name__)
@@ -111,7 +113,7 @@ class ProcessedImage(Base):
 
 
 def create_db(bpm_directory, db_address=_DEFAULT_DB,
-              configdb_address='http://configdb.lco.gtn/sites/'):
+              configdb_address=_CONFIGDB_ADDRESS):
     """
     Create the database structure.
 
@@ -128,7 +130,7 @@ def create_db(bpm_directory, db_address=_DEFAULT_DB,
     populate_calibration_table_with_bpms(bpm_directory, db_address=db_address)
 
 
-def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
+def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
     """
     Parse the contents of the configdb.
 
@@ -164,7 +166,7 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
 
 
 def populate_instrument_tables(db_address=_DEFAULT_DB,
-                               configdb_address='http://configdb.lco.gtn/sites/'):
+                               configdb_address=_CONFIGDB_ADDRESS):
     """
     Populate the instrument table
 
@@ -321,7 +323,7 @@ def query_for_instrument(db_address, site, camera, enclosure, telescope, must_be
     return instrument
 
 
-def get_instrument(header, db_address=_DEFAULT_DB, configdb_address='http://configdb.lco.gtn/sites/'):
+def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_ADDRESS):
     site = header.get('SITEID')
     enclosure = header.get('ENCID')
     telescope = header.get('TELID')
