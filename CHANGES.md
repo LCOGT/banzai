@@ -1,4 +1,4 @@
-0.19.3 (2019-03-05)
+0.19.4 (2019-03-05)
 -------------------
 - Require enclosure and telescope for instrument query
 - Avoid trying to reduce files that don't have fits extension in filename
