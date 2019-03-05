@@ -19,18 +19,21 @@ def munge(image):
 
     # 1m SBIGS
     elif '1m0' in image.instrument.type:
-        image.header['SATURATE'] = (46000.0, '[ADU] Saturation level used')
+        if image.header.get('SATURATE', 0.0) == 0.0:
+            image.header['SATURATE'] = (46000.0, '[ADU] Saturation level used')
     elif '0m4' in image.instrument.type or '0m8' in image.instrument.type:
-        image.header['SATURATE'] = (56000.0, '[ADU] Saturation level used')
+        if image.header.get('SATURATE', 0.0) == 0.0:
+            image.header['SATURATE'] = (64000.0, '[ADU] Saturation level used')
     elif 'fs02' == image.instrument.camera:
         # These values were given by Joe Tufts on 2016-06-07
         # These should really be measured empirically.
-        if image.header['CCDSUM'] == '2 2':
-            image.header['SATURATE'] = (500000.0 / float(image.header['GAIN']),
-                                        '[ADU] Saturation level used')
-        elif image.header['CCDSUM'] == '1 1':
-            image.header['SATURATE'] = (125000.0 / float(image.header['GAIN']),
-                                        '[ADU] Saturation level used')
+        if image.header.get('SATURATE', 0.0) == 0.0:
+            if image.header['CCDSUM'] == '2 2':
+                image.header['SATURATE'] = (500000.0 / float(image.header['GAIN']),
+                                            '[ADU] Saturation level used')
+            elif image.header['CCDSUM'] == '1 1':
+                image.header['SATURATE'] = (125000.0 / float(image.header['GAIN']),
+                                            '[ADU] Saturation level used')
     if not image_has_valid_saturate_value(image):
         raise ValueError('Saturate value not valid {f}'.format(f=image.filename))
 
