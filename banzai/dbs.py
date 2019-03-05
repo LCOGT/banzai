@@ -83,7 +83,7 @@ class Instrument(Base):
     """
     __tablename__ = 'instruments'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    site = Column(String(15), ForeignKey('sites.id'), index=True)
+    site = Column(String(15), ForeignKey('sites.id'), index=True, nullable=False)
     enclosure = Column(String(20), index=True, nullable=False)
     telescope = Column(String(20), index=True, nullable=False)
     camera = Column(String(50), index=True, nullable=False)
