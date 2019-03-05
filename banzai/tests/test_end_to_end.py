@@ -42,6 +42,7 @@ def run_reduce_individual_frames(raw_filenames):
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
             file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
+    redis_broker.join('process_image')
 
 
 def run_stack_calibrations(frame_type):
@@ -57,7 +58,7 @@ def run_stack_calibrations(frame_type):
                                  max_date=max_date, db_address=os.environ['DB_ADDRESS'])
         logger.info('Running the following stacking command: {command}'.format(command=command))
         os.system(command)
-    redis_broker.join('default')
+    redis_broker.join('schedule_stack')
 
 
 def mark_frames_as_good(raw_filenames):
@@ -93,7 +94,6 @@ def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_ty
     for day_obs in DAYS_OBS:
         created_stacked_calibrations += glob(os.path.join(DATA_ROOT, day_obs, 'processed',
                                                           '*' + calibration_type.lower() + '*.fits*'))
-    redis_broker.join('default')
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(created_stacked_calibrations) == number_of_stacks_that_should_have_been_created
 
@@ -104,7 +104,6 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
     calibrations_in_db = db_session.query(CalibrationImage).filter(CalibrationImage.type == calibration_type)
     calibrations_in_db = calibrations_in_db.filter(CalibrationImage.is_master).all()
     db_session.close()
-    redis_broker.join('default')
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(calibrations_in_db) == number_of_stacks_that_should_have_been_created
 

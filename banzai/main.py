@@ -446,6 +446,7 @@ def schedule_stack(runtime_context_json, block_id, calibration_type, instrument_
                                 datetime.strptime(runtime_context.min_date, '%Y-%m-%d %H:%M:%S'),
                                 datetime.strptime(runtime_context.max_date, '%Y-%m-%d %H:%M:%S'))
         else:
+            logger.info('molecule incomplete')
             raise Exception
 
 
