@@ -41,7 +41,7 @@ class DataTable(object):
 class Image(object):
 
     def __init__(self, pipeline_context, filename=None, data=None, data_tables=None,
-                 header=None, extension_headers=None, bpm=None):
+                 header=None, extension_headers=None, bpm=None, nx_rows_to_read_in=None):
         if header is None:
             header = fits.Header()
 
@@ -57,19 +57,30 @@ class Image(object):
                 filename = filename[:-3]
             self.filename = os.path.basename(filename)
 
-        self.data = data
-        self.data_tables = data_tables
         self.header = header
-        self.bpm = bpm
+        self.nx = header.get('NAXIS1')
+        self.ny = header.get('NAXIS2')
 
+        if nx_rows_to_read_in is None:
+            nx_rows_to_read_in = (0, self.nx)
+        self.nx_rows_read_in = nx_rows_to_read_in
+        a, b = self.nx_rows_read_in
+        self.data = data
+        if self.data is not None:
+            self.data = data[:, a:b]
+        self.bpm = bpm
+        if bpm is not None:
+            self.bpm = self.bpm[:, a:b]
+        self.nx_actual = a - b
+
+        self.data_tables = data_tables
         self.extension_headers = extension_headers
 
         self.request_number = header.get('REQNUM')
         self.instrument, self.site, self.camera = self._init_instrument_info(pipeline_context)
 
         self.epoch = str(header.get('DAY-OBS'))
-        self.nx = header.get('NAXIS1')
-        self.ny = header.get('NAXIS2')
+
         self.block_id = header.get('BLKUID')
         self.block_start = date_utils.parse_date_obs(header.get('BLKSDATE', '1900-01-01T00:00:00.00000'))
         self.molecule_id = header.get('MOLUID')
