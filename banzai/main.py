@@ -259,24 +259,6 @@ def stack_calibrations(pipeline_context=None, raw_path=None):
                          pipeline_context.min_date, pipeline_context.max_date)
 
 
-def update_db():
-    parser = argparse.ArgumentParser(description="Query the configdb to ensure that the instruments table"
-                                                 "has the most up-to-date information")
-
-    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
-                                                                 'critical', 'fatal', 'error'])
-    parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
-                        help='Database address: Should be in SQLAlchemy form')
-    args = parser.parse_args()
-    logs.set_log_level(args.log_level)
-
-    try:
-        dbs.populate_instrument_tables(db_address=pipeline_context.db_address)
-    except Exception:
-        logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
-
-
 def run_realtime_pipeline():
     extra_console_arguments = [{'args': ['--n-processes'],
                                 'kwargs': {'dest': 'n_processes', 'default': 12,
