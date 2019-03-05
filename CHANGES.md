@@ -1,5 +1,7 @@
-0.19.4 (2019-02-27)
+0.19.4 (2019-03-05)
 -------------------
+- Require enclosure and telescope for instrument query
+- Avoid trying to reduce files that don't have fits extension in filename
 - Added entrypoint to update instruments table in database
 - Removed defunct entrypoint to reduce night by site
 

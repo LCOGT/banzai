@@ -228,7 +228,8 @@ the absolute values along the vertical axis. Next, the SNR is computed as:
 
 SNR = [power - median(power)] / MAD(power)
 
-The frame is considered to have pattern noise if more than 5 bins are above an SNR of 15.
+The method than searches for groups of 3 or more adjacent pixels that have an SNR above 15. If more than 1% of
+all pixels are in these groups, then the frame is considered to have pattern noise.
 
 Pointing Test
 =============
