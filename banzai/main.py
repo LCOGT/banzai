@@ -375,7 +375,7 @@ class RealtimeModeListener(ConsumerMixin):
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
-@dramatiq.actor(queue_name="process_image")
+@dramatiq.actor(queue_name=settings.REDIS_QUEUE_NAMES['PROCESS_IMAGE'])
 def process_image(path, runtime_context_dict):
     logger.info('Got into actor.')
     runtime_context = Context(runtime_context_dict)
@@ -427,7 +427,7 @@ def mark_frame_as_bad():
 RETRY_DELAY = 1000*60*10
 
 
-@dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name="schedule_stack")
+@dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
 def schedule_stack(runtime_context_json, block_id, calibration_type, instrument_site, instrument_camera):
     runtime_context = Context(runtime_context_json)
     instrument = dbs.query_for_instrument(runtime_context.db_address, instrument_site, instrument_camera)

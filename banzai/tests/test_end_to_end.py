@@ -5,6 +5,7 @@ import argparse
 import pytest
 import mock
 
+from banzai import settings
 from banzai.main import redis_broker
 from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
 from banzai.utils import fits_utils, date_utils, file_utils
@@ -42,7 +43,7 @@ def run_reduce_individual_frames(raw_filenames):
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
             file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
-    redis_broker.join('process_image')
+    redis_broker.join(settings.REDIS_QUEUE_NAMES['PROCESS_IMAGE'])
 
 
 def run_stack_calibrations(frame_type):
@@ -58,7 +59,7 @@ def run_stack_calibrations(frame_type):
                                  max_date=max_date, db_address=os.environ['DB_ADDRESS'])
         logger.info('Running the following stacking command: {command}'.format(command=command))
         os.system(command)
-    redis_broker.join('schedule_stack')
+    redis_broker.join(settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
 
 
 def mark_frames_as_good(raw_filenames):
