@@ -1,3 +1,7 @@
+0.19.4 (2019-02-14)
+-------------------
+- Require enclosure and telescope for instrument query
+
 0.19.3 (2019-02-13)
 -------------------
 - Fixed bug where master calibrations had wrong daydir in filename
