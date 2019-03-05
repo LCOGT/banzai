@@ -1,14 +1,13 @@
 import os
 import tempfile
 import logging
-import datetime
+
+from banzai import logs
 
 import numpy as np
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
-
-from banzai.utils import date_utils
 
 logger = logging.getLogger(__name__)
 
@@ -132,8 +131,12 @@ def open_fits_file(filename):
 
 
 def get_primary_header(filename):
-    hdulist = open_fits_file(filename)
-    return hdulist[0].header
+    try:
+        hdulist = open_fits_file(filename)
+        return hdulist[0].header
+    except Exception:
+        logger.error("Unable to open fits file: {}".format(logs.format_exception()), extra_tags={'filename': filename})
+        return None
 
 
 def open_image(filename):
