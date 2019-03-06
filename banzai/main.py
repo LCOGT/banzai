@@ -424,7 +424,7 @@ def mark_frame_as_bad():
     mark_frame("bad")
 
 
-RETRY_DELAY = 1000*60*10
+RETRY_DELAY = os.getenv('RETRY_DELAY', 1000*60*10)
 
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
@@ -436,17 +436,15 @@ def schedule_stack(runtime_context_json, block_id, calibration_type, instrument_
     start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = start_date + timedelta(days=1)
     for molecule in block.get('molecules', []):
-        reported_calibration_images = 0
-        for event in molecule.get('events', []):
-            reported_calibration_images += event.get('completed_exposures', 0)
         if (molecule['completed'] or molecule['failed']):
+            logger.info('processing master calibration for block id {0}'.format(str(block_id)))
             process_master_maker(runtime_context,
                                 instrument,
                                 calibration_type,
                                 datetime.strptime(runtime_context.min_date, '%Y-%m-%d %H:%M:%S'),
                                 datetime.strptime(runtime_context.max_date, '%Y-%m-%d %H:%M:%S'))
         else:
-            logger.info('molecule incomplete')
+            logger.info('molecule incomplete for block id {0}'.format(str(block_id)))
             raise Exception
 
 

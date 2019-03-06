@@ -90,6 +90,8 @@ spec:
       env:
         - name: DB_ADDRESS
           value: "sqlite:////archive/engineering/test.db"
+        - name: RETRY_DELAY
+          value: 600000
       command:
         - dramatiq
         - banzai.main
