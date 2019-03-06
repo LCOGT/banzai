@@ -1,3 +1,8 @@
+0.19.4 (2019-03-05)
+-------------------
+- We no longer overwrite all SATURATE vales for the 0.4m telescopes. We now only use the
+  defaults if the value is missing or 0. We also set/check MAXLIN to the same value.
+
 0.19.3 (2019-02-13)
 -------------------
 - Fixed bug where master calibrations had wrong daydir in filename
