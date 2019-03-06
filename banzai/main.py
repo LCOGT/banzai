@@ -402,7 +402,24 @@ def mark_frame_as_bad():
     mark_frame("bad")
 
 
-<<<<<<< HEAD
+def update_db():
+    parser = argparse.ArgumentParser(description="Query the configdb to ensure that the instruments table"
+                                                 "has the most up-to-date information")
+
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
+    parser.add_argument('--db-address', dest='db_address',
+                        default='mysql://cmccully:password@localhost/test',
+                        help='Database address: Should be in SQLAlchemy form')
+    args = parser.parse_args()
+    logs.set_log_level(args.log_level)
+
+    try:
+        dbs.populate_instrument_tables(db_address=args.db_address)
+    except Exception:
+        logger.error('Could not populate instruments table: {error}'.format(error=logs.format_exception()))
+
+
 RETRY_DELAY = os.getenv('RETRY_DELAY', 1000*60*10)
 
 
@@ -446,21 +463,3 @@ def schedule_stacking_checks(runtime_context):
                 logger.info(runtime_context._asdict())
                 schedule_stack.send_with_options(args=(runtime_context._asdict(), block_for_calibration['id'],
                     calibration_type, instrument.site, instrument.camera))
-=======
-def update_db():
-    parser = argparse.ArgumentParser(description="Query the configdb to ensure that the instruments table"
-                                                 "has the most up-to-date information")
-
-    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
-                                                                 'critical', 'fatal', 'error'])
-    parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
-                        help='Database address: Should be in SQLAlchemy form')
-    args = parser.parse_args()
-    logs.set_log_level(args.log_level)
-
-    try:
-        dbs.populate_instrument_tables(db_address=args.db_address)
-    except Exception:
-        logger.error('Could not populate instruments table: {error}'.format(error=logs.format_exception()))
->>>>>>> master
