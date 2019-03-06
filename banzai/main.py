@@ -264,54 +264,6 @@ def stack_calibrations(pipeline_context=None, raw_path=None):
                          pipeline_context.min_date, pipeline_context.max_date)
 
 
-def run_end_of_night():
-    extra_console_arguments = [{'args': ['--site'],
-                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
-                               {'args': ['--dayobs'],
-                                'kwargs': {'dest': 'dayobs', 'default': None,
-                                           'help': 'Day-Obs to reduce (e.g. 20160201)'}},
-                               {'args': ['--raw-path-root'],
-                                'kwargs': {'dest': 'rawpath_root', 'default': '/archive/engineering',
-                                           'help': 'Top level directory with raw data.'}}]
-
-    pipeline_context = parse_args(banzai.settings.ImagingSettings, extra_console_arguments=extra_console_arguments,
-                                  parser_description='Reduce all the data from a site at the end of a night.')
-
-    # Ping the configdb to get instruments
-    try:
-        dbs.populate_instrument_tables(db_address=pipeline_context.db_address)
-    except Exception:
-        logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
-
-    try:
-        timezone = dbs.get_timezone(pipeline_context.site, db_address=pipeline_context.db_address)
-    except dbs.SiteMissingException:
-        msg = "Site {site} not found in database {db}, exiting."
-        logger.error(msg.format(site=pipeline_context.site, db=pipeline_context.db_address),
-                     extra_tags={'site': pipeline_context.site})
-        return
-
-    # If no dayobs is given, calculate it.
-    if pipeline_context.dayobs is None:
-        dayobs = date_utils.get_dayobs(timezone=timezone)
-    else:
-        dayobs = pipeline_context.dayobs
-
-    instruments = dbs.get_instruments_at_site(pipeline_context.site,
-                                              db_address=pipeline_context.db_address,
-                                              ignore_schedulability=pipeline_context.ignore_schedulability)
-    instruments = [instrument for instrument in instruments
-                   if banzai.context.instrument_passes_criteria(instrument, pipeline_context.FRAME_SELECTION_CRITERIA)]
-    # For each instrument at the given site
-    for instrument in instruments:
-        raw_path = os.path.join(pipeline_context.rawpath_root, pipeline_context.site,
-                                instrument.camera, dayobs, 'raw')
-        try:
-            reduce_directory(pipeline_context, raw_path, image_types=['EXPOSE', 'STANDARD'])
-        except Exception:
-            logger.error(logs.format_exception())
-
-
 def run_realtime_pipeline():
     extra_console_arguments = [{'args': ['--n-processes'],
                                 'kwargs': {'dest': 'n_processes', 'default': 12,
@@ -449,3 +401,21 @@ def mark_frame_as_good():
 
 def mark_frame_as_bad():
     mark_frame("bad")
+
+
+def update_db():
+    parser = argparse.ArgumentParser(description="Query the configdb to ensure that the instruments table"
+                                                 "has the most up-to-date information")
+
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
+    parser.add_argument('--db-address', dest='db_address',
+                        default='mysql://cmccully:password@localhost/test',
+                        help='Database address: Should be in SQLAlchemy form')
+    args = parser.parse_args()
+    logs.set_log_level(args.log_level)
+
+    try:
+        dbs.populate_instrument_tables(db_address=args.db_address)
+    except Exception:
+        logger.error('Could not populate instruments table: {error}'.format(error=logs.format_exception()))
