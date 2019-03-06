@@ -48,6 +48,10 @@ def need_to_process_image(path, ignore_schedulability, db_address=dbs._DEFAULT_D
     """
     logger.info("Checking if file needs to be processed", extra_tags={"filename": path})
 
+    if not (path.endswith('.fits') or path.endswith('.fits.fz')):
+        logger.warning("Filename does not have a .fits extension, stopping reduction", extra_tags={"filename": path})
+        return False
+
     header = get_primary_header(path)
     if not image_utils.image_can_be_processed(header, db_address):
         return False

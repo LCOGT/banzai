@@ -24,6 +24,18 @@ INSTRUMENTS = [os.path.join(site, os.path.basename(instrument_path)) for site in
 DAYS_OBS = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrument in INSTRUMENTS
             for dayobs_path in glob(os.path.join(DATA_ROOT, instrument, '201*'))]
 
+ENCLOSURE_DICT = {
+    'fl11': 'domb',
+    'kb27': 'clma',
+    'fs02': 'clma',
+}
+
+TELESCOPE_DICT = {
+    'fl11': '1m0a',
+    'kb27': '0m4b',
+    'fs02': '2m0a',
+}
+
 
 def run_end_to_end_tests():
     parser = argparse.ArgumentParser()
@@ -53,10 +65,13 @@ def run_stack_calibrations(frame_type):
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
         min_date, max_date = date_utils.get_min_and_max_dates(timezone, dayobs, return_string=True)
         command = 'banzai_stack_calibrations --raw-path {raw_path} --frame-type {frame_type} ' \
-                  '--site {site} --camera {camera} --min-date {min_date} --max-date {max_date} ' \
+                  '--site {site} --camera {camera} ' \
+                  '--enclosure {enclosure} --telescope {telescope} ' \
+                  '--min-date {min_date} --max-date {max_date} ' \
                   '--db-address={db_address} --ignore-schedulability --fpack'
-        command = command.format(raw_path=raw_path, frame_type=frame_type, site=site, camera=camera, min_date=min_date,
-                                 max_date=max_date, db_address=os.environ['DB_ADDRESS'])
+        command = command.format(raw_path=raw_path, frame_type=frame_type, site=site, camera=camera,
+                                 enclosure=ENCLOSURE_DICT[camera], telescope=TELESCOPE_DICT[camera],
+                                 min_date=min_date, max_date=max_date, db_address=os.environ['DB_ADDRESS'])
         logger.info('Running the following stacking command: {command}'.format(command=command))
         os.system(command)
     redis_broker.join(settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])

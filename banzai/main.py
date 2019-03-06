@@ -245,6 +245,10 @@ def reduce_single_frame(runtime_context=None):
 def stack_calibrations(runtime_context=None, raw_path=None):
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
+                               {'args': ['--enclosure'],
+                                'kwargs': {'dest': 'enclosure', 'help': 'Enclosure code (e.g. clma)', 'required': True}},
+                               {'args': ['--telescope'],
+                                'kwargs': {'dest': 'telescope', 'help': 'Telescope code (e.g. 0m4a)', 'required': True}},
                                {'args': ['--camera'],
                                 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)', 'required': True}},
                                {'args': ['--frame-type'],
@@ -260,7 +264,7 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
     logger.info('starting stack calibrations')
-    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path, banzai.settings.ImagingSettings(),
                                                      extra_console_arguments=extra_console_arguments)
     schedule_stacking_checks(runtime_context)
 
@@ -414,6 +418,28 @@ def mark_frame(mark_as):
     logger.info("Marking the frame {filename} as {mark_as}".format(filename=args.filename, mark_as=mark_as))
     dbs.mark_frame(args.filename, mark_as, db_address=args.db_address)
     logger.info("Finished")
+
+
+def add_instrument():
+    parser = argparse.ArgumentParser(description="Add a new instrument to the database")
+    parser.add_argument("--site", help='Site code (e.g. ogg)', required=True)
+    parser.add_argument('--enclosure', help= 'Enclosure code (e.g. clma)', required=True)
+    parser.add_argument('--telescope', help='Telescope code (e.g. 0m4a)', required=True)
+    parser.add_argument("--camera", help='Camera (e.g. kb95)', required=True)
+    parser.add_argument("--camera-type", dest='camera_type',
+                        help="Camera type (e.g. 1m0-SciCam-Sinistro)", required=True)
+    parser.add_argument("--schedulable", help="Mark the instrument as schedulable", action='store_true',
+                        dest='schedulable', default=False)
+    parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
+                        help='Database address: Should be in SQLAlchemy format')
+    args = parser.parse_args()
+    instrument = {'site': args.site,
+                  'enclosure': args.enclosure,
+                  'telescope': args.telescope,
+                  'camera': args.camera,
+                  'type': args.camera_type,
+                  'schedulable': args.schedulable}
+    dbs.add_instrument(instrument, db_address=args.db_address)
 
 
 def mark_frame_as_good():
