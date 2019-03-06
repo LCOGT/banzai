@@ -269,54 +269,6 @@ def stack_calibrations(runtime_context=None, raw_path=None):
     schedule_stacking_checks(runtime_context)
 
 
-def run_end_of_night():
-    extra_console_arguments = [{'args': ['--site'],
-                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
-                               {'args': ['--dayobs'],
-                                'kwargs': {'dest': 'dayobs', 'default': None,
-                                           'help': 'Day-Obs to reduce (e.g. 20160201)'}},
-                               {'args': ['--raw-path-root'],
-                                'kwargs': {'dest': 'rawpath_root', 'default': '/archive/engineering',
-                                           'help': 'Top level directory with raw data.'}}]
-
-    runtime_context = parse_args(extra_console_arguments=extra_console_arguments,
-                                 parser_description='Reduce all the data from a site at the end of a night.')
-
-    # Ping the configdb to get instruments
-    try:
-        dbs.populate_instrument_tables(db_address=runtime_context.db_address)
-    except Exception:
-        logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
-
-    try:
-        timezone = dbs.get_timezone(runtime_context.site, db_address=runtime_context.db_address)
-    except dbs.SiteMissingException:
-        msg = "Site {site} not found in database {db}, exiting."
-        logger.error(msg.format(site=runtime_context.site, db=runtime_context.db_address),
-                     extra_tags={'site': runtime_context.site})
-        return
-
-    # If no dayobs is given, calculate it.
-    if runtime_context.dayobs is None:
-        dayobs = date_utils.get_dayobs(timezone=timezone)
-    else:
-        dayobs = runtime_context.dayobs
-
-    instruments = dbs.get_instruments_at_site(runtime_context.site,
-                                              db_address=runtime_context.db_address,
-                                              ignore_schedulability=runtime_context.ignore_schedulability)
-    instruments = [instrument for instrument in instruments
-                   if instrument_utils.instrument_passes_criteria(instrument, runtime_context.ignore_schedulability)]
-    # For each instrument at the given site
-    for instrument in instruments:
-        raw_path = os.path.join(runtime_context.rawpath_root, runtime_context.site,
-                                instrument.camera, dayobs, 'raw')
-        try:
-            reduce_directory(runtime_context, raw_path, image_types=['EXPOSE', 'STANDARD'])
-        except Exception:
-            logger.error(logs.format_exception())
-
-
 def run_realtime_pipeline():
     extra_console_arguments = [{'args': ['--n-processes'],
                                 'kwargs': {'dest': 'n_processes', 'default': 12,
@@ -450,6 +402,7 @@ def mark_frame_as_bad():
     mark_frame("bad")
 
 
+<<<<<<< HEAD
 RETRY_DELAY = os.getenv('RETRY_DELAY', 1000*60*10)
 
 
@@ -493,3 +446,21 @@ def schedule_stacking_checks(runtime_context):
                 logger.info(runtime_context._asdict())
                 schedule_stack.send_with_options(args=(runtime_context._asdict(), block_for_calibration['id'],
                     calibration_type, instrument.site, instrument.camera))
+=======
+def update_db():
+    parser = argparse.ArgumentParser(description="Query the configdb to ensure that the instruments table"
+                                                 "has the most up-to-date information")
+
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
+    parser.add_argument('--db-address', dest='db_address',
+                        default='mysql://cmccully:password@localhost/test',
+                        help='Database address: Should be in SQLAlchemy form')
+    args = parser.parse_args()
+    logs.set_log_level(args.log_level)
+
+    try:
+        dbs.populate_instrument_tables(db_address=args.db_address)
+    except Exception:
+        logger.error('Could not populate instruments table: {error}'.format(error=logs.format_exception()))
+>>>>>>> master
