@@ -91,7 +91,7 @@ spec:
         - name: DB_ADDRESS
           value: "sqlite:////archive/engineering/test.db"
         - name: RETRY_DELAY
-          value: 0
+          value: "0"
       command:
         - dramatiq
         - banzai.main
