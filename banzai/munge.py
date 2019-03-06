@@ -25,7 +25,7 @@ def munge(image):
         update_saturate(image, 64000.0)
     elif 'fs02' == image.instrument.camera:
         # These values were given by Joe Tufts on 2016-06-07
-        binning = image.header.get('CCDSUM', '1 1')[0]
+        binning = image.header.get('CCDSUM', '1 1')
         n_binned_pixels = int(binning[0]) * int(binning[2])
         update_saturate(image, 125000.0 * n_binned_pixels / float(image.header['GAIN']))
 
