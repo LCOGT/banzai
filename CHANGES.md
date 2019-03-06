@@ -2,6 +2,10 @@
 -------------------
 - We no longer overwrite all SATURATE vales for the 0.4m telescopes. We now only use the
   defaults if the value is missing or 0. We also set/check MAXLIN to the same value.
+- Require enclosure and telescope for instrument query
+- Avoid trying to reduce files that don't have fits extension in filename
+- Added entrypoint to update instruments table in database
+- Removed defunct entrypoint to reduce night by site
 
 0.19.3 (2019-02-13)
 -------------------
