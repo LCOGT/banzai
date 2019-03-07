@@ -196,7 +196,9 @@ def process_single_frame(runtime_context, raw_path, filename, log_message=''):
 
 @dramatiq.actor()
 def process_master_maker(runtime_context, instrument, frame_type, min_date, max_date, use_masters=False):
-    extra_tags = {'instrument': instrument.camera, 'obstype': frame_type,
+    extra_tags = {'type': instrument.type, 'site': instrument.site,
+                  'enclosure': instrument.enclosure, 'telescope': instrument.telescope,
+                  'camera': instrument.camera, 'obstype': frame_type,
                   'min_date': min_date.strftime(date_utils.TIMESTAMP_FORMAT),
                   'max_date': max_date.strftime(date_utils.TIMESTAMP_FORMAT)}
     logger.info("Making master frames", extra_tags=extra_tags)
