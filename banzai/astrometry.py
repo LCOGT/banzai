@@ -4,6 +4,7 @@ import shlex
 import tempfile
 import logging
 import requests
+from requests import HTTPError
 
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -40,7 +41,8 @@ class WCSSolver(Stage):
                            'naxis1': image.nx,
                            'naxis2': image.ny,
                            'ra': image.ra,
-                           'dec': image.dec}
+                           'dec': image.dec,
+                           'statistics': False}
         try:
             astrometry_response = requests.post(_ASTROMETRY_SERVICE_URL, json=catalog_payload)
             astrometry_response.raise_for_status()
