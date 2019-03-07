@@ -424,9 +424,9 @@ RETRY_DELAY = os.getenv('RETRY_DELAY', 1000*60*10)
 
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
-def schedule_stack(runtime_context_json, block_id, calibration_type, instrument_site, instrument_camera):
+def schedule_stack(runtime_context_json, block_id, calibration_type, site, camera, enclosure, telescope):
     runtime_context = Context(runtime_context_json)
-    instrument = dbs.query_for_instrument(runtime_context.db_address, instrument_site, instrument_camera)
+    instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera, enclosure, telescope)
     logger.debug('scheduling stack for block_id: ' + str(block_id))
     block = lake_utils.get_block_by_id(block_id)
     start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -462,4 +462,4 @@ def schedule_stacking_checks(runtime_context):
                 #     calibration_type, instrument), delay=max(message_delay.microseconds*1000, 0))
                 logger.info(runtime_context._asdict())
                 schedule_stack.send_with_options(args=(runtime_context._asdict(), block_for_calibration['id'],
-                    calibration_type, instrument.site, instrument.camera))
+                    calibration_type, instrument.site, instrument.camera, instrument.enclosure, instrument.telescope))
