@@ -64,14 +64,26 @@ def test_returns_null_if_ny_are_different(mock_cal):
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_flags_image_if_no_master_calibration(mock_cal):
+def test_rejects_image_if_no_master_calibration(mock_cal):
     mock_cal.return_value = None
     nx = 101
     ny = 103
     context = make_context_with_master_bias(nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
-    image = subtractor.do_stage(FakeImage(nx=nx, ny=ny) )
-    assert image.is_bad is True
+    image = subtractor.do_stage(FakeImage(nx=nx, ny=ny))
+    assert image is None
+
+
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+def test_does_not_reject_image_if_no_master_calibration_and_calibrations_not_required(mock_cal):
+    mock_cal.return_value = None
+    nx = 101
+    ny = 103
+    context = make_context_with_master_bias(nx=nx, ny=ny)
+    context.calibrations_not_required = True
+    subtractor = BiasSubtractor(context)
+    image = subtractor.do_stage(FakeImage(nx=nx, ny=ny))
+    assert image is not None
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
