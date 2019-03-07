@@ -45,7 +45,7 @@ def run_stack_calibrations(frame_type):
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         site, camera, dayobs = day_obs.split('/')
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
-        min_date, max_date = date_utils.get_min_and_max_dates(timezone, dayobs, return_string=True)
+        min_date, max_date = date_utils.get_min_and_max_dates(timezone, dayobs, return_string=True, single_night=True)
         command = 'banzai_stack_calibrations --raw-path {raw_path} --frame-type {frame_type} ' \
                   '--site {site} --camera {camera} --min-date {min_date} --max-date {max_date} ' \
                   '--db-address={db_address} --ignore-schedulability --fpack'

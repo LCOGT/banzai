@@ -133,10 +133,14 @@ def valid_date(s):
         raise argparse.ArgumentTypeError(msg)
 
 
-def get_min_and_max_dates(timezone, dayobs, return_string=False):
+def get_min_and_max_dates_of_single_night(timezone, dayobs, return_string=False, single_night=False):
+    if single_night:
+        days_minus, days_plus = 0.5, 0.5
+    else:
+        days_minus, days_plus = 1.0, 0.0
     midnight_at_site = _get_midnight(timezone, dayobs)
-    min_date = midnight_at_site - datetime.timedelta(days=0.5)
-    max_date = midnight_at_site + datetime.timedelta(days=0.5)
+    min_date = midnight_at_site - datetime.timedelta(days=days_minus)
+    max_date = midnight_at_site + datetime.timedelta(days=days_plus)
     if return_string:
         min_date = min_date.strftime(TIMESTAMP_FORMAT)
         max_date = max_date.strftime(TIMESTAMP_FORMAT)
