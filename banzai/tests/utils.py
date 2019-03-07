@@ -55,13 +55,15 @@ class FakeImage(Image):
 
 
 class FakeContext(object):
-    def __init__(self, preview_mode=False, settings=banzai.settings.ImagingSettings(), frame_class=FakeImage):
+    def __init__(self, preview_mode=False, settings=banzai.settings.ImagingSettings(), frame_class=FakeImage,
+                 calibrations_not_required=False):
         for key, value in dict(inspect.getmembers(settings)).items():
             if not key.startswith('_'):
                 setattr(self, key, value)
         self.FRAME_CLASS = frame_class
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
+        self.calibrations_not_required = calibrations_not_required
 
     def image_can_be_processed(self, header):
         return True
