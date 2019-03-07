@@ -318,7 +318,8 @@ def run_end_of_night():
         site = args.site
         instruments = dbs.get_instruments_at_site(site, db_address=runtime_context.db_address)
         instruments = [instrument for instrument in instruments
-                       if instrument_utils.instrument_passes_criteria(instrument, runtime_context.ignore_schedulability)]
+                       if (instrument_utils.instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
+                           and instrument.schedulable is True)]
     else:
         instruments = [dbs.get_instrument_by_camera(args.camera, db_address=runtime_context.db_address)]
         site = instruments[0].site
