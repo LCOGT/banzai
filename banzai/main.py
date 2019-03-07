@@ -103,8 +103,9 @@ def parse_args(settings, extra_console_arguments=None,
                         help='ElasticSearch index to use for QC results')
     parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
                         help='Elasticsearch document type for QC records')
-    parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
-                        help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
+    parser.add_argument('--calibrations-not-required', dest='calibrations_not_required',
+                        default=False, action='store_true',
+                        help='Do not require any calibrations (BPM, bias, dark, skyflat) to reduce the data')
     parser.add_argument('--ignore-schedulability', dest='ignore_schedulability',
                         default=False, action='store_true',
                         help='Relax requirement that the instrument be schedulable')
