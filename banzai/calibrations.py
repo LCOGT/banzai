@@ -105,16 +105,20 @@ class ApplyCalibration(Stage):
         pass
 
     def on_missing_master_calibration(self, image):
-        msg = 'Master Calibration file does not exist for {stage}, flagging image as bad'
-        logger.error(msg.format(stage=self.stage_name), image=image)
-        image.is_bad = True
+        msg = 'Master Calibration file does not exist for {stage}'
+        if self.pipeline_context.calibrations_not_required:
+            msg += ', skipping stage'
+            logger.warning(msg.format(stage=self.stage_name), image=image)
+            return image
+        else:
+            logger.error(msg.format(stage=self.stage_name), image=image)
+            return None
 
     def do_stage(self, image):
         master_calibration_filename = self.get_calibration_filename(image)
 
         if master_calibration_filename is None:
-            self.on_missing_master_calibration(image)
-            return image
+            return self.on_missing_master_calibration(image)
 
         master_calibration_image = self.pipeline_context.FRAME_CLASS(self.pipeline_context,
                                                                      filename=master_calibration_filename)
@@ -150,11 +154,12 @@ class CalibrationComparer(ApplyCalibration):
         msg = 'No master {caltype} frame exists, flagging image as bad.'
         logger.error(msg.format(caltype=self.calibration_type), image=image)
         image.is_bad = True
+        return image
 
     def apply_master_calibration(self, image, master_calibration_image):
         # Short circuit
         if master_calibration_image.data is None:
-            return image
+            return self.on_missing_master_calibration(image)
 
         # We assume the image has already been normalized before this stage is run.
         bad_pixel_fraction = np.abs(image.data - master_calibration_image.data)
