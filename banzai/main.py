@@ -264,8 +264,8 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
     logger.info('starting stack calibrations')
-    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path, banzai.settings.ImagingSettings(),
-                                                     extra_console_arguments=extra_console_arguments)
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
+                                                    extra_console_arguments=extra_console_arguments)
     schedule_stacking_checks(runtime_context)
 
 
