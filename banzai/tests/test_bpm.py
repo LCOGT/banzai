@@ -35,9 +35,8 @@ class FakeInstrument(object):
 class FakeContextForBPM(FakeContext):
 
     def __init__(self, *args, **kwargs):
-        self.no_bpm = kwargs.pop('no_bpm', False)
-        self.db_address = 'FakeDBAddress'
         super(FakeContextForBPM, self).__init__(*args, **kwargs)
+        self.db_address = 'FakeDBAddress'
 
 
 def make_test_bpm(nx, ny, bad_pixel_fraction=0.1, make_3d=False):
@@ -94,11 +93,11 @@ def test_removes_image_if_file_missing(mock_get_bpm_filename):
 
 
 @mock.patch('banzai.bpm.dbs.get_bpm_filename')
-def test_uses_fallback_if_bpm_missing_and_no_bpm_set(mock_get_bpm_filename):
+def test_uses_fallback_if_bpm_missing_and_calibrations_not_required(mock_get_bpm_filename):
     image = FakeImageForBPM()
     fallback_bpm = np.zeros(image.data.shape, dtype=np.uint8)
     mock_get_bpm_filename.return_value = None
-    tester = BPMUpdater(FakeContextForBPM(no_bpm=True))
+    tester = BPMUpdater(FakeContextForBPM(calibrations_not_required=True))
     assert tester.do_stage(image) is not None
     np.testing.assert_array_equal(image.bpm, fallback_bpm)
 
