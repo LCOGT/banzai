@@ -441,7 +441,7 @@ def schedule_stack(runtime_context_json, block_id, calibration_type, site, camer
                                 calibration_type,
                                 datetime.strptime(runtime_context.min_date, '%Y-%m-%d %H:%M:%S'),
                                 datetime.strptime(runtime_context.max_date, '%Y-%m-%d %H:%M:%S'))
-        else if strptime(block['end'], date_utils.TIMESTAMP_FORMAT) > datetime.now():
+        elif strptime(block['end'], date_utils.TIMESTAMP_FORMAT) > datetime.now():
             logger.info('molecule incomplete for block id {0}'.format(str(block_id)))
             raise Exception
         else:
