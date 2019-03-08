@@ -1,5 +1,4 @@
 import requests
-import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,8 +12,11 @@ def get_next_calibration_blocks(site, start_before, start_after):
                'proposal': CALIBRATE_PROPOSAL_ID, 'aborted': False, 'canceled': False, 'order': 'start'}
     response = requests.get(LAKE_URL, params=payload)
     response.raise_for_status()
-
-    return response.json()['results']
+    results = response.json()['results']
+    for block in results:
+        for molecule in block['molecules']:
+            molecule['type'] = molecule['type'].replace('_', '')
+    return results
 
 
 def get_next_block(instrument, calibration_type, blocks):
@@ -28,5 +30,8 @@ def get_next_block(instrument, calibration_type, blocks):
 def get_block_by_id(block_id):
     response = requests.get(LAKE_URL + str(block_id))
     response.raise_for_status()
+    block = response.json()
+    for molecule in block['molecules']:
+        molecule['type'] = molecule['type'].replace('_', '')
 
-    return response.json()
+    return block

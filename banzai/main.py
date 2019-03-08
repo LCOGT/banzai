@@ -431,16 +431,14 @@ def schedule_stack(runtime_context_json, block_id, calibration_type, site, camer
     instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera, enclosure, telescope)
     logger.debug('scheduling stack for block_id: ' + str(block_id))
     block = lake_utils.get_block_by_id(block_id)
-    start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    end_date = start_date + timedelta(days=1)
     for molecule in block.get('molecules', []):
-        if (molecule['completed'] or molecule['failed']):
+        if ((molecule['completed'] or molecule['failed']) and runtime_context.calibration_type == molecule['type']):
             logger.info('processing master calibration for block id {0}'.format(str(block_id)))
             process_master_maker(runtime_context,
-                                instrument,
-                                calibration_type,
-                                datetime.strptime(runtime_context.min_date, '%Y-%m-%d %H:%M:%S'),
-                                datetime.strptime(runtime_context.max_date, '%Y-%m-%d %H:%M:%S'))
+                                 instrument,
+                                 calibration_type,
+                                 datetime.strptime(runtime_context.min_date, '%Y-%m-%d %H:%M:%S'),
+                                 datetime.strptime(runtime_context.max_date, '%Y-%m-%d %H:%M:%S'))
         elif datetime.strptime(block['end'], date_utils.TIMESTAMP_FORMAT) > datetime.now():
             logger.info('molecule incomplete for block id {0}'.format(str(block_id)))
             raise Exception
@@ -453,17 +451,16 @@ def schedule_stacking_checks(runtime_context):
     calibration_blocks = lake_utils.get_next_calibration_blocks(runtime_context.site, runtime_context.max_date, runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
-        for calibration_type in settings.CALIBRATION_IMAGE_TYPES:
-            block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
-            if block_for_calibration is not None:
-                logger.info('block for calibration: ' + json.dumps(block_for_calibration))
-                block_end = datetime.strptime(block_for_calibration['end'], date_utils.TIMESTAMP_FORMAT)
-                stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[calibration_type])
-                now = datetime.utcnow()
-                #message_delay = now - block_end + stack_delay
-                logger.info('before send schedule_stack')
-                # schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
-                #     calibration_type, instrument), delay=max(message_delay.microseconds*1000, 0))
-                logger.info(runtime_context._asdict())
-                schedule_stack.send_with_options(args=(runtime_context._asdict(), block_for_calibration['id'],
-                    calibration_type, instrument.site, instrument.camera, instrument.enclosure, instrument.telescope))
+        block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
+        if block_for_calibration is not None:
+            logger.info('block for calibration: ' + json.dumps(block_for_calibration))
+            block_end = datetime.strptime(block_for_calibration['end'], date_utils.TIMESTAMP_FORMAT)
+            stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[calibration_type])
+            now = datetime.utcnow()
+            #message_delay = now - block_end + stack_delay
+            logger.info('before send schedule_stack')
+            # schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
+            #     calibration_type, instrument), delay=max(message_delay.microseconds*1000, 0))
+            logger.info(runtime_context._asdict())
+            schedule_stack.send_with_options(args=(runtime_context._asdict(), block_for_calibration['id'],
+                calibration_type, instrument.site, instrument.camera, instrument.enclosure,instrument.telescope))
