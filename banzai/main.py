@@ -451,7 +451,7 @@ def schedule_stacking_checks(runtime_context):
     calibration_blocks = lake_utils.get_next_calibration_blocks(runtime_context.site, runtime_context.max_date, runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
-        block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
+        block_for_calibration = lake_utils.get_next_block(instrument, runtime_context.calibration_type, calibration_blocks)
         if block_for_calibration is not None:
             logger.info('block for calibration: ' + json.dumps(block_for_calibration))
             block_end = datetime.strptime(block_for_calibration['end'], date_utils.TIMESTAMP_FORMAT)
