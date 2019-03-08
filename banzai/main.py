@@ -429,10 +429,10 @@ RETRY_DELAY = int(os.getenv('RETRY_DELAY', 1000*60*10))
 def schedule_stack(runtime_context_json, block_id, calibration_type, site, camera, enclosure, telescope):
     runtime_context = Context(runtime_context_json)
     instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera, enclosure, telescope)
-    logger.debug('scheduling stack for block_id: ' + str(block_id))
+    logger.info('scheduling stack for block_id: ' + str(block_id))
     block = lake_utils.get_block_by_id(block_id)
     for molecule in block.get('molecules', []):
-        if ((molecule['completed'] or molecule['failed']) and runtime_context.frame_type == molecule['type']):
+        if ((molecule['completed'] or molecule['failed']) and runtime_context.frame_type.upper() == molecule['type']):
             logger.info('processing master calibration for block id {0}'.format(str(block_id)))
             process_master_maker(runtime_context,
                                  instrument,
@@ -464,5 +464,5 @@ def schedule_stacking_checks(runtime_context):
             #     calibration_type, instrument), delay=max(message_delay.microseconds*1000, 0))
             logger.info(runtime_context._asdict())
             schedule_stack.send_with_options(args=(runtime_context._asdict(), block_for_calibration['id'],
-                                                   runtime_context.frame_type.upper(), instrument.site,
+                                                   runtime_context.frame_type, instrument.site,
                                                    instrument.camera, instrument.enclosure, instrument.telescope))
