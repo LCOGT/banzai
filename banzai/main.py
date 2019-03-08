@@ -155,7 +155,7 @@ def run(image_path, runtime_context):
 
 def run_master_maker(image_path_list, runtime_context, frame_type):
     images = [read_image(image_path, runtime_context) for image_path in image_path_list]
-    stage_constructor = import_utils.import_attribute(settings.CALIBRATION_STACKER_STAGE[frame_type])
+    stage_constructor = import_utils.import_attribute(settings.CALIBRATION_STACKER_STAGE[frame_type.upper()])
     stage_to_run = stage_constructor(runtime_context)
     images = stage_to_run.run(images)
     for image in images:
@@ -432,6 +432,7 @@ def schedule_stack(runtime_context_json, block_id, calibration_type, site, camer
     logger.info('scheduling stack for block_id: ' + str(block_id))
     block = lake_utils.get_block_by_id(block_id)
     for molecule in block.get('molecules', []):
+        logger.info(molecule)
         if ((molecule['completed'] or molecule['failed']) and runtime_context.frame_type.upper() == molecule['type']):
             logger.info('processing master calibration for block id {0}'.format(str(block_id)))
             process_master_maker(runtime_context,
@@ -452,7 +453,6 @@ def schedule_stacking_checks(runtime_context):
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
         block_for_calibration = lake_utils.get_next_block(instrument, runtime_context.frame_type, calibration_blocks)
-        logger.info(block_for_calibration)
         if block_for_calibration is not None:
             logger.info('block for calibration: ' + json.dumps(block_for_calibration))
             block_end = datetime.strptime(block_for_calibration['end'], date_utils.TIMESTAMP_FORMAT)
