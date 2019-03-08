@@ -444,7 +444,7 @@ def schedule_stack(runtime_context_json, block_id, calibration_type, site, camer
             logger.info('molecule incomplete for block id {0}'.format(str(block_id)))
             raise Exception
         else:
-            return
+            continue
 
 
 # @dramatiq.actor()
