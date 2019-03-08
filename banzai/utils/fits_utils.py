@@ -124,10 +124,10 @@ def open_fits_file(filename):
             output_filename = os.path.join(tmpdirname, base_filename)
             os.system('funpack -O {0} {1}'.format(output_filename, filename))
             hdulist = fits.open(output_filename, 'readonly')
+            return hdulist
     else:
         hdulist = fits.open(filename, 'readonly')
-
-    return hdulist
+        return hdulist
 
 
 def get_primary_header(filename):

@@ -422,7 +422,7 @@ def update_db():
         logger.error('Could not populate instruments table: {error}'.format(error=logs.format_exception()))
 
 
-RETRY_DELAY = os.getenv('RETRY_DELAY', 1000*60*10)
+RETRY_DELAY = int(os.getenv('RETRY_DELAY', 1000*60*10))
 
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
@@ -441,9 +441,11 @@ def schedule_stack(runtime_context_json, block_id, calibration_type, site, camer
                                 calibration_type,
                                 datetime.strptime(runtime_context.min_date, '%Y-%m-%d %H:%M:%S'),
                                 datetime.strptime(runtime_context.max_date, '%Y-%m-%d %H:%M:%S'))
-        else:
+        else if strptime(block['end'], date_utils.TIMESTAMP_FORMAT) > datetime.now():
             logger.info('molecule incomplete for block id {0}'.format(str(block_id)))
             raise Exception
+        else:
+            return
 
 
 # @dramatiq.actor()
