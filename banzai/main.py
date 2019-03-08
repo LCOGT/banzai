@@ -456,7 +456,7 @@ def schedule_stacking_checks(runtime_context):
         if block_for_calibration is not None:
             logger.info('block for calibration: ' + json.dumps(block_for_calibration))
             block_end = datetime.strptime(block_for_calibration['end'], date_utils.TIMESTAMP_FORMAT)
-            stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[runtime_context.frame_type])
+            stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[runtime_context.frame_type.upper()])
             now = datetime.utcnow()
             #message_delay = now - block_end + stack_delay
             logger.info('before send schedule_stack')
@@ -464,5 +464,5 @@ def schedule_stacking_checks(runtime_context):
             #     calibration_type, instrument), delay=max(message_delay.microseconds*1000, 0))
             logger.info(runtime_context._asdict())
             schedule_stack.send_with_options(args=(runtime_context._asdict(), block_for_calibration['id'],
-                                                   runtime_context.frame_type, instrument.site,
+                                                   runtime_context.frame_type.upper(), instrument.site,
                                                    instrument.camera, instrument.enclosure, instrument.telescope))
