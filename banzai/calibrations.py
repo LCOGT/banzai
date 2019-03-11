@@ -11,6 +11,8 @@ from banzai.utils import image_utils, stats, fits_utils, qc, date_utils
 
 logger = logging.getLogger(__name__)
 
+BYTES_PER_BIT = 8.
+
 
 class CalibrationMaker(MultiFrameStage):
     def __init__(self, pipeline_context):
@@ -59,25 +61,15 @@ class CalibrationStacker(CalibrationMaker):
         # is used to create the filename and select the day directory
         images.sort(key=lambda image: image.dateobs, reverse=True)
 
-        data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
-        stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
-
         make_calibration_name = self.pipeline_context.CALIBRATION_FILENAME_FUNCTIONS[self.calibration_type]
-
         master_calibration_filename = make_calibration_name(images[0])
 
+        # Print out filenames for logger
         for i, image in enumerate(images):
-            logger.debug('Stacking Frames', image=image,
+            logger.debug('Stacking frames', image=image,
                          extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
-            data_stack[:, :, i] = image.data[:, :]
-            stack_mask[:, :, i] = image.bpm[:, :]
 
-        stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
-
-        # Memory cleanup
-        del data_stack
-        del stack_mask
-
+        stacked_data = self.stack_calibrations(images)
         master_bpm = np.array(stacked_data == 0.0, dtype=np.uint8)
 
         # Save the master dark image with all of the combined images in the header
@@ -89,6 +81,31 @@ class CalibrationStacker(CalibrationMaker):
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})
         return master_image
+
+    def stack_calibrations(self, images, nbytes_max=1E9, array_bit_size=32):
+
+        image = images[0]  # Used for fiducial parameters
+        stacked_data = np.zeros((image.ny, image.nx), dtype=np.float32)
+
+        ngroups = max(1, round(array_bit_size / BYTES_PER_BIT * image.nx * image.ny * len(images) / nbytes_max))
+        division = image.nx / float(ngroups)
+
+        msg = "Dividing stacks into {ngroups} groups with maximum size {ngb_max} MB"
+        logger.debug(msg.format(ngroups=ngroups, ngb_max=nbytes_max/1E6))
+
+        for igroup in range(ngroups):
+            a, b = round(division * igroup), round(division * (igroup + 1))
+            nx = b-a
+            data_stack = np.zeros((image.ny, nx, len(images)), dtype=np.float32)
+            stack_mask = np.zeros((image.ny, nx, len(images)), dtype=np.uint8)
+            for i, image in enumerate(images):
+                image_tmp = self.pipeline_context.FRAME_CLASS(self.pipeline_context, filename=image.full_filepath,
+                                                              nx_rows_to_read_in=(a,b))
+                data_stack[:, :, i] = image_tmp.data[:, :]
+                stack_mask[:, :, i] = image_tmp.bpm[:, :]
+            stacked_data[:, a:b] = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
+
+        return stacked_data
 
 
 class ApplyCalibration(Stage):
