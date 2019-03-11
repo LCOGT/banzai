@@ -53,6 +53,7 @@ class Image(object):
 
         if filename is not None:
             data, header, bpm, extension_headers = fits_utils.open_image(filename)
+            self.full_filepath = filename
             if '.fz' == filename[-3:]:
                 filename = filename[:-3]
             self.filename = os.path.basename(filename)
@@ -63,8 +64,14 @@ class Image(object):
 
         if nx_rows_to_read_in is None:
             nx_rows_to_read_in = (0, self.nx)
+        elif not hasattr(nx_rows_to_read_in, '__len__'):
+            nx_rows_to_read_in = (0, nx_rows_to_read_in)
         self.nx_rows_read_in = nx_rows_to_read_in
-        a, b = self.nx_rows_read_in
+        try:
+            a, b = self.nx_rows_read_in
+        except (ValueError, TypeError):
+            logger.error("nx_rows_to_read in must be None (to read in all rows), an integer (to set the maximum row), "
+                         "or a tuple (to set the first and last row)")
         self.data = data
         if self.data is not None:
             self.data = data[:, a:b]
@@ -264,9 +271,9 @@ class Image(object):
         return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
 
 
-def read_image(filename, pipeline_context):
+def read_image(filename, pipeline_context, nx_rows_to_read_in):
     try:
-        image = pipeline_context.FRAME_CLASS(pipeline_context, filename=filename)
+        image = pipeline_context.FRAME_CLASS(pipeline_context, filename=filename, nx_rows_to_read_in=nx_rows_to_read_in)
         if image.instrument is None:
             logger.error("Image instrument attribute is None, aborting", image=image)
             raise IOError
