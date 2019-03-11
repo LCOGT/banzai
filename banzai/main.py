@@ -221,8 +221,8 @@ def parse_directory_args(runtime_context=None, raw_path=None, extra_console_argu
 
 def reduce_directory(runtime_context=None, raw_path=None, image_types=None):
     # TODO: Remove image_types once reduce_night is not needed
-    pipeline_context, raw_path = parse_directory_args(runtime_context, raw_path)
-    process_directory(pipeline_context, raw_path, image_types=image_types,
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
+    process_directory(runtime_context, raw_path, image_types=image_types,
                       log_message='Reducing all frames in directory')
 
 
@@ -313,7 +313,7 @@ def run_individual_listener(broker_url, queue_name, runtime_context):
 class RealtimeModeListener(ConsumerMixin):
     def __init__(self, broker_url, runtime_context):
         self.broker_url = broker_url
-        self.pipeline_context = runtime_context
+        self.runtime_context = runtime_context
 
     def on_connection_error(self, exc, interval):
         logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
