@@ -59,6 +59,8 @@ class PipelineContext(object):
         raise TypeError('Resetting attribute is not allowed. PipelineContext is immutable.')
 
     def image_can_be_processed(self, header):
+        if header is None:
+            return False
         # Short circuit if the instrument is a guider even if they don't exist in configdb
         if not image_utils.get_obstype(header) in self.LAST_STAGE:
             return False
