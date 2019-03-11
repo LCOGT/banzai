@@ -425,12 +425,12 @@ def update_db():
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 1000*60*10))
 
 
-@dramatiq.actor(queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
-def should_retry_schedule_stack(retries_so_far, message_data):
+@dramatiq.actor(max_retries=0, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
+def should_retry_schedule_stack(message_data, exception_data):
     logger.info('entering should_retry_schedule_stack')
     logger.info(message_data)
-    if retries_so_far >= 2:
-        message_data['process_any_images'] = True
+    if message_data['options']['retries'] >= 2:
+        message_data['kwargs']['process_any_images'] = True
     logger.info(message_data)
 
 
