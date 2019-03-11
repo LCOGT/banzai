@@ -16,23 +16,28 @@ def munge(image):
             munge_sinistro(image)
         else:
             raise SinistroModeNotSupported('Sinistro mode not supported {f}'.format(f=image.filename))
-
     # 1m SBIGS
     elif '1m0' in image.instrument.type:
-        image.header['SATURATE'] = (46000.0, '[ADU] Saturation level used')
+        # Saturation level from ORAC Pipeline
+        update_saturate(image, 46000.0)
     elif '0m4' in image.instrument.type or '0m8' in image.instrument.type:
-        image.header['SATURATE'] = (56000.0, '[ADU] Saturation level used')
+        # Measured by Daniel Harbeck
+        update_saturate(image, 64000.0)
     elif 'fs02' == image.instrument.camera:
         # These values were given by Joe Tufts on 2016-06-07
-        # These should really be measured empirically.
-        if image.header['CCDSUM'] == '2 2':
-            image.header['SATURATE'] = (500000.0 / float(image.header['GAIN']),
-                                        '[ADU] Saturation level used')
-        elif image.header['CCDSUM'] == '1 1':
-            image.header['SATURATE'] = (125000.0 / float(image.header['GAIN']),
-                                        '[ADU] Saturation level used')
+        binning = image.header.get('CCDSUM', '1 1')
+        n_binned_pixels = int(binning[0]) * int(binning[2])
+        update_saturate(image, 125000.0 * n_binned_pixels / float(image.header['GAIN']))
+
     if not image_has_valid_saturate_value(image):
         raise ValueError('Saturate value not valid {f}'.format(f=image.filename))
+
+
+def update_saturate(image, saturation_level):
+    if image.header.get('SATURATE', 0.0) == 0.0:
+        image.header['SATURATE'] = (saturation_level, '[ADU] Saturation level used')
+    if image.header.get('MAXLIN', 0.0) == 0.0:
+        image.header['MAXLIN'] = (saturation_level, '[ADU] Non-linearity level')
 
 
 def sinistro_mode_is_supported(image):

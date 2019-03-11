@@ -4,6 +4,7 @@ import shlex
 import tempfile
 import logging
 import requests
+from requests import ConnectionError
 
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -27,6 +28,7 @@ class WCSSolver(Stage):
         # Skip the image if we don't have some kind of initial RA and Dec guess
         if np.isnan(image.ra) or np.isnan(image.dec):
             logger.error('Skipping WCS solution. No initial pointing guess from header.', image=image)
+            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             return image
 
         image_catalog = image.data_tables.get('catalog')
@@ -39,12 +41,22 @@ class WCSSolver(Stage):
                            'naxis1': image.nx,
                            'naxis2': image.ny,
                            'ra': image.ra,
-                           'dec': image.dec}
+                           'dec': image.dec,
+                           'statistics': False}
         try:
             astrometry_response = requests.post(_ASTROMETRY_SERVICE_URL, json=catalog_payload)
-            astrometry_response.raise_for_status()
-        except HTTPError:
-            logger.error('Error from Astrometry service. WCS solve not completed.', image=image)
+        except ConnectionError:
+            logger.error('Astrometry service unreachable.', image=image)
+            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+            return image
+
+        if astrometry_response.status_code == 400:
+            logger.error('Astrometry service query malformed', image=image)
+            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+            return image
+
+        if astrometry_response.json()['solved'] == False:
+            logger.warning('WCS solution failed.', image=image)
             image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             return image
 

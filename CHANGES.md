@@ -1,5 +1,11 @@
+0.20.0 (2019-03-11)
+-------------------
+- Configure pipeline to use GAIA-Astrometry.net service for WCS solves.
+
 0.19.4 (2019-03-05)
 -------------------
+- We no longer overwrite all SATURATE vales for the 0.4m telescopes. We now only use the
+  defaults if the value is missing or 0. We also set/check MAXLIN to the same value.
 - Require enclosure and telescope for instrument query
 - Avoid trying to reduce files that don't have fits extension in filename
 - Added entrypoint to update instruments table in database
