@@ -162,7 +162,8 @@ def process_directory(runtime_context, raw_path, image_types=None, log_message='
         image_types = [None]
     images_to_reduce = []
     for image_type in image_types:
-        images_to_reduce += image_utils.select_images(image_path_list, runtime_context.db_address, image_type)
+        images_to_reduce += image_utils.select_images(image_path_list, image_type, runtime_context.db_address,
+                                                      runtime_context.ignore_schedulability)
     for image_path in images_to_reduce:
         try:
             run(image_path, runtime_context)
