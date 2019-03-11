@@ -145,7 +145,7 @@ def run(image_path, pipeline_context):
 
 
 def run_master_maker(image_path_list, pipeline_context, frame_type):
-    images = [read_image(image_path, pipeline_context) for image_path in image_path_list]
+    images = [read_image(image_path, pipeline_context, nx_rows_to_read_in=0) for image_path in image_path_list]
     stage_to_run = pipeline_context.CALIBRATION_STACKER_STAGE[frame_type](pipeline_context)
     images = stage_to_run.run(images)
     for image in images:
