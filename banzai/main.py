@@ -427,6 +427,7 @@ RETRY_DELAY = int(os.getenv('RETRY_DELAY', 1000*60*10))
 
 @dramatiq.actor()
 def should_retry_schedule_stack(retries_so_far, message_data):
+    logger.info('entering should_retry_schedule_stack')
     logger.info(message_data)
     if retries_so_far >= 2:
         message_data['process_any_images'] = True
@@ -438,6 +439,11 @@ def schedule_stack(runtime_context_json, blocks, calibration_type, site, camera,
     runtime_context_json['min_date'] = datetime.strptime(runtime_context.min_date, '%Y-%m-%d %H:%M:%S')
     runtime_context_json['max_date'] = datetime.strptime(runtime_context.max_date, '%Y-%m-%d %H:%M:%S')
     runtime_context = Context(runtime_context_json)
+    logger.info('entering schedule stack for calibration type {0} from {1} to {2}'.format(
+        calibration_type,
+        runtime_context.min_date,
+        runtime_context.max_date
+    ))
     instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera, enclosure, telescope)
     completed_image_count = len(dbs.get_individual_calibration_images(instrument, frame_type,
                                                                       runtime_context.min_date,
@@ -449,6 +455,7 @@ def schedule_stack(runtime_context_json, blocks, calibration_type, site, camera,
         for molecule in block['molecules']:
             if runtime_context.frame_type.upper() == molecule['type']:
                 expected_image_count += molecule['exposure_count']
+    logger.info('expected image count: {0}'.format(str(expected_image_count)))
     if (expected_image_count < completed_image_count and not process_any_images):
         raise
     else:
