@@ -236,6 +236,10 @@ def reduce_single_frame(runtime_context=None):
 def stack_calibrations(runtime_context=None, raw_path=None):
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
+                               {'args': ['--enclosure'],
+                                'kwargs': {'dest': 'enclosure', 'help': 'Enclosure code (e.g. clma)', 'required': True}},
+                               {'args': ['--telescope'],
+                                'kwargs': {'dest': 'telescope', 'help': 'Telescope code (e.g. 0m4a)', 'required': True}},
                                {'args': ['--camera'],
                                 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)', 'required': True}},
                                {'args': ['--frame-type'],
@@ -255,54 +259,6 @@ def stack_calibrations(runtime_context=None, raw_path=None):
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera)
     process_master_maker(runtime_context, instrument,  runtime_context.frame_type.upper(),
                          runtime_context.min_date, runtime_context.max_date)
-
-
-def run_end_of_night():
-    extra_console_arguments = [{'args': ['--site'],
-                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
-                               {'args': ['--dayobs'],
-                                'kwargs': {'dest': 'dayobs', 'default': None,
-                                           'help': 'Day-Obs to reduce (e.g. 20160201)'}},
-                               {'args': ['--raw-path-root'],
-                                'kwargs': {'dest': 'rawpath_root', 'default': '/archive/engineering',
-                                           'help': 'Top level directory with raw data.'}}]
-
-    runtime_context = parse_args(extra_console_arguments=extra_console_arguments,
-                                  parser_description='Reduce all the data from a site at the end of a night.')
-
-    # Ping the configdb to get instruments
-    try:
-        dbs.populate_instrument_tables(db_address=runtime_context.db_address)
-    except Exception:
-        logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
-
-    try:
-        timezone = dbs.get_timezone(runtime_context.site, db_address=runtime_context.db_address)
-    except dbs.SiteMissingException:
-        msg = "Site {site} not found in database {db}, exiting."
-        logger.error(msg.format(site=runtime_context.site, db=runtime_context.db_address),
-                     extra_tags={'site': runtime_context.site})
-        return
-
-    # If no dayobs is given, calculate it.
-    if runtime_context.dayobs is None:
-        dayobs = date_utils.get_dayobs(timezone=timezone)
-    else:
-        dayobs = runtime_context.dayobs
-
-    instruments = dbs.get_instruments_at_site(runtime_context.site,
-                                              db_address=runtime_context.db_address,
-                                              ignore_schedulability=runtime_context.ignore_schedulability)
-    instruments = [instrument for instrument in instruments
-                   if instrument_utils.instrument_passes_criteria(instrument, runtime_context.ignore_schedulability)]
-    # For each instrument at the given site
-    for instrument in instruments:
-        raw_path = os.path.join(runtime_context.rawpath_root, runtime_context.site,
-                                instrument.camera, dayobs, 'raw')
-        try:
-            reduce_directory(runtime_context, raw_path, image_types=['EXPOSE', 'STANDARD'])
-        except Exception:
-            logger.error(logs.format_exception())
 
 
 def run_realtime_pipeline():
@@ -410,9 +366,49 @@ def mark_frame(mark_as):
     logger.info("Finished")
 
 
+def add_instrument():
+    parser = argparse.ArgumentParser(description="Add a new instrument to the database")
+    parser.add_argument("--site", help='Site code (e.g. ogg)', required=True)
+    parser.add_argument('--enclosure', help= 'Enclosure code (e.g. clma)', required=True)
+    parser.add_argument('--telescope', help='Telescope code (e.g. 0m4a)', required=True)
+    parser.add_argument("--camera", help='Camera (e.g. kb95)', required=True)
+    parser.add_argument("--camera-type", dest='camera_type',
+                        help="Camera type (e.g. 1m0-SciCam-Sinistro)", required=True)
+    parser.add_argument("--schedulable", help="Mark the instrument as schedulable", action='store_true',
+                        dest='schedulable', default=False)
+    parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
+                        help='Database address: Should be in SQLAlchemy format')
+    args = parser.parse_args()
+    instrument = {'site': args.site,
+                  'enclosure': args.enclosure,
+                  'telescope': args.telescope,
+                  'camera': args.camera,
+                  'type': args.camera_type,
+                  'schedulable': args.schedulable}
+    dbs.add_instrument(instrument, db_address=args.db_address)
+
+
 def mark_frame_as_good():
     mark_frame("good")
 
 
 def mark_frame_as_bad():
     mark_frame("bad")
+
+
+def update_db():
+    parser = argparse.ArgumentParser(description="Query the configdb to ensure that the instruments table"
+                                                 "has the most up-to-date information")
+
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
+    parser.add_argument('--db-address', dest='db_address',
+                        default='mysql://cmccully:password@localhost/test',
+                        help='Database address: Should be in SQLAlchemy form')
+    args = parser.parse_args()
+    logs.set_log_level(args.log_level)
+
+    try:
+        dbs.populate_instrument_tables(db_address=args.db_address)
+    except Exception:
+        logger.error('Could not populate instruments table: {error}'.format(error=logs.format_exception()))
