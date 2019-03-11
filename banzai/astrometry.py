@@ -47,7 +47,7 @@ class WCSSolver(Stage):
         try:
             astrometry_response = requests.post(_ASTROMETRY_SERVICE_URL, json=catalog_payload)
         except ConnectionError:
-            logger.error("Astrometry service unreachable.", image=image)
+            logger.error('Astrometry service unreachable.', image=image)
             image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             return image
 
