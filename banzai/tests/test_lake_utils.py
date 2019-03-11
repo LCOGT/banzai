@@ -36,7 +36,7 @@ def test_can_parse_successful_response(mock_requests):
     mock_response._content = str.encode(json.dumps(fake_response_json))
     mock_response.status_code = 200
     mock_requests.return_value = mock_response
-    blocks = lake_utils.get_next_calibration_blocks('', '', '')
+    blocks = lake_utils.get_calibration_blocks_for_time_range('', '', '')
     assert blocks == fake_response_json['results']
 
 
@@ -46,4 +46,4 @@ def test_can_parse_unsuccessful_response(mock_requests):
     mock_response.status_code = 418
     mock_requests.return_value = mock_response
     with pytest.raises(requests.HTTPError):
-        lake_utils.get_next_calibration_blocks('', '', '')
+        lake_utils.get_calibration_blocks_for_time_range('', '', '')

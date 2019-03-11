@@ -478,6 +478,6 @@ def schedule_stacking_checks(runtime_context):
             logger.info(runtime_context._asdict())
             schedule_stack.send_with_options(args=(runtime_context._asdict(), blocks_for_calibration,
                                                    runtime_context.frame_type, instrument.site,
-                                                   instrument.camera, instrument.enclosure, instrument.telescope,
-                                                   process_any_images=False),
-                                                   on_failure=should_retry)
+                                                   instrument.camera, instrument.enclosure, instrument.telescope),
+                                             kwargs={'process_any_images', False},
+                                             on_failure=should_retry_schedule_stack)
