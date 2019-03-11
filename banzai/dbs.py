@@ -17,7 +17,7 @@ import requests
 from astropy.io import fits
 from sqlalchemy import create_engine, pool, desc, type_coerce, cast
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 
@@ -26,6 +26,8 @@ from banzai.utils import date_utils
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
 _DEFAULT_DB = 'mysql://cmccully:password@localhost/test'
+
+_CONFIGDB_ADDRESS = 'http://configdb.lco.gtn/sites/'
 
 Base = declarative_base()
 
@@ -81,12 +83,13 @@ class Instrument(Base):
     """
     __tablename__ = 'instruments'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    site = Column(String(15), ForeignKey('sites.id'), index=True)
-    enclosure = Column(String(20), index=True)
-    telescope = Column(String(20), index=True)
-    camera = Column(String(50), index=True)
+    site = Column(String(15), ForeignKey('sites.id'), index=True, nullable=False)
+    enclosure = Column(String(20), index=True, nullable=False)
+    telescope = Column(String(20), index=True, nullable=False)
+    camera = Column(String(50), index=True, nullable=False)
     type = Column(String(100))
     schedulable = Column(Boolean, default=False)
+    __table_args__ = (UniqueConstraint('site', 'enclosure', 'telescope', 'camera', name='instrument_constraint'),)
 
 
 class Site(Base):
@@ -110,7 +113,7 @@ class ProcessedImage(Base):
 
 
 def create_db(bpm_directory, db_address=_DEFAULT_DB,
-              configdb_address='http://configdb.lco.gtn/sites/'):
+              configdb_address=_CONFIGDB_ADDRESS):
     """
     Create the database structure.
 
@@ -127,7 +130,7 @@ def create_db(bpm_directory, db_address=_DEFAULT_DB,
     populate_calibration_table_with_bpms(bpm_directory, db_address=db_address)
 
 
-def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
+def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
     """
     Parse the contents of the configdb.
 
@@ -163,7 +166,7 @@ def parse_configdb(configdb_address='http://configdb.lco.gtn/sites/'):
 
 
 def populate_instrument_tables(db_address=_DEFAULT_DB,
-                               configdb_address='http://configdb.lco.gtn/sites/'):
+                               configdb_address=_CONFIGDB_ADDRESS):
     """
     Populate the instrument table
 
@@ -198,21 +201,31 @@ def populate_instrument_tables(db_address=_DEFAULT_DB,
     db_session.commit()
 
     for instrument in instruments:
-        equivalence_criteria = {'site': instrument['site'],
-                                'enclosure': instrument['enclosure'],
-                                'telescope': instrument['telescope'],
-                                'camera': instrument['camera']}
-        record_attributes = {'site': instrument['site'],
-                             'enclosure': instrument['enclosure'],
-                             'telescope': instrument['telescope'],
-                             'camera': instrument['camera'],
-                             'type': instrument['type'],
-                             'schedulable': instrument['schedulable']}
-
-        add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
-
-    db_session.commit()
+        add_instrument(instrument, db_address=db_address, db_session=db_session)
     db_session.close()
+
+
+def add_instrument(instrument, db_address=_DEFAULT_DB, db_session=None):
+    if db_session is None:
+        existing_session = False
+        db_session = get_session(db_address)
+    else:
+        existing_session = True
+    equivalence_criteria = {'site': instrument['site'],
+                            'enclosure': instrument['enclosure'],
+                            'telescope': instrument['telescope'],
+                            'camera': instrument['camera']}
+    record_attributes = {'site': instrument['site'],
+                         'enclosure': instrument['enclosure'],
+                         'telescope': instrument['telescope'],
+                         'camera': instrument['camera'],
+                         'type': instrument['type'],
+                         'schedulable': instrument['schedulable']}
+
+    add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
+    db_session.commit()
+    if not existing_session:
+        db_session.close()
 
 
 def add_or_update_record(db_session, table_model, equivalence_criteria, record_attributes):
@@ -296,43 +309,40 @@ class SiteMissingException(Exception):
     pass
 
 
-def query_for_instrument(db_address, site, camera):
+def query_for_instrument(db_address, site, camera, enclosure, telescope, must_be_schedulable=False):
     # Short circuit
-    if site is None or camera is None:
+    if None in [site, camera, telescope, enclosure]:
         return None
     db_session = get_session(db_address=db_address)
     criteria = (Instrument.site == site) & (Instrument.camera == camera)
-    instrument = db_session.query(Instrument).filter(criteria).first()
+    criteria &= (Instrument.enclosure == enclosure) & (Instrument.telescope == telescope)
+    if must_be_schedulable:
+        criteria &= Instrument.schedulable.is_(True)
+    instrument = db_session.query(Instrument).filter(criteria).order_by(Instrument.id.desc()).first()
     db_session.close()
     return instrument
 
 
-def _guess_instrument_values_from_header(header, db_address):
+def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_ADDRESS):
     site = header.get('SITEID')
+    enclosure = header.get('ENCID')
+    telescope = header.get('TELID')
     camera = header.get('INSTRUME')
-    db_session = get_session(db_address=db_address)
-    add_or_update_record(db_session, Instrument,
-                         {'site': site, 'camera': camera},
-                         {'site': site, 'camera': camera,
-                          'type': 'unknown',
-                          'schedulable': False})
-    db_session.commit()
-    db_session.close()
-    instrument = query_for_instrument(db_address, site, camera)
-    return instrument
-
-
-def get_instrument(header, db_address=_DEFAULT_DB):
-    site = header.get('SITEID')
-    camera = header.get('INSTRUME')
-    instrument_from_instrume_keyword = query_for_instrument(db_address, site, camera)
-    instrument = instrument_from_instrume_keyword if instrument_from_instrume_keyword is not None \
-        else query_for_instrument(db_address, site, header.get('TELESCOP'))
+    instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+    # if instrument is missing, try to check the configdb
     if instrument is None:
-        logger.error('Instrument {site}/{camera} is not in the database, '
-                     'extracting best-guess values from header'.format(site=site, camera=camera),
-                     extra_tags={'site': site, 'instrument': instrument})
-        instrument = _guess_instrument_values_from_header(header, db_address)
+        populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
+        instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+    if instrument is None:
+        camera = header.get('TELESCOP')
+        instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+    if instrument is None:
+        # Change the camera in the logs back to the default keyword INSTRUME
+        camera = header.get('INSTRUME')
+        msg = 'Instrument is not in the database, Please add it before reducing this data.'
+        logger.error(msg, extra_tags={'site': site, 'enclosure': enclosure,
+                                      'telescope': telescope, 'camera': camera})
+        raise ValueError('Instrument is missing from the database.')
     return instrument
 
 
@@ -424,7 +434,7 @@ def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=
 
 
 def get_master_calibration_image(image, calibration_type, master_selection_criteria,
-                                 use_older_calibrations=False, db_address=_DEFAULT_DB):
+                                 use_only_older_calibrations=False, db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
@@ -437,7 +447,7 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
 
     # During real-time reduction, we want to avoid using different master calibrations for the same block,
     # therefore we make sure the the calibration frame used was created before the block start time
-    if use_older_calibrations and image.block_start is not None:
+    if use_only_older_calibrations and image.block_start is not None:
         calibration_criteria &= CalibrationImage.datecreated < image.block_start
 
     db_session = get_session(db_address=db_address)

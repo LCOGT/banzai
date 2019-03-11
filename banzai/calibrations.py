@@ -133,7 +133,7 @@ class ApplyCalibration(Stage):
 
     def get_calibration_filename(self, image):
         return dbs.get_master_calibration_image(image, self.calibration_type, self.master_selection_criteria,
-                                                use_older_calibrations=self.runtime_context.use_older_calibrations,
+                                                use_only_older_calibrations=self.runtime_context.use_only_older_calibrations,
                                                 db_address=self.runtime_context.db_address)
 
 
