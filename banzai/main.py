@@ -425,6 +425,7 @@ def update_db():
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 1000*60*10))
 
 
+@dramatiq.actor()
 def should_retry_schedule_stack(retries_so_far, message_data):
     logger.info(message_data)
     if retries_so_far >= 2:
