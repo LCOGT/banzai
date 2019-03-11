@@ -425,7 +425,7 @@ def update_db():
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 1000*60*10))
 
 
-@dramatiq.actor()
+@dramatiq.actor(queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
 def should_retry_schedule_stack(retries_so_far, message_data):
     logger.info('entering should_retry_schedule_stack')
     logger.info(message_data)
