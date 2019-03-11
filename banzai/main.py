@@ -244,7 +244,7 @@ def reduce_single_frame(runtime_context=None):
     process_single_frame(runtime_context, raw_path, runtime_context.filename)
 
 
-def stack_calibrations(runtime_context=None, raw_path=None):
+def schedule_calibration_stacking(runtime_context=None, raw_path=None):
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
                                {'args': ['--enclosure'],
@@ -265,9 +265,9 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                            'help': 'Latest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
-    logger.info('starting stack calibrations')
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
                                                     extra_console_arguments=extra_console_arguments)
+    logger.info('Begin scheduling calibration stacking for {0} to {1}'.format(runtime_context.min_date, runtime_context.max_date))
     schedule_stacking_checks(runtime_context)
 
 
@@ -425,44 +425,59 @@ def update_db():
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 1000*60*10))
 
 
+def should_retry_schedule_stack(retries_so_far, message_data):
+    logger.info(message_data)
+    if retries_so_far >= 2:
+        message_data['process_any_images'] = True
+    logger.info(message_data)
+
+
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
-def schedule_stack(runtime_context_json, block_id, calibration_type, site, camera, enclosure, telescope):
+def schedule_stack(runtime_context_json, blocks, calibration_type, site, camera, enclosure, telescope, process_any_images=True):
+    runtime_context_json['min_date'] = datetime.strptime(runtime_context.min_date, '%Y-%m-%d %H:%M:%S')
+    runtime_context_json['max_date'] = datetime.strptime(runtime_context.max_date, '%Y-%m-%d %H:%M:%S')
     runtime_context = Context(runtime_context_json)
     instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera, enclosure, telescope)
-    logger.info('scheduling stack for block_id: ' + str(block_id))
-    block = lake_utils.get_block_by_id(block_id)
-    for molecule in block.get('molecules', []):
-        logger.info(molecule)
-        if ((molecule['completed'] or molecule['failed']) and runtime_context.frame_type.upper() == molecule['type']):
-            logger.info('processing master calibration for block id {0}'.format(str(block_id)))
-            process_master_maker(runtime_context,
-                                 instrument,
-                                 calibration_type,
-                                 datetime.strptime(runtime_context.min_date, '%Y-%m-%d %H:%M:%S'),
-                                 datetime.strptime(runtime_context.max_date, '%Y-%m-%d %H:%M:%S'))
-        elif datetime.strptime(block['end'], date_utils.TIMESTAMP_FORMAT) > datetime.now():
-            logger.info('molecule incomplete for block id {0}'.format(str(block_id)))
-            raise Exception
-        else:
-            continue
+    completed_image_count = len(dbs.get_individual_calibration_images(instrument, frame_type,
+                                                                      runtime_context.min_date,
+                                                                      runtime_context.max_date,
+                                                                      use_masters=False,
+                                                                      db_address=runtime_context.db_address))
+    expected_image_count = 0
+    for block in blocks:
+        for molecule in block['molecules']:
+            if runtime_context.frame_type.upper() == molecule['type']:
+                expected_image_count += molecule['exposure_count']
+    if (expected_image_count < completed_image_count and not process_any_images):
+        raise
+    else:
+        process_master_maker(runtime_context, instrument, calibration_type, runtime_context.min_date,
+                             runtime_context.max_date)
 
 
 # @dramatiq.actor()
 def schedule_stacking_checks(runtime_context):
-    calibration_blocks = lake_utils.get_next_calibration_blocks(runtime_context.site, runtime_context.max_date, runtime_context.min_date)
+    calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(runtime_context.site,
+                                                                          runtime_context.max_date,
+                                                                          runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
-        block_for_calibration = lake_utils.get_next_block(instrument, runtime_context.frame_type, calibration_blocks)
-        if block_for_calibration is not None:
-            logger.info('block for calibration: ' + json.dumps(block_for_calibration))
-            block_end = datetime.strptime(block_for_calibration['end'], date_utils.TIMESTAMP_FORMAT)
+        blocks_for_calibration = lake_utils.get_calibration_blocks_for_type(instrument,
+                                                                            runtime_context.frame_type,
+                                                                            calibration_blocks)
+        if len(blocks_for_calibration) > 0:
+            block_ids = [block['id'] for block in blocks_for_calibration]
+            logger.info('block_ids: ' + block_ids)
+            block_end = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
             stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[runtime_context.frame_type.upper()])
             now = datetime.utcnow()
-            #message_delay = now - block_end + stack_delay
+            # message_delay = now - block_end + stack_delay
             logger.info('before send schedule_stack')
             # schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
             #     calibration_type, instrument), delay=max(message_delay.microseconds*1000, 0))
             logger.info(runtime_context._asdict())
-            schedule_stack.send_with_options(args=(runtime_context._asdict(), block_for_calibration['id'],
+            schedule_stack.send_with_options(args=(runtime_context._asdict(), blocks_for_calibration,
                                                    runtime_context.frame_type, instrument.site,
-                                                   instrument.camera, instrument.enclosure, instrument.telescope))
+                                                   instrument.camera, instrument.enclosure, instrument.telescope,
+                                                   process_any_images=False),
+                                                   on_failure=should_retry)
