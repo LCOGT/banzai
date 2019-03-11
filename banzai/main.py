@@ -467,7 +467,6 @@ def schedule_stacking_checks(runtime_context):
                                                                             calibration_blocks)
         if len(blocks_for_calibration) > 0:
             block_ids = [block['id'] for block in blocks_for_calibration]
-            logger.info('block_ids: ' + block_ids)
             block_end = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
             stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[runtime_context.frame_type.upper()])
             now = datetime.utcnow()
