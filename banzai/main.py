@@ -430,8 +430,7 @@ def should_retry_schedule_stack(message_data, exception_data):
     logger.info('entering should_retry_schedule_stack')
     logger.info(message_data)
     if message_data['options']['retries'] >= 2:
-        message_data['kwargs']['process_any_images'] = True
-    logger.info(message_data)
+        schedule_stack(message_data['args'], process_any_images=True)
 
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
@@ -463,7 +462,6 @@ def schedule_stack(runtime_context_json, blocks, calibration_type, site, camera,
                              runtime_context.max_date)
 
 
-# @dramatiq.actor()
 def schedule_stacking_checks(runtime_context):
     calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(runtime_context.site,
                                                                           runtime_context.max_date,
