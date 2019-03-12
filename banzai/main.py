@@ -430,7 +430,7 @@ def should_retry_schedule_stack(message_data, exception_data):
     logger.info('entering should_retry_schedule_stack')
     logger.info(message_data)
     if message_data['options']['retries'] >= 2:
-        schedule_stack(message_data['args'], process_any_images=True)
+        schedule_stack(*message_data['args'], process_any_images=True)
 
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
