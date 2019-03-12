@@ -446,7 +446,7 @@ def schedule_stack(runtime_context_json, blocks, calibration_type, site, camera,
         runtime_context.max_date
     ))
     instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera, enclosure, telescope)
-    completed_image_count = len(dbs.get_individual_calibration_images(instrument, frame_type,
+    completed_image_count = len(dbs.get_individual_calibration_images(instrument, calibration_type,
                                                                       runtime_context.min_date,
                                                                       runtime_context.max_date,
                                                                       use_masters=False,
@@ -454,7 +454,7 @@ def schedule_stack(runtime_context_json, blocks, calibration_type, site, camera,
     expected_image_count = 0
     for block in blocks:
         for molecule in block['molecules']:
-            if runtime_context.frame_type.upper() == molecule['type']:
+            if calibration_type.upper() == molecule['type']:
                 expected_image_count += molecule['exposure_count']
     logger.info('expected image count: {0}'.format(str(expected_image_count)))
     if (expected_image_count < completed_image_count and not process_any_images):
