@@ -66,6 +66,8 @@ class Image(object):
         self.nx = header.get('NAXIS1')
         if nx_rows_to_read_in is not None:
             self.nx_actual = nx_rows_to_read_in[1] - nx_rows_to_read_in[0]
+        else:
+            self.nx_actual = self.nx
         self.ny = header.get('NAXIS2')
 
         self.data_tables = data_tables
