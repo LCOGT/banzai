@@ -83,7 +83,7 @@ def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_ma
     else:
         image = FakeImage(**kwargs)
         image = stage.do_stage(image)
-        assert image is None
+        assert image.is_bad is True
 
 
 def gaussian2d(image_shape, x0, y0, brightness, fwhm):
