@@ -52,33 +52,21 @@ class Image(object):
             extension_headers = []
 
         if filename is not None:
-            data, header, bpm, extension_headers = fits_utils.open_image(filename)
+            data, header, bpm, extension_headers = fits_utils.open_image(filename,
+                                                                         nx_rows_to_read_in=nx_rows_to_read_in)
             self.full_filepath = filename
             if '.fz' == filename[-3:]:
                 filename = filename[:-3]
             self.filename = os.path.basename(filename)
 
         self.header = header
-        self.nx = header.get('NAXIS1')
-        self.ny = header.get('NAXIS2')
-
-        if nx_rows_to_read_in is None:
-            nx_rows_to_read_in = (0, self.nx)
-        elif not hasattr(nx_rows_to_read_in, '__len__'):
-            nx_rows_to_read_in = (0, nx_rows_to_read_in)
-        self.nx_rows_read_in = nx_rows_to_read_in
-        try:
-            a, b = self.nx_rows_read_in
-        except (ValueError, TypeError):
-            logger.error("nx_rows_to_read in must be None (to read in all rows), an integer (to set the maximum row), "
-                         "or a tuple (to set the first and last row)")
         self.data = data
-        if self.data is not None:
-            self.data = data[:, a:b]
         self.bpm = bpm
-        if bpm is not None:
-            self.bpm = self.bpm[:, a:b]
-        self.nx_actual = a - b
+
+        self.nx = header.get('NAXIS1')
+        if nx_rows_to_read_in is not None:
+            self.nx_actual = nx_rows_to_read_in[1] - nx_rows_to_read_in[0]
+        self.ny = header.get('NAXIS2')
 
         self.data_tables = data_tables
         self.extension_headers = extension_headers
