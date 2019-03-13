@@ -15,6 +15,7 @@ class FakeImage(Image):
     def __init__(self, pipeline_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',
                  ccdsum='2 2', epoch='20160101', n_amps=1, filter='U', data=None, header=None, **kwargs):
         self.nx = nx
+        self.nx_actual = nx
         self.ny = ny
         self.instrument_id = -1
         self.site = site
@@ -27,6 +28,7 @@ class FakeImage(Image):
         if n_amps > 1:
             self.data = np.stack(n_amps*[self.data])
         self.filename = 'test.fits'
+        self.full_filepath = '/tmp/test.fits'
         self.filter = filter
         self.dateobs = datetime(2016, 1, 1)
         if header is None:
