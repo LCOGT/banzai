@@ -1,3 +1,8 @@
+0.20.1 (2019-03-13)
+-------------------
+- Continue reduction even if ApplyCalibration encounters an inhomgeneous
+  set exception
+
 0.20.0 (2019-03-11)
 -------------------
 - Configure pipeline to use GAIA-Astrometry.net service for WCS solves.
