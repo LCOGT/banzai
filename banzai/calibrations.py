@@ -100,7 +100,7 @@ class CalibrationStacker(CalibrationMaker):
             stack_mask = np.zeros((image.ny, nx, len(images)), dtype=np.uint8)
             for i, image in enumerate(images):
                 image_tmp = self.pipeline_context.FRAME_CLASS(self.pipeline_context, filename=image.full_filepath,
-                                                              nx_rows_to_read_in=(a,b))
+                                                              nx_rows_to_read_in=(a, b))
                 data_stack[:, :, i] = image_tmp.data[:, :]
                 stack_mask[:, :, i] = image_tmp.bpm[:, :]
             stacked_data[:, a:b] = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
