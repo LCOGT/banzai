@@ -122,7 +122,8 @@ class ApplyCalibration(Stage):
             image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
         except image_utils.InhomogeneousSetException:
             logger.error(logs.format_exception(), image=image)
-            return None
+            self.on_missing_master_calibration(image)
+            return image
 
         return self.apply_master_calibration(image, master_calibration_image)
 
