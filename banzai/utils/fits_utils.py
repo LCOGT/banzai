@@ -139,7 +139,7 @@ def get_primary_header(filename):
         return None
 
 
-def open_image(filename):
+def open_image(filename, nx_rows_to_read_in=None):
     """
     Load an image from a FITS file
 
@@ -147,6 +147,9 @@ def open_image(filename):
     ----------
     filename: str
               Full path of the file to open
+    nx_rows_to_read_in: tuple of ints or None
+                        (a, b) of the rows along the x axis to read in; otherwise None to
+                        indicate all rows to be read in
 
     Returns
     -------
@@ -172,23 +175,34 @@ def open_image(filename):
 
     # Get the main header
     header = hdulist[0].header
+    if nx_rows_to_read_in is None:
+        nx_rows_to_read_in = (0, None)
+    try:
+        a, b = nx_rows_to_read_in
+    except (ValueError, TypeError):
+        logger.error("nx_rows_to_read in must be None (to read in all rows) or a tuple (to set the first and last row)")
+        return None, None, None, None
 
     # Check for multi-extension fits
     extension_headers = []
     sci_extensions = get_extensions_by_name(hdulist, 'SCI')
     if len(sci_extensions) > 1:
-        data = np.zeros((len(sci_extensions), sci_extensions[0].data.shape[0],
-                         sci_extensions[0].data.shape[1]), dtype=np.float32)
+        ny = sci_extensions[0].data.shape[0]
+        if b is None:
+            nx = sci_extensions[0].data.shape[1]
+        else:
+            nx = b - a
+        data = np.zeros((len(sci_extensions), ny, nx), dtype=np.float32)
         for i, hdu in enumerate(sci_extensions):
-            data[i, :, :] = hdu.data[:, :]
+            data[i, :, :] = hdu.data[:, a:b]
             extension_headers.append(hdu.header)
     elif len(sci_extensions) == 1:
-        data = sci_extensions[0].data.astype(np.float32)
+        data = sci_extensions[0].data.astype(np.float32)[:, a:b]
     else:
-        data = hdulist[0].data.astype(np.float32)
+        data = hdulist[0].data.astype(np.float32)[:, a:b]
 
     try:
-        bpm = hdulist['BPM'].data.astype(np.uint8)
+        bpm = hdulist['BPM'].data.astype(np.uint8)[:, a:b]
     except KeyError:
         bpm = None
 
