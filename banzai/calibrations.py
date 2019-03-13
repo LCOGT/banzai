@@ -87,7 +87,10 @@ class CalibrationStacker(CalibrationMaker):
         image = images[0]  # Used for fiducial parameters
         stacked_data = np.zeros((image.ny, image.nx), dtype=np.float32)
 
-        ngroups = max(1, round(array_bit_size / BYTES_PER_BIT * image.nx * image.ny * len(images) / nbytes_max))
+        if image.nx_actual != image.nx:
+            ngroups = max(1, round(array_bit_size / BYTES_PER_BIT * image.nx * image.ny * len(images) / nbytes_max))
+        else:
+            ngroups = 1
         division = image.nx / float(ngroups)
 
         msg = "Dividing stacks into {ngroups} groups with maximum size {ngb_max} MB"
@@ -99,8 +102,11 @@ class CalibrationStacker(CalibrationMaker):
             data_stack = np.zeros((image.ny, nx, len(images)), dtype=np.float32)
             stack_mask = np.zeros((image.ny, nx, len(images)), dtype=np.uint8)
             for i, image in enumerate(images):
-                image_tmp = self.pipeline_context.FRAME_CLASS(self.pipeline_context, filename=image.full_filepath,
-                                                              nx_rows_to_read_in=(a, b))
+                if image.nx_actual != image.nx:
+                    image_tmp = self.pipeline_context.FRAME_CLASS(self.pipeline_context, filename=image.full_filepath,
+                                                                  nx_rows_to_read_in=(a, b))
+                else:
+                    image_tmp = image
                 data_stack[:, :, i] = image_tmp.data[:, :]
                 stack_mask[:, :, i] = image_tmp.bpm[:, :]
             stacked_data[:, a:b] = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
