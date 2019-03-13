@@ -261,7 +261,7 @@ class Image(object):
         return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
 
 
-def read_image(filename, pipeline_context, nx_rows_to_read_in):
+def read_image(filename, pipeline_context, nx_rows_to_read_in=None):
     try:
         image = pipeline_context.FRAME_CLASS(pipeline_context, filename=filename, nx_rows_to_read_in=nx_rows_to_read_in)
         if image.instrument is None:
