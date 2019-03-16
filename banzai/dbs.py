@@ -149,6 +149,8 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
     results = requests.get(configdb_address).json()['results']
     instruments = []
     sites = []
+    nres_specific = {'telescope': '', 'enclosure': 'igla'}
+    nres_site_cameras = {'tlv': 'fa18', 'lsc': 'fa09', 'cpt': 'fa13', 'elp': 'fa17'}
     for site in results:
         sites.append({'code': site['code'], 'timezone': site['timezone']})
         for enc in site['enclosure_set']:
@@ -156,12 +158,20 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
                 for ins in tel['instrument_set']:
                     sci_cam = ins.get('science_camera')
                     if sci_cam is not None:
-                        instruments.append({'site': site['code'],
-                                            'enclosure': enc['code'],
-                                            'telescope': tel['code'],
-                                            'camera': sci_cam['code'],
-                                            'type': sci_cam['camera_type']['code'],
-                                            'schedulable': ins['state'] == 'SCHEDULABLE'})
+                        if site['code'] not in list(nres_site_cameras.keys()):
+                            instruments.append({'site': site['code'],
+                                                'enclosure': enc['code'],
+                                                'telescope': tel['code'],
+                                                'camera': sci_cam['code'],
+                                                'type': sci_cam['camera_type']['code'],
+                                                'schedulable': ins['state'] == 'SCHEDULABLE'})
+                        else:
+                            instruments.append({'site': site['code'],
+                                                'enclosure': nres_specific['enclosure'],
+                                                'telescope': nres_specific['telescope'],
+                                                'camera': nres_site_cameras[site['code']],
+                                                'type': sci_cam['camera_type']['code'],
+                                                'schedulable': ins['state'] == 'SCHEDULABLE'})
     return sites, instruments
 
 
@@ -325,8 +335,9 @@ def query_for_instrument(db_address, site, camera, enclosure, telescope, must_be
 
 def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_ADDRESS):
     site = header.get('SITEID')
-    enclosure = header.get('ENCID')
-    telescope = header.get('TELID')
+    #TODO this is a hardcode so that NRES reduces.
+    enclosure = 'igla'#header.get('ENCID')
+    telescope = ''#header.get('TELID')
     camera = header.get('INSTRUME')
     instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
     # if instrument is missing, try to check the configdb
