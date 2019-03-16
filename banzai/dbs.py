@@ -150,7 +150,7 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
     instruments = []
     sites = []
     nres_specific = {'telescope': '', 'enclosure': 'igla'}
-    nres_site_cameras = {'tlv': 'fa18', 'lsc': 'fa09', 'cpt': 'fa13', 'elp': 'fa17'}
+    nres_camera_for_site = {'tlv': 'fa18', 'lsc': 'fa09', 'cpt': 'fa13', 'elp': 'fa17'}
     for site in results:
         sites.append({'code': site['code'], 'timezone': site['timezone']})
         for enc in site['enclosure_set']:
@@ -158,20 +158,19 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
                 for ins in tel['instrument_set']:
                     sci_cam = ins.get('science_camera')
                     if sci_cam is not None:
-                        if site['code'] not in list(nres_site_cameras.keys()):
-                            instruments.append({'site': site['code'],
-                                                'enclosure': enc['code'],
-                                                'telescope': tel['code'],
-                                                'camera': sci_cam['code'],
-                                                'type': sci_cam['camera_type']['code'],
-                                                'schedulable': ins['state'] == 'SCHEDULABLE'})
-                        else:
-                            instruments.append({'site': site['code'],
-                                                'enclosure': nres_specific['enclosure'],
-                                                'telescope': nres_specific['telescope'],
-                                                'camera': nres_site_cameras[site['code']],
-                                                'type': sci_cam['camera_type']['code'],
-                                                'schedulable': ins['state'] == 'SCHEDULABLE'})
+                        instrument = {'site': site['code'],
+                                      'enclosure': enc['code'],
+                                      'telescope': tel['code'],
+                                      'camera': sci_cam['code'],
+                                      'type': sci_cam['camera_type']['code'],
+                                      'schedulable': ins['state'] == 'SCHEDULABLE'}
+                        # TODO fix configdb so that the heinous hotfix below is not necessary.
+                        if site['code'] in list(nres_camera_for_site.keys()):
+                            instrument['enclosure'] = nres_specific['enclosure']
+                            instrument['telescope'] = nres_specific['telescope']
+                            instrument['camera'] = nres_camera_for_site[site['code']]
+                        # End of NRES hotfix.
+                        instruments.append(instrument)
     return sites, instruments
 
 
