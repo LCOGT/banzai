@@ -34,6 +34,12 @@ Base = declarative_base()
 logger = logging.getLogger(__name__)
 
 
+class NRESdbinformation:
+    other = {'telescope': '', 'enclosure': 'igla'}
+    # camera_for_site = {'tlv': 'fa18', 'lsc': 'fa09', 'cpt': 'fa13', 'elp': 'fa17'}
+    camera_designation = {'tlv': 'nres04', 'lsc': 'nres01', 'cpt': 'nres03', 'elp': 'nres02'}
+
+
 def get_session(db_address=_DEFAULT_DB):
     """
     Get a connection to the database.
@@ -149,8 +155,6 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
     results = requests.get(configdb_address).json()['results']
     instruments = []
     sites = []
-    nres_specific = {'telescope': '', 'enclosure': 'igla'}
-    nres_camera_for_site = {'tlv': 'fa18', 'lsc': 'fa09', 'cpt': 'fa13', 'elp': 'fa17'}
     for site in results:
         sites.append({'code': site['code'], 'timezone': site['timezone']})
         for enc in site['enclosure_set']:
@@ -165,10 +169,10 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
                                       'type': sci_cam['camera_type']['code'],
                                       'schedulable': ins['state'] == 'SCHEDULABLE'}
                         # TODO fix configdb so that the heinous hotfix below is not necessary.
-                        if site['code'] in list(nres_camera_for_site.keys()):
-                            instrument['enclosure'] = nres_specific['enclosure']
-                            instrument['telescope'] = nres_specific['telescope']
-                            instrument['camera'] = nres_camera_for_site[site['code']]
+                        if site['code'] in list(NRESdbinformation.camera_designation.keys()):
+                            instrument['enclosure'] = NRESdbinformation.other['enclosure']
+                            instrument['telescope'] = NRESdbinformation.other['telescope']
+                            instrument['camera'] = NRESdbinformation.camera_designation[site['code']]
                         # End of NRES hotfix.
                         instruments.append(instrument)
     return sites, instruments
@@ -334,10 +338,14 @@ def query_for_instrument(db_address, site, camera, enclosure, telescope, must_be
 
 def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_ADDRESS):
     site = header.get('SITEID')
-    #TODO this is a hardcode so that NRES reduces.
-    enclosure = 'igla'#header.get('ENCID')
-    telescope = ''#header.get('TELID')
-    camera = header.get('INSTRUME')
+    if site in list(NRESdbinformation.camera_designation.keys()):
+        enclosure = NRESdbinformation.other['enclosure']
+        telescope = NRESdbinformation.other['telescope']
+        camera = NRESdbinformation.camera_designation[site]
+    else:
+        enclosure = header.get('ENCID')
+        telescope = header.get('TELID')
+        camera = header.get('INSTRUME')
     instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
     # if instrument is missing, try to check the configdb
     if instrument is None:
