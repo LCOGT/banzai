@@ -3,6 +3,8 @@ import subprocess
 import shlex
 import tempfile
 import logging
+import requests
+from requests import ConnectionError, HTTPError
 
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -15,24 +17,19 @@ from banzai.stages import Stage
 
 logger = logging.getLogger(__name__)
 
+_ASTROMETRY_SERVICE_URL='http://astrometry.lco.gtn/catalog/'
 
 class WCSSolver(Stage):
-    cmd = 'solve-field --crpix-center --no-verify --no-tweak ' \
-          ' --radius 2.0 --ra {ra} --dec {dec} --guess-scale ' \
-          '--scale-units arcsecperpix --scale-low {scale_low} --scale-high {scale_high} ' \
-          '--no-plots -N none --no-remove-lines ' \
-          '--code-tolerance 0.003 --pixel-error 1 -d 1-200 ' \
-          '--solved none --match none --rdls none --wcs {wcs_name} --corr none --overwrite ' \
-          '-X X -Y Y -s FLUX --width {nx} --height {ny} {catalog_name}'
 
     def __init__(self, runtime_context):
         super(WCSSolver, self).__init__(runtime_context)
 
     def do_stage(self, image):
 
-        # Short circuit if we don't have some kind of initial RA and Dec guess
+        # Skip the image if we don't have some kind of initial RA and Dec guess
         if np.isnan(image.ra) or np.isnan(image.dec):
             logger.error('Skipping WCS solution. No initial pointing guess from header.', image=image)
+            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             return image
 
         with tempfile.TemporaryDirectory() as tmpdirname:
@@ -78,8 +75,51 @@ class WCSSolver(Stage):
 
                 # Add the RA and Dec values to the catalog
                 add_ra_dec_to_catalog(image)
+        image_catalog = image.data_tables.get('catalog')
+
+        catalog_payload = {'X': list(image_catalog['x']),
+                           'Y': list(image_catalog['y']),
+                           'FLUX': list(image_catalog['flux']),
+                           'pixel_scale': image.pixel_scale,
+                           'naxis': 2,
+                           'naxis1': image.nx,
+                           'naxis2': image.ny,
+                           'ra': image.ra,
+                           'dec': image.dec,
+                           'statistics': False}
+        try:
+            astrometry_response = requests.post(_ASTROMETRY_SERVICE_URL, json=catalog_payload)
+            astrometry_response.raise_for_status()
+        except ConnectionError:
+            logger.error('Astrometry service unreachable.', image=image)
+            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+            return image
+        except HTTPError:
+            if astrometry_response.status_code == 400:
+                logger.error('Astrometry service query malformed', image=image)
             else:
-                image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+                logger.error('Astrometry service encountered an error.', image=image)
+
+            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+            return image
+
+        if astrometry_response.json()['solved'] == False:
+            logger.warning('WCS solution failed.', image=image)
+            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+            return image
+
+        header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
+                                     'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
+
+        for keyword in header_keywords_to_update:
+            image.header[keyword] = astrometry_response.json()[keyword]
+
+        image.header['RA'], image.header['DEC'] = get_ra_dec_in_sexagesimal(image.header['CRVAL1'],
+                                                                            image.header['CRVAL2'])
+
+        add_ra_dec_to_catalog(image)
+
+        image.header['WCSERR'] = (0, 'Error status of WCS fit. 0 for no error')
 
         logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.header['WCSERR']})
         return image
