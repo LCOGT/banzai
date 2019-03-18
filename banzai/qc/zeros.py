@@ -16,7 +16,7 @@ class ZerosTest(Stage):
     =====
     Sometimes when a camera fails, all pixels have a value of 0.
     """
-    ZEROS_THRESHOLD = 0.2
+    ZEROS_THRESHOLD = 0.95
 
     def __init__(self, pipeline_context):
         super(ZerosTest, self).__init__(pipeline_context)

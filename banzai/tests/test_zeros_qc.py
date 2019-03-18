@@ -39,27 +39,14 @@ def test_image_all_0s():
     assert image is None
 
 
-def test_image_5_percent_0(set_random_seed):
+def test_image_95_percent_0(set_random_seed):
     tester = ZerosTest(None)
     nx = 101
     ny = 103
     image = FakeImage(nx=nx, ny=ny)
-    random_pixels_x = np.random.randint(0, nx - 1, size=int(0.05 * nx * ny))
-    random_pixels_y = np.random.randint(0, ny - 1, size=int(0.05 * nx * ny))
+    random_pixels_x = np.random.randint(0, nx - 1, size=int(0.95 * nx * ny))
+    random_pixels_y = np.random.randint(0, ny - 1, size=int(0.95 * nx * ny))
     for i in zip(random_pixels_y, random_pixels_x):
         image.data[i] = 0
     image = tester.do_stage(image)
     assert image is not None
-
-
-def test_image_30_percent_0(set_random_seed):
-    tester = ZerosTest(None)
-    nx = 101
-    ny = 103
-    image = FakeImage(nx=nx, ny=ny)
-    random_pixels_x = np.random.randint(0, nx - 1, size=int(0.3 * nx * ny))
-    random_pixels_y = np.random.randint(0, ny - 1, size=int(0.3 * nx * ny))
-    for i in zip(random_pixels_y, random_pixels_x):
-        image.data[i] = 0
-    image = tester.do_stage(image)
-    assert image is None
