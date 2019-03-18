@@ -61,6 +61,7 @@ CALIBRATION_STACKER_STAGE = {'BIAS': 'banzai.bias.BiasMaker',
 
 CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT']
 
+# Stack delays are expressed in milliseconds--namely, each is five minutes
 CALIBRATION_STACK_DELAYS = {'BIAS': 300000,
                             'DARK': 300000,
                             'SKYFLAT': 300000}

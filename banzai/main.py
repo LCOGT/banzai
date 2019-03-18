@@ -12,7 +12,6 @@ import os
 import logging
 import sys
 import dramatiq
-import json
 
 from datetime import datetime, timedelta
 from kombu import Exchange, Connection, Queue
@@ -22,7 +21,7 @@ from dramatiq.brokers.redis import RedisBroker
 
 from banzai import dbs, realtime, logs
 from banzai.context import Context, ContextJSONEncoder
-from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils, import_utils, lake_utils
+from banzai.utils import image_utils, date_utils, fits_utils, import_utils, lake_utils
 from banzai.utils.image_utils import read_image
 from banzai import settings
 
@@ -40,6 +39,7 @@ root_logger.addHandler(root_handler)
 
 
 logger = logging.getLogger(__name__)
+
 
 redis_broker = RedisBroker(host=os.getenv('REDIS_HOST', '127.0.0.1'))
 dramatiq.set_broker(redis_broker)
@@ -470,21 +470,21 @@ def schedule_stacking_checks(runtime_context):
                                                                           runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
-        blocks_for_calibration = lake_utils.get_calibration_blocks_for_type(instrument,
-                                                                            runtime_context.frame_type,
-                                                                            calibration_blocks)
+        blocks_for_calibration = lake_utils.filter_calibration_blocks_for_type(instrument,
+                                                                               runtime_context.frame_type,
+                                                                               calibration_blocks)
         if len(blocks_for_calibration) > 0:
-            block_ids = [block['id'] for block in blocks_for_calibration]
             block_end = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
             stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[runtime_context.frame_type.upper()])
-            now = datetime.utcnow()
-            # message_delay = now - block_end + stack_delay
-            logger.info('before send schedule_stack')
-            # schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
-            #     calibration_type, instrument), delay=max(message_delay.microseconds*1000, 0))
-            logger.info(runtime_context._asdict())
+            now = datetime.utcnow().replace(microsecond=0)
+            message_delay = block_end - now + stack_delay
+            if message_delay.days < 0:
+                message_delay_in_ms = 0  # Remove delay if block end is in the past
+            else:
+                message_delay_in_ms = message_delay.seconds*1000
             schedule_stack.send_with_options(args=(runtime_context._asdict(), blocks_for_calibration,
                                                    runtime_context.frame_type, instrument.site,
                                                    instrument.camera, instrument.enclosure, instrument.telescope),
                                              kwargs={'process_any_images', False},
-                                             on_failure=should_retry_schedule_stack)
+                                             on_failure=should_retry_schedule_stack,
+                                             delay=message_delay_in_ms)

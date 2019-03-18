@@ -19,7 +19,7 @@ def get_calibration_blocks_for_time_range(site, start_before, start_after):
     return results
 
 
-def get_calibration_blocks_for_type(instrument, calibration_type, blocks):
+def filter_calibration_blocks_for_type(instrument, calibration_type, blocks):
     logger.info(instrument, calibration_type)
     calibration_blocks = []
     for block in blocks:
@@ -30,7 +30,7 @@ def get_calibration_blocks_for_type(instrument, calibration_type, blocks):
                 logger.info(molecule)
                 logger.info(instrument.camera)
                 if calibration_type.upper() == molecule['type'] and instrument.camera == molecule['inst_name']:
-                    calibration_blocks.append(block)
+                    calibration_blocks.append(block) #this could append the same block multiple times and should be fixed
     return calibration_blocks
 
 
