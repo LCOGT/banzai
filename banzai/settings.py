@@ -82,6 +82,7 @@ class ImagingSettings(Settings):
 
     ORDERED_STAGES = [bpm.BPMUpdater,
                       qc.HeaderSanity,
+                      qc.ZerosTest,
                       qc.ThousandsTest,
                       qc.SaturationTest,
                       bias.OverscanSubtractor,
