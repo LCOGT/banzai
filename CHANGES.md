@@ -1,3 +1,7 @@
+0.20.1 (2019-03-14)
+-------------------
+- Fixed bug where gaia astrometry service solve failure was not handled properly
+
 0.20.0 (2019-03-11)
 -------------------
 - Configure pipeline to use GAIA-Astrometry.net service for WCS solves.
