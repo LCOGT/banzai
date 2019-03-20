@@ -30,7 +30,7 @@ def filter_calibration_blocks_for_type(instrument, calibration_type, blocks):
                 logger.info(molecule)
                 logger.info(instrument.camera)
                 if calibration_type.upper() == molecule['type'] and instrument.camera == molecule['inst_name']:
-                    calibration_blocks.append(block) #this could append the same block multiple times and should be fixed
+                    calibration_blocks.append(block) #TODO: this could append the same block multiple times and should be fixed
     return calibration_blocks
 
 
