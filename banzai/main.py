@@ -480,6 +480,6 @@ def schedule_stacking_checks(runtime_context):
             schedule_stack.send_with_options(args=(runtime_context._asdict(), blocks_for_calibration,
                                                    runtime_context.frame_type, instrument.site,
                                                    instrument.camera, instrument.enclosure, instrument.telescope),
-                                             kwargs={'process_any_images', False},
+                                             kwargs={'process_any_images': False},
                                              on_failure=should_retry_schedule_stack,
                                              delay=message_delay_in_ms)
