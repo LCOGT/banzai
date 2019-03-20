@@ -51,3 +51,34 @@ def test_add_or_update():
     db_session.delete(telescope)
     db_session.commit()
     db_session.close()
+
+
+def test_removing_duplicates():
+    nres_inst = {'site': 'tlv', 'camera': 'nres01', 'schedulable': True}
+    other_inst = {'site': 'tlv', 'camera': 'cam01', 'schedulable': True}
+    instruments = [other_inst] + [nres_inst]*3
+    culled_list = dbs.remove_nres_duplicates(instruments)
+    assert len(culled_list) == 2
+    assert culled_list[1]['camera'] == 'nres01'
+    assert culled_list[0]['camera'] == 'cam01'
+
+
+def test_removing_duplicates_favors_scheduluable():
+    nres_inst = {'site': 'tlv', 'camera': 'nres01', 'schedulable': True}
+    other_inst = {'site': 'tlv', 'camera': 'cam01', 'schedulable': True}
+    instruments = [other_inst, nres_inst, {'site': 'tlv', 'camera': 'nres01', 'schedulable': False}]
+    culled_list = dbs.remove_nres_duplicates(instruments)
+    assert len(culled_list) == 2
+    assert culled_list[1]['camera'] == 'nres01'
+    assert culled_list[0]['camera'] == 'cam01'
+    assert culled_list[1]['schedulable']
+
+
+def test_not_removing_singlets():
+    nres_inst = {'site': 'tlv', 'camera': 'nres01', 'schedulable': True}
+    other_inst = {'site': 'tlv', 'camera': 'cam01', 'schedulable': True}
+    instruments = [other_inst] + [nres_inst]
+    culled_list = dbs.remove_nres_duplicates(instruments)
+    assert len(culled_list) == 2
+    assert culled_list[1]['camera'] == 'nres01'
+    assert culled_list[0]['camera'] == 'cam01'

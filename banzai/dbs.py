@@ -34,13 +34,6 @@ Base = declarative_base()
 logger = logging.getLogger(__name__)
 
 
-class NRESdbinformation:
-    other = {'telescope': '', 'enclosure': 'igla'}
-    # instrument_for_site = {'tlv': 'nres04', 'lsc': 'nres01', 'cpt': 'nres03', 'elp': 'nres02'}
-    instrument_for_camera = {'fa18': 'nres04', 'fa09': 'nres01', 'fa13': 'nres03', 'fa17': 'nres01'}
-    instruments = ['nres04', 'nres03', 'nres02', 'nres01']
-
-
 def get_session(db_address=_DEFAULT_DB):
     """
     Get a connection to the database.
@@ -169,13 +162,27 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
                                       'camera': sci_cam['code'],
                                       'type': sci_cam['camera_type']['code'],
                                       'schedulable': ins['state'] == 'SCHEDULABLE'}
-                        # TODO fix configdb so that the heinous hotfix below is not necessary.
-                        if instrument['camera'] in NRESdbinformation.instruments:
-                            instrument['enclosure'] = NRESdbinformation.other['enclosure']
-                            instrument['telescope'] = NRESdbinformation.other['telescope']
-                        # End of NRES hotfix.
                         instruments.append(instrument)
+    instruments = remove_nres_duplicates(instruments)
     return sites, instruments
+
+
+def remove_nres_duplicates(instruments):
+    nres_instruments = [instrument for instrument in instruments if 'nres' in instrument['camera'].lower()]
+
+    indices_to_remove = []
+    for nres0x in set([instrument['camera'] for instrument in nres_instruments]):
+        nres_indicies = [i for i, instrument in enumerate(instruments) if instrument['camera'] == nres0x]
+        # If no duplicate, continue
+        if len(nres_indicies) == 1:
+            continue
+        # keep the schedulable instrument if there is one.
+        schedulable_indices = [i for i in nres_indicies if instruments[i]['schedulable']]
+        index_to_keep = nres_indicies[0]
+        if len(schedulable_indices) > 0:
+            index_to_keep = schedulable_indices[0]
+        indices_to_remove += [i for i in nres_indicies if i != index_to_keep]
+    return [instrument for i, instrument in enumerate(instruments) if i not in indices_to_remove]
 
 
 def populate_instrument_tables(db_address=_DEFAULT_DB,
@@ -322,13 +329,17 @@ class SiteMissingException(Exception):
     pass
 
 
-def query_for_instrument(db_address, site, camera, enclosure, telescope, must_be_schedulable=False):
+def query_for_instrument(db_address, site, camera, enclosure=None, telescope=None,
+                         must_be_schedulable=False):
     # Short circuit
-    if None in [site, camera, telescope, enclosure]:
+    if None in [site, camera]:
         return None
     db_session = get_session(db_address=db_address)
     criteria = (Instrument.site == site) & (Instrument.camera == camera)
-    criteria &= (Instrument.enclosure == enclosure) & (Instrument.telescope == telescope)
+    if enclosure is not None:
+        criteria &= Instrument.enclosure == enclosure
+    if telescope is not None:
+        criteria &= Instrument.telescope == telescope
     if must_be_schedulable:
         criteria &= Instrument.schedulable.is_(True)
     instrument = db_session.query(Instrument).filter(criteria).order_by(Instrument.id.desc()).first()
@@ -339,29 +350,23 @@ def query_for_instrument(db_address, site, camera, enclosure, telescope, must_be
 def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_ADDRESS):
     site = header.get('SITEID')
     camera = header.get('INSTRUME')
-    # TODO fix the NRES headers so that the heinous hotfix below is not necessary.
-    if camera in list(NRESdbinformation.instrument_for_camera.keys()):
-        enclosure = NRESdbinformation.other['enclosure']
-        telescope = NRESdbinformation.other['telescope']
-        camera = NRESdbinformation.instrument_for_camera[camera]
-    else:
-        enclosure = header.get('ENCID')
-        telescope = header.get('TELID')
-    # End of Hotfix
+    enclosure = header.get('ENCID')
+    telescope = header.get('TELID')
     instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+    if instrument is None:
+        # NRES hotfix
+        camera = header.get('TELESCOP')
+        instrument = query_for_instrument(db_address, site, camera, enclosure=None, telescope=None)
     # if instrument is missing, try to check the configdb
     if instrument is None:
+        camera = header.get('INSTRUME')
         populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
         instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
     if instrument is None:
-        camera = header.get('TELESCOP')
-        instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
-    if instrument is None:
-        # Change the camera in the logs back to the default keyword INSTRUME
-        camera = header.get('INSTRUME')
         msg = 'Instrument is not in the database, Please add it before reducing this data.'
-        logger.error(msg, extra_tags={'site': site, 'enclosure': enclosure,
-                                      'telescope': telescope, 'camera': camera})
+        tags = {'site': site, 'enclosure': enclosure,
+                'telescope': telescope, 'camera': camera}
+        logger.error(msg, extra_tags=tags)
         raise ValueError('Instrument is missing from the database.')
     return instrument
 
