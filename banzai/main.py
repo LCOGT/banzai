@@ -433,6 +433,7 @@ def should_retry_schedule_stack(message_data, exception_data):
 
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
 def schedule_stack(runtime_context_json, blocks, calibration_type, site, camera, enclosure, telescope, process_any_images=True):
+    logger.info('schedule stack for matching blocks')
     runtime_context_json['min_date'] = datetime.strptime(runtime_context_json['min_date'], '%Y-%m-%d %H:%M:%S')
     runtime_context_json['max_date'] = datetime.strptime(runtime_context_json['max_date'], '%Y-%m-%d %H:%M:%S')
     runtime_context = Context(runtime_context_json)
@@ -456,6 +457,7 @@ def schedule_stack(runtime_context_json, blocks, calibration_type, site, camera,
 
 
 def schedule_stacking_checks(runtime_context):
+    logger.info('scheduling stacking checks')
     calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(runtime_context.site,
                                                                           runtime_context.max_date,
                                                                           runtime_context.min_date)
@@ -468,11 +470,13 @@ def schedule_stacking_checks(runtime_context):
             block_end = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
             stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[runtime_context.frame_type.upper()])
             now = datetime.utcnow().replace(microsecond=0)
+            logger.info('before schedule stack for block type {0}'.format(runtime_context.frame_type))
             message_delay = block_end - now + stack_delay
             if message_delay.days < 0:
                 message_delay_in_ms = 0  # Remove delay if block end is in the past
             else:
                 message_delay_in_ms = message_delay.seconds*1000
+            logger.info('scheduling with message delay {0}'.format(str(message_delay_in_ms)))
             schedule_stack.send_with_options(args=(runtime_context._asdict(), blocks_for_calibration,
                                                    runtime_context.frame_type, instrument.site,
                                                    instrument.camera, instrument.enclosure, instrument.telescope),
