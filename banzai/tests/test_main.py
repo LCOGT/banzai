@@ -56,13 +56,7 @@ fake_instruments_response = FakeInstrument()
 
 @dramatiq.actor()
 def foo(*args, **kwargs):
-    raise
     return
-
-
-@dramatiq.actor
-def print_error(mesage_data, exception_data):
-    print(message_data)
 
 
 @pytest.fixture
@@ -96,7 +90,7 @@ class TestMain():
         mock_schedule_stack.side_effect = actor.send_with_options
         runtime_context = Context(runtime_context_json)
         schedule_stacking_checks(runtime_context)
-        mock_schedule_stack.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value,    'BIAS', 'coj', '2m0-SciCam-Spectral', 'clma', '2m0a'), delay=0, kwargs={'process_any_images', False},  on_failure=mock.ANY)
+        mock_schedule_stack.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value,    'BIAS', 'coj', '2m0-SciCam-Spectral', 'clma', '2m0a'), delay=0, kwargs={'process_any_images': False},  on_failure=mock.ANY)
         assert stub_broker.queues['schedule_stack.DQ'].qsize() == 1
 
     @mock.patch('banzai.main.schedule_stack.send_with_options')
@@ -116,7 +110,7 @@ class TestMain():
         mock_schedule_stack.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value,
                                                      'BIAS', 'coj', '2m0-SciCam-Spectral', 'clma', '2m0a'),
                                                delay=(60000+CALIBRATION_STACK_DELAYS['BIAS']),
-                                               kwargs={'process_any_images', False}, on_failure=mock.ANY)
+                                               kwargs={'process_any_images': False}, on_failure=mock.ANY)
         assert stub_broker.queues['schedule_stack.DQ'].qsize() == 1
 
     @mock.patch('banzai.main.process_master_maker')
