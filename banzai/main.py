@@ -266,7 +266,7 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                          runtime_context.min_date, runtime_context.max_date)
 
 
-def run_end_of_night():
+def run_easy_process_directory():
 
     parser = argparse.ArgumentParser(description="Reprocess a night of data given either a site or camera code")
 
@@ -304,13 +304,21 @@ def run_end_of_night():
                         help='Only use calibrations that were created before the start of the block?')
     parser.add_argument('--preview-mode', dest='preview_mode', default=False,
                         help='Save the reductions to the preview directory')
+    parser.add_argument('--require-schedulability', dest='require_schedulability',
+                        default=False, action='store_true',
+                        help='Require that an instrument be schedulable. Only valid when an instrument is '
+                             'specified instead of a site.')
 
     args = parser.parse_args()
 
     args.post_to_archive = not args.no_post_to_archive
     args.post_to_elasticsearch = not args.no_post_to_elasticsearch
     args.fpack = not args.no_fpack
-    args.ignore_schedulability = False
+    # If specifying a site, you probably just want the schedulable instruments
+    if args.site is not None:
+        args.ignore_schedulability = False
+    else:
+        args.ignore_schedulability = not args.require_schedulability
 
     logs.set_log_level(args.log_level)
 
