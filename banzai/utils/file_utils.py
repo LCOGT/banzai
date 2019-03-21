@@ -18,7 +18,7 @@ def post_to_archive_queue(image_path):
 def make_output_directory(pipeline_context, image_config):
     # Create output directory if necessary
     output_directory = os.path.join(pipeline_context.processed_path, image_config.site,
-                                    image_config.camera, image_config.epoch)
+                                    image_config.instrument.name, image_config.epoch)
 
     if pipeline_context.preview_mode:
         output_directory = os.path.join(output_directory, 'preview')
