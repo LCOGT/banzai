@@ -18,8 +18,8 @@ class SourceDetector(Stage):
     threshold = 10.0
     min_area = 9
 
-    def __init__(self, pipeline_context):
-        super(SourceDetector, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(SourceDetector, self).__init__(runtime_context)
 
     def do_stage(self, image):
         try:

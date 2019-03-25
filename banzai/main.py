@@ -18,12 +18,11 @@ from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 from lcogt_logging import LCOGTFormatter
 
-import banzai.context
 from banzai import dbs, realtime, logs
-from banzai.context import PipelineContext
-from banzai.utils import image_utils, date_utils, fits_utils
-from banzai.images import read_image
-import banzai.settings
+from banzai.context import Context
+from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils, import_utils
+from banzai.utils.image_utils import read_image
+from banzai import settings
 
 
 # Logger set up
@@ -72,13 +71,14 @@ def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
     else:
         last_index = ordered_stages.index(last_stage) + 1
 
-    stages_todo = ordered_stages[:last_index] + extra_stages
+    stages_todo = [import_utils.import_attribute(stage) for stage in ordered_stages[:last_index]]
+
+    stages_todo += [import_utils.import_attribute(stage) for stage in extra_stages]
 
     return stages_todo
 
 
-def parse_args(settings, extra_console_arguments=None,
-               parser_description='Process LCO data.', **kwargs):
+def parse_args(extra_console_arguments=None, parser_description='Process LCO data.'):
     """Parse arguments, including default command line argument, and set the overall log level"""
 
     parser = argparse.ArgumentParser(description=parser_description)
@@ -108,6 +108,10 @@ def parse_args(settings, extra_console_arguments=None,
     parser.add_argument('--ignore-schedulability', dest='ignore_schedulability',
                         default=False, action='store_true',
                         help='Relax requirement that the instrument be schedulable')
+    parser.add_argument('--use-only-older-calibrations', dest='use_only_older_calibrations', default=False,
+                        action='store_true', help='Only use calibrations that were created before the start of the block')
+    parser.add_argument('--preview-mode', dest='preview_mode', default=False, action='store_true',
+                        help='Save the reductions to the preview directory')
 
     if extra_console_arguments is None:
         extra_console_arguments = []
@@ -117,42 +121,40 @@ def parse_args(settings, extra_console_arguments=None,
 
     logs.set_log_level(args.log_level)
 
-    if not args.ignore_schedulability:
-        settings.FRAME_SELECTION_CRITERIA += settings.SCHEDULABLE_CRITERIA
+    runtime_context = Context(args)
 
-    pipeline_context = PipelineContext(args, settings, **kwargs)
-
-    return pipeline_context
+    return runtime_context
 
 
-def run(image_path, pipeline_context):
+def run(image_path, runtime_context):
     """
     Main driver script for banzai.
     """
-    image = read_image(image_path, pipeline_context)
-    stages_to_do = get_stages_todo(pipeline_context.ORDERED_STAGES,
-                                   last_stage=pipeline_context.LAST_STAGE[image.obstype],
-                                   extra_stages=pipeline_context.EXTRA_STAGES[image.obstype])
+    image = read_image(image_path, runtime_context)
+    stages_to_do = get_stages_todo(settings.ORDERED_STAGES,
+                                   last_stage=settings.LAST_STAGE[image.obstype],
+                                   extra_stages=settings.EXTRA_STAGES[image.obstype])
     logger.info("Starting to reduce frame", image=image)
     for stage in stages_to_do:
-        stage_to_run = stage(pipeline_context)
+        stage_to_run = stage(runtime_context)
         image = stage_to_run.run(image)
     if image is None:
         logger.error('Reduction stopped', extra_tags={'filename': image_path})
         return
-    image.write(pipeline_context)
+    image.write(runtime_context)
     logger.info("Finished reducing frame", image=image)
 
 
-def run_master_maker(image_path_list, pipeline_context, frame_type):
-    images = [read_image(image_path, pipeline_context) for image_path in image_path_list]
-    stage_to_run = pipeline_context.CALIBRATION_STACKER_STAGE[frame_type](pipeline_context)
+def run_master_maker(image_path_list, runtime_context, frame_type):
+    images = [read_image(image_path, runtime_context) for image_path in image_path_list]
+    stage_constructor = import_utils.import_attribute(settings.CALIBRATION_STACKER_STAGE[frame_type])
+    stage_to_run = stage_constructor(runtime_context)
     images = stage_to_run.run(images)
     for image in images:
-        image.write(pipeline_context)
+        image.write(runtime_context)
 
 
-def process_directory(pipeline_context, raw_path, image_types=None, log_message=''):
+def process_directory(runtime_context, raw_path, image_types=None, log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     image_path_list = image_utils.make_image_path_list(raw_path)
@@ -160,82 +162,79 @@ def process_directory(pipeline_context, raw_path, image_types=None, log_message=
         image_types = [None]
     images_to_reduce = []
     for image_type in image_types:
-        images_to_reduce += image_utils.select_images(image_path_list, pipeline_context, image_type)
+        images_to_reduce += image_utils.select_images(image_path_list, image_type, runtime_context.db_address,
+                                                      runtime_context.ignore_schedulability)
     for image_path in images_to_reduce:
         try:
-            run(image_path, pipeline_context)
+            run(image_path, runtime_context)
         except Exception:
             logger.error(logs.format_exception(), extra_tags={'filename': image_path})
 
 
-def process_single_frame(pipeline_context, raw_path, filename, log_message=''):
+def process_single_frame(runtime_context, raw_path, filename, log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
     full_path = os.path.join(raw_path, filename)
     # Short circuit
-    if not pipeline_context.image_can_be_processed(fits_utils.get_primary_header(full_path)):
+    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(full_path), runtime_context.db_address):
         logger.error('Image cannot be processed. Check to make sure the instrument '
                      'is in the database and that the OBSTYPE is recognized by BANZAI',
                      extra_tags={'raw_path': raw_path, 'filename': filename})
         return
     try:
-        run(full_path, pipeline_context)
+        run(full_path, runtime_context)
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
 
 
-def process_master_maker(pipeline_context, instrument, frame_type, min_date, max_date, use_masters=False):
+def process_master_maker(runtime_context, instrument, frame_type, min_date, max_date, use_masters=False):
     extra_tags = {'instrument': instrument.camera, 'obstype': frame_type,
                   'min_date': min_date.strftime(date_utils.TIMESTAMP_FORMAT),
                   'max_date': max_date.strftime(date_utils.TIMESTAMP_FORMAT)}
     logger.info("Making master frames", extra_tags=extra_tags)
     image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
                                                             use_masters=use_masters,
-                                                            db_address=pipeline_context.db_address)
+                                                            db_address=runtime_context.db_address)
     if len(image_path_list) == 0:
         logger.info("No calibration frames found to stack", extra_tags=extra_tags)
 
     try:
-        run_master_maker(image_path_list, pipeline_context, frame_type)
+        run_master_maker(image_path_list, runtime_context, frame_type)
     except Exception:
         logger.error(logs.format_exception())
     logger.info("Finished")
 
 
-def parse_directory_args(pipeline_context=None, raw_path=None, settings=None, extra_console_arguments=None):
+def parse_directory_args(runtime_context=None, raw_path=None, extra_console_arguments=None):
     if extra_console_arguments is None:
         extra_console_arguments = []
 
-    if pipeline_context is None:
-        if settings is None:
-            logger.error("Cannot create a pipeline context without any settings")
-            raise Exception
+    if runtime_context is None:
         if raw_path is None:
             extra_console_arguments += [RAW_PATH_CONSOLE_ARGUMENT]
 
-        pipeline_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
+            runtime_context = parse_args(extra_console_arguments=extra_console_arguments)
 
         if raw_path is None:
-            raw_path = pipeline_context.raw_path
-    return pipeline_context, raw_path
+            raw_path = runtime_context.raw_path
+    return runtime_context, raw_path
 
 
-def reduce_directory(pipeline_context=None, raw_path=None, image_types=None):
+def reduce_directory(runtime_context=None, raw_path=None, image_types=None):
     # TODO: Remove image_types once reduce_night is not needed
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings())
-    process_directory(pipeline_context, raw_path, image_types=image_types,
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
+    process_directory(runtime_context, raw_path, image_types=image_types,
                       log_message='Reducing all frames in directory')
 
 
-def reduce_single_frame(pipeline_context=None):
+def reduce_single_frame(runtime_context=None):
     extra_console_arguments = [{'args': ['--filename'],
                                 'kwargs': {'dest': 'filename', 'help': 'Name of file to process'}}]
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, None, banzai.settings.ImagingSettings(),
-                                                      extra_console_arguments=extra_console_arguments)
-    process_single_frame(pipeline_context, raw_path, pipeline_context.filename)
+    runtime_context, raw_path = parse_directory_args(runtime_context, extra_console_arguments=extra_console_arguments)
+    process_single_frame(runtime_context, raw_path, runtime_context.filename)
 
 
-def stack_calibrations(pipeline_context=None, raw_path=None):
+def stack_calibrations(runtime_context=None, raw_path=None):
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
                                {'args': ['--enclosure'],
@@ -256,12 +255,12 @@ def stack_calibrations(pipeline_context=None, raw_path=None):
                                            'help': 'Latest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
-    pipeline_context, raw_path = parse_directory_args(pipeline_context, raw_path, banzai.settings.ImagingSettings(),
-                                                      extra_console_arguments=extra_console_arguments)
-    instrument = dbs.query_for_instrument(pipeline_context.db_address, pipeline_context.site, pipeline_context.camera,
-                                          pipeline_context.enclosure, pipeline_context.telescope)
-    process_master_maker(pipeline_context, instrument,  pipeline_context.frame_type.upper(),
-                         pipeline_context.min_date, pipeline_context.max_date)
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
+                                                     extra_console_arguments=extra_console_arguments)
+    instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera,
+                                          runtime_context.enclosure, runtime_context.telescope)
+    process_master_maker(runtime_context, instrument,  runtime_context.frame_type.upper(),
+                         runtime_context.min_date, runtime_context.max_date)
 
 
 def run_realtime_pipeline():
@@ -273,37 +272,33 @@ def run_realtime_pipeline():
                                            'help': 'URL for the broker service.'}},
                                {'args': ['--queue-name'],
                                 'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
-                                           'help': 'Name of the queue to listen to from the fits exchange.'}},
-                               {'args': ['--preview-mode'],
-                                'kwargs': {'dest': 'preview_mode', 'default': False,
-                                           'help': 'Save the real-time reductions to the preview directory'}}]
+                                           'help': 'Name of the queue to listen to from the fits exchange.'}}]
 
-    pipeline_context = parse_args(banzai.settings.ImagingSettings,
-                                  parser_description='Reduce LCO imaging data in real time.',
-                                  extra_console_arguments=extra_console_arguments, realtime_reduction=True)
+    runtime_context = parse_args(parser_description='Reduce LCO imaging data in real time.',
+                                 extra_console_arguments=extra_console_arguments)
 
     # Need to keep the amqp logger level at least as high as INFO,
     # or else it send heartbeat check messages every second
     logging.getLogger('amqp').setLevel(max(logger.level, getattr(logging, 'INFO')))
 
     try:
-        dbs.populate_instrument_tables(db_address=pipeline_context.db_address)
+        dbs.populate_instrument_tables(db_address=runtime_context.db_address)
     except Exception:
         logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
 
     logger.info('Starting pipeline listener')
 
-    for i in range(pipeline_context.n_processes):
-        p = multiprocessing.Process(target=run_individual_listener, args=(pipeline_context.broker_url,
-                                                                          pipeline_context.queue_name,
-                                                                          copy.deepcopy(pipeline_context)))
+    for i in range(runtime_context.n_processes):
+        p = multiprocessing.Process(target=run_individual_listener, args=(runtime_context.broker_url,
+                                                                          runtime_context.queue_name,
+                                                                          copy.deepcopy(runtime_context)))
         p.start()
 
 
-def run_individual_listener(broker_url, queue_name, pipeline_context):
+def run_individual_listener(broker_url, queue_name, runtime_context):
 
     fits_exchange = Exchange('fits_files', type='fanout')
-    listener = RealtimeModeListener(broker_url, pipeline_context)
+    listener = RealtimeModeListener(broker_url, runtime_context)
 
     with Connection(listener.broker_url) as connection:
         listener.connection = connection.clone()
@@ -318,9 +313,9 @@ def run_individual_listener(broker_url, queue_name, pipeline_context):
 
 
 class RealtimeModeListener(ConsumerMixin):
-    def __init__(self, broker_url, pipeline_context):
+    def __init__(self, broker_url, runtime_context):
         self.broker_url = broker_url
-        self.pipeline_context = pipeline_context
+        self.runtime_context = runtime_context
 
     def on_connection_error(self, exc, interval):
         logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
@@ -337,17 +332,17 @@ class RealtimeModeListener(ConsumerMixin):
         path = body.get('path')
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
         try:
-            if realtime.need_to_process_image(path, self.pipeline_context,
-                                              db_address=self.pipeline_context.db_address,
-                                              max_tries=self.pipeline_context.max_tries):
+            if realtime.need_to_process_image(path, self.runtime_context.ignore_schedulability,
+                                              db_address=self.runtime_context.db_address,
+                                              max_tries=self.runtime_context.max_tries):
 
                 logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
 
                 # Increment the number of tries for this file
-                realtime.increment_try_number(path, db_address=self.pipeline_context.db_address)
+                realtime.increment_try_number(path, db_address=self.runtime_context.db_address)
 
-                run(path, self.pipeline_context)
-                realtime.set_file_as_processed(path, db_address=self.pipeline_context.db_address)
+                run(path, self.runtime_context)
+                realtime.set_file_as_processed(path, db_address=self.runtime_context.db_address)
 
         except Exception:
             logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),

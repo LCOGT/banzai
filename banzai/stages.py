@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 class Stage(abc.ABC):
 
-    def __init__(self, pipeline_context):
-        self.pipeline_context = pipeline_context
+    def __init__(self, runtime_context):
+        self.runtime_context = runtime_context
 
     @property
     def stage_name(self):
@@ -33,8 +33,8 @@ class Stage(abc.ABC):
 
 class MultiFrameStage(abc.ABC):
 
-    def __init__(self, pipeline_context):
-        self.pipeline_context = pipeline_context
+    def __init__(self, runtime_context):
+        self.runtime_context = runtime_context
 
     @property
     def stage_name(self):

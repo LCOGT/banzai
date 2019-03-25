@@ -24,22 +24,26 @@ def test_master_selection_criteria():
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_returns_null_if_ccdsums_are_different(mock_cal):
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
+def test_returns_null_if_ccdsums_are_different(mock_frame, mock_cal):
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'ccdsum', '1 1')
 
 
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_returns_null_if_nx_are_different(mock_cal):
+def test_returns_null_if_nx_are_different(mock_cal, mock_frame):
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'nx', 105)
 
 
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_returns_null_if_ny_are_different(mock_cal):
+def test_returns_null_if_ny_are_different(mock_cal, mock_frame):
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'ny', 107)
 
 
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_returns_null_if_filters_are_different(mock_cal):
+def test_returns_null_if_filters_are_different(mock_cal, mock_frame):
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'filter', 'w')
 
 
@@ -53,7 +57,8 @@ def test_flag_bad_if_no_master_calibration(mock_cal, set_random_seed):
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_does_not_flag_noisy_images(mock_cal, set_random_seed):
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
+def test_does_not_flag_noisy_images(mock_frame, mock_cal, set_random_seed):
     mock_cal.return_value = 'test.fits'
     master_flat_variation = 0.025
     nx = 101
@@ -79,7 +84,8 @@ class FakeFlatComparer(FlatComparer):
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_does_flag_bad_images(mock_cal, set_random_seed):
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
+def test_does_flag_bad_images(mock_frame, mock_cal, set_random_seed):
     mock_cal.return_value = 'test.fits'
     nx = 101
     ny = 103

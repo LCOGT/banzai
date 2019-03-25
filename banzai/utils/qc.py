@@ -27,14 +27,14 @@ def format_qc_results(qc_results, image):
     return filename, results_to_save
 
 
-def save_qc_results(pipeline_context, qc_results, image, **kwargs):
+def save_qc_results(runtime_context, qc_results, image, **kwargs):
     """
     Save the Quality Control results to ElasticSearch
 
     Parameters
     ----------
-    pipeline_context: object
-                      PipelineContext instance
+    runtime_context: object
+                      Context instance with runtime values
     qc_results : dict
                  Dictionary of key value pairs to be saved to ElasticSearch
     image : banzai.images.Image
@@ -46,16 +46,16 @@ def save_qc_results(pipeline_context, qc_results, image, **kwargs):
     """
 
     es_output = {}
-    if getattr(pipeline_context, 'post_to_elasticsearch', False):
+    if getattr(runtime_context, 'post_to_elasticsearch', False):
         filename, results_to_save = format_qc_results(qc_results, image)
-        es = elasticsearch.Elasticsearch(pipeline_context.elasticsearch_url)
+        es = elasticsearch.Elasticsearch(runtime_context.elasticsearch_url)
         try:
-            es_output = es.update(index=pipeline_context.elasticsearch_qc_index,
-                                  doc_type=pipeline_context.elasticsearch_doc_type,
+            es_output = es.update(index=runtime_context.elasticsearch_qc_index,
+                                  doc_type=runtime_context.elasticsearch_doc_type,
                                   id=filename, body={'doc': results_to_save, 'doc_as_upsert': True},
                                   retry_on_conflict=5, timestamp=results_to_save['@timestamp'], **kwargs)
         except Exception:
             error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
-            logger.error(error_message.format(url=pipeline_context.elasticsearch_url,
+            logger.error(error_message.format(url=runtime_context.elasticsearch_url,
                                               exception=logs.format_exception()))
     return es_output

@@ -2,12 +2,21 @@ import os
 from glob import glob
 import logging
 
-import banzai.context
+from banzai import settings, logs
 from banzai import logs
 from banzai import dbs
+from banzai.images import logger
+from banzai.munge import munge
 from banzai.utils.fits_utils import get_primary_header
+from banzai.utils.instrument_utils import instrument_passes_criteria
+from banzai.utils import import_utils
+from banzai.exceptions import InhomogeneousSetException
+
 
 logger = logging.getLogger(__name__)
+
+
+FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
 
 
 def get_obstype(header):
@@ -18,12 +27,17 @@ def get_reduction_level(header):
     return header.get('RLEVEL', '00')
 
 
-def select_images(image_list, context, image_type):
+def select_images(image_list, image_type, db_address, ignore_schedulability):
     images = []
     for filename in image_list:
         try:
             header = get_primary_header(filename)
-            if context.image_can_be_processed(header) and (image_type is None or get_obstype(header) == image_type):
+            should_process = image_can_be_processed(header, db_address)
+            should_process &= (image_type is None or get_obstype(header) == image_type)
+            if not ignore_schedulability:
+                instrument = dbs.get_instrument(header, db_address=db_address)
+                should_process &= instrument.schedulable
+            if should_process:
                 images.append(filename)
         except Exception:
             logger.error(logs.format_exception(), extra_tags={'filename': filename})
@@ -50,11 +64,6 @@ def make_image_path_list(raw_path):
     return image_path_list
 
 
-def get_calibration_image_path_list(pipeline_context, instrument, frame_type, min_date, max_date, use_masters=False):
-    return dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
-                                                 use_masters=use_masters, db_address=pipeline_context.db_address)
-
-
 def check_image_homogeneity(images, group_by_attributes=None):
     attribute_list = ['nx', 'ny', 'site', 'camera']
     if group_by_attributes is not None:
@@ -64,9 +73,22 @@ def check_image_homogeneity(images, group_by_attributes=None):
             raise InhomogeneousSetException('Images have different {0}s'.format(attribute))
 
 
-class InhomogeneousSetException(Exception):
-    pass
+def image_can_be_processed(header, db_address):
+    instrument = dbs.get_instrument(header, db_address=db_address)
+    passes = instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
+    passes &= get_obstype(header) in settings.LAST_STAGE
+    passes &= get_reduction_level(header) == '00'
+    return passes
 
 
-class MissingCatalogException(Exception):
-    pass
+def read_image(filename, runtime_context):
+    try:
+        image = FRAME_CLASS(runtime_context, filename=filename)
+        if image.instrument is None:
+            logger.error("Image instrument attribute is None, aborting", image=image)
+            raise IOError
+        munge(image)
+        return image
+    except Exception:
+        logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
+                     extra_tags={'filename': filename})
