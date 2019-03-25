@@ -108,7 +108,7 @@ class ApplyCalibration(Stage):
 
     def on_missing_master_calibration(self, image):
         msg = 'Master Calibration file does not exist for {stage}'
-        if self.pipeline_context.calibrations_not_required:
+        if self.runtime_context.calibrations_not_required:
             msg += ', skipping stage'
             logger.warning(msg.format(stage=self.stage_name), image=image)
             return image

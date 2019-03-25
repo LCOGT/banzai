@@ -105,9 +105,7 @@ def test_bias_subtraction_is_reasonable(mock_frame, mock_cal):
     ny = 103
     mock_frame.return_value = FakeBiasImage(bias_level=input_bias, data=np.random.normal(0.0, input_readnoise, size=(ny, nx)),
                                             nx=nx, ny=ny)
-    # TODO: make_context_with_master_bias can now go away. Just use a FakeContext instead
-    context = make_context_with_master_bias(bias_level=input_bias, readnoise=input_readnoise, nx=nx, ny=ny)
-    subtractor = BiasSubtractor(context)
+    subtractor = BiasSubtractor(FakeContext())
     image = FakeImage(image_multiplier=input_level)
     image = subtractor.do_stage(image)
     assert np.abs(image.header.get('BIASLVL') - input_bias) < 1.0
