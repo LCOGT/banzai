@@ -20,7 +20,7 @@ from lcogt_logging import LCOGTFormatter
 
 from banzai import dbs, realtime, logs
 from banzai.context import Context
-from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils, import_utils
+from banzai.utils import image_utils, date_utils, fits_utils, import_utils
 from banzai.utils.image_utils import read_image
 from banzai import settings
 
@@ -267,21 +267,15 @@ def stack_calibrations(runtime_context=None, raw_path=None):
 
 def run_easy_process_directory():
 
-    parser = argparse.ArgumentParser(description="Reprocess a night of data given either a site or camera code")
+    parser = argparse.ArgumentParser(description="Reprocess a night of data given a directory and DB address")
 
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--site', help='Site code (e.g. ogg)')
-    group.add_argument('--camera', help='Camera code (e.g. kb95)')
-
-    parser.add_argument('--dayobs', default=None, help='Day-Obs to reduce (e.g. 20160201)')
-
+    parser.add_argument("--raw-path", required=True, dest='raw_path',
+                        help='Directory to search for data')
     parser.add_argument('--db-address', dest='db_address', required=True,
                         help='Database address: Should be in SQLAlchemy form')
+
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
-
-    parser.add_argument("--raw-path", default='/archive/engineering', dest='rawpath_root',
-                        help='Top level directory to search for data')
     parser.add_argument("--processed-path", default='/archive/engineering',
                         help='Top level directory where the processed data will be stored')
     parser.add_argument('--no-post-to-archive', dest='no_post_to_archive', action='store_true',
@@ -303,21 +297,12 @@ def run_easy_process_directory():
                         help='Only use calibrations that were created before the start of the block?')
     parser.add_argument('--preview-mode', dest='preview_mode', default=False,
                         help='Save the reductions to the preview directory')
-    parser.add_argument('--require-schedulability', dest='require_schedulability',
-                        default=False, action='store_true',
-                        help='Require that an instrument be schedulable. Only valid when an instrument is '
-                             'specified instead of a site.')
 
     args = parser.parse_args()
 
     args.post_to_archive = not args.no_post_to_archive
     args.post_to_elasticsearch = not args.no_post_to_elasticsearch
     args.fpack = not args.no_fpack
-    # If specifying a site, you probably just want the schedulable instruments
-    if args.site is not None:
-        args.ignore_schedulability = False
-    else:
-        args.ignore_schedulability = not args.require_schedulability
 
     logs.set_log_level(args.log_level)
 
@@ -329,42 +314,26 @@ def run_easy_process_directory():
     except Exception:
         logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
 
-    if args.site is not None:
-        site = args.site
-        instruments = dbs.get_instruments_at_site(site, db_address=runtime_context.db_address)
-        instruments = [instrument for instrument in instruments
-                       if (instrument_utils.instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
-                           and instrument.schedulable is True)]
-    else:
-        instruments = [dbs.get_instrument_by_camera(args.camera, db_address=runtime_context.db_address,
-                                                    ignore_schedulability=runtime_context.ignore_schedulability)]
-        site = instruments[0].site
-
-    timezone = dbs.get_timezone(site, db_address=runtime_context.db_address)
-    # If no dayobs is given, calculate it.
-    if runtime_context.dayobs is None:
-        dayobs = date_utils.get_dayobs(timezone=timezone)
-    else:
-        dayobs = runtime_context.dayobs
+    # Get all info from first image file in directory
+    image_header = fits_utils.get_primary_header(image_utils.make_image_path_list(args.raw_path)[0])
+    instrument = dbs.get_instrument(image_header, db_address=args.db_address)
+    timezone = dbs.get_timezone(instrument.site, db_address=runtime_context.db_address)
+    dayobs = date_utils.get_dayobs(timezone=timezone)
     min_date, max_date = date_utils.get_min_and_max_dates(timezone, dayobs)
 
-    # For each instrument at the given site
-    for instrument in instruments:
-        raw_path = os.path.join(runtime_context.rawpath_root, instrument.site,
-                                instrument.camera, dayobs, 'raw')
-        for image_type in ['BIAS', 'DARK', 'SKYFLAT']:
-            try:
-                reduce_directory(runtime_context, raw_path, image_types=[image_type])
-            except Exception:
-                logger.error(logs.format_exception())
-            try:
-                process_master_maker(runtime_context, instrument, image_type.upper(), min_date, max_date)
-            except Exception:
-                logger.error(logs.format_exception())
+    for image_type in ['BIAS', 'DARK', 'SKYFLAT']:
         try:
-            reduce_directory(runtime_context, raw_path, image_types=['EXPOSE', 'STANDARD'])
+            reduce_directory(runtime_context, args.raw_path, image_types=[image_type])
         except Exception:
             logger.error(logs.format_exception())
+        try:
+            process_master_maker(runtime_context, instrument, image_type.upper(), min_date, max_date)
+        except Exception:
+            logger.error(logs.format_exception())
+    try:
+        reduce_directory(runtime_context, args.raw_path, image_types=['EXPOSE', 'STANDARD'])
+    except Exception:
+        logger.error(logs.format_exception())
 
 
 def run_realtime_pipeline():
