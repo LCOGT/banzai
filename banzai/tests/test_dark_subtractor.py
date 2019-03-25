@@ -4,7 +4,7 @@ import numpy as np
 from banzai.dark import DarkSubtractor
 from banzai.tests.utils import FakeImage, handles_inhomogeneous_set, FakeContext
 
-from banzai.tests.dark_utils import make_context_with_realistic_master_dark, FakeDarkImage
+from banzai.tests.dark_utils import make_context_with_realistic_master_dark, FakeDarkImage, get_dark_data
 
 
 def test_null_input_image():
@@ -72,8 +72,9 @@ def test_dark_subtraction_is_reasonable(mock_cal, mock_frame):
     input_level = 2000.0
     nx = 101
     ny = 103
-    mock_frame.return_value = FakeDarkImage(dark_level=input_dark, readnoise=input_readnoise, nx=nx, ny=ny,
-                                            dark_exptime=dark_exptime, n_stacked_images=n_stacked_images)
+    master_dark_data = get_dark_data(dark_level=input_dark, readnoise=input_readnoise, nx=nx, ny=ny,
+                         dark_exptime=dark_exptime, n_stacked_images=n_stacked_images)
+    mock_frame.return_value = FakeDarkImage(data=master_dark_data)
     subtractor = DarkSubtractor(FakeContext())
     image = FakeImage(image_multiplier=input_level)
     image = subtractor.do_stage(image)

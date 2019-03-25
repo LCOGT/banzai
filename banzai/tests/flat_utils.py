@@ -9,7 +9,11 @@ class FakeFlatImage(FakeImage):
             self.header[key] = value
 
 
+def get_flat_data(flat_level=1.0, master_flat_variation=0.05, nx=101, ny=103):
+    return np.random.normal(flat_level, master_flat_variation, size=(ny, nx))
+
+
 def make_context_with_master_flat(flat_level=1.0, master_flat_variation=0.05, nx=101, ny=103):
-    fake_master_flat = FakeFlatImage(data=np.random.normal(flat_level, master_flat_variation, size=(ny, nx)),
-                                     nx=nx, ny=ny)
+    flat_data = get_flat_data(flat_level=flat_level, master_flat_variation=master_flat_variation, nx=nx, ny=ny)
+    fake_master_flat = FakeFlatImage(data=flat_data, nx=nx, ny=ny)
     return FakeContext(frame_class=lambda *args, **kwargs: fake_master_flat)

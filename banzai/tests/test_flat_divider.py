@@ -4,7 +4,7 @@ import numpy as np
 from banzai.flats import FlatDivider
 from banzai.tests.utils import FakeImage, handles_inhomogeneous_set, FakeContext
 
-from banzai.tests.flat_utils import make_context_with_master_flat, FakeFlatImage
+from banzai.tests.flat_utils import make_context_with_master_flat, FakeFlatImage, get_flat_data
 
 
 def test_null_input_image():
@@ -70,8 +70,8 @@ def test_flat_subtraction_is_reasonable(mock_cal, mock_frame):
     input_level = 2000.0
     nx = 101
     ny = 103
-
-    mock_frame.return_value = FakeFlatImage(flat_level=input_flat, master_flat_variation=flat_variation, nx=nx, ny=ny)
+    master_flat_data = get_flat_data(flat_level=input_flat, master_flat_variation=flat_variation, nx=nx, ny=ny)
+    mock_frame.return_value = FakeFlatImage(data=master_flat_data)
     subtractor = FlatDivider(FakeContext())
     image = FakeImage(image_multiplier=input_level)
     image = subtractor.do_stage(image)

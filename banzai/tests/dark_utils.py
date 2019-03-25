@@ -21,8 +21,8 @@ def get_dark_pattern(nx, ny, master_dark_fraction):
     return dark_pattern
 
 
-def make_context_with_realistic_master_dark(dark_pattern=None, nx=101, ny=103, dark_level=30.0,
-                                            dark_exptime=900.0, readnoise=10.0, n_stacked_images=100):
+def get_dark_data(dark_pattern=None, nx=101, ny=103, dark_level=30.0,
+                  dark_exptime=900.0, readnoise=10.0, n_stacked_images=100):
     if dark_pattern is None:
         dark_pattern = np.zeros((ny, nx))
     data = dark_level + dark_pattern * dark_exptime
@@ -30,7 +30,13 @@ def make_context_with_realistic_master_dark(dark_pattern=None, nx=101, ny=103, d
     dark_noise /= np.sqrt(n_stacked_images)
     data += dark_noise
     data /= dark_exptime
+    return data
 
+
+def make_context_with_realistic_master_dark(dark_pattern=None, nx=101, ny=103, dark_level=30.0,
+                                            dark_exptime=900.0, readnoise=10.0, n_stacked_images=100):
+    data = get_dark_data(dark_pattern=dark_pattern, nx=nx, ny=ny, dark_level=dark_level, dark_exptime=dark_exptime,
+                         readnoise=readnoise, n_stacked_images=n_stacked_images)
     context = FakeContext(frame_class=lambda *args, **kwargs: FakeDarkImage(data=data))
     context.dark_pattern = dark_pattern
     return context
