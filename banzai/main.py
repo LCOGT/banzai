@@ -222,7 +222,6 @@ def parse_directory_args(runtime_context=None, raw_path=None, extra_console_argu
 
 def reduce_directory(runtime_context=None, raw_path=None, image_types=None):
     # TODO: Remove image_types once reduce_night is not needed
-    pipeline_context, raw_path = parse_directory_args(runtime_context, raw_path)
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
     msg = 'Reducing all{} frames in directory'
     if image_types is not None:
@@ -337,7 +336,8 @@ def run_easy_process_directory():
                        if (instrument_utils.instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
                            and instrument.schedulable is True)]
     else:
-        instruments = [dbs.get_instrument_by_camera(args.camera, db_address=runtime_context.db_address)]
+        instruments = [dbs.get_instrument_by_camera(args.camera, db_address=runtime_context.db_address,
+                                                    ignore_schedulability=runtime_context.ignore_schedulability)]
         site = instruments[0].site
 
     timezone = dbs.get_timezone(site, db_address=runtime_context.db_address)

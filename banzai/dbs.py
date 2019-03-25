@@ -346,11 +346,13 @@ def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_AD
     return instrument
 
 
-def get_instrument_by_camera(camera, db_address=_DEFAULT_DB):
+def get_instrument_by_camera(camera, db_address=_DEFAULT_DB, ignore_schedulability=False):
     if camera is None:
         return None
     db_session = get_session(db_address=db_address)
-    criteria = (Instrument.camera == camera) & (Instrument.schedulable .is_(True))
+    criteria = (Instrument.camera == camera)
+    if not ignore_schedulability:
+        criteria &= (Instrument.schedulable .is_(True))
     instrument = db_session.query(Instrument).filter(criteria)
     db_session.close()
     if instrument.count() > 1:
