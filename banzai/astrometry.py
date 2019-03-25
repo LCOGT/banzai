@@ -1,23 +1,18 @@
-import os
-import subprocess
-import shlex
-import tempfile
 import logging
 import requests
 from requests import ConnectionError, HTTPError
 
-from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units
 import numpy as np
 
-from banzai.exceptions import MissingCatalogException
 from banzai.stages import Stage
 
 logger = logging.getLogger(__name__)
 
-_ASTROMETRY_SERVICE_URL='http://astrometry.lco.gtn/catalog/'
+_ASTROMETRY_SERVICE_URL = 'http://astrometry.lco.gtn/catalog/'
+
 
 class WCSSolver(Stage):
 
