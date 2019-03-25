@@ -6,6 +6,7 @@ settings.py: Settings script for banzai.
     pipeline context.
 
 """
+import os
 import operator
 
 from banzai.utils.instrument_utils import InstrumentCriterion

@@ -117,9 +117,9 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
     parser.add_argument('--ignore-schedulability', dest='ignore_schedulability',
                         default=False, action='store_true',
                         help='Relax requirement that the instrument be schedulable')
-    parser.add_argument('--use-older-calibrations', dest='use_older_calibrations', default=True, type=bool,
-                        help='Only use calibrations that were created before the start of the block?')
-    parser.add_argument('--preview-mode', dest='preview_mode', default=False,
+    parser.add_argument('--use-only-older-calibrations', dest='use_only_older_calibrations', default=False,
+                        action='store_true', help='Only use calibrations that were created before the start of the block')
+    parser.add_argument('--preview-mode', dest='preview_mode', default=False, action='store_true',
                         help='Save the reductions to the preview directory')
     parser.add_argument('--max-tries', dest='max_tries', default=5,
                         help='Maximum number of times to try to process a frame')
@@ -182,7 +182,8 @@ def process_directory(runtime_context, raw_path, image_types=None, log_message='
         image_types = [None]
     images_to_reduce = []
     for image_type in image_types:
-        images_to_reduce += image_utils.select_images(image_path_list, runtime_context.db_address, image_type)
+        images_to_reduce += image_utils.select_images(image_path_list, image_type, runtime_context.db_address,
+                                                      runtime_context.ignore_schedulability)
     for image_path in images_to_reduce:
         try:
             run(image_path, runtime_context)
@@ -277,8 +278,9 @@ def run_process_master_maker(runtime_context=None, raw_path=None):
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
                                                     extra_console_arguments=extra_console_arguments)
-    logger.info('Begin calibration stacking for {0} to {1}'.format(runtime_context.min_date, runtime_context.max_date))
-    process_master_maker(runtime_context, runtime_context.instrument, runtime_context.frame_type.upper(),
+    instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera,
+                                          runtime_context.enclosure, runtime_context.telescope)
+    process_master_maker(runtime_context, instrument, runtime_context.frame_type.upper(),
                          runtime_context.min_date, runtime_context.max_date)
 
 

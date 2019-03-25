@@ -1,12 +1,7 @@
-import os
-import subprocess
-import shlex
-import tempfile
 import logging
 import requests
 from requests import ConnectionError, HTTPError
 
-from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units

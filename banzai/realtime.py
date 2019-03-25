@@ -21,7 +21,7 @@ def increment_try_number(path, db_address=dbs._DEFAULT_DB):
     dbs.commit_processed_image(image, db_address=db_address)
 
 
-def need_to_process_image(path, ignore_schedulability, db_address=dbs._DEFAULT_DB, max_tries=5):
+def need_to_process_image(path, ignore_schedulability=False, db_address=dbs._DEFAULT_DB, max_tries=5):
     """
     Figure out if we need to try to make a process a given file.
 
