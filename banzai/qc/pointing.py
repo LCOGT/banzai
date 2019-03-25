@@ -19,8 +19,8 @@ class PointingTest(Stage):
     WARNING_THRESHOLD = 30.0
     SEVERE_THRESHOLD = 300.0
 
-    def __init__(self, pipeline_context):
-        super(PointingTest, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(PointingTest, self).__init__(runtime_context)
 
     def do_stage(self, image):
         try:
@@ -55,7 +55,7 @@ class PointingTest(Stage):
                       'pointing.warning': pointing_warning,
                       'pointing.warning_threshold': self.WARNING_THRESHOLD,
                       'pointing.offset': angular_separation}
-        qc.save_qc_results(self.pipeline_context, qc_results, image)
+        qc.save_qc_results(self.runtime_context, qc_results, image)
 
         image.header['PNTOFST'] = (
             angular_separation, '[arcsec] offset of requested and solved center'

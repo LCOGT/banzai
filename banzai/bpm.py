@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 class BPMUpdater(Stage):
 
     def do_stage(self, image):
-        add_bpm_to_image(image, self.pipeline_context)
+        add_bpm_to_image(image, self.runtime_context)
         validate_bpm_size(image)
-        if image.header.get('L1IDMASK', '') == '' and not self.pipeline_context.calibrations_not_required:
+        if image.header.get('L1IDMASK', '') == '' and not self.runtime_context.calibrations_not_required:
             logger.error("Can't add BPM to image, stopping reduction", image=image)
             return None
         flag_bad_pixels(image)
@@ -23,12 +23,12 @@ class BPMUpdater(Stage):
         return image
 
 
-def add_bpm_to_image(image, pipeline_context):
+def add_bpm_to_image(image, runtime_context):
     # Exit if image already has a BPM
     if image.bpm is not None:
         return
     # Get the BPM filename
-    bpm_filename = dbs.get_bpm_filename(image.instrument.id, image.ccdsum, db_address=pipeline_context.db_address)
+    bpm_filename = dbs.get_bpm_filename(image.instrument.id, image.ccdsum, db_address=runtime_context.db_address)
     # Check if file is missing
     if bpm_filename is None:
         logger.warning('Unable to find BPM in database, falling back to empty BPM', image=image)

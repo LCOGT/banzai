@@ -22,8 +22,8 @@ class ThousandsTest(Stage):
     # something bad probably happened, so we reject the image
     THOUSANDS_THRESHOLD = 0.2
 
-    def __init__(self, pipeline_context):
-        super(ThousandsTest, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(ThousandsTest, self).__init__(runtime_context)
 
     def do_stage(self, image):
         npixels = np.product(image.data.shape)
@@ -40,6 +40,6 @@ class ThousandsTest(Stage):
             return None
         else:
             logger.info('Measuring fraction of 1000s.', image=image, extra_tags=logging_tags)
-        qc.save_qc_results(self.pipeline_context, qc_results, image)
+        qc.save_qc_results(self.runtime_context, qc_results, image)
 
         return image

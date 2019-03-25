@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class FlatNormalizer(Stage):
-    def __init__(self, pipeline_context):
-        super(FlatNormalizer, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(FlatNormalizer, self).__init__(runtime_context)
 
     def do_stage(self, image):
         # Get the sigma clipped mean of the central 25% of the image
@@ -25,8 +25,8 @@ class FlatNormalizer(Stage):
 
 
 class FlatMaker(CalibrationStacker):
-    def __init__(self, pipeline_context):
-        super(FlatMaker, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(FlatMaker, self).__init__(runtime_context)
 
     @property
     def calibration_type(self):
@@ -40,9 +40,9 @@ class FlatMaker(CalibrationStacker):
 
 
 class FlatDivider(ApplyCalibration):
-    def __init__(self, pipeline_context):
+    def __init__(self, runtime_context):
 
-        super(FlatDivider, self).__init__(pipeline_context)
+        super(FlatDivider, self).__init__(runtime_context)
 
     @property
     def calibration_type(self):
@@ -64,8 +64,8 @@ class FlatDivider(ApplyCalibration):
 
 
 class FlatComparer(CalibrationComparer):
-    def __init__(self, pipeline_context):
-        super(FlatComparer, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(FlatComparer, self).__init__(runtime_context)
 
     @property
     def calibration_type(self):

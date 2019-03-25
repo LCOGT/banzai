@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 
 
 class GainNormalizer(Stage):
-    def __init__(self, pipeline_context):
-        super(GainNormalizer, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(GainNormalizer, self).__init__(runtime_context)
 
     def do_stage(self, image):
         logger.info('Multiplying by gain', image=image, extra_tags={'gain': image.gain})
