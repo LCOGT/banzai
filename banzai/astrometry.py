@@ -13,10 +13,9 @@ from astropy import units
 import numpy as np
 
 from banzai.stages import Stage
+from banzai import settings
 
 logger = logging.getLogger(__name__)
-
-_ASTROMETRY_SERVICE_URL='http://astrometry.lco.gtn/catalog/'
 
 class WCSSolver(Stage):
 
@@ -44,7 +43,7 @@ class WCSSolver(Stage):
                            'dec': image.dec,
                            'statistics': False}
         try:
-            astrometry_response = requests.post(_ASTROMETRY_SERVICE_URL, json=catalog_payload)
+            astrometry_response = requests.post(settings.ASTROMETRY_SERVICE_URL, json=catalog_payload)
             astrometry_response.raise_for_status()
         except ConnectionError:
             logger.error('Astrometry service unreachable.', image=image)

@@ -4,3 +4,7 @@ class InhomogeneousSetException(Exception):
 
 class MissingCatalogException(Exception):
     pass
+
+
+class IncompleteProcessingException(Exception):
+    pass

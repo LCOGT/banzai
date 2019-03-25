@@ -25,6 +25,7 @@ from banzai import dbs, realtime, logs
 from banzai.context import Context, ContextJSONEncoder
 from banzai.utils import image_utils, date_utils, fits_utils, import_utils, lake_utils
 from banzai.utils.image_utils import read_image
+from banzai.exceptions import IncompleteProcessingException
 from banzai import settings
 
 
@@ -205,7 +206,6 @@ def process_single_frame(runtime_context, raw_path, filename, log_message=''):
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
 
 
-@dramatiq.actor()
 def process_master_maker(runtime_context, instrument, frame_type, min_date, max_date, use_masters=False):
     extra_tags = {'type': instrument.type, 'site': instrument.site,
                   'enclosure': instrument.enclosure, 'telescope': instrument.telescope,
@@ -253,6 +253,33 @@ def reduce_single_frame(runtime_context=None):
                                 'kwargs': {'dest': 'filename', 'help': 'Name of file to process'}}]
     runtime_context, raw_path = parse_directory_args(runtime_context, extra_console_arguments=extra_console_arguments)
     process_single_frame(runtime_context, raw_path, runtime_context.filename)
+
+
+def run_process_master_maker(runtime_context=None, raw_path=None):
+    extra_console_arguments = [{'args': ['--site'],
+                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
+                               {'args': ['--enclosure'],
+                                'kwargs': {'dest': 'enclosure', 'help': 'Enclosure code (e.g. clma)', 'required': True}},
+                               {'args': ['--telescope'],
+                                'kwargs': {'dest': 'telescope', 'help': 'Telescope code (e.g. 0m4a)', 'required': True}},
+                               {'args': ['--camera'],
+                                'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)', 'required': True}},
+                               {'args': ['--frame-type'],
+                                'kwargs': {'dest': 'frame_type', 'help': 'Type of frames to process',
+                                           'choices': ['bias', 'dark', 'skyflat'], 'required': True}},
+                               {'args': ['--min-date'],
+                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.valid_date,
+                                           'help': 'Earliest observation time of the individual calibration frames. '
+                                                   'Must be in the format "YYYY-MM-DDThh:mm:ss".'}},
+                               {'args': ['--max-date'],
+                                'kwargs': {'dest': 'max_date', 'required': True, 'type': date_utils.valid_date,
+                                           'help': 'Latest observation time of the individual calibration frames. '
+                                                   'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
+                                                    extra_console_arguments=extra_console_arguments)
+    logger.info('Begin calibration stacking for {0} to {1}'.format(runtime_context.min_date, runtime_context.max_date))
+    process_master_maker(runtime_context, runtime_context.instrument, runtime_context.frame_type.upper(),
+                         runtime_context.min_date, runtime_context.max_date)
 
 
 def schedule_calibration_stacking(runtime_context=None, raw_path=None):
@@ -461,7 +488,7 @@ def schedule_stack(runtime_context_json, blocks, calibration_type, site, camera,
                 expected_image_count += molecule['exposure_count']
     logger.info('expected image count: {0}'.format(str(expected_image_count)))
     if (expected_image_count < completed_image_count and not process_any_images):
-        raise
+        raise IncompleteProcessingException
     else:
         process_master_maker(runtime_context, instrument, calibration_type, runtime_context.min_date,
                              runtime_context.max_date)
