@@ -11,7 +11,7 @@ RUN conda install -y pip numpy\>=1.13 cython scipy astropy pytest\>=3.6,\<4.0 mo
         && conda clean -y --all
 
 RUN pip install --no-cache-dir logutils lcogt_logging sqlalchemy\>=1.3.0b1 psycopg2-binary dramatiq[redis,watch] \
-        git+https://github.com/kbarbary/sep.git@master
+        apscheduler git+https://github.com/kbarbary/sep.git@master
 
 RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
         && /usr/sbin/useradd -g 10000 -d /home/archive -M -N -u 10087 archive \
