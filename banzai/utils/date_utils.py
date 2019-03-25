@@ -131,18 +131,3 @@ def valid_date(s):
     except ValueError:
         msg = "Not a valid date: '{0}'.".format(s)
         raise argparse.ArgumentTypeError(msg)
-
-
-def get_min_and_max_dates(timezone, dayobs, return_string=False):
-    midnight_at_site = _get_midnight(timezone, dayobs)
-    min_date = midnight_at_site + datetime.timedelta(days=0.5)
-    max_date = midnight_at_site + datetime.timedelta(days=1.5)
-    if return_string:
-        min_date = min_date.strftime(TIMESTAMP_FORMAT)
-        max_date = max_date.strftime(TIMESTAMP_FORMAT)
-    return min_date, max_date
-
-
-# Returns previous midnight relative to date of observation
-def _get_midnight(timezone, dayobs):
-    return datetime.datetime.strptime(dayobs, '%Y%m%d') - datetime.timedelta(hours=timezone)

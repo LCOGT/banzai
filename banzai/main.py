@@ -100,7 +100,7 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
                         default=False)
     parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
                         default=False)
-    parser.add_argument('--fpack', dest='fpack', action='store_true', default=True,
+    parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
     parser.add_argument('--rlevel', dest='rlevel', default=91, type=int, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',

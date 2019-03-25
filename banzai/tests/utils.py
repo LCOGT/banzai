@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 from astropy.io.fits import Header
@@ -7,6 +7,7 @@ from astropy.utils.data import get_pkg_data_filename
 
 from banzai.stages import Stage
 from banzai.images import Image
+from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,17 @@ def gaussian2d(image_shape, x0, y0, brightness, fwhm):
     exponent *= (x2d - x0) ** 2.0 + (y2d - y0) ** 2.0
 
     return normfactor * np.exp(exponent)
+
+
+def get_min_and_max_dates(timezone, dayobs, return_string=False):
+    # Gets next midnight relative to date of observation
+    midnight_at_site = datetime.strptime(dayobs, '%Y%m%d') + timedelta(hours=24-timezone)
+    min_date = midnight_at_site - timedelta(days=0.5)
+    max_date = midnight_at_site + timedelta(days=0.5)
+    if return_string:
+        min_date = min_date.strftime(TIMESTAMP_FORMAT)
+        max_date = max_date.strftime(TIMESTAMP_FORMAT)
+    return min_date, max_date
 
 
 class FakeResponse(object):

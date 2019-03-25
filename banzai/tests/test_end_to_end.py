@@ -9,7 +9,7 @@ from banzai import settings
 from banzai.main import redis_broker
 from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
 from banzai.utils import fits_utils, date_utils, file_utils
-from banzai.tests.utils import FakeResponse
+from banzai.tests.utils import FakeResponse, get_min_and_max_dates
 
 import logging
 
@@ -63,7 +63,7 @@ def run_stack_calibrations(frame_type):
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         site, camera, dayobs = day_obs.split('/')
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
-        min_date, max_date = date_utils.get_min_and_max_dates(timezone, dayobs, return_string=True)
+        min_date, max_date = get_min_and_max_dates(timezone, dayobs, return_string=True)
         command = 'banzai_stack_calibrations --raw-path {raw_path} --frame-type {frame_type} ' \
                   '--site {site} --camera {camera} ' \
                   '--enclosure {enclosure} --telescope {telescope} ' \
