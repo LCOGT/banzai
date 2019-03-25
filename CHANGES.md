@@ -1,3 +1,18 @@
+0.21.0 (2019-03-25)
+-------------------
+- Significant refactor to the pipeline context and settings files. We have now
+  split settings that are static into the settings file and settings that can
+  change at runtime into the "runtime context". This is in preparation for 
+  running a task queue (e.g. dramatiq).
+
+0.20.1 (2019-03-14)
+-------------------
+- Fixed bug where gaia astrometry service solve failure was not handled properly
+
+0.20.0 (2019-03-11)
+-------------------
+- Configure pipeline to use GAIA-Astrometry.net service for WCS solves.
+
 0.19.4 (2019-03-05)
 -------------------
 - We no longer overwrite all SATURATE vales for the 0.4m telescopes. We now only use the
