@@ -18,11 +18,14 @@ from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 from lcogt_logging import LCOGTFormatter
 from dramatiq.brokers.redis import RedisBroker
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.schedulers.blocking import BlockingScheduler
 
 from banzai import dbs, realtime, logs
-from banzai.context import Context
-from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils, import_utils, lake_utils
+from banzai.context import Context, ContextJSONEncoder
+from banzai.utils import image_utils, date_utils, fits_utils, import_utils, lake_utils
 from banzai.utils.image_utils import read_image
+from banzai.exceptions import IncompleteProcessingException
 from banzai import settings
 
 
@@ -40,8 +43,10 @@ root_logger.addHandler(root_handler)
 
 logger = logging.getLogger(__name__)
 
+
 redis_broker = RedisBroker(host=os.getenv('REDIS_HOST', '127.0.0.1'))
 dramatiq.set_broker(redis_broker)
+dramatiq.set_encoder(ContextJSONEncoder())
 
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
@@ -112,9 +117,9 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
     parser.add_argument('--ignore-schedulability', dest='ignore_schedulability',
                         default=False, action='store_true',
                         help='Relax requirement that the instrument be schedulable')
-    parser.add_argument('--use-older-calibrations', dest='use_older_calibrations', default=True, type=bool,
-                        help='Only use calibrations that were created before the start of the block?')
-    parser.add_argument('--preview-mode', dest='preview_mode', default=False,
+    parser.add_argument('--use-only-older-calibrations', dest='use_only_older_calibrations', default=False,
+                        action='store_true', help='Only use calibrations that were created before the start of the block')
+    parser.add_argument('--preview-mode', dest='preview_mode', default=False, action='store_true',
                         help='Save the reductions to the preview directory')
     parser.add_argument('--max-tries', dest='max_tries', default=5,
                         help='Maximum number of times to try to process a frame')
@@ -130,6 +135,15 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
     runtime_context = Context(args)
 
     return runtime_context
+
+
+def start_schedule_calibration_stacking():
+    scheduler = BlockingScheduler()
+    for entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.values():
+        scheduler.add_job(
+            schedule_calibration_stacking.send,
+            CronTrigger.from_crontab(entry),
+        )
 
 
 def run(image_path, runtime_context):
@@ -153,7 +167,7 @@ def run(image_path, runtime_context):
 
 def run_master_maker(image_path_list, runtime_context, frame_type):
     images = [read_image(image_path, runtime_context) for image_path in image_path_list]
-    stage_constructor = import_utils.import_attribute(settings.CALIBRATION_STACKER_STAGE[frame_type])
+    stage_constructor = import_utils.import_attribute(settings.CALIBRATION_STACKER_STAGE[frame_type.upper()])
     stage_to_run = stage_constructor(runtime_context)
     images = stage_to_run.run(images)
     for image in images:
@@ -168,7 +182,8 @@ def process_directory(runtime_context, raw_path, image_types=None, log_message='
         image_types = [None]
     images_to_reduce = []
     for image_type in image_types:
-        images_to_reduce += image_utils.select_images(image_path_list, runtime_context.db_address, image_type)
+        images_to_reduce += image_utils.select_images(image_path_list, image_type, runtime_context.db_address,
+                                                      runtime_context.ignore_schedulability)
     for image_path in images_to_reduce:
         try:
             run(image_path, runtime_context)
@@ -193,7 +208,9 @@ def process_single_frame(runtime_context, raw_path, filename, log_message=''):
 
 
 def process_master_maker(runtime_context, instrument, frame_type, min_date, max_date, use_masters=False):
-    extra_tags = {'instrument': instrument.camera, 'obstype': frame_type,
+    extra_tags = {'type': instrument.type, 'site': instrument.site,
+                  'enclosure': instrument.enclosure, 'telescope': instrument.telescope,
+                  'camera': instrument.camera, 'obstype': frame_type,
                   'min_date': min_date.strftime(date_utils.TIMESTAMP_FORMAT),
                   'max_date': max_date.strftime(date_utils.TIMESTAMP_FORMAT)}
     logger.info("Making master frames", extra_tags=extra_tags)
@@ -239,9 +256,41 @@ def reduce_single_frame(runtime_context=None):
     process_single_frame(runtime_context, raw_path, runtime_context.filename)
 
 
-def stack_calibrations(runtime_context=None, raw_path=None):
+def run_process_master_maker(runtime_context=None, raw_path=None):
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
+                               {'args': ['--enclosure'],
+                                'kwargs': {'dest': 'enclosure', 'help': 'Enclosure code (e.g. clma)', 'required': True}},
+                               {'args': ['--telescope'],
+                                'kwargs': {'dest': 'telescope', 'help': 'Telescope code (e.g. 0m4a)', 'required': True}},
+                               {'args': ['--camera'],
+                                'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)', 'required': True}},
+                               {'args': ['--frame-type'],
+                                'kwargs': {'dest': 'frame_type', 'help': 'Type of frames to process',
+                                           'choices': ['bias', 'dark', 'skyflat'], 'required': True}},
+                               {'args': ['--min-date'],
+                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.valid_date,
+                                           'help': 'Earliest observation time of the individual calibration frames. '
+                                                   'Must be in the format "YYYY-MM-DDThh:mm:ss".'}},
+                               {'args': ['--max-date'],
+                                'kwargs': {'dest': 'max_date', 'required': True, 'type': date_utils.valid_date,
+                                           'help': 'Latest observation time of the individual calibration frames. '
+                                                   'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
+                                                    extra_console_arguments=extra_console_arguments)
+    instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera,
+                                          runtime_context.enclosure, runtime_context.telescope)
+    process_master_maker(runtime_context, instrument, runtime_context.frame_type.upper(),
+                         runtime_context.min_date, runtime_context.max_date)
+
+
+def schedule_calibration_stacking(runtime_context=None, raw_path=None):
+    extra_console_arguments = [{'args': ['--site'],
+                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
+                               {'args': ['--enclosure'],
+                                'kwargs': {'dest': 'enclosure', 'help': 'Enclosure code (e.g. clma)', 'required': True}},
+                               {'args': ['--telescope'],
+                                'kwargs': {'dest': 'telescope', 'help': 'Telescope code (e.g. 0m4a)', 'required': True}},
                                {'args': ['--camera'],
                                 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)', 'required': True}},
                                {'args': ['--frame-type'],
@@ -257,57 +306,9 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
-                                                     extra_console_arguments=extra_console_arguments)
-    instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera)
+                                                    extra_console_arguments=extra_console_arguments)
+    logger.info('Begin scheduling calibration stacking for {0} to {1}'.format(runtime_context.min_date, runtime_context.max_date))
     schedule_stacking_checks(runtime_context)
-
-
-def run_end_of_night():
-    extra_console_arguments = [{'args': ['--site'],
-                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)'}},
-                               {'args': ['--dayobs'],
-                                'kwargs': {'dest': 'dayobs', 'default': None,
-                                           'help': 'Day-Obs to reduce (e.g. 20160201)'}},
-                               {'args': ['--raw-path-root'],
-                                'kwargs': {'dest': 'rawpath_root', 'default': '/archive/engineering',
-                                           'help': 'Top level directory with raw data.'}}]
-
-    runtime_context = parse_args(extra_console_arguments=extra_console_arguments,
-                                 parser_description='Reduce all the data from a site at the end of a night.')
-
-    # Ping the configdb to get instruments
-    try:
-        dbs.populate_instrument_tables(db_address=runtime_context.db_address)
-    except Exception:
-        logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
-
-    try:
-        timezone = dbs.get_timezone(runtime_context.site, db_address=runtime_context.db_address)
-    except dbs.SiteMissingException:
-        msg = "Site {site} not found in database {db}, exiting."
-        logger.error(msg.format(site=runtime_context.site, db=runtime_context.db_address),
-                     extra_tags={'site': runtime_context.site})
-        return
-
-    # If no dayobs is given, calculate it.
-    if runtime_context.dayobs is None:
-        dayobs = date_utils.get_dayobs(timezone=timezone)
-    else:
-        dayobs = runtime_context.dayobs
-
-    instruments = dbs.get_instruments_at_site(runtime_context.site,
-                                              db_address=runtime_context.db_address,
-                                              ignore_schedulability=runtime_context.ignore_schedulability)
-    instruments = [instrument for instrument in instruments
-                   if instrument_utils.instrument_passes_criteria(instrument, runtime_context.ignore_schedulability)]
-    # For each instrument at the given site
-    for instrument in instruments:
-        raw_path = os.path.join(runtime_context.rawpath_root, runtime_context.site,
-                                instrument.camera, dayobs, 'raw')
-        try:
-            reduce_directory(runtime_context, raw_path, image_types=['EXPOSE', 'STANDARD'])
-        except Exception:
-            logger.error(logs.format_exception())
 
 
 def run_realtime_pipeline():
@@ -372,7 +373,7 @@ class RealtimeModeListener(ConsumerMixin):
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
-@dramatiq.actor()
+@dramatiq.actor(queue_name=settings.REDIS_QUEUE_NAMES['PROCESS_IMAGE'])
 def process_image(path, runtime_context_dict):
     logger.info('Got into actor.')
     runtime_context = Context(runtime_context_dict)
@@ -413,6 +414,28 @@ def mark_frame(mark_as):
     logger.info("Finished")
 
 
+def add_instrument():
+    parser = argparse.ArgumentParser(description="Add a new instrument to the database")
+    parser.add_argument("--site", help='Site code (e.g. ogg)', required=True)
+    parser.add_argument('--enclosure', help= 'Enclosure code (e.g. clma)', required=True)
+    parser.add_argument('--telescope', help='Telescope code (e.g. 0m4a)', required=True)
+    parser.add_argument("--camera", help='Camera (e.g. kb95)', required=True)
+    parser.add_argument("--camera-type", dest='camera_type',
+                        help="Camera type (e.g. 1m0-SciCam-Sinistro)", required=True)
+    parser.add_argument("--schedulable", help="Mark the instrument as schedulable", action='store_true',
+                        dest='schedulable', default=False)
+    parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
+                        help='Database address: Should be in SQLAlchemy format')
+    args = parser.parse_args()
+    instrument = {'site': args.site,
+                  'enclosure': args.enclosure,
+                  'telescope': args.telescope,
+                  'camera': args.camera,
+                  'type': args.camera_type,
+                  'schedulable': args.schedulable}
+    dbs.add_instrument(instrument, db_address=args.db_address)
+
+
 def mark_frame_as_good():
     mark_frame("good")
 
@@ -421,33 +444,82 @@ def mark_frame_as_bad():
     mark_frame("bad")
 
 
-RETRY_DELAY = 1000*60*10
+def update_db():
+    parser = argparse.ArgumentParser(description="Query the configdb to ensure that the instruments table"
+                                                 "has the most up-to-date information")
+
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
+    parser.add_argument('--db-address', dest='db_address',
+                        default='mysql://cmccully:password@localhost/test',
+                        help='Database address: Should be in SQLAlchemy form')
+    args = parser.parse_args()
+    logs.set_log_level(args.log_level)
+
+    try:
+        dbs.populate_instrument_tables(db_address=args.db_address)
+    except Exception:
+        logger.error('Could not populate instruments table: {error}'.format(error=logs.format_exception()))
 
 
-@dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY)
-def schedule_stack(runtime_context, block_id, calibration_type, instrument):
-    block = lake_utils.get_block_by_id(block_id)
-    start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    end_date = start_date + timedelta(days=1)
-    for molecule in block.get('molecules', []):
-        reported_calibration_images = molecule.get('events', []).get('completed_exposures', None)
-        if (molecule['completed'] or molecule['failed']):
-            process_master_maker(runtime_context, instrument, calibration_type, start_date, end_date, expected_frame_num=reported_calibration_images)
-        else:
-            raise Exception
+RETRY_DELAY = int(os.getenv('RETRY_DELAY', 1000*60*10))
 
 
-@dramatiq.actor()
+@dramatiq.actor(max_retries=0, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
+def should_retry_schedule_stack(message_data, exception_data):
+    if message_data['options']['retries'] >= 2:
+        schedule_stack(*message_data['args'], process_any_images=True)
+
+
+@dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
+def schedule_stack(runtime_context_json, blocks, calibration_type, site, camera, enclosure, telescope, process_any_images=True):
+    logger.info('schedule stack for matching blocks')
+    runtime_context_json['min_date'] = datetime.strptime(runtime_context_json['min_date'], '%Y-%m-%d %H:%M:%S')
+    runtime_context_json['max_date'] = datetime.strptime(runtime_context_json['max_date'], '%Y-%m-%d %H:%M:%S')
+    runtime_context = Context(runtime_context_json)
+    instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera, enclosure, telescope)
+    completed_image_count = len(dbs.get_individual_calibration_images(instrument, calibration_type,
+                                                                      runtime_context.min_date,
+                                                                      runtime_context.max_date,
+                                                                      use_masters=False,
+                                                                      db_address=runtime_context.db_address))
+    expected_image_count = 0
+    for block in blocks:
+        for molecule in block['molecules']:
+            if calibration_type.upper() == molecule['type']:
+                expected_image_count += molecule['exposure_count']
+    logger.info('expected image count: {0}'.format(str(expected_image_count)))
+    if (expected_image_count < completed_image_count and not process_any_images):
+        raise IncompleteProcessingException
+    else:
+        process_master_maker(runtime_context, instrument, calibration_type, runtime_context.min_date,
+                             runtime_context.max_date)
+
+
 def schedule_stacking_checks(runtime_context):
-    now = datetime.utcnow()
-    calibration_blocks = lake_utils.get_next_calibration_blocks(runtime_context.site, now, now+timedelta(days=1))
+    logger.info('scheduling stacking checks')
+    calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(runtime_context.site,
+                                                                          runtime_context.max_date,
+                                                                          runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
-        for calibration_type in settings.CALIBRATION_IMAGE_TYPES:
-            block_for_calibration = lake_utils.get_next_block(instrument, calibration_type, calibration_blocks)
-            if block_for_calibration is not None:
-                block_end = datetime.strptime(block_for_calibration['end'], '%Y-%m-%dT%H:%M:%S')
-                stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS['calibration_type'])
-                message_delay = now - block_end + stack_delay
-                schedule_stack.send_with_options(args=(runtime_context, block_for_calibration['id'],
-                    calibration_type, instrument), delay=message_delay)
+        blocks_for_calibration = lake_utils.filter_calibration_blocks_for_type(instrument,
+                                                                               runtime_context.frame_type,
+                                                                               calibration_blocks)
+        if len(blocks_for_calibration) > 0:
+            block_end = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
+            stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[runtime_context.frame_type.upper()])
+            now = datetime.utcnow().replace(microsecond=0)
+            logger.info('before schedule stack for block type {0}'.format(runtime_context.frame_type))
+            message_delay = block_end - now + stack_delay
+            if message_delay.days < 0:
+                message_delay_in_ms = 0  # Remove delay if block end is in the past
+            else:
+                message_delay_in_ms = message_delay.seconds*1000
+            logger.info('scheduling with message delay {0}'.format(str(message_delay_in_ms)))
+            schedule_stack.send_with_options(args=(runtime_context._asdict(), blocks_for_calibration,
+                                                   runtime_context.frame_type, instrument.site,
+                                                   instrument.camera, instrument.enclosure, instrument.telescope),
+                                             kwargs={'process_any_images': False},
+                                             on_failure=should_retry_schedule_stack,
+                                             delay=message_delay_in_ms)

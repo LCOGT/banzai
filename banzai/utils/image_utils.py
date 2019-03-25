@@ -74,6 +74,11 @@ def check_image_homogeneity(images, group_by_attributes=None):
 
 
 def image_can_be_processed(header, db_address):
+    if header is None:
+        return False
+    # Short circuit if the instrument is a guider even if they don't exist in configdb
+    if not get_obstype(header) in settings.LAST_STAGE:
+        return False
     instrument = dbs.get_instrument(header, db_address=db_address)
     passes = instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
     passes &= get_obstype(header) in settings.LAST_STAGE

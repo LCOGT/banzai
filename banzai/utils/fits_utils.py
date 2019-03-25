@@ -1,14 +1,13 @@
 import os
 import tempfile
 import logging
-import datetime
+
+from banzai import logs
 
 import numpy as np
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
-
-from banzai.utils import date_utils
 
 logger = logging.getLogger(__name__)
 
@@ -125,15 +124,19 @@ def open_fits_file(filename):
             output_filename = os.path.join(tmpdirname, base_filename)
             os.system('funpack -O {0} {1}'.format(output_filename, filename))
             hdulist = fits.open(output_filename, 'readonly')
+            return hdulist
     else:
         hdulist = fits.open(filename, 'readonly')
-
-    return hdulist
+        return hdulist
 
 
 def get_primary_header(filename):
-    hdulist = open_fits_file(filename)
-    return hdulist[0].header
+    try:
+        hdulist = open_fits_file(filename)
+        return hdulist[0].header
+    except Exception:
+        logger.error("Unable to open fits file: {}".format(logs.format_exception()), extra_tags={'filename': filename})
+        return None
 
 
 def open_image(filename):

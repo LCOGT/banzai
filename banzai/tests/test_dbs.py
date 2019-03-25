@@ -18,9 +18,10 @@ def teardown_module():
 def test_add_or_update():
     db_session = dbs.get_session(db_address='sqlite:///test.db')
     # Add a fake telescope
-    dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101'},
-                             {'site': 'bpl', 'camera': 'kb101', 'type': 'SBig',
-                              'schedulable': False})
+    dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma',
+                                                          'telescope': '1m0a'},
+                             {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma', 'telescope': '1m0a',
+                              'type': 'SBig', 'schedulable': False})
     db_session.commit()
 
     # Make sure it got added
@@ -29,9 +30,10 @@ def test_add_or_update():
     assert telescope is not None
 
     # Update the fake telescope
-    dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101'},
-                             {'site': 'bpl', 'camera': 'kb101', 'type': 'SBig',
-                              'schedulable': True})
+    dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma',
+                                                          'telescope': '1m0a'},
+                             {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma', 'telescope': '1m0a',
+                              'type': 'SBig', 'schedulable': True})
 
     db_session.commit()
     # Make sure the update took

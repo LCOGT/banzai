@@ -8,29 +8,11 @@ metadata:
 spec:
   # Create some empty directories to be mounted within the Pod
   volumes:
-    - name: astrometry-catalogs
-      emptyDir:
-        sizeLimit: 15Gi
     - name: banzai-data
       emptyDir:
         sizeLimit: 10Gi
 
   initContainers:
-    # When the Pod is initialized, copy all files within the container at path
-    # /opt/astrometry.net/data into the empty data volume mounted at /data
-    - name: astrometry-catalogs
-      image: docker.lco.global/astrometry.net-catalogs:1.0.0
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: astrometry-catalogs
-          mountPath: /data
-          readOnly: false
-      command:
-        - /bin/cp
-        - -a
-        - /opt/astrometry.net/data
-        - /data/
-
     # When the Pod is initialized, copy all files within the container at path
     # /archive/engineering into the empty data volume mounted at /data
     - name: banzai-data
@@ -70,14 +52,39 @@ spec:
         limits:
           cpu: 1
           memory: 1Gi
-    - name: banzai-workers
+    - name: banzai-workers-schedule-stack
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
       volumeMounts:
-        - name: astrometry-catalogs
-          mountPath: /opt/astrometry.net/data
-          subPath: data
-          readOnly: true
+        - name: banzai-data
+          mountPath: /archive/engineering
+          subPath: engineering
+          readOnly: false
+      env:
+        - name: DB_ADDRESS
+          value: "sqlite:////archive/engineering/test.db"
+        - name: RETRY_DELAY
+          value: "0"
+      command:
+        - dramatiq
+        - banzai.main
+        - --processes
+        - "2"
+        - --threads
+        - "1"
+        - --queues
+        - "schedule_stack"
+      resources:
+        requests:
+          cpu: 0.7
+          memory: 4Gi
+        limits:
+          cpu: 4
+          memory: 8Gi
+    - name: banzai-workers-process-image
+      image: @BANZAI_IMAGE@
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
         - name: banzai-data
           mountPath: /archive/engineering
           subPath: engineering
@@ -87,11 +94,13 @@ spec:
           value: "sqlite:////archive/engineering/test.db"
       command:
         - dramatiq
+        - banzai.main
         - --processes
         - "4"
         - --threads
         - "1"
-        - banzai.main
+        - --queues
+        - "process_image"
       resources:
         requests:
           cpu: 0.7
@@ -102,15 +111,6 @@ spec:
     - name: banzai-listener
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: astrometry-catalogs
-          mountPath: /opt/astrometry.net/data
-          subPath: data
-          readOnly: true
-        - name: banzai-data
-          mountPath: /archive/engineering
-          subPath: engineering
-          readOnly: false
       env:
         - name: DB_ADDRESS
           value: "sqlite:////archive/engineering/test.db"
