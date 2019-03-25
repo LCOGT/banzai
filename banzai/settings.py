@@ -72,6 +72,13 @@ REDIS_QUEUE_NAMES = {'DEFAULT': 'default',
                      'PROCESS_IMAGE': 'process_image',
                      'SCHEDULE_STACK': 'schedule_stack'}
 
+SCHEDULE_STACKING_CRON_ENTRIES = {'coj': '30 06 * * *',
+                                  'cpt': '00 15 * * *',
+                                  'tfn': '30 17 * * *',
+                                  'lsc': '00 21 * * *',
+                                  'elp': '00 23 * * *',
+                                  'ogg': '00 03 * * *'}
+
 
 def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):
     def get_calibration_filename(image):

@@ -18,6 +18,8 @@ from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 from lcogt_logging import LCOGTFormatter
 from dramatiq.brokers.redis import RedisBroker
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.schedulers.blocking import BlockingScheduler
 
 from banzai import dbs, realtime, logs
 from banzai.context import Context, ContextJSONEncoder
@@ -132,6 +134,15 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
     runtime_context = Context(args)
 
     return runtime_context
+
+
+def start_schedule_calibration_stacking():
+    scheduler = BlockingScheduler()
+    for entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.values():
+        scheduler.add_job(
+            schedule_calibration_stacking.send,
+            CronTrigger.from_crontab(entry),
+        )
 
 
 def run(image_path, runtime_context):
