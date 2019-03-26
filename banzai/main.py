@@ -319,7 +319,7 @@ def schedule_calibration_stacking(runtime_context=None, raw_path=None):
                                                     extra_console_arguments=extra_console_arguments)
     timezone_for_site = dbs.get_timezone(runtime_context.site, db_address=runtime_context.db_address)
     min_date, max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(timezone_for_site)
-    runtime_context_json = runtime_context._asdict()
+    runtime_context_json = dict(runtime_context._asdict())
     runtime_context_json['min_date'] = min_date
     runtime_context_json['max_date'] = max_date
     runtime_context = Context(runtime_context_json)
