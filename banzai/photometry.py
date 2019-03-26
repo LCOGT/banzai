@@ -16,7 +16,7 @@ class SourceDetector(Stage):
     # Note that threshold is number of sigma, not an absolute number because we provide the error
     # array to SEP.
     threshold = 10.0
-    min_area = 9
+    min_area = 15
 
     def __init__(self, runtime_context):
         super(SourceDetector, self).__init__(runtime_context)
@@ -42,8 +42,8 @@ class SourceDetector(Stage):
 
             # Do an initial source detection
             # TODO: Add back in masking after we are sure SEP works
-            sources = sep.extract(data, self.threshold, minarea=self.min_area,
-                                  err=error, deblend_cont=0.005)
+            sources = sep.extract(data, self.threshold, mask=mask,  minarea=self.min_area,
+                                  err=error, deblend_cont=0.05)
 
             # Convert the detections into a table
             sources = Table(sources)
@@ -213,7 +213,20 @@ class SourceDetector(Stage):
             good_objects = catalog['flag'] == 0
 
             seeing = np.median(catalog['fwhm'][good_objects]) * image.pixel_scale
-            image.header['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
+
+
+            fwhmcat = catalog['fwhm'][good_objects]  * image.pixel_scale
+            goodseeing = fwhmcat > 0
+
+            # Find a number closer to the mode of the distribution than median
+            for iter in range(2):
+                medianfwhm = np.median(fwhmcat[goodseeing])
+                fwhmstd = np.std (fwhmcat[goodseeing])
+                goodseeing = abs(fwhmcat - medianfwhm) < 2 * fwhmstd
+                if np.sum(goodseeing) > 10:
+                    medianfwhm = np.median(fwhmcat[goodseeing])
+
+            image.header['L1FWHM'] = (medianfwhm, '[arcsec] Frame FWHM in arcsec')
 
             mean_ellipticity = stats.sigma_clipped_mean(sources['ellipticity'][good_objects],
                                                         3.0)
