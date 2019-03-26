@@ -131,3 +131,15 @@ def valid_date(s):
     except ValueError:
         msg = "Not a valid date: '{0}'.".format(s)
         raise argparse.ArgumentTypeError(msg)
+
+
+def get_min_and_max_dates_for_calibration_scheduling(timezone, return_string=False):
+    # Gets next midnight relative to date of observation
+    current_date = datetime.datetime.utcnow().replace(hour=12, minute=0, second=0)
+    noon_at_site = datetime.strptime(current_date, '%Y-%m-%d') + datetime.timedelta(hours=24-timezone)
+    min_date = noon_at_site - datetime.timedelta(days=0.5)
+    max_date = noon_at_site + datetime.timedelta(days=0.5)
+    if return_string:
+        min_date = min_date.strftime(TIMESTAMP_FORMAT)
+        max_date = max_date.strftime(TIMESTAMP_FORMAT)
+    return min_date, max_date

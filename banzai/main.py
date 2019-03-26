@@ -137,13 +137,23 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
     return runtime_context
 
 
-def start_schedule_calibration_stacking():
+def start_schedule_calibration_stacking(runtime_context=None, raw_path=None):
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
     scheduler = BlockingScheduler()
-    for entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.values():
+    for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
+        runtime_context_json = runtime_context._asdict()
+        runtime_context_json['site'] = site
+        worker_runtime_context = Context(runtime_context_json)
         scheduler.add_job(
-            schedule_calibration_stacking.send,
+            schedule_calibration_stacking.send_with_options(runtime_context=worker_runtime_context,
+                                                            raw_path=raw_path),
             CronTrigger.from_crontab(entry),
         )
+
+    try:
+        scheduler.start()
+    except KeyboardInterrupt:
+        scheduler.shutdown()
 
 
 def run(image_path, runtime_context):
@@ -307,6 +317,12 @@ def schedule_calibration_stacking(runtime_context=None, raw_path=None):
 
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
                                                     extra_console_arguments=extra_console_arguments)
+    timezone_for_site = dbs.get_timezone(runtime_context.site, db_address=runtime_context.db_address)
+    min_date, max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(timezone_for_site)
+    runtime_context_json = runtime_context._asdict()
+    runtime_context_json['min_date'] = min_date
+    runtime_context_json['max_date'] = max_date
+    runtime_context = Context(runtime_context_json)
     logger.info('Begin scheduling calibration stacking for {0} to {1}'.format(runtime_context.min_date, runtime_context.max_date))
     schedule_stacking_checks(runtime_context)
 
@@ -503,23 +519,34 @@ def schedule_stacking_checks(runtime_context):
                                                                           runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
-        blocks_for_calibration = lake_utils.filter_calibration_blocks_for_type(instrument,
-                                                                               runtime_context.frame_type,
-                                                                               calibration_blocks)
-        if len(blocks_for_calibration) > 0:
-            block_end = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
-            stack_delay = timedelta(milliseconds=settings.CALIBRATION_STACK_DELAYS[runtime_context.frame_type.upper()])
-            now = datetime.utcnow().replace(microsecond=0)
-            logger.info('before schedule stack for block type {0}'.format(runtime_context.frame_type))
-            message_delay = block_end - now + stack_delay
-            if message_delay.days < 0:
-                message_delay_in_ms = 0  # Remove delay if block end is in the past
-            else:
-                message_delay_in_ms = message_delay.seconds*1000
-            logger.info('scheduling with message delay {0}'.format(str(message_delay_in_ms)))
-            schedule_stack.send_with_options(args=(runtime_context._asdict(), blocks_for_calibration,
-                                                   runtime_context.frame_type, instrument.site,
-                                                   instrument.camera, instrument.enclosure, instrument.telescope),
-                                             kwargs={'process_any_images': False},
-                                             on_failure=should_retry_schedule_stack,
-                                             delay=message_delay_in_ms)
+        print(runtime_context)
+        runtime_context_json = dict(runtime_context._asdict())
+        runtime_context_json['enclosure'] = instrument.enclosure
+        runtime_context_json['telescope'] = instrument.telescope
+        runtime_context_json['camera'] = instrument.camera
+        for frame_type in settings.CALIBRATION_IMAGE_TYPES:
+            runtime_context_json['frame_type'] = frame_type
+            worker_runtime_context = Context(runtime_context_json)
+            blocks_for_calibration = lake_utils.filter_calibration_blocks_for_type(instrument,
+                                                                                   worker_runtime_context.frame_type,
+                                                                                   calibration_blocks)
+            if len(blocks_for_calibration) > 0:
+                block_end = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
+                stack_delay = timedelta(
+                    milliseconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context.frame_type.upper()]
+                )
+                now = datetime.utcnow().replace(microsecond=0)
+                logger.info('before schedule stack for block type {0}'.format(runtime_context.frame_type))
+                message_delay = block_end - now + stack_delay
+                if message_delay.days < 0:
+                    message_delay_in_ms = 0  # Remove delay if block end is in the past
+                else:
+                    message_delay_in_ms = message_delay.seconds*1000
+                logger.info('scheduling with message delay {0}'.format(str(message_delay_in_ms)))
+                schedule_stack.send_with_options(args=(runtime_context._asdict(), blocks_for_calibration,
+                                                       runtime_context.frame_type, instrument.site,
+                                                       instrument.camera, instrument.enclosure,
+                                                       instrument.telescope),
+                                                 kwargs={'process_any_images': False},
+                                                 on_failure=should_retry_schedule_stack,
+                                                 delay=message_delay_in_ms)
