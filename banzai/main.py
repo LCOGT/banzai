@@ -493,8 +493,8 @@ def should_retry_schedule_stack(message_data, exception_data):
 @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
 def schedule_stack(runtime_context_json, blocks, calibration_type, site, camera, enclosure, telescope, process_any_images=True):
     logger.info('schedule stack for matching blocks')
-    runtime_context_json['min_date'] = datetime.strptime(runtime_context_json['min_date'], '%Y-%m-%d %H:%M:%S')
-    runtime_context_json['max_date'] = datetime.strptime(runtime_context_json['max_date'], '%Y-%m-%d %H:%M:%S')
+    runtime_context_json['min_date'] = datetime.strptime(runtime_context_json['min_date'], date_utils.TIMESTAMP_FORMAT)
+    runtime_context_json['max_date'] = datetime.strptime(runtime_context_json['max_date'], date_utils.TIMESTAMP_FORMAT)
     runtime_context = Context(runtime_context_json)
     instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera, enclosure, telescope)
     completed_image_count = len(dbs.get_individual_calibration_images(instrument, calibration_type,
