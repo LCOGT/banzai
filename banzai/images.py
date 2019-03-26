@@ -110,7 +110,7 @@ class Image(object):
         if self.obstype in settings.CALIBRATION_IMAGE_TYPES:
             dbs.save_calibration_info(filepath, self, db_address=runtime_context.db_address)
         if runtime_context.post_to_archive:
-            self._post_to_archive(filepath)
+            self._post_to_archive(filepath, runtime_context)
 
     def _save_pipeline_metadata(self, runtime_context):
         self.datecreated = datetime.datetime.utcnow()
