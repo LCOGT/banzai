@@ -294,6 +294,7 @@ def run_process_master_maker(runtime_context=None, raw_path=None):
                          runtime_context.min_date, runtime_context.max_date)
 
 
+@dramatiq.actor(queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
 def schedule_calibration_stacking(runtime_context=None, raw_path=None):
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
@@ -315,6 +316,7 @@ def schedule_calibration_stacking(runtime_context=None, raw_path=None):
                                            'help': 'Latest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
+    print('starting schedule_calibration_stacking for end-to-end tests')
     logger.info('starting schedule_calibration_stacking for end-to-end tests')
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
                                                     extra_console_arguments=extra_console_arguments)
