@@ -520,7 +520,6 @@ def schedule_stacking_checks(runtime_context):
                                                                           runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
-        print(runtime_context)
         runtime_context_json = dict(runtime_context._asdict())
         runtime_context_json['enclosure'] = instrument.enclosure
         runtime_context_json['telescope'] = instrument.telescope

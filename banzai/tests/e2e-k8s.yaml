@@ -114,6 +114,8 @@ spec:
       env:
         - name: DB_ADDRESS
           value: "sqlite:////archive/engineering/test.db"
+        - name: ASTROMETRY_SERVICE_URL
+          value: "http://astrometry.lco.gtn/catalog/"
       command:
         - banzai_run_realtime_pipeline
         - "--db-address=sqlite:////archive/engineering/test.db"
