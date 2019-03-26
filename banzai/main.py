@@ -293,16 +293,21 @@ def run_easy_process_directory():
                         help='Elasticsearch document type for QC records')
     parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
                         help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
-    parser.add_argument('--use-older-calibrations', dest='use_older_calibrations', default=True, type=bool,
+    parser.add_argument('--use-only-older-calibrations', dest='use_only_older_calibrations', default=False,
                         help='Only use calibrations that were created before the start of the block?')
     parser.add_argument('--preview-mode', dest='preview_mode', default=False,
                         help='Save the reductions to the preview directory')
+    parser.add_argument('--require-schedulability', dest='require_schedulability',
+                        default=False, action='store_true',
+                        help='Require that the instrument be schedulable')
+
 
     args = parser.parse_args()
 
     args.post_to_archive = not args.no_post_to_archive
     args.post_to_elasticsearch = not args.no_post_to_elasticsearch
     args.fpack = not args.no_fpack
+    args.ignore_schedulability = not args.require_schedulability
 
     logs.set_log_level(args.log_level)
 
@@ -315,8 +320,14 @@ def run_easy_process_directory():
         logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
 
     # Get all info from first image file in directory
-    image_header = fits_utils.get_primary_header(image_utils.make_image_path_list(args.raw_path)[0])
+    logger.info("Reducing all the data in {raw_path}".format(raw_path=args.raw_path))
+    image_path_list = image_utils.make_image_path_list(args.raw_path)
+    image_header = fits_utils.get_primary_header(image_path_list[0])
     instrument = dbs.get_instrument(image_header, db_address=args.db_address)
+    if not args.ignore_schedulability and not instrument.schedulable:
+        logger.error("Instrument not schedulable but --require-schedulability flag is set")
+        return
+
     timezone = dbs.get_timezone(instrument.site, db_address=runtime_context.db_address)
     dayobs = date_utils.get_dayobs(timezone=timezone)
     min_date, max_date = date_utils.get_min_and_max_dates(timezone, dayobs)
