@@ -1,0 +1,56 @@
+
+site=lsc
+camera=fa15
+calibdates="20190323 20190322 20190321"
+
+
+mindate="2019-03-01T00:00:00"
+maxdate="2019-04-30T00:00:00"
+sciencedates="20190322 20190320 "
+sciencedates="20190314"
+
+processedpath=/home/dharbeck/Software/banzai/testing/
+
+if false; then
+for date in calibdates; do
+    rawpath=/archive/engineering/$site/$camera/$date/raw
+
+    biases=`ls $rawpath/*b00*`
+    for file in $biases; do
+        banzai_reduce_individual_frame --no-bpm --processed-path $processedpath --fpack --db-address sqlite:///db/test.db --ignore-schedulability --filename $file
+    done
+    banzai_stack_calibrations --ignore-schedulability --fpack  --db-address sqlite:///db/test.db --processed-path $processedpath --site $site --telescope 1m0a --enclosure doma --camera $camera --frame-type bias --min-date $mindate --max-date $maxdate
+
+    darks=`ls $rawpath/*d00*`
+    for file in $darks; do
+     banzai_reduce_individual_frame --no-bpm --processed-path $processedpath --fpack --db-address sqlite:///db/test.db --ignore-schedulability --filename $file
+    done
+    banzai_stack_calibrations --ignore-schedulability --fpack  --db-address sqlite:///db/test.db --processed-path $processedpath --site $site --telescope 1m0a --enclosure doma --camera $camera --frame-type dark --min-date $mindate --max-date $maxdate
+
+    flats=`ls $rawpath/*f00*`
+    for file in $flats; do
+     banzai_reduce_individual_frame --no-bpm --processed-path $processedpath --fpack --db-address sqlite:///db/test.db --ignore-schedulability --filename $file
+    done
+    banzai_stack_calibrations --ignore-schedulability --fpack  --db-address sqlite:///db/test.db --processed-path $processedpath --site $site --telescope 1m0a --enclosure doma --camera $camera --frame-type skyflat --min-date $mindate --max-date $maxdate
+
+done
+
+
+
+fi
+
+for date in $sciencedates; do
+    rawpath=/archive/engineering/$site/$camera/$date/raw
+
+    images=`ls $rawpath/*e00*`
+
+    for file in $images; do
+     banzai_reduce_individual_frame --no-bpm --processed-path $processedpath --fpack --db-address sqlite:///db/test.db --ignore-schedulability --filename $file
+    done
+done
+
+
+python testing/comparecagtalogs.py /archive/engineering/lsc/fa15/20190322/processed/ testing/lsc/fa15/20190322/processed/
+python testing/comparecagtalogs.py /archive/engineering/lsc/fa15/20190320/processed/ testing/lsc/fa15/20190320/processed/
+python testing/comparecagtalogs.py /archive/engineering/lsc/fa15/20190314/processed/ testing/lsc/fa15/20190314/processed/
+
