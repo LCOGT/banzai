@@ -125,9 +125,10 @@ def get_dayobs(timezone):
     return epoch_date_to_string(yesterday.date())
 
 
-def valid_date(s):
+def validate_date(s):
     try:
-        return datetime.datetime.strptime(s, TIMESTAMP_FORMAT)
+        datetime.datetime.strptime(s, TIMESTAMP_FORMAT)
+        return s
     except ValueError:
         msg = "Not a valid date: '{0}'.".format(s)
         raise argparse.ArgumentTypeError(msg)

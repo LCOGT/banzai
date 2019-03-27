@@ -257,7 +257,7 @@ def stack_calibrations(runtime_context=None, raw_path=None):
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera,
                                           runtime_context.enclosure, runtime_context.telescope)
     calibrations.process_master_maker(runtime_context, instrument,  runtime_context.frame_type.upper(),
-                         runtime_context.min_date, runtime_context.max_date)
+                                      runtime_context.min_date, runtime_context.max_date)
 
 
 def e2e_stack_calibrations(runtime_context=None, raw_path=None):

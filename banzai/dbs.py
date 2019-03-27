@@ -463,8 +463,8 @@ def get_individual_calibration_images(instrument, calibration_type, min_date, ma
     calibration_criteria = CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.is_master.is_(use_masters)
-    calibration_criteria &= CalibrationImage.dateobs >= min_date
-    calibration_criteria &= CalibrationImage.dateobs <= max_date
+    calibration_criteria &= CalibrationImage.dateobs >= datetime.datetime.strptime(min_date, date_utils.TIMESTAMP_FORMAT)
+    calibration_criteria &= CalibrationImage.dateobs <= datetime.datetime.strptime(max_date, date_utils.TIMESTAMP_FORMAT)
 
     db_session = get_session(db_address=db_address)
     images = db_session.query(CalibrationImage).filter(calibration_criteria).all()

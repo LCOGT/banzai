@@ -14,6 +14,7 @@ from banzai.utils import date_utils
 from banzai.context import Context
 from banzai.tests.utils import FakeInstrument
 from banzai.tests.bias_utils import FakeBiasImage
+from banzai.exceptions import IncompleteProcessingException
 
 fake_blocks_response_json = {
                         "results": [
@@ -48,8 +49,8 @@ fake_blocks_response_json = {
                     }
 
 runtime_context_json = {'site': 'coj', 'min_date': '2019-02-19T20:27:49',
-                        'max_date': '2019-02-19T21:55:09', 'frame_type': 'BIAS',
-                        'db_address': 'db_address'}
+                        'max_date': '2019-02-19T21:55:09', 'frame_type': 'BIAS', 'db_address': 'db_address',
+                        'camera': '2m0-SciCam-Spectral', 'enclosure': 'clma', 'telescope': '2m0a'}
 
 fake_instruments_response = FakeInstrument()
 
@@ -90,7 +91,10 @@ class TestMain():
         mock_schedule_stack.side_effect = actor.send_with_options
         runtime_context = Context(runtime_context_json)
         schedule_stacking_checks(runtime_context)
-        mock_schedule_stack.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value,    'BIAS', 'coj', '2m0-SciCam-Spectral', 'clma', '2m0a'), delay=0, kwargs={'process_any_images': False},  on_failure=mock.ANY)
+        mock_schedule_stack.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value),
+                                               delay=0,
+                                               kwargs={'process_any_images': False},
+                                               on_failure=mock.ANY)
         assert stub_broker.queues['schedule_stack.DQ'].qsize() == 1
 
     @mock.patch('banzai.tasks.schedule_stack.send_with_options')
@@ -107,8 +111,7 @@ class TestMain():
         mock_schedule_stack.side_effect = actor.send_with_options
         runtime_context = Context(runtime_context_json)
         schedule_stacking_checks(runtime_context)
-        mock_schedule_stack.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value,
-                                                     'BIAS', 'coj', '2m0-SciCam-Spectral', 'clma', '2m0a'),
+        mock_schedule_stack.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value),
                                                delay=(60000+CALIBRATION_STACK_DELAYS['BIAS']),
                                                kwargs={'process_any_images': False}, on_failure=mock.ANY)
         assert stub_broker.queues['schedule_stack.DQ'].qsize() == 1
@@ -120,14 +123,10 @@ class TestMain():
         fake_inst = FakeInstrument(site='coj', camera='2m0-SciCam-Spectral', enclosure='clma', telescope='2m0a')
         mock_query_for_inst.return_value = fake_inst
         mock_get_calibration_images.return_value = [FakeBiasImage(), FakeBiasImage()]
-        expected_runtime_context = Context({'site': 'coj', 'min_date': datetime(2019, 2, 19, 20, 27, 49),
-                                            'max_date': datetime(2019, 2, 19, 21, 55, 9), 'frame_type': 'BIAS',
-                                            'db_address': 'db_address'})
-        schedule_stack(runtime_context_json, [fake_blocks_response_json['results'][0]], 'BIAS', 'coj',
-                       '2m0-SciCam-Spectral', 'clma', '2m0a')
-        mock_process_master_maker.assert_called_with(expected_runtime_context, fake_inst, 'BIAS',
-                                                     expected_runtime_context.min_date,
-                                                     expected_runtime_context.max_date)
+        schedule_stack(runtime_context_json, [fake_blocks_response_json['results'][0]])
+        mock_process_master_maker.assert_called_with(Context(runtime_context_json), fake_inst, 'BIAS',
+                                                     runtime_context_json['min_date'],
+                                                     runtime_context_json['max_date'])
 
     @mock.patch('banzai.calibrations.process_master_maker')
     @mock.patch('banzai.tasks.dbs.get_individual_calibration_images')
@@ -135,10 +134,10 @@ class TestMain():
     def test_schedule_stack_not_enough_images(self, mock_query_for_inst, mock_get_calibration_images, mock_process_master_maker):
         fake_inst = FakeInstrument(site='coj', camera='2m0-SciCam-Spectral', enclosure='clma', telescope='2m0a')
         mock_query_for_inst.return_value = fake_inst
-        mock_get_calibration_images.return_value = [FakeInstrument()]
-        with pytest.raises(Exception):
-            schedule_stack(runtime_context_json, [fake_blocks_response_json['results'][0]], 'BIAS', 'coj',
-                           '2m0-SciCam-Spectral', 'clma', '2m0a')
+        mock_get_calibration_images.return_value = [FakeBiasImage()]
+        with pytest.raises(IncompleteProcessingException) as e:
+            schedule_stack(runtime_context_json, [fake_blocks_response_json['results'][0]], process_any_images=False)
+        assert e.type is IncompleteProcessingException
 
     @mock.patch('banzai.tasks.schedule_stack')
     def test_should_retry_schedule_stack_one_retry(self, mock_schedule_stack):
