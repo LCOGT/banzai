@@ -72,7 +72,6 @@ def mark_frames_as_good(raw_filenames):
         for filename in glob(os.path.join(DATA_ROOT, day_obs, 'processed', raw_filenames)):
             command = 'banzai_mark_frame_as_good --filename {filename} --db-address={db_address}'
             command = command.format(filename=os.path.basename(filename), db_address=os.environ['DB_ADDRESS'])
-            logger.info('mark frames as good command: {command}'.format(command))
             os.system(command)
     logger.info('Finished marking frames as good for filenames: {filenames}'.format(filenames=raw_filenames))
 
