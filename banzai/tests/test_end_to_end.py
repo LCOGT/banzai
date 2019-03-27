@@ -51,14 +51,17 @@ def run_end_to_end_tests():
 
 
 def run_reduce_individual_frames(raw_filenames):
+    logger.info('Reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
             file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
     redis_broker.join(settings.REDIS_QUEUE_NAMES['PROCESS_IMAGE'])
+    logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
 
 
 def run_stack_calibrations(frame_type):
+    logger.info('Stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         site, camera, dayobs = day_obs.split('/')
@@ -75,14 +78,17 @@ def run_stack_calibrations(frame_type):
         logger.info('Running the following stacking command: {command}'.format(command=command))
         os.system(command)
     redis_broker.join(settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
+    logger.info('Finished stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
 
 
 def mark_frames_as_good(raw_filenames):
+    logger.info('Marking frames as good for filenames: {filenames}'.format(filenames=raw_filenames))
     for day_obs in DAYS_OBS:
         for filename in glob(os.path.join(DATA_ROOT, day_obs, 'processed', raw_filenames)):
             command = 'banzai_mark_frame_as_good --filename {filename} --db-address={db_address}'
             command = command.format(filename=os.path.basename(filename), db_address=os.environ['DB_ADDRESS'])
             os.system(command)
+    logger.info('Finished marking frames as good for filenames: {filenames}'.format(filenames=raw_filenames))
 
 
 def get_expected_number_of_calibrations(raw_filenames, calibration_type):
