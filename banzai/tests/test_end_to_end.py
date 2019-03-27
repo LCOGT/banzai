@@ -70,7 +70,7 @@ def mark_frames_as_good(raw_filenames):
     logger.info('Marking frames as good for filenames: {filenames}'.format(filenames=raw_filenames))
     for day_obs in DAYS_OBS:
         for filename in glob(os.path.join(DATA_ROOT, day_obs, 'processed', raw_filenames)):
-            mark_frame(filename, "good", db_address=os.environ['DB_ADDRESS'])
+            mark_frame(os.path.basename(filename), "good", db_address=os.environ['DB_ADDRESS'])
     logger.info('Finished marking frames as good for filenames: {filenames}'.format(filenames=raw_filenames))
 
 
