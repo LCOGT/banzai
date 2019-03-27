@@ -221,3 +221,32 @@ def create_master_calibration_header(old_header, images):
     for image in images:
         header.add_history(image.filename)
     return header
+
+
+def run_master_maker(image_path_list, runtime_context, frame_type):
+    images = [image_utils.read_image(image_path, runtime_context) for image_path in image_path_list]
+    stage_constructor = import_utils.import_attribute(settings.CALIBRATION_STACKER_STAGE[frame_type.upper()])
+    stage_to_run = stage_constructor(runtime_context)
+    images = stage_to_run.run(images)
+    for image in images:
+        image.write(runtime_context)
+
+
+def process_master_maker(runtime_context, instrument, frame_type, min_date, max_date, use_masters=False):
+    extra_tags = {'type': instrument.type, 'site': instrument.site,
+                  'enclosure': instrument.enclosure, 'telescope': instrument.telescope,
+                  'camera': instrument.camera, 'obstype': frame_type,
+                  'min_date': min_date.strftime(date_utils.TIMESTAMP_FORMAT),
+                  'max_date': max_date.strftime(date_utils.TIMESTAMP_FORMAT)}
+    logger.info("Making master frames", extra_tags=extra_tags)
+    image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
+                                                            use_masters=use_masters,
+                                                            db_address=runtime_context.db_address)
+    if len(image_path_list) == 0:
+        logger.info("No calibration frames found to stack", extra_tags=extra_tags)
+
+    try:
+        run_master_maker(image_path_list, runtime_context, frame_type)
+    except Exception:
+        logger.error(logs.format_exception())
+    logger.info("Finished")

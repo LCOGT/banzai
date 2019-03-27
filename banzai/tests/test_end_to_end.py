@@ -6,9 +6,8 @@ import pytest
 import mock
 
 from banzai import settings
-from banzai.main import redis_broker
 from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
-from banzai.utils import fits_utils, date_utils, file_utils
+from banzai.utils import fits_utils, file_utils
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates
 
 import logging
@@ -23,18 +22,6 @@ INSTRUMENTS = [os.path.join(site, os.path.basename(instrument_path)) for site in
 
 DAYS_OBS = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrument in INSTRUMENTS
             for dayobs_path in glob(os.path.join(DATA_ROOT, instrument, '201*'))]
-
-ENCLOSURE_DICT = {
-    'fl11': 'domb',
-    'kb27': 'clma',
-    'fs02': 'clma',
-}
-
-TELESCOPE_DICT = {
-    'fl11': '1m0a',
-    'kb27': '0m4b',
-    'fs02': '2m0a',
-}
 
 
 def run_end_to_end_tests():
@@ -56,7 +43,7 @@ def run_reduce_individual_frames(raw_filenames):
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
             file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
-    redis_broker.join(settings.REDIS_QUEUE_NAMES['PROCESS_IMAGE'])
+    settings.REDIS_BROKER.join(settings.REDIS_QUEUE_NAMES['PROCESS_IMAGE'])
     logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
 
 
@@ -67,17 +54,15 @@ def run_stack_calibrations(frame_type):
         site, camera, dayobs = day_obs.split('/')
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
         min_date, max_date = get_min_and_max_dates(timezone, dayobs, return_string=True)
-        command = 'banzai_stack_calibrations --raw-path {raw_path} --frame-type {frame_type} ' \
-                  '--site {site} --camera {camera} ' \
-                  '--enclosure {enclosure} --telescope {telescope} ' \
+        command = 'banzai_e2e_stack_calibrations --raw-path {raw_path} --frame-type {frame_type} ' \
+                  '--site {site} ' \
                   '--min-date {min_date} --max-date {max_date} ' \
                   '--db-address={db_address} --ignore-schedulability --fpack'
-        command = command.format(raw_path=raw_path, frame_type=frame_type, site=site, camera=camera,
-                                 enclosure=ENCLOSURE_DICT[camera], telescope=TELESCOPE_DICT[camera],
+        command = command.format(raw_path=raw_path, frame_type=frame_type, site=site,
                                  min_date=min_date, max_date=max_date, db_address=os.environ['DB_ADDRESS'])
         logger.info('Running the following stacking command: {command}'.format(command=command))
         os.system(command)
-    redis_broker.join(settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
+    settings.REDIS_BROKER.join(settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
     logger.info('Finished stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
 
 
@@ -87,6 +72,7 @@ def mark_frames_as_good(raw_filenames):
         for filename in glob(os.path.join(DATA_ROOT, day_obs, 'processed', raw_filenames)):
             command = 'banzai_mark_frame_as_good --filename {filename} --db-address={db_address}'
             command = command.format(filename=os.path.basename(filename), db_address=os.environ['DB_ADDRESS'])
+            logger.info('mark frames as good command: {command}'.format(command))
             os.system(command)
     logger.info('Finished marking frames as good for filenames: {filenames}'.format(filenames=raw_filenames))
 

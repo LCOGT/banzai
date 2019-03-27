@@ -12,6 +12,8 @@ import operator
 from banzai.utils.instrument_utils import InstrumentCriterion
 from banzai.utils.file_utils import ccdsum_to_filename, filter_to_filename
 
+from dramatiq.brokers.redis import RedisBroker
+
 
 def telescope_to_filename(image):
     return image.header.get('TELESCOP', '').replace('-', '')
@@ -69,10 +71,6 @@ CALIBRATION_STACK_DELAYS = {'BIAS': 300000,
 
 SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
 
-REDIS_QUEUE_NAMES = {'DEFAULT': 'default',
-                     'PROCESS_IMAGE': 'process_image',
-                     'SCHEDULE_STACK': 'schedule_stack'}
-
 SCHEDULE_STACKING_CRON_ENTRIES = {'coj': '30 06 * * *',
                                   'cpt': '00 15 * * *',
                                   'tfn': '30 17 * * *',
@@ -81,6 +79,12 @@ SCHEDULE_STACKING_CRON_ENTRIES = {'coj': '30 06 * * *',
                                   'ogg': '00 03 * * *'}
 
 ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/catalog/')
+
+REDIS_BROKER = RedisBroker(host=os.getenv('REDIS_HOST', '127.0.0.1'))
+
+REDIS_QUEUE_NAMES = {'DEFAULT': 'default',
+                     'PROCESS_IMAGE': 'process_image',
+                     'SCHEDULE_STACK': 'schedule_stack'}
 
 
 def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):

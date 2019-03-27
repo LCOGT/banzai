@@ -20,7 +20,6 @@ def get_calibration_blocks_for_time_range(site, start_before, start_after):
 
 
 def filter_calibration_blocks_for_type(instrument, calibration_type, blocks):
-    logger.info(instrument, calibration_type)
     calibration_blocks = []
     for block in blocks:
         logger.info(block)
