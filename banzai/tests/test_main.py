@@ -47,8 +47,8 @@ fake_blocks_response_json = {
                         ]
                     }
 
-runtime_context_json = {'site': 'coj', 'min_date': '2019-02-19 20:27:49',
-                        'max_date': '2019-02-19 21:55:09', 'frame_type': 'BIAS',
+runtime_context_json = {'site': 'coj', 'min_date': '2019-02-19T20:27:49',
+                        'max_date': '2019-02-19T21:55:09', 'frame_type': 'BIAS',
                         'db_address': 'db_address'}
 
 fake_instruments_response = FakeInstrument()
