@@ -244,11 +244,11 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                 'kwargs': {'dest': 'frame_type', 'help': 'Type of frames to process',
                                            'choices': ['bias', 'dark', 'skyflat'], 'required': True}},
                                {'args': ['--min-date'],
-                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.valid_date,
+                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.validate_date,
                                            'help': 'Earliest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}},
                                {'args': ['--max-date'],
-                                'kwargs': {'dest': 'max_date', 'required': True, 'type': date_utils.valid_date,
+                                'kwargs': {'dest': 'max_date', 'required': True, 'type': date_utils.validate_date,
                                            'help': 'Latest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
@@ -267,11 +267,11 @@ def e2e_stack_calibrations(runtime_context=None, raw_path=None):
                                 'kwargs': {'dest': 'frame_type', 'help': 'Type of frames to process',
                                            'choices': ['bias', 'dark', 'skyflat'], 'required': True}},
                                {'args': ['--min-date'],
-                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.valid_date,
+                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.validate_date,
                                            'help': 'Earliest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}},
                                {'args': ['--max-date'],
-                                'kwargs': {'dest': 'max_date', 'required': True, 'type': date_utils.valid_date,
+                                'kwargs': {'dest': 'max_date', 'required': True, 'type': date_utils.validate_date,
                                            'help': 'Latest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
