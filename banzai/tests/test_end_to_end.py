@@ -6,7 +6,7 @@ import pytest
 import mock
 
 from banzai import settings
-from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
+from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone, mark_frame
 from banzai.utils import fits_utils, file_utils
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates
 
@@ -54,7 +54,7 @@ def run_stack_calibrations(frame_type):
         site, camera, dayobs = day_obs.split('/')
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
         min_date, max_date = get_min_and_max_dates(timezone, dayobs, return_string=True)
-        command = 'banzai_e2e_stack_calibrations --raw-path {raw_path} --frame-type {frame_type} ' \
+        command = 'banzai_e2e_stack_calibrations --frame-type {frame_type} ' \
                   '--site {site} ' \
                   '--min-date {min_date} --max-date {max_date} ' \
                   '--db-address={db_address} --ignore-schedulability --fpack'
@@ -70,9 +70,7 @@ def mark_frames_as_good(raw_filenames):
     logger.info('Marking frames as good for filenames: {filenames}'.format(filenames=raw_filenames))
     for day_obs in DAYS_OBS:
         for filename in glob(os.path.join(DATA_ROOT, day_obs, 'processed', raw_filenames)):
-            command = 'banzai_mark_frame_as_good --filename {filename} --db-address={db_address}'
-            command = command.format(filename=os.path.basename(filename), db_address=os.environ['DB_ADDRESS'])
-            os.system(command)
+            mark_frame(filename, "good", db_address=os.environ['DB_ADDRESS'])
     logger.info('Finished marking frames as good for filenames: {filenames}'.format(filenames=raw_filenames))
 
 

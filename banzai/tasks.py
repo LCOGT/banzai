@@ -35,6 +35,7 @@ def schedule_calibration_stacking(runtime_context=None, raw_path=None):
 
 @dramatiq.actor(max_retries=0, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
 def should_retry_schedule_stack(message_data, exception_data):
+    logger.info('Failed to process message, retrying')
     if message_data['options']['retries'] >= 2:
         schedule_stack(*message_data['args'], process_any_images=True)
 
