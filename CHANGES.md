@@ -1,3 +1,8 @@
+0.21.1 (2019-03-28)
+-------------------
+- Added a quality control stage that checks to ensure images are not
+  primarily comprised of 0s, which indicates a camera failure
+
 0.21.0 (2019-03-25)
 -------------------
 - Significant refactor to the pipeline context and settings files. We have now
