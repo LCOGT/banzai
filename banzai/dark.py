@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class DarkNormalizer(Stage):
-    def __init__(self, pipeline_context):
-        super(DarkNormalizer, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(DarkNormalizer, self).__init__(runtime_context)
 
     def do_stage(self, image):
         image.data /= image.exptime
@@ -20,8 +20,8 @@ class DarkNormalizer(Stage):
 
 
 class DarkMaker(CalibrationStacker):
-    def __init__(self, pipeline_context):
-        super(DarkMaker, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(DarkMaker, self).__init__(runtime_context)
 
     @property
     def calibration_type(self):
@@ -29,8 +29,8 @@ class DarkMaker(CalibrationStacker):
 
 
 class DarkSubtractor(ApplyCalibration):
-    def __init__(self, pipeline_context):
-        super(DarkSubtractor, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(DarkSubtractor, self).__init__(runtime_context)
 
     @property
     def calibration_type(self):
@@ -50,8 +50,8 @@ class DarkSubtractor(ApplyCalibration):
 
 
 class DarkComparer(CalibrationComparer):
-    def __init__(self, pipeline_context):
-        super(DarkComparer, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(DarkComparer, self).__init__(runtime_context)
 
     @property
     def calibration_type(self):

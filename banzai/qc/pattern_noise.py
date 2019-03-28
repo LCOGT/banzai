@@ -21,8 +21,8 @@ class PatternNoiseDetector(Stage):
     # The minimum number of adjacent pixels to form a group
     MIN_ADJACENT_PIXELS = 3
 
-    def __init__(self, pipeline_context):
-        super(PatternNoiseDetector, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(PatternNoiseDetector, self).__init__(runtime_context)
 
     def do_stage(self, image):
         pattern_noise_is_bad, fraction_pixels_above_threshold = self.check_for_pattern_noise(image.data)
@@ -39,7 +39,7 @@ class PatternNoiseDetector(Stage):
                       'pattern_noise.min_fraction_pixels_above_threshold': self.MIN_FRACTION_PIXELS_ABOVE_THRESHOLD,
                       'pattern_noise.min_adjacent_pixels': self.MIN_ADJACENT_PIXELS,
                       'patter_noise.fraction_pixels_above_threshold': fraction_pixels_above_threshold}
-        qc.save_qc_results(self.pipeline_context, qc_results, image)
+        qc.save_qc_results(self.runtime_context, qc_results, image)
         return image
 
     def check_for_pattern_noise(self, data):

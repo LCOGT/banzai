@@ -2,7 +2,7 @@ import mock
 import numpy as np
 
 from banzai.bias import BiasMaker
-from banzai.tests.utils import FakeContext, handles_inhomogeneous_set
+from banzai.tests.utils import FakeContext, handles_inhomogeneous_set, FakeInstrument
 from banzai.tests.bias_utils import FakeBiasImage, make_context_with_master_bias
 
 
@@ -17,7 +17,8 @@ def test_group_by_attributes():
     assert maker.group_by_attributes() == ['ccdsum']
 
 
-def test_header_cal_type_bias():
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
+def test_header_cal_type_bias(mock_frame):
     nx = 101
     ny = 103
     context = make_context_with_master_bias(bias_level=0.0, readnoise=10.0, nx=nx, ny=ny)
@@ -58,7 +59,8 @@ def test_bias_level_is_average_of_inputs(mock_instrument_info):
     assert header['BIASLVL'] == np.mean(bias_levels)
 
 
-def test_makes_a_sensible_master_bias():
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
+def test_makes_a_sensible_master_bias(mock_fream):
     nimages = 20
     expected_readnoise = 15.0
 
