@@ -9,9 +9,8 @@ from astropy.io import fits
 from astropy.table import Table
 
 import banzai
-from banzai import dbs
-from banzai.utils import date_utils, file_utils, fits_utils, image_utils
-from banzai.munge import munge
+from banzai import dbs, settings, exceptions
+from banzai.utils import date_utils, file_utils, fits_utils
 from banzai import logs
 
 logger = logging.getLogger(__name__)
@@ -40,7 +39,7 @@ class DataTable(object):
 
 class Image(object):
 
-    def __init__(self, pipeline_context, filename=None, data=None, data_tables=None,
+    def __init__(self, runtime_context, filename=None, data=None, data_tables=None,
                  header=None, extension_headers=None, bpm=None, nx_rows_to_read_in=None):
         if header is None:
             header = fits.Header()
@@ -74,7 +73,7 @@ class Image(object):
         self.extension_headers = extension_headers
 
         self.request_number = header.get('REQNUM')
-        self.instrument, self.site, self.camera = self._init_instrument_info(pipeline_context)
+        self.instrument, self.site, self.camera = self._init_instrument_info(runtime_context)
 
         self.epoch = str(header.get('DAY-OBS'))
 
@@ -100,31 +99,31 @@ class Image(object):
 
         self.is_bad = False
         self.is_master = header.get('ISMASTER', False)
-        self.attributes = pipeline_context.CALIBRATION_SET_CRITERIA.get(self.obstype, {})
+        self.attributes = settings.CALIBRATION_SET_CRITERIA.get(self.obstype, {})
 
-    def _init_instrument_info(self, pipeline_context):
+    def _init_instrument_info(self, runtime_context):
         if len(self.header) > 0:
-            instrument = dbs.get_instrument(self.header, db_address=pipeline_context.db_address)
+            instrument = dbs.get_instrument(self.header, db_address=runtime_context.db_address)
             site = instrument.site
             camera = instrument.camera
         else:
             instrument, site, camera = None, None, None
         return instrument, site, camera
 
-    def write(self, pipeline_context):
-        self._save_pipeline_metadata(pipeline_context)
-        self._update_filename(pipeline_context)
-        filepath = self._get_filepath(pipeline_context)
-        self._writeto(filepath, fpack=pipeline_context.fpack)
-        if self.obstype in pipeline_context.CALIBRATION_IMAGE_TYPES:
-            dbs.save_calibration_info(filepath, self, db_address=pipeline_context.db_address)
-        if pipeline_context.post_to_archive:
+    def write(self, runtime_context):
+        self._save_pipeline_metadata(runtime_context)
+        self._update_filename(runtime_context)
+        filepath = self._get_filepath(runtime_context)
+        self._writeto(filepath, fpack=runtime_context.fpack)
+        if self.obstype in settings.CALIBRATION_IMAGE_TYPES:
+            dbs.save_calibration_info(filepath, self, db_address=runtime_context.db_address)
+        if runtime_context.post_to_archive:
             self._post_to_archive(filepath)
 
-    def _save_pipeline_metadata(self, pipeline_context):
+    def _save_pipeline_metadata(self, runtime_context):
         self.datecreated = datetime.datetime.utcnow()
         self.header['DATE'] = (date_utils.date_obs_to_string(self.datecreated), '[UTC] Date this FITS file was written')
-        self.header['RLEVEL'] = (pipeline_context.rlevel, 'Reduction level')
+        self.header['RLEVEL'] = (runtime_context.rlevel, 'Reduction level')
         self.header['PIPEVER'] = (banzai.__version__, 'Pipeline version')
 
         if file_utils.instantly_public(self.header['PROPID']):
@@ -139,14 +138,14 @@ class Image(object):
                         'l1pubdat': self.header['L1PUBDAT'],}
         logger.info('Adding pipeline metadata to the header', image=self, extra_tags=logging_tags)
 
-    def _update_filename(self, pipeline_context):
+    def _update_filename(self, runtime_context):
         self.filename = self.filename.replace('00.fits',
-                                              '{:02d}.fits'.format(int(pipeline_context.rlevel)))
-        if pipeline_context.fpack and not self.filename.endswith('.fz'):
+                                              '{:02d}.fits'.format(int(runtime_context.rlevel)))
+        if runtime_context.fpack and not self.filename.endswith('.fz'):
             self.filename += '.fz'
 
-    def _get_filepath(self, pipeline_context):
-        output_directory = file_utils.make_output_directory(pipeline_context, self)
+    def _get_filepath(self, runtime_context):
+        output_directory = file_utils.make_output_directory(runtime_context, self)
         return os.path.join(output_directory, os.path.basename(self.filename))
 
     def _writeto(self, filepath, fpack=False):
@@ -212,7 +211,7 @@ class Image(object):
 
     def write_catalog(self, filename, nsources=None):
         if self.data_tables.get('catalog') is None:
-            raise image_utils.MissingCatalogException
+            raise exceptions.MissingCatalogException
         else:
             self.data_tables.get('catalog')[:nsources].write(filename, format='fits', overwrite=True)
 
@@ -259,19 +258,6 @@ class Image(object):
         inner_nx = round(self.nx * inner_edge_width)
         inner_ny = round(self.ny * inner_edge_width)
         return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
-
-
-def read_image(filename, pipeline_context, nx_rows_to_read_in=None):
-    try:
-        image = pipeline_context.FRAME_CLASS(pipeline_context, filename=filename, nx_rows_to_read_in=nx_rows_to_read_in)
-        if image.instrument is None:
-            logger.error("Image instrument attribute is None, aborting", image=image)
-            raise IOError
-        munge(image)
-        return image
-    except Exception:
-        logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
-                     extra_tags={'filename': filename})
 
 
 def regenerate_data_table_from_fits_hdu_list(hdu_list, table_extension_name, input_dictionary=None):
