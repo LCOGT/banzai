@@ -1,3 +1,10 @@
+0.21.1 (2019-03-28)
+-------------------
+- When creating an Image object, it is now possible to read a subset
+  of the data in (by number of rows)
+- The maximum memory used by the calibration stacker can now be set,
+  and the routine will then read in and stack a subset of rows at a time
+
 0.21.0 (2019-03-25)
 -------------------
 - Significant refactor to the pipeline context and settings files. We have now
