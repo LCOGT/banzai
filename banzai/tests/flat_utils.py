@@ -3,8 +3,8 @@ import numpy as np
 
 
 class FakeFlatImage(FakeImage):
-    def __init__(self, pipeline_context=None, flat_level=10000.0, data=None, header=None, **kwargs):
-        super(FakeFlatImage, self).__init__(pipeline_context=pipeline_context, data=data, header=header, **kwargs)
+    def __init__(self, runtime_context=None, flat_level=10000.0, data=None, header=None, **kwargs):
+        super(FakeFlatImage, self).__init__(runtime_context=runtime_context, data=data, header=header, **kwargs)
         for key, value in {'FLATLVL': flat_level, 'OBSTYPE': 'SKYFLAT'}.items():
             self.header[key] = value
 

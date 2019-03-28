@@ -1,7 +1,18 @@
-0.20.1 (2019-03-13)
+0.21.1 (2019-03-28)
 -------------------
 - Continue reduction even if ApplyCalibration encounters an inhomgeneous
   set exception
+  
+0.21.0 (2019-03-25)
+-------------------
+- Significant refactor to the pipeline context and settings files. We have now
+  split settings that are static into the settings file and settings that can
+  change at runtime into the "runtime context". This is in preparation for 
+  running a task queue (e.g. dramatiq).
+
+0.20.1 (2019-03-14)
+-------------------
+- Fixed bug where gaia astrometry service solve failure was not handled properly
 
 0.20.0 (2019-03-11)
 -------------------

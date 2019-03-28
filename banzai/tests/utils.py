@@ -1,6 +1,5 @@
 import json
 from datetime import datetime
-import inspect
 
 import numpy as np
 from astropy.io.fits import Header
@@ -8,11 +7,12 @@ from astropy.utils.data import get_pkg_data_filename
 
 from banzai.stages import Stage
 from banzai.images import Image
-import banzai.settings
+import logging
+logger = logging.getLogger(__name__)
 
 
 class FakeImage(Image):
-    def __init__(self, pipeline_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',
+    def __init__(self, runtime_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',
                  ccdsum='2 2', epoch='20160101', n_amps=1, filter='U', data=None, header=None, **kwargs):
         self.nx = nx
         self.ny = ny
@@ -22,8 +22,10 @@ class FakeImage(Image):
         self.ccdsum = ccdsum
         self.epoch = epoch
         if data is None:
-            data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
-        self.data = data
+            self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
+        else:
+            self.data = data
+        logger.info(self.data)
         if n_amps > 1:
             self.data = np.stack(n_amps*[self.data])
         self.filename = 'test.fits'
@@ -55,10 +57,7 @@ class FakeImage(Image):
 
 
 class FakeContext(object):
-    def __init__(self, preview_mode=False, settings=banzai.settings.ImagingSettings(), frame_class=FakeImage):
-        for key, value in dict(inspect.getmembers(settings)).items():
-            if not key.startswith('_'):
-                setattr(self, key, value)
+    def __init__(self, preview_mode=False, frame_class=FakeImage):
         self.FRAME_CLASS = frame_class
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
@@ -107,3 +106,8 @@ class FakeResponse(object):
 
     def json(self):
         return self.data
+
+
+class FakeInstrument(object):
+    def __init__(self, schedulable=True):
+        self.schedulable = schedulable

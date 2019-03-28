@@ -17,8 +17,8 @@ class SaturationTest(Stage):
     # Empirically we have decided to use a 5% threshold to reject the image
     SATURATION_THRESHOLD = 0.05
 
-    def __init__(self, pipeline_context):
-        super(SaturationTest, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(SaturationTest, self).__init__(runtime_context)
 
     def do_stage(self, image):
         saturation_level = float(image.header['SATURATE'])
@@ -40,6 +40,6 @@ class SaturationTest(Stage):
         else:
             image.header['SATFRAC'] = (saturation_fraction,
                                        "Fraction of Pixels that are Saturated")
-        qc.save_qc_results(self.pipeline_context, qc_results, image)
+        qc.save_qc_results(self.runtime_context, qc_results, image)
 
         return image

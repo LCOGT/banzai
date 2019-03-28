@@ -47,13 +47,15 @@ def test_returns_null_if_filters_are_different():
     handles_inhomogeneous_set(FlatMaker, FakeContext(), 'filter', 'w', calibration_maker=True)
 
 
-def test_makes_a_sensible_master_flat():
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
+def test_makes_a_sensible_master_flat(mock_frame):
     nimages = 50
     flat_level = 10000.0
     nx = 101
     ny = 103
+    master_flat_variation = 0.05
     images = [FakeFlatImage(flat_level, nx=nx, ny=ny) for _ in range(nimages)]
-    flat_pattern = np.random.normal(1.0, 0.05, size=(ny, nx))
+    flat_pattern = np.random.normal(1.0, master_flat_variation, size=(ny, nx))
     for i, image in enumerate(images):
         image.data = flat_pattern + np.random.normal(0.0, 0.02, size=(ny, nx))
 

@@ -1,28 +1,23 @@
-import os
-import subprocess
-import shlex
-import tempfile
 import logging
 import requests
-from requests import ConnectionError
+from requests import ConnectionError, HTTPError
 
-from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units
 import numpy as np
 
 from banzai.stages import Stage
-from banzai.utils import image_utils
 
 logger = logging.getLogger(__name__)
 
-_ASTROMETRY_SERVICE_URL='http://astrometry.lco.gtn/catalog/'
+_ASTROMETRY_SERVICE_URL = 'http://astrometry.lco.gtn/catalog/'
+
 
 class WCSSolver(Stage):
 
-    def __init__(self, pipeline_context):
-        super(WCSSolver, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(WCSSolver, self).__init__(runtime_context)
 
     def do_stage(self, image):
 
@@ -46,13 +41,17 @@ class WCSSolver(Stage):
                            'statistics': False}
         try:
             astrometry_response = requests.post(_ASTROMETRY_SERVICE_URL, json=catalog_payload)
+            astrometry_response.raise_for_status()
         except ConnectionError:
             logger.error('Astrometry service unreachable.', image=image)
             image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             return image
+        except HTTPError:
+            if astrometry_response.status_code == 400:
+                logger.error('Astrometry service query malformed', image=image)
+            else:
+                logger.error('Astrometry service encountered an error.', image=image)
 
-        if astrometry_response.status_code == 400:
-            logger.error('Astrometry service query malformed', image=image)
             image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             return image
 
