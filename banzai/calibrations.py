@@ -105,8 +105,8 @@ class CalibrationStacker(CalibrationMaker):
             stack_mask = np.zeros((image.ny, nx, len(images)), dtype=np.uint8)
             for i, image in enumerate(images):
                 if image.nx_actual != image.nx:
-                    image_tmp = self.pipeline_context.FRAME_CLASS(self.pipeline_context, filename=image.full_filepath,
-                                                                  nx_rows_to_read_in=(a, b))
+                    image_tmp = FRAME_CLASS(self.runtime_context, filename=image.full_filepath,
+                                            nx_rows_to_read_in=(a, b))
                 else:
                     image_tmp = image
                 data_stack[:, :, i] = image_tmp.data[:, :]
