@@ -2,7 +2,9 @@
 -------------------
 - Added entry point `banzai_easy_process_directory` for convenient data
   (re)processing. The default parameters are set to be those used in production,
-  and the user only needs to provide a directory and a database address.
+  and the user only needs to provide a directory and a database address. 
+  This command reduces and stacks calibration frames, and then reduces 
+  standard and expose frames. 
 
 0.21.0 (2019-03-25)
 -------------------
