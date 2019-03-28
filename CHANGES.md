@@ -1,3 +1,9 @@
+0.21.1 (2019-03-28)
+-------------------
+- Added entry point `banzai_easy_process_directory` for convenient data
+  (re)processing. The default parameters are set to be those used in production,
+  and the user only needs to provide a directory and a database address.
+
 0.21.0 (2019-03-25)
 -------------------
 - Significant refactor to the pipeline context and settings files. We have now
