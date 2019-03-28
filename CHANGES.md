@@ -1,3 +1,10 @@
+0.21.1 (2019-03-28)
+-------------------
+- The `--no-bpm` flag has been replaced by `--calibrations-not-required`,
+  which encompasses all calibration types (BPM, bias, dark, skyflat, etc).
+  Setting this flag ensures that the BANZAI reduction will not fail if any
+  type of required master calibration is missing from the database. 
+
 0.21.0 (2019-03-25)
 -------------------
 - Significant refactor to the pipeline context and settings files. We have now
