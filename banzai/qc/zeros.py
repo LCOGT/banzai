@@ -18,8 +18,8 @@ class ZerosTest(Stage):
     """
     ZEROS_THRESHOLD = 0.95
 
-    def __init__(self, pipeline_context):
-        super(ZerosTest, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(ZerosTest, self).__init__(runtime_context)
 
     def do_stage(self, image):
         fraction_0s_list = []
@@ -39,6 +39,6 @@ class ZerosTest(Stage):
             return None
         else:
             logger.info('Measuring fraction of 0s.', image=image, extra_tags=logging_tags)
-        qc.save_qc_results(self.pipeline_context, qc_results, image)
+        qc.save_qc_results(self.runtime_context, qc_results, image)
 
         return image
