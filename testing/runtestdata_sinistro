@@ -50,7 +50,7 @@ for date in $sciencedates; do
 done
 
 
-python testing/comparecagtalogs.py /archive/engineering/lsc/fa15/20190322/processed/ testing/lsc/fa15/20190322/processed/
-python testing/comparecagtalogs.py /archive/engineering/lsc/fa15/20190320/processed/ testing/lsc/fa15/20190320/processed/
-python testing/comparecagtalogs.py /archive/engineering/lsc/fa15/20190314/processed/ testing/lsc/fa15/20190314/processed/
+python testing/comparecagtalogs.py /archive/engineering/lsc/fa15/20190322/processed/ testing/lsc/fa15/20190322/processed/ > sinistro.txt
+python testing/comparecagtalogs.py /archive/engineering/lsc/fa15/20190320/processed/ testing/lsc/fa15/20190320/processed/ >> sinistro.txt
+python testing/comparecagtalogs.py /archive/engineering/lsc/fa15/20190314/processed/ testing/lsc/fa15/20190314/processed/ >> sinistro.txt
 

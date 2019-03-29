@@ -43,6 +43,8 @@ def get_source_catalog(imagename):
 
 
 def comparebanzaicatalogs(image1, image2):
+    if not os.path.isfile(image1) or not os.path.isfile(image2):
+        return
     cat1, wcs1, fwhm1, defocus1 = get_source_catalog(image1)
     cat2, wcs2, fwhm2, defocus2 = get_source_catalog(image2)
 
@@ -66,8 +68,8 @@ def comparebanzaicatalogs(image1, image2):
         #return
 
 
-    print("{} {: 5.2f} {: 5.2f} {: 5.2f} | {: 6.4f} {: 6.4f} | {: 10d}  {: 10d} |"
-          " {:6.4f} {:5.2f} {:5.2f} ".format(os.path.basename (image2), defocus1, fwhm1, fwhm2,
+    print("{} {: 5.2f} {: 5.2f} {: 5.2f} | {: 6.4f} {: 6.4f} | {: 7d}  {: 7d} |"
+          " {: 6.4f} {: 5.2f} {: 5.2f} ".format(os.path.basename (image2), defocus1, fwhm1, fwhm2,
                                               (wcs1.wcs.crval[
                                                    0] -
                                                wcs2.wcs.crval[
