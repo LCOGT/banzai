@@ -69,7 +69,7 @@ spec:
         - dramatiq
         - banzai.main
         - --processes
-        - "2"
+        - "1"
         - --threads
         - "1"
         - --queues
