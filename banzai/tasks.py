@@ -60,7 +60,7 @@ def schedule_stack(runtime_context_json, blocks, process_any_images=True):
     logger.info('expected image count: {0}'.format(str(expected_image_count)))
     logger.info('completed image count: {0}'.format(str(completed_image_count)))
     if (completed_image_count < expected_image_count and not process_any_images):
-        raise IncompleteProcessingException
+        raise
     else:
         calibrations.process_master_maker(runtime_context, instrument, runtime_context.frame_type,
                                           runtime_context.min_date, runtime_context.max_date)
