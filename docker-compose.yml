@@ -1,7 +1,8 @@
 version: '2'
 services:
-  BANZAIpipelineE2EData:
+  banzai-e2e:
     image: docker.lco.global/banzai-e2e-data:1.0.1
+    container_name: banzai-e2e
     entrypoint:
     - /bin/true
     labels:
@@ -13,47 +14,108 @@ services:
       options:
         max-size: '100m'
         max-file: '3'
-  BANZAIRedis:
+  banzai-fits-exchange:
+    image: rabbitmq:3.7.9
+    container_name: banzai-fits-exchange
+    logging:
+      options:
+        max-size: '100m'
+        max-file: '3'
+  banzai-redis:
     image: redis:5.0.3
+    container_name: banzai-redis
     labels:
       io.rancher.container.pull_image: always
-  BANZAIWorkers:
+  banzai-init:
     image: ${DOCKER_IMG}
-    entrypoint: ["dramatiq", "banzai:main", "-p", "12"]
+    container_name: banzai-init
+    working_dir: /lco/banzai
+    depends_on:
+      - banzai-e2e
+    entrypoint: ["python", "-c", "from banzai.tests import test_end_to_end;
+                 test_end_to_end.init(); exit()"]
+    environment:
+      DB_ADDRESS: sqlite:////archive/engineering/test.db
     volumes_from:
-      - BANZAIpipelineE2EData
+      - banzai-e2e
     labels:
       io.rancher.container.pull_image: always
-      io.rancher.sidekicks: BANZAIpipelineE2EData
+      io.rancher.sidekicks: banzai-e2e
     logging:
       options:
         max-size: '100m'
         max-file: '3'
-  BANZAIListener:
+  banzai-image-workers:
     image: ${DOCKER_IMG}
-    entrypoint: ["banzai_run_realtime_pipeline", "--db-address=sqlite:////archive/engineering/test.db"]
-    environment:
-      DB_ADDRESS: sqlite:////archive/engineering/test.db
+    container_name: banzai-image-workers
+    entrypoint: ["dramatiq", "banzai.main", "-p", "4", "--threads", "1",
+                 "--queues", "process_image"]
+    depends_on:
+      - banzai-redis
+      - banzai-fits-exchange
+      - banzai-e2e
+      - banzai-init
+    links:
+      - banzai-redis:redis
     volumes_from:
-    - BANZAIpipelineE2EData
+      - banzai-e2e
+    environment:
+      DB_ADDRESS: "sqlite:////archive/engineering/test.db"
+      REDIS_HOST: "redis"
     labels:
       io.rancher.container.pull_image: always
-      io.rancher.sidekicks: BANZAIpipelineE2EData
+      io.rancher.sidekicks: banzai-e2e
     logging:
       options:
         max-size: '100m'
         max-file: '3'
-  BANZAITestRunner:
+  banzai-stack-workers:
     image: ${DOCKER_IMG}
-    entrypoint: ["tail", "-f", "/dev/null"]
-    environment:
-      DB_ADDRESS: sqlite:////archive/engineering/test.db
-      FITS_BROKER: 127.0.0.1
+    container_name: banzai-stack-workers
+    entrypoint: ["dramatiq", "banzai.tasks", "-p", "1", "--threads", "1",
+                 "--queues", "schedule_stack"]
+    depends_on:
+      - banzai-redis
+      - banzai-fits-exchange
+      - banzai-e2e
+      - banzai-init
+    links:
+      - banzai-redis:redis
     volumes_from:
-      - BANZAIpipelineE2EData
+      - banzai-e2e
+    environment:
+      DB_ADDRESS: "sqlite:////archive/engineering/test.db"
+      RETRY_DELAY: "0"
+      REDIS_HOST: "redis"
     labels:
       io.rancher.container.pull_image: always
-      io.rancher.sidekicks: BANZAIpipelineE2EData
+      io.rancher.sidekicks: banzai-e2e
+    logging:
+      options:
+        max-size: '100m'
+        max-file: '3'
+  banzai-listener:
+    image: ${DOCKER_IMG}
+    container_name: banzai-listener
+    depends_on:
+      - banzai-redis
+      - banzai-fits-exchange
+      - banzai-e2e
+      - banzai-init
+    links:
+      - banzai-fits-exchange:broker
+      - banzai-redis:redis
+    entrypoint: ["banzai_run_realtime_pipeline", "--fpack",
+                 "--db-address=sqlite:////archive/engineering/test.db",
+                 "--broker-url=broker"]
+    environment:
+      DB_ADDRESS: sqlite:////archive/engineering/test.db
+      REDIS_HOST: "redis"
+    volumes_from:
+    - banzai-e2e
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.sidekicks: banzai-e2e
     logging:
       options:
         max-size: '100m'
