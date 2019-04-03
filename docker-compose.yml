@@ -17,6 +17,7 @@ services:
   banzai-fits-exchange:
     image: rabbitmq:3.7.9
     container_name: banzai-fits-exchange
+    mem_limit: '1g'
     logging:
       options:
         max-size: '100m'
@@ -26,6 +27,7 @@ services:
     container_name: banzai-redis
     labels:
       io.rancher.container.pull_image: always
+    mem_limit: '1g'
   banzai-init:
     image: ${DOCKER_IMG}
     container_name: banzai-init
@@ -48,6 +50,7 @@ services:
   banzai-image-workers:
     image: ${DOCKER_IMG}
     container_name: banzai-image-workers
+    mem_limit: '8g'
     entrypoint: ["dramatiq", "banzai.main", "-p", "4", "--threads", "1",
                  "--queues", "process_image"]
     depends_on:
@@ -60,7 +63,6 @@ services:
     volumes_from:
       - banzai-e2e
     environment:
-      DB_ADDRESS: "sqlite:////archive/engineering/test.db"
       REDIS_HOST: "redis"
     labels:
       io.rancher.container.pull_image: always
@@ -74,6 +76,7 @@ services:
     container_name: banzai-stack-workers
     entrypoint: ["dramatiq", "banzai.tasks", "-p", "1", "--threads", "1",
                  "--queues", "schedule_stack"]
+    mem_limit: '8g'
     depends_on:
       - banzai-redis
       - banzai-fits-exchange
@@ -84,7 +87,6 @@ services:
     volumes_from:
       - banzai-e2e
     environment:
-      DB_ADDRESS: "sqlite:////archive/engineering/test.db"
       RETRY_DELAY: "0"
       REDIS_HOST: "redis"
     labels:
@@ -97,6 +99,7 @@ services:
   banzai-listener:
     image: ${DOCKER_IMG}
     container_name: banzai-listener
+    mem_limit: '1g'
     depends_on:
       - banzai-redis
       - banzai-fits-exchange
@@ -111,6 +114,7 @@ services:
     environment:
       DB_ADDRESS: sqlite:////archive/engineering/test.db
       REDIS_HOST: "redis"
+      FITS_BROKER_URL: "broker"
     volumes_from:
     - banzai-e2e
     labels:

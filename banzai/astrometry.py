@@ -12,6 +12,7 @@ from banzai import settings
 
 logger = logging.getLogger(__name__)
 
+
 class WCSSolver(Stage):
 
     def __init__(self, runtime_context):

@@ -65,11 +65,13 @@ spec:
           value: "sqlite:////archive/engineering/test.db"
         - name: RETRY_DELAY
           value: "0"
+        - name: REDIS_HOST
+          value: "127.0.0.1"
       command:
         - dramatiq
         - banzai.tasks
         - --processes
-        - "2"
+        - "1"
         - --threads
         - "1"
         - --queues
@@ -92,6 +94,8 @@ spec:
       env:
         - name: DB_ADDRESS
           value: "sqlite:////archive/engineering/test.db"
+        - name: REDIS_HOST
+          value: "127.0.0.1"
       command:
         - dramatiq
         - banzai.main
@@ -119,10 +123,15 @@ spec:
       env:
         - name: DB_ADDRESS
           value: "sqlite:////archive/engineering/test.db"
+        - name: FITS_BROKER_URL
+          value: "127.0.0.1"
+        - name: REDIS_HOST
+          value: "127.0.0.1"
       command:
         - banzai_run_realtime_pipeline
         - "--db-address=sqlite:////archive/engineering/test.db"
         - "--fpack"
+        - "--broker-url='127.0.0.1'"
       resources:
         requests:
           cpu: 0.1
