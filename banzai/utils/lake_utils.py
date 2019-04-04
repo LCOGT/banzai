@@ -22,12 +22,8 @@ def get_calibration_blocks_for_time_range(site, start_before, start_after):
 def filter_calibration_blocks_for_type(instrument, calibration_type, blocks):
     calibration_blocks = []
     for block in blocks:
-        logger.info(block)
         if instrument.type.upper() == block['instrument_class'] and instrument.site == block['site'] and instrument.enclosure == block['observatory']:
-            logger.info(instrument.type)
             for molecule in block['molecules']:
-                logger.info(molecule)
-                logger.info(instrument.camera)
                 if calibration_type.upper() == molecule['type'] and instrument.camera == molecule['inst_name']:
                     calibration_blocks.append(block) #TODO: this could append the same block multiple times and should be fixed
                     break

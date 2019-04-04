@@ -323,6 +323,7 @@ def run_realtime_pipeline():
 class RealtimeModeListener(ConsumerMixin):
     def __init__(self, runtime_context):
         self.runtime_context = runtime_context
+        self.broker_url = runtime_context.broker_url
 
     def on_connection_error(self, exc, interval):
         logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
