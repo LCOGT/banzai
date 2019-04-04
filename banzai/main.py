@@ -285,7 +285,7 @@ def run_realtime_pipeline():
                                 'kwargs': {'dest': 'n_processes', 'default': 12,
                                            'help': 'Number of listener processes to spawn.', 'type': int}},
                                {'args': ['--broker-url'],
-                                'kwargs': {'dest': 'broker_url', 'default': '127.0.0.1',
+                                'kwargs': {'dest': 'broker_url', 'default': 'localhost',
                                            'help': 'URL for the broker service.'}},
                                {'args': ['--queue-name'],
                                 'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
@@ -306,9 +306,9 @@ def run_realtime_pipeline():
     logger.info('Starting pipeline listener')
 
     fits_exchange = Exchange('fits_files', type='fanout')
-    listener = RealtimeModeListener(runtime_context.broker_url, runtime_context)
+    listener = RealtimeModeListener(runtime_context)
 
-    with Connection(listener.broker_url) as connection:
+    with Connection(runtime_context.broker_url) as connection:
         listener.connection = connection.clone()
         listener.queue = Queue(runtime_context.queue_name, fits_exchange)
         try:
@@ -321,8 +321,7 @@ def run_realtime_pipeline():
 
 
 class RealtimeModeListener(ConsumerMixin):
-    def __init__(self, broker_url, runtime_context):
-        self.broker_url = broker_url
+    def __init__(self, runtime_context):
         self.runtime_context = runtime_context
 
     def on_connection_error(self, exc, interval):

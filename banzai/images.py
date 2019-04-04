@@ -146,6 +146,7 @@ class Image(object):
         base_filename = os.path.basename(filepath).split('.fz')[0]
         with tempfile.TemporaryDirectory() as temp_directory:
             hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True, output_verify='fix+warn')
+            hdu_list.close()
             if fpack:
                 if os.path.exists(filepath):
                     os.remove(filepath)

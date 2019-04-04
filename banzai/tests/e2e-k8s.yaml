@@ -124,7 +124,7 @@ spec:
         - name: DB_ADDRESS
           value: "sqlite:////archive/engineering/test.db"
         - name: FITS_BROKER_URL
-          value: "127.0.0.1"
+          value: "localhost"
         - name: REDIS_HOST
           value: "127.0.0.1"
       command:
