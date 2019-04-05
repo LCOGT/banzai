@@ -210,6 +210,7 @@ def make_calibration_filename_function(calibration_type, attribute_filename_func
 
 
 def create_master_calibration_header(old_header, images):
+    old_header.pop('HISTORY')  # otherwise the following code will duplicate the HISTORY.
     header = fits.Header()
     for key in old_header.keys():
         try:
@@ -220,9 +221,7 @@ def create_master_calibration_header(old_header, images):
         except ValueError as e:
             logger.error('Could not add keyword {key}: {error}'.format(key=key, error=e))
             continue
-
     header = fits_utils.sanitizeheader(header)
-
     observation_dates = [image.dateobs for image in images]
     mean_dateobs = date_utils.mean_date(observation_dates)
 
