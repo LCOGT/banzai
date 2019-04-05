@@ -198,12 +198,11 @@ class CalibrationComparer(ApplyCalibration):
 
 
 def create_master_calibration_header(old_header, images):
-    old_header.pop('HISTORY')  # otherwise the following code will duplicate the HISTORY.
     header = fits.Header()
     for key in old_header.keys():
         try:
-            # Dump empty header keywords
-            if len(key) > 0:
+            # Dump empty header keywords and ignore old histories.
+            if len(key) > 0 and key != 'HISTORY':
                 for i in range(old_header.count(key)):
                     header[key] = (old_header[(key, i)], old_header.comments[(key, i)])
         except ValueError as e:
