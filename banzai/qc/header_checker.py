@@ -21,8 +21,8 @@ class HeaderSanity(Stage):
     DEC_MIN = -90.0
     DEC_MAX = 90.0
 
-    def __init__(self, pipeline_context):
-        super(HeaderSanity, self).__init__(pipeline_context)
+    def __init__(self, runtime_context):
+        super(HeaderSanity, self).__init__(runtime_context)
 
         self.expected_header_keywords = ['RA', 'DEC', 'CAT-RA', 'CAT-DEC',
                                          'OFST-RA', 'OFST-DEC', 'TPT-RA',
@@ -92,7 +92,7 @@ class HeaderSanity(Stage):
             qc_results["header.keywords.missing.names"] = missing_keywords
         if are_keywords_na:
             qc_results["header.keywords.na.names"] = na_keywords
-        qc.save_qc_results(self.pipeline_context, qc_results, image)
+        qc.save_qc_results(self.runtime_context, qc_results, image)
         return missing_keywords + na_keywords
 
     def check_ra_range(self, image, bad_keywords=None):
@@ -118,7 +118,7 @@ class HeaderSanity(Stage):
                 logger.error(sentence, image=image)
             qc_results = {"header.ra.failed": is_bad_ra_value,
                           "header.ra.value": ra_value}
-            qc.save_qc_results(self.pipeline_context, qc_results, image)
+            qc.save_qc_results(self.runtime_context, qc_results, image)
 
     def check_dec_range(self, image, bad_keywords=None):
         """
@@ -143,7 +143,7 @@ class HeaderSanity(Stage):
                 logger.error(sentence, image=image)
             qc_results = {"header.dec.failed": is_bad_dec_value,
                           "header.dec.value": dec_value}
-            qc.save_qc_results(self.pipeline_context, qc_results, image)
+            qc.save_qc_results(self.runtime_context, qc_results, image)
 
     def check_exptime_value(self, image, bad_keywords=None):
         """
@@ -168,4 +168,4 @@ class HeaderSanity(Stage):
                                'null or negative value'.format(exptime_value)
                     logger.error(sentence, image=image)
                 qc_results["header.exptime.failed"] = is_exptime_null
-            qc.save_qc_results(self.pipeline_context, qc_results, image)
+            qc.save_qc_results(self.runtime_context, qc_results, image)
