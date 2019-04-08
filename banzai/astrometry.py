@@ -28,6 +28,11 @@ class WCSSolver(Stage):
 
         image_catalog = image.data_tables.get('catalog')
 
+        # Short circuit
+        if image_catalog is None:
+            logger.warning('Not attempting WCS solve because no catalog exists', image=image)
+            return image
+
         catalog_payload = {'X': list(image_catalog['x']),
                            'Y': list(image_catalog['y']),
                            'FLUX': list(image_catalog['flux']),
@@ -54,7 +59,7 @@ class WCSSolver(Stage):
             image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             return image
 
-        if astrometry_response.json()['solved'] == False:
+        if not astrometry_response.json()['solved']:
             logger.warning('WCS solution failed.', image=image)
             image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             return image

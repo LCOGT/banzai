@@ -56,7 +56,11 @@ def need_to_process_image(path, ignore_schedulability=False, db_address=dbs._DEF
     if not image_utils.image_can_be_processed(header, db_address):
         return False
 
-    if not ignore_schedulability and not dbs.get_instrument(header, db_address=db_address).schedulable:
+    try:
+        instrument = dbs.get_instrument(header, db_address=db_address)
+    except ValueError:
+        return False
+    if not ignore_schedulability and not instrument.schedulable:
         return False
 
     # Get the image in db. If it doesn't exist add it.

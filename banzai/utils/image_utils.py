@@ -79,7 +79,10 @@ def image_can_be_processed(header, db_address):
     # Short circuit if the instrument is a guider even if they don't exist in configdb
     if not get_obstype(header) in settings.LAST_STAGE:
         return False
-    instrument = dbs.get_instrument(header, db_address=db_address)
+    try:
+        instrument = dbs.get_instrument(header, db_address=db_address)
+    except ValueError:
+        return False
     passes = instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
     passes &= get_obstype(header) in settings.LAST_STAGE
     passes &= get_reduction_level(header) == '00'

@@ -282,9 +282,9 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
         ccdsum = fits.getval(bpm_filename, 'CCDSUM', extension_number)
         dateobs = date_utils.parse_date_obs(fits.getval(bpm_filename, 'DATE-OBS', extension_number))
 
-        instrument = get_instrument(header, db_address=db_address)
-
-        if instrument is None:
+        try:
+            instrument = get_instrument(header, db_address=db_address)
+        except ValueError:
             logger.error('Instrument is missing from database', extra_tags={'site': header['SITEID'],
                                                                             'camera': header['INSTRUME']})
             continue
