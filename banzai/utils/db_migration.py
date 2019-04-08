@@ -96,65 +96,62 @@ def migrate_db():
         new_db_address=args.new_db_address, old_db_address=args.old_db_address))
     create_new_db(args.new_db_address)
 
-    old_db_session = dbs.get_session(db_address=args.old_db_address)
-    new_db_session = dbs.get_session(db_address=args.new_db_address)
+    with dbs.get_session(db_address=args.old_db_address) as old_db_session, dbs.get_session(db_address=args.new_db_address) as new_db_session:
 
-    # First copy sites table
-    logger.info("Querying and organizing the old Site table")
-    sites = base_to_dict(old_db_session.query(Site).all())
-    logger.info("Adding {n} rows from the old Site table to the new Site table".format(n=len(sites)))
-    add_rows(new_db_session, dbs.Site, sites)
+        # First copy sites table
+        logger.info("Querying and organizing the old Site table")
+        sites = base_to_dict(old_db_session.query(Site).all())
+        logger.info("Adding {n} rows from the old Site table to the new Site table".format(n=len(sites)))
+        add_rows(new_db_session, dbs.Site, sites)
 
-    # Move Telescope to Instrument with a couple of variable renames
-    logger.info("Querying and organizing the old Telescope table")
-    telescopes = base_to_dict(old_db_session.query(Telescope).all())
-    change_key_name(telescopes, 'instrument', 'camera')
-    change_key_name(telescopes, 'camera_type', 'type')
-    logger.info("Adding {n} rows from the old Telescope table to the new Instrument table".format(
-        n=len(telescopes)))
-    add_rows(new_db_session, dbs.Instrument, telescopes)
+        # Move Telescope to Instrument with a couple of variable renames
+        logger.info("Querying and organizing the old Telescope table")
+        telescopes = base_to_dict(old_db_session.query(Telescope).all())
+        change_key_name(telescopes, 'instrument', 'camera')
+        change_key_name(telescopes, 'camera_type', 'type')
+        logger.info("Adding {n} rows from the old Telescope table to the new Instrument table".format(
+            n=len(telescopes)))
+        add_rows(new_db_session, dbs.Instrument, telescopes)
 
-    # Move old BPMs to CalibrationImage
-    logger.info("Querying and organizing the old BadPixelMask table")
-    bpms = base_to_dict(old_db_session.query(BadPixelMask).all())
-    for row in bpms:
-        row['type'] = 'BPM'
-        row['is_master'] = True
-        row['attributes'] = {'ccdsum': row.pop('ccdsum')}
-        del(row['id'])
-    change_key_name(bpms, 'creation_date', 'dateobs')
-    change_key_name(bpms, 'telescope_id', 'instrument_id')
-    # BPMs have some duplicates, remove them
-    already_seen = []
-    bpms_pruned = []
-    for row in bpms:
-        if row['filename'] not in already_seen:
-            bpms_pruned.append(row)
-            already_seen.append(row['filename'])
-    logger.info("Adding {n} rows from the old BadPixelMask table to the new CalibrationImage table".format(
-        n=len(bpms_pruned)))
-    add_rows(new_db_session, dbs.CalibrationImage, bpms_pruned)
+        # Move old BPMs to CalibrationImage
+        logger.info("Querying and organizing the old BadPixelMask table")
+        bpms = base_to_dict(old_db_session.query(BadPixelMask).all())
+        for row in bpms:
+            row['type'] = 'BPM'
+            row['is_master'] = True
+            row['attributes'] = {'ccdsum': row.pop('ccdsum')}
+            del(row['id'])
+        change_key_name(bpms, 'creation_date', 'dateobs')
+        change_key_name(bpms, 'telescope_id', 'instrument_id')
+        # BPMs have some duplicates, remove them
+        already_seen = []
+        bpms_pruned = []
+        for row in bpms:
+            if row['filename'] not in already_seen:
+                bpms_pruned.append(row)
+                already_seen.append(row['filename'])
+        logger.info("Adding {n} rows from the old BadPixelMask table to the new CalibrationImage table".format(
+            n=len(bpms_pruned)))
+        add_rows(new_db_session, dbs.CalibrationImage, bpms_pruned)
 
-    # Convert old CalibrationImage to new type
-    logger.info("Querying and organizing the old CalibrationsImage table")
-    calibrations = base_to_dict(old_db_session.query(CalibrationImage).all())
-    for row in calibrations:
-        row['is_master'] = True
-        row['attributes'] = {'filter': row.pop('filter_name'), 'ccdsum': row.pop('ccdsum')}
-        del(row['id'])
-    change_key_name(calibrations, 'dayobs', 'dateobs')
-    change_key_name(calibrations, 'telescope_id', 'instrument_id')
-    logger.info("Adding {n} rows from the old CalibrationImage table to the new CalibrationImage table".format(
-        n=len(calibrations)))
-    add_rows(new_db_session, dbs.CalibrationImage, calibrations)
+        # Convert old CalibrationImage to new type
+        logger.info("Querying and organizing the old CalibrationsImage table")
+        calibrations = base_to_dict(old_db_session.query(CalibrationImage).all())
+        for row in calibrations:
+            row['is_master'] = True
+            row['attributes'] = {'filter': row.pop('filter_name'), 'ccdsum': row.pop('ccdsum')}
+            del(row['id'])
+        change_key_name(calibrations, 'dayobs', 'dateobs')
+        change_key_name(calibrations, 'telescope_id', 'instrument_id')
+        logger.info("Adding {n} rows from the old CalibrationImage table to the new CalibrationImage table".format(
+            n=len(calibrations)))
+        add_rows(new_db_session, dbs.CalibrationImage, calibrations)
 
-    # Copy the PreviewImage table to ProcssedImage (attributes are all the same)
-    logger.info("Querying and organizing the old PreviewImage table")
-    preview_images = base_to_dict(old_db_session.query(PreviewImage).all())
-    logger.info("Adding {n} rows from the old PreviewImage table to the new ProcessedImage table".format(
-        n=len(preview_images)))
-    add_rows(new_db_session, dbs.ProcessedImage, preview_images)
+        # Copy the PreviewImage table to ProcssedImage (attributes are all the same)
+        logger.info("Querying and organizing the old PreviewImage table")
+        preview_images = base_to_dict(old_db_session.query(PreviewImage).all())
+        logger.info("Adding {n} rows from the old PreviewImage table to the new ProcessedImage table".format(
+            n=len(preview_images)))
+        add_rows(new_db_session, dbs.ProcessedImage, preview_images)
 
-    logger.info("Finished")
-    new_db_session.close()
-    old_db_session.close()
+        logger.info("Finished")

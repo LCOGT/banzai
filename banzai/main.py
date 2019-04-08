@@ -402,7 +402,8 @@ def add_instrument():
                   'camera': args.camera,
                   'type': args.camera_type,
                   'schedulable': args.schedulable}
-    dbs.add_instrument(instrument, db_address=args.db_address)
+    with dbs.get_session(db_address=args.db_address) as db_session:
+        dbs.add_instrument(instrument, db_session)
 
 
 def mark_frame_as_good():
