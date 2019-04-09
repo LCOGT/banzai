@@ -331,9 +331,11 @@ def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_AD
     if instrument is None:
         populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
         instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+    # Test for NRES and/or FLOYDS which only require the site and camera name
     if instrument is None:
         camera = header.get('TELESCOP')
-        instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+        if 'nres' in camera.lower():
+            instrument = query_for_instrument(db_address, site, camera)
     if instrument is None:
         # Change the camera in the logs back to the default keyword INSTRUME
         camera = header.get('INSTRUME')
