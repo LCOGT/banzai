@@ -52,11 +52,12 @@ class WCSSolver(Stage):
             return image
         except HTTPError:
             if astrometry_response.status_code == 400:
-                logger.error('Astrometry service query malformed', image=image)
+                logger.error('Astrometry service query malformed: {msg}'.format(msg=astrometry_response.json()),
+                             image=image)
             else:
                 logger.error('Astrometry service encountered an error.', image=image,
-                             extra_tags={'astrometry_message': astrometry_response.get('message', ''),
-                                         'astrometry_solve_id': astrometry_response.get('id', 'UnknownID')})
+                             extra_tags={'astrometry_message': astrometry_response.json().get('message', ''),
+                                         'astrometry_solve_id': astrometry_response.json().get('solve_id', 'UnknownID')})
 
             image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             return image
