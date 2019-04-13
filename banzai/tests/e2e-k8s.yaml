@@ -6,6 +6,7 @@ metadata:
   labels:
     app.kubernetes.io/name: banzai
 spec:
+  nodeName: ip-10-100-7-236.us-west-2.compute.internal
   # Create some empty directories to be mounted within the Pod
   volumes:
     - name: banzai-data
