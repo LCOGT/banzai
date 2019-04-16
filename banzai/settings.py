@@ -12,9 +12,9 @@ import operator
 from banzai.utils.instrument_utils import InstrumentCriterion
 from banzai.utils.file_utils import ccdsum_to_filename, filter_to_filename
 
-from dramatiq.brokers.redis import RedisBroker
-from dramatiq.middleware import AgeLimit, Callbacks, TimeLimit, Retries
-from dramatiq.middleware import Pipelines, ShutdownNotifications
+# from dramatiq.brokers.redis import RedisBroker
+# from dramatiq.middleware import AgeLimit, Callbacks, TimeLimit, Retries
+# from dramatiq.middleware import Pipelines, ShutdownNotifications
 
 
 def telescope_to_filename(image):
@@ -66,10 +66,10 @@ CALIBRATION_STACKER_STAGE = {'BIAS': 'banzai.bias.BiasMaker',
 
 CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT']
 
-# Stack delays are expressed in milliseconds--namely, each is five minutes
-CALIBRATION_STACK_DELAYS = {'BIAS': 300000,
-                            'DARK': 300000,
-                            'SKYFLAT': 300000}
+# Stack delays are expressed in seconds--namely, each is five minutes
+CALIBRATION_STACK_DELAYS = {'BIAS': 300,
+                            'DARK': 300,
+                            'SKYFLAT': 300}
 
 SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
 
@@ -82,9 +82,9 @@ SCHEDULE_STACKING_CRON_ENTRIES = {'coj': '30 06 * * *',
 
 ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/catalog/')
 
-REDIS_BROKER = RedisBroker(host=os.getenv('REDIS_HOST', '127.0.0.1'),
-                           middleware=[AgeLimit(), Callbacks(), TimeLimit(), Pipelines(),
-                                       ShutdownNotifications(), Retries()])
+# REDIS_BROKER = RedisBroker(host=os.getenv('REDIS_HOST', '127.0.0.1'),
+#                            middleware=[AgeLimit(), Callbacks(), TimeLimit(), Pipelines(),
+#                                        ShutdownNotifications(), Retries()])
 
 REDIS_QUEUE_NAMES = {'DEFAULT': 'default',
                      'PROCESS_IMAGE': 'process_image',

@@ -1,24 +1,45 @@
 import os
-import dramatiq
 import logging
 
 from datetime import datetime, timedelta
+from celery import Celery
 
-from banzai import settings, dbs, calibrations
+from banzai import settings, dbs, realtime, calibrations
 from banzai.utils import lake_utils, date_utils
-from banzai.context import Context, ContextJSONEncoder
-from banzai.exceptions import IncompleteProcessingException
+from banzai.context import Context
 
-
-dramatiq.set_broker(settings.REDIS_BROKER)
-dramatiq.set_encoder(ContextJSONEncoder())
+app = Celery('banzai')
+app.conf.broker_url = os.getenv('REDIS_HOST', '127.0.0.1')
 
 logger = logging.getLogger(__name__)
 
-RETRY_DELAY = int(os.getenv('RETRY_DELAY', 1000*60*10))
+RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 
 
-@dramatiq.actor(queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
+@app.task(name='celery.process_image')
+def process_image(path, runtime_context_dict):
+    logger.info('Got into actor.')
+    runtime_context = Context(runtime_context_dict)
+    try:
+        # pipeline_context = PipelineContext.from_dict(pipeline_context_json)
+        if realtime.need_to_process_image(path, runtime_context,
+                                          db_address=runtime_context.db_address,
+                                          max_tries=runtime_context.max_tries):
+            logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
+
+            # Increment the number of tries for this file
+            realtime.increment_try_number(path, db_address=runtime_context.db_address)
+
+            run(path, runtime_context)
+            realtime.set_file_as_processed(path, db_address=runtime_context.db_address)
+
+    except Exception:
+        logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
+                     extra_tags={'filename': os.path.basename(path)})
+
+
+# @dramatiq.actor(queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
+@app.task(name='celery.schedule_calibration_stacking')
 def schedule_calibration_stacking(runtime_context=None, raw_path=None):
     logger.info('starting schedule_calibration_stacking for end-to-end tests')
     timezone_for_site = dbs.get_timezone(runtime_context.site, db_address=runtime_context.db_address)
@@ -33,15 +54,17 @@ def schedule_calibration_stacking(runtime_context=None, raw_path=None):
         schedule_stacking_checks(runtime_context)
 
 
-@dramatiq.actor(max_retries=0, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
-def should_retry_schedule_stack(message_data, exception_data):
-    logger.info('Failed to process message, retrying')
-    if message_data['options']['retries'] >= 2:
-        schedule_stack(*message_data['args'], process_any_images=True)
+# @dramatiq.actor(max_retries=0, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
+# @app.task(name='celery.should_retry_schedule_stack')
+# def should_retry_schedule_stack(message_data, exception_data):
+#     logger.info('Failed to process message, retrying')
+#     if message_data['options']['retries'] >= 2:
+#         schedule_stack(*message_data['args'], process_any_images=True)
 
 
-@dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
-def schedule_stack(runtime_context_json, blocks, process_any_images=True):
+# @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
+@app.task(name='celery.schedule_stack', bind=True, default_retry_delay=RETRY_DELAY)
+def schedule_stack(self, runtime_context_json, blocks, process_any_images=True):
     logger.info('schedule stack for matching blocks')
     runtime_context = Context(runtime_context_json)
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site,
@@ -59,8 +82,8 @@ def schedule_stack(runtime_context_json, blocks, process_any_images=True):
                 expected_image_count += molecule['exposure_count']
     logger.info('expected image count: {0}'.format(str(expected_image_count)))
     logger.info('completed image count: {0}'.format(str(completed_image_count)))
-    if (completed_image_count < expected_image_count and not process_any_images):
-        raise IncompleteProcessingException
+    if (completed_image_count < expected_image_count and self.request.retries < 3):
+        raise self.retry()
     else:
         calibrations.process_master_maker(runtime_context, instrument, runtime_context.frame_type,
                                           runtime_context.min_date, runtime_context.max_date)
@@ -83,17 +106,15 @@ def schedule_stacking_checks(runtime_context):
         if len(blocks_for_calibration) > 0:
             block_end = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
             stack_delay = timedelta(
-                milliseconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context['frame_type'].upper()]
+                seconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context['frame_type'].upper()]
             )
             now = datetime.utcnow().replace(microsecond=0)
             logger.info('before schedule stack for block type {0}'.format(worker_runtime_context['frame_type']))
             message_delay = block_end - now + stack_delay
             if message_delay.days < 0:
-                message_delay_in_ms = 0  # Remove delay if block end is in the past
+                message_delay_in_seconds = 0  # Remove delay if block end is in the past
             else:
-                message_delay_in_ms = message_delay.seconds*1000
-            logger.info('scheduling with message delay {0}'.format(str(message_delay_in_ms)))
-            schedule_stack.send_with_options(args=(worker_runtime_context, blocks_for_calibration),
-                                             kwargs={'process_any_images': False},
-                                             on_failure=should_retry_schedule_stack,
-                                             delay=message_delay_in_ms)
+                message_delay_in_seconds = message_delay.seconds
+            logger.info('scheduling with message delay {0}'.format(str(message_delay_in_seconds)))
+            schedule_stack.apply_async(args=(worker_runtime_context, blocks_for_calibration),
+                                       eta=message_delay_in_seconds)

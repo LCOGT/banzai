@@ -10,7 +10,7 @@ RUN conda install -y pip numpy\>=1.13 scipy astropy pytest mock requests ipython
         && conda install -y -c conda-forge kombu elasticsearch\<6.0.0,\>=5.0.0 pytest-astropy mysql-connector-python\
         && conda clean -y --all
 
-RUN pip install --no-cache-dir git+https://github.com/cython/cython.git@master logutils lcogt_logging sqlalchemy\>=1.3.0b1 psycopg2-binary dramatiq[redis,watch] \
+RUN pip install --no-cache-dir git+https://github.com/cython/cython.git@master logutils lcogt_logging sqlalchemy\>=1.3.0b1 psycopg2-binary celery[redis] \
         apscheduler git+https://github.com/kbarbary/sep.git@master
 
 RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \

@@ -28,13 +28,3 @@ def filter_calibration_blocks_for_type(instrument, calibration_type, blocks):
                     calibration_blocks.append(block) #TODO: this could append the same block multiple times and should be fixed
                     break
     return calibration_blocks
-
-
-def get_block_by_id(block_id):
-    response = requests.get(LAKE_URL + str(block_id))
-    response.raise_for_status()
-    block = response.json()
-    for molecule in block['molecules']:
-        molecule['type'] = molecule['type'].replace('_', '')
-
-    return block

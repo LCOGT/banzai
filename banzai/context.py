@@ -1,7 +1,7 @@
-import json
+# import json
 
 from collections import namedtuple
-from dramatiq import JSONEncoder
+# from dramatiq import JSONEncoder
 
 
 def Context(args):
@@ -13,6 +13,6 @@ def Context(args):
     return constructor(**args_dict)
 
 
-class ContextJSONEncoder(JSONEncoder):
-    def encode(self, data):
-        return json.dumps(data, separators=(",", ":"), default=str).encode("utf-8")
+# class ContextJSONEncoder(JSONEncoder):
+#     def encode(self, data):
+#         return json.dumps(data, separators=(",", ":"), default=str).encode("utf-8")
