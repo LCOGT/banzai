@@ -6,7 +6,6 @@ metadata:
   labels:
     app.kubernetes.io/name: banzai
 spec:
-  nodeName: ip-10-100-7-236.us-west-2.compute.internal
   # Create some empty directories to be mounted within the Pod
   volumes:
     - name: banzai-data
@@ -86,8 +85,8 @@ spec:
         - "schedule_stack"
       resources:
         requests:
-          cpu: 0.7
-          memory: 4.5Gi
+          cpu: 0.1
+          memory: 5.0Gi
         limits:
           cpu: 4
           memory: 8Gi
@@ -115,8 +114,8 @@ spec:
         - "process_image"
       resources:
         requests:
-          cpu: 0.7
-          memory: 4.5Gi
+          cpu: 0.1
+          memory: 5.0Gi
         limits:
           cpu: 4
           memory: 8Gi
