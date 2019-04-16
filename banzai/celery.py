@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta
 from celery import Celery
 
-from banzai import settings, dbs, realtime, calibrations
+from banzai import settings, dbs, calibrations
 from banzai.utils import lake_utils, date_utils
 from banzai.context import Context
 
@@ -14,28 +14,6 @@ app.conf.broker_url = os.getenv('REDIS_HOST', '127.0.0.1')
 logger = logging.getLogger(__name__)
 
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
-
-
-@app.task(name='celery.process_image')
-def process_image(path, runtime_context_dict):
-    logger.info('Got into actor.')
-    runtime_context = Context(runtime_context_dict)
-    try:
-        # pipeline_context = PipelineContext.from_dict(pipeline_context_json)
-        if realtime.need_to_process_image(path, runtime_context,
-                                          db_address=runtime_context.db_address,
-                                          max_tries=runtime_context.max_tries):
-            logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
-
-            # Increment the number of tries for this file
-            realtime.increment_try_number(path, db_address=runtime_context.db_address)
-
-            run(path, runtime_context)
-            realtime.set_file_as_processed(path, db_address=runtime_context.db_address)
-
-    except Exception:
-        logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
-                     extra_tags={'filename': os.path.basename(path)})
 
 
 # @dramatiq.actor(queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])

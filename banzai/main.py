@@ -20,8 +20,8 @@ from lcogt_logging import LCOGTFormatter
 
 from banzai import dbs, logs, calibrations
 from banzai.context import Context
-from banzai.utils import image_utils, date_utils, fits_utils, import_utils
-from banzai.celery import schedule_stacking_checks
+from banzai.utils import image_utils, date_utils, fits_utils, import_utils, realtime_utils
+from banzai.celery import app, schedule_stacking_checks
 from banzai.realtime import RealtimeModeListener
 from banzai import settings
 
@@ -200,6 +200,28 @@ def process_single_frame(runtime_context, raw_path, filename, log_message=''):
         run(full_path, runtime_context)
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
+
+
+@app.task(name='celery.process_image')
+def process_image(path, runtime_context_dict):
+    logger.info('Got into actor.')
+    runtime_context = Context(runtime_context_dict)
+    try:
+        # pipeline_context = PipelineContext.from_dict(pipeline_context_json)
+        if realtime_utils.need_to_process_image(path, runtime_context,
+                                                db_address=runtime_context.db_address,
+                                                max_tries=runtime_context.max_tries):
+            logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
+
+            # Increment the number of tries for this file
+            realtime_utils.increment_try_number(path, db_address=runtime_context.db_address)
+
+            run(path, runtime_context)
+            realtime_utils.set_file_as_processed(path, db_address=runtime_context.db_address)
+
+    except Exception:
+        logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
+                     extra_tags={'filename': os.path.basename(path)})
 
 
 def parse_directory_args(runtime_context=None, raw_path=None, extra_console_arguments=None):
