@@ -11,9 +11,9 @@ import argparse
 import os
 import logging
 import sys
-# import dramatiq
 
 from kombu import Exchange, Connection, Queue
+from kombu.mixins import ConsumerMixin
 from lcogt_logging import LCOGTFormatter
 # from apscheduler.triggers.cron import CronTrigger
 # from apscheduler.schedulers.blocking import BlockingScheduler
@@ -22,7 +22,6 @@ from banzai import dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils import image_utils, date_utils, fits_utils, import_utils, realtime_utils
 from banzai.celery import app, schedule_stacking_checks
-from banzai.realtime import RealtimeModeListener
 from banzai import settings
 
 
@@ -39,12 +38,31 @@ root_logger.addHandler(root_handler)
 
 logger = logging.getLogger(__name__)
 
-# dramatiq.set_broker(settings.REDIS_BROKER)
-# dramatiq.set_encoder(ContextJSONEncoder())
-
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
                                         'help': 'Top level directory where the raw data is stored'}}
+
+
+class RealtimeModeListener(ConsumerMixin):
+    def __init__(self, runtime_context):
+        self.runtime_context = runtime_context
+        self.broker_url = runtime_context.broker_url
+
+    def on_connection_error(self, exc, interval):
+        logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
+        self.connection = self.connection.clone()
+        self.connection.ensure_connection(max_retries=10)
+
+    def get_consumers(self, Consumer, channel):
+        consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
+        # Only fetch one thing off the queue at a time
+        consumer.qos(prefetch_count=1)
+        return [consumer]
+
+    def on_message(self, body, message):
+        path = body.get('path')
+        process_image.apply_async(args=(path, self.runtime_context._asdict()))
+        message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
 def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):

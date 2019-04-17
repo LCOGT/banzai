@@ -1,14 +1,9 @@
 import logging
 
 from banzai import dbs
-from banzai.main import run
 from banzai.utils import fits_utils, image_utils, file_utils
 
 logger = logging.getLogger(__name__)
-
-
-def run_realtime_banzai(path, runtime_context):
-    run(path, runtime_context)
 
 
 def set_file_as_processed(path, db_address=dbs._DEFAULT_DB):

@@ -4,8 +4,9 @@ import argparse
 
 import pytest
 import mock
+import time
 
-from banzai import settings
+from banzai.celery import app
 from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone, mark_frame
 from banzai.utils import fits_utils, file_utils
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates
@@ -13,6 +14,8 @@ from banzai.tests.utils import FakeResponse, get_min_and_max_dates
 import logging
 
 logger = logging.getLogger(__name__)
+
+app.conf.update(CELERY_TASK_ALWAYS_EAGER=True)
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
 
@@ -22,6 +25,20 @@ INSTRUMENTS = [os.path.join(site, os.path.basename(instrument_path)) for site in
 
 DAYS_OBS = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrument in INSTRUMENTS
             for dayobs_path in glob(os.path.join(DATA_ROOT, instrument, '201*'))]
+
+
+def celery_join():
+    celery_inspector = app.control.inspect()
+    while True:
+        queues = [celery_inspector.active(), celery_inspector.scheduled(), celery_inspector.reserved()]
+        time.sleep(1)
+        if any([queue is None or 'celery@banzai-celery-worker' not in queue for queue in queues]):
+            logger.warn('No valid celery queues were detected, retrying...', extra_tags={'queues': queues})
+            # Reset the celery connection
+            celery_inspector = app.control.inspect()
+            continue
+        if all([len(queue['celery@banzai-celery-worker']) == 0 for queue in queues]):
+            break
 
 
 def run_end_to_end_tests():
@@ -43,7 +60,7 @@ def run_reduce_individual_frames(raw_filenames):
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
             file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
-    settings.REDIS_BROKER.join(settings.REDIS_QUEUE_NAMES['PROCESS_IMAGE'])
+    celery_join()
     logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
 
 
@@ -62,7 +79,7 @@ def run_stack_calibrations(frame_type):
                                  min_date=min_date, max_date=max_date, db_address=os.environ['DB_ADDRESS'])
         logger.info('Running the following stacking command: {command}'.format(command=command))
         os.system(command)
-    settings.REDIS_BROKER.join(settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
+    celery_join()
     logger.info('Finished stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
 
 

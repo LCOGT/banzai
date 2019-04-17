@@ -9,14 +9,14 @@ from banzai.utils import lake_utils, date_utils
 from banzai.context import Context
 
 app = Celery('banzai')
-app.conf.broker_url = os.getenv('REDIS_HOST', '127.0.0.1')
+app.config_from_object('banzai.celeryconfig')
+app.conf.update(broker_url=os.getenv('REDIS_HOST', 'redis://redis:6379/0'))
 
 logger = logging.getLogger(__name__)
 
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 
 
-# @dramatiq.actor(queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
 @app.task(name='celery.schedule_calibration_stacking')
 def schedule_calibration_stacking(runtime_context=None, raw_path=None):
     logger.info('starting schedule_calibration_stacking for end-to-end tests')
@@ -32,15 +32,6 @@ def schedule_calibration_stacking(runtime_context=None, raw_path=None):
         schedule_stacking_checks(runtime_context)
 
 
-# @dramatiq.actor(max_retries=0, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
-# @app.task(name='celery.should_retry_schedule_stack')
-# def should_retry_schedule_stack(message_data, exception_data):
-#     logger.info('Failed to process message, retrying')
-#     if message_data['options']['retries'] >= 2:
-#         schedule_stack(*message_data['args'], process_any_images=True)
-
-
-# @dramatiq.actor(max_retries=3, min_backoff=RETRY_DELAY, max_backoff=RETRY_DELAY, queue_name=settings.REDIS_QUEUE_NAMES['SCHEDULE_STACK'])
 @app.task(name='celery.schedule_stack', bind=True, default_retry_delay=RETRY_DELAY)
 def schedule_stack(self, runtime_context_json, blocks, process_any_images=True):
     logger.info('schedule stack for matching blocks')
@@ -95,4 +86,4 @@ def schedule_stacking_checks(runtime_context):
                 message_delay_in_seconds = message_delay.seconds
             logger.info('scheduling with message delay {0}'.format(str(message_delay_in_seconds)))
             schedule_stack.apply_async(args=(worker_runtime_context, blocks_for_calibration),
-                                       eta=message_delay_in_seconds)
+                                       countdown=message_delay_in_seconds)
