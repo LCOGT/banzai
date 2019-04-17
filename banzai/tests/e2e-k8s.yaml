@@ -75,14 +75,14 @@ spec:
         - name: REDIS_HOST
           value: "redis://redis:6379/0"
       command:
-        - dramatiq
-        - banzai.tasks
-        - --processes
-        - "1"
-        - --threads
-        - "1"
-        - --queues
-        - "schedule_stack"
+        - celery
+        - -A
+        - banzai
+        - worker
+        - --hostname
+        - "banzai-celery-worker"
+        - -l
+        - "info"
       resources:
         requests:
           cpu: 0.1

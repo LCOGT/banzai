@@ -4,4 +4,3 @@ class InhomogeneousSetException(Exception):
 
 class MissingCatalogException(Exception):
     pass
-
