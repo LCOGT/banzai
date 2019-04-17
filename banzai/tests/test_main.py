@@ -64,7 +64,7 @@ class TestMain():
         runtime_context = Context(runtime_context_json)
         schedule_stacking_checks(runtime_context)
         mock_schedule_stack.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value),
-                                               eta=0)
+                                               countdown=0)
         # assert stub_broker.queues['schedule_stack.DQ'].qsize() == 1
 
     @mock.patch('banzai.celery.schedule_stack.apply_async')
@@ -80,7 +80,7 @@ class TestMain():
         runtime_context = Context(runtime_context_json)
         schedule_stacking_checks(runtime_context)
         mock_schedule_stack.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value),
-                                               eta=(60+CALIBRATION_STACK_DELAYS['BIAS']))
+                                               countdown=(60+CALIBRATION_STACK_DELAYS['BIAS']))
         # assert stub_broker.queues['schedule_stack.DQ'].qsize() == 1
 
     @mock.patch('banzai.calibrations.process_master_maker')
