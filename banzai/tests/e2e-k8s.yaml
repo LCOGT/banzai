@@ -30,6 +30,13 @@ spec:
         - -a
         - /archive/engineering
         - /data/
+      resources:
+        requests:
+          cpu: 0.1
+          memory: 256M
+        limits:
+          cpu: 1
+          memory: 1Gi
 
   containers:
     - name: banzai-redis
@@ -38,7 +45,7 @@ spec:
       resources:
         requests:
           cpu: 0.1
-          memory: 128M
+          memory: 256M
         limits:
           cpu: 1
           memory: 1Gi
@@ -48,7 +55,7 @@ spec:
       resources:
         requests:
           cpu: 0.1
-          memory: 128M
+          memory: 256M
         limits:
           cpu: 1
           memory: 1Gi
@@ -78,8 +85,8 @@ spec:
         - "schedule_stack"
       resources:
         requests:
-          cpu: 0.7
-          memory: 4Gi
+          cpu: 0.1
+          memory: 5.0Gi
         limits:
           cpu: 4
           memory: 8Gi
@@ -107,8 +114,8 @@ spec:
         - "process_image"
       resources:
         requests:
-          cpu: 0.7
-          memory: 4Gi
+          cpu: 0.1
+          memory: 5.0Gi
         limits:
           cpu: 4
           memory: 8Gi
@@ -134,7 +141,7 @@ spec:
       resources:
         requests:
           cpu: 0.1
-          memory: 128M
+          memory: 256M
         limits:
           cpu: 1
           memory: 1Gi

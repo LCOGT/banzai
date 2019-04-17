@@ -37,8 +37,8 @@ def schedule_stack(self, runtime_context_json, blocks, process_any_images=True):
     logger.info('schedule stack for matching blocks')
     runtime_context = Context(runtime_context_json)
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site,
-                                          runtime_context.camera, runtime_context.enclosure,
-                                          runtime_context.telescope)
+                                          runtime_context.camera, enclosure=runtime_context.enclosure,
+                                          telescope=runtime_context.telescope)
     completed_image_count = len(dbs.get_individual_calibration_images(instrument, runtime_context.frame_type,
                                                                       runtime_context.min_date,
                                                                       runtime_context.max_date,
