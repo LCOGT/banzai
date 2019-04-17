@@ -59,7 +59,7 @@ spec:
         limits:
           cpu: 1
           memory: 1Gi
-    - name: banzai-workers-schedule-stack
+    - name: banzai-celery-workers
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
       volumeMounts:
@@ -73,7 +73,7 @@ spec:
         - name: RETRY_DELAY
           value: "0"
         - name: REDIS_HOST
-          value: "127.0.0.1"
+          value: "redis://redis:6379/0"
       command:
         - dramatiq
         - banzai.tasks
@@ -83,35 +83,6 @@ spec:
         - "1"
         - --queues
         - "schedule_stack"
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 5.0Gi
-        limits:
-          cpu: 4
-          memory: 8Gi
-    - name: banzai-workers-process-image
-      image: @BANZAI_IMAGE@
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: banzai-data
-          mountPath: /archive/engineering
-          subPath: engineering
-          readOnly: false
-      env:
-        - name: DB_ADDRESS
-          value: "sqlite:////archive/engineering/test.db"
-        - name: REDIS_HOST
-          value: "127.0.0.1"
-      command:
-        - dramatiq
-        - banzai.main
-        - --processes
-        - "4"
-        - --threads
-        - "1"
-        - --queues
-        - "process_image"
       resources:
         requests:
           cpu: 0.1
@@ -133,7 +104,7 @@ spec:
         - name: FITS_BROKER_URL
           value: "localhost"
         - name: REDIS_HOST
-          value: "127.0.0.1"
+          value: "redis://redis:6379/0"
       command:
         - banzai_run_realtime_pipeline
         - "--db-address=sqlite:////archive/engineering/test.db"
