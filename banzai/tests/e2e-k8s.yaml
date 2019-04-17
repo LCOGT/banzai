@@ -73,7 +73,7 @@ spec:
         - name: RETRY_DELAY
           value: "0"
         - name: REDIS_HOST
-          value: "redis://redis:6379/0"
+          value: "redis://localhost:6379/0"
       command:
         - celery
         - -A
@@ -104,7 +104,7 @@ spec:
         - name: FITS_BROKER_URL
           value: "localhost"
         - name: REDIS_HOST
-          value: "redis://redis:6379/0"
+          value: "redis://localhost:6379/0"
       command:
         - banzai_run_realtime_pipeline
         - "--db-address=sqlite:////archive/engineering/test.db"
