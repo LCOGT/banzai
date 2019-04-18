@@ -259,6 +259,9 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                                      extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera,
                                           enclosure=runtime_context.enclosure, telescope=runtime_context.telescope)
+    if instrument is None:
+        logger.error('Requested instrument is not in the database. Please add it and try again.')
+        sys.exit(1)
     process_master_maker(runtime_context, instrument,  runtime_context.frame_type.upper(),
                          runtime_context.min_date, runtime_context.max_date)
 
