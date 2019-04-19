@@ -168,14 +168,18 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
                                       'name': ins.get('code'),
                                       'type': sci_cam['camera_type']['code'],
                                       'schedulable': ins['state'] == 'SCHEDULABLE'}
-
+                        # hotfix for configdb
                         if instrument['name'] is None:
                             instrument['name'] = instrument['camera']
-                        # this will be removed when configdb is updated
                         if instrument['name'] in CAMERAS_FOR_INSTRUMENTS:
                             instrument['camera'] = CAMERAS_FOR_INSTRUMENTS[instrument['name']]
-                        # end of hotfix
                         instruments.append(instrument)
+                        if 'nres' in instrument['name']:
+                            # hotfix so that we can reduce old nres frames when the cameras were flXX instead of faXX
+                            fl_instrument = instrument.copy()
+                            fl_instrument['camera'] = instrument['camera'].replace('fa', 'fl')
+                            instruments.append(fl_instrument)
+
     instruments = remove_nres_duplicates(instruments)
     return sites, instruments
 

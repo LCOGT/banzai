@@ -82,3 +82,13 @@ def test_not_removing_singlets():
     assert len(culled_list) == 2
     assert culled_list[1]['name'] == 'nres01'
     assert culled_list[0]['name'] == 'cam01'
+
+
+def test_fl_cameras_are_added():
+    nres_inst = {'site': 'tlv', 'name': 'nres01', 'camera': 'fa18', 'schedulable': True}
+    nres_fl_inst = {'site': 'tlv', 'name': 'nres01', 'camera': 'fl18', 'schedulable': True}
+    instruments = [nres_inst, nres_fl_inst, nres_fl_inst]
+    culled_list = dbs.remove_nres_duplicates(instruments)
+    assert len(culled_list) == 2
+    assert culled_list[1]['camera'] == 'fl18'
+    assert culled_list[0]['camera'] == 'fa18'
