@@ -9,8 +9,8 @@ from banzai.utils import lake_utils, date_utils
 from banzai.context import Context
 
 app = Celery('banzai')
-app.config_from_object('banzai.celeryconfig')
-app.conf.update(broker_url=os.getenv('REDIS_HOST', 'redis://redis:6379/0'))
+app.config_from_object('banzai.settings')
+app.conf.update(broker_url=os.getenv('REDIS_HOST', 'redis://localhost:6379/0'))
 
 logger = logging.getLogger(__name__)
 

@@ -150,25 +150,6 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
     return runtime_context
 
 
-# def start_schedule_calibration_stacking(runtime_context=None, raw_path=None):
-#     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
-#     scheduler = BlockingScheduler()
-#     for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
-#         runtime_context_json = dict(runtime_context._asdict())
-#         runtime_context_json['site'] = site
-#         worker_runtime_context = Context(runtime_context_json)
-#         scheduler.add_job(
-#             schedule_calibration_stacking.send_with_options(runtime_context=worker_runtime_context,
-#                                                             raw_path=raw_path),
-#             CronTrigger.from_crontab(entry),
-#         )
-
-#     try:
-#         scheduler.start()
-#     except KeyboardInterrupt:
-#         scheduler.shutdown()
-
-
 def run(image_path, runtime_context):
     """
     Main driver script for banzai.
