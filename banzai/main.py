@@ -210,7 +210,7 @@ def setup_stacking_schedule(sender, runtime_context=None, raw_path=None, **kwarg
         runtime_context_json['site'] = site
         worker_runtime_context = Context(runtime_context_json)
         sender.add_periodic_task(
-        crontab(minutes=entry['minute'], hours=entry['hours']),
+            crontab(minutes=entry['minute'], hours=entry['hour']),
             schedule_calibration_stacking.s(runtime_context=worker_runtime_context, raw_path=raw_path),
         )
 
