@@ -73,6 +73,31 @@ services:
       options:
         max-size: '100m'
         max-file: '3'
+  banzai-celery-beat:
+    image: ${DOCKER_IMG}
+    container_name: banzai-celery-beat
+    entrypoint: ["celery", "-A", "banzai", "beat",
+                 "-l", "info"]
+    mem_limit: '8g'
+    depends_on:
+      - banzai-redis
+      - banzai-fits-exchange
+      - banzai-e2e
+      - banzai-init
+    links:
+      - banzai-redis:redis
+    volumes_from:
+      - banzai-e2e
+    environment:
+      RETRY_DELAY: "0"
+      REDIS_HOST: "redis://redis:6379/0"
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.sidekicks: banzai-e2e
+    logging:
+      options:
+        max-size: '100m'
+        max-file: '3'
   banzai-listener:
     image: ${DOCKER_IMG}
     container_name: banzai-listener

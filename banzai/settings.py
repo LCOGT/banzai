@@ -69,18 +69,23 @@ CALIBRATION_STACK_DELAYS = {'BIAS': 300,
 
 SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
 
-SCHEDULE_STACKING_CRON_ENTRIES = {'coj': '30 06 * * *',
-                                  'cpt': '00 15 * * *',
-                                  'tfn': '30 17 * * *',
-                                  'lsc': '00 21 * * *',
-                                  'elp': '00 23 * * *',
-                                  'ogg': '00 03 * * *'}
+SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
+                                  'cpt': {'minute': 0, 'hour': 15},
+                                  'tfn': {'minute': 30, 'hour': 17},
+                                  'lsc': {'minute': 0, 'hour': 21},
+                                  'elp': {'minute': 0, 'hour': 23},
+                                  'ogg': {'minute': 0, 'hour': 3}}
 
 ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/catalog/')
 
 REDIS_QUEUE_NAMES = {'DEFAULT': 'default',
                      'PROCESS_IMAGE': 'process_image',
                      'SCHEDULE_STACK': 'schedule_stack'}
+
+CELERY_REDIS_HOST = 'redis://redis:6379/0'
+CELERY_IMPORTS = ('banzai.main', 'banzai.celery')
+CELERY_PREFETCH_MULTIPLIER = 1
+CELERYD_MAX_TASKS_PER_CHILD = 1000
 
 
 def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):

@@ -14,6 +14,7 @@ import sys
 
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
+from celery.schedules import crontab
 from lcogt_logging import LCOGTFormatter
 # from apscheduler.triggers.cron import CronTrigger
 # from apscheduler.schedulers.blocking import BlockingScheduler
@@ -21,7 +22,7 @@ from lcogt_logging import LCOGTFormatter
 from banzai import dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils import image_utils, date_utils, fits_utils, import_utils, realtime_utils
-from banzai.celery import app, schedule_stacking_checks
+from banzai.celery import app, schedule_stacking_checks, schedule_calibration_stacking
 from banzai import settings
 
 
@@ -218,6 +219,19 @@ def process_single_frame(runtime_context, raw_path, filename, log_message=''):
         run(full_path, runtime_context)
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
+
+
+@app.on_after_configure.connect
+def setup_stacking_schedule(sender, runtime_context=None, raw_path=None, **kwargs):
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
+    for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
+        runtime_context_json = dict(runtime_context._asdict())
+        runtime_context_json['site'] = site
+        worker_runtime_context = Context(runtime_context_json)
+        sender.add_periodic_task(
+            crontab(minutes=entry['minutes'], hours=entry['hours']),
+            schedule_calibration_stacking.s(runtime_context=worker_runtime_context, raw_path=raw_path),
+        )
 
 
 @app.task(name='celery.process_image')
