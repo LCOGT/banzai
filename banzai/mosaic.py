@@ -19,6 +19,7 @@ class MosaicCreator(Stage):
             mosaiced_data = np.zeros((ny, nx), dtype=np.float32)
             mosaiced_bpm = np.zeros((ny, nx), dtype=np.uint8)
             for i in range(image.get_n_amps()):
+                ccdsum = image.extension_headers[i].get('CCDSUM', image.ccdsum)
                 datasec = image.extension_headers[i]['DATASEC']
                 amp_slice = fits_utils.parse_region_keyword(datasec)
                 logging_tags['DATASEC{0}'.format(i + 1)] = datasec
@@ -54,10 +55,13 @@ def get_mosaic_size(image, n_amps):
     for i in range(n_amps):
         detsec_keyword = image.extension_headers[i]['DETSEC']
         detsec = fits_utils.parse_region_keyword(detsec_keyword)
+        ccdsum = image.extension_headers[i].get('CCDSUM', image.ccdsum).split(' ')
         if detsec is not None:
+            # Convert starts from 0 indexed to 1 indexed
             x_pixel_limits.append(detsec[1].start + 1)
-            x_pixel_limits.append(detsec[1].stop)
             y_pixel_limits.append(detsec[0].start + 1)
+            # Note python is not inclusive at the end (unlike IRAF)
+            x_pixel_limits.append(detsec[1].stop)
             y_pixel_limits.append(detsec[0].stop)
         else:
             x_pixel_limits.append(None)
@@ -67,6 +71,6 @@ def get_mosaic_size(image, n_amps):
     x_pixel_limits = [x if x is not None else 1 for x in x_pixel_limits]
     y_pixel_limits = [y if y is not None else 1 for y in y_pixel_limits]
 
-    nx = np.max(x_pixel_limits) - np.min(x_pixel_limits) + 1
-    ny = np.max(y_pixel_limits) - np.min(y_pixel_limits) + 1
+    nx = (np.max(x_pixel_limits) - np.min(x_pixel_limits) + 1) // int(ccdsum[0])
+    ny = (np.max(y_pixel_limits) - np.min(y_pixel_limits) + 1) // int(ccdsum[1])
     return nx, ny

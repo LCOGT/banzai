@@ -52,3 +52,10 @@ def ccdsum_to_filename(image):
 
 def filter_to_filename(image):
     return str(image.filter)
+
+
+def config_to_filename(image):
+    filename = str(image.configuration_mode)
+    filename = filename.replace('full_frame', 'full')
+    filename = filename.replace('central_2k_2x2', 'center')
+    return filename

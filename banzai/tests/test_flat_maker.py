@@ -14,7 +14,7 @@ def test_min_images():
 
 def test_group_by_attributes():
     maker = FlatMaker(FakeContext())
-    assert maker.group_by_attributes() == ['ccdsum', 'filter']
+    assert maker.group_by_attributes() == ['configuration_mode', 'filter']
 
 
 @mock.patch('banzai.images.Image._init_instrument_info')
@@ -31,8 +31,9 @@ def test_header_cal_type_flat(mock_instrument_info):
     assert header['OBSTYPE'].upper() == 'SKYFLAT'
 
 
-def test_returns_null_if_ccdsums_are_different():
-    handles_inhomogeneous_set(FlatMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
+@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
+def test_returns_null_if_confmodes_are_different(mock_frame):
+    handles_inhomogeneous_set(FlatMaker, FakeContext(), 'configuration_mode', 'central_2k_2x2', calibration_maker=True)
 
 
 def test_returns_null_if_nx_are_different():

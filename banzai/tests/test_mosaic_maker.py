@@ -9,6 +9,11 @@ class FakeMosaicImage(FakeImage):
     def __init__(self, *args, **kwargs):
         super(FakeMosaicImage, self).__init__(*args, **kwargs)
         self.extension_headers = None
+        self.ccdsum = '1 1'
+        self.extension_headers = [{'DATASEC': '[1:512,1:512]', 'DETSEC': '[1025:2048,3072:2049]', 'CCDSUM': '2 2'},
+                                  {'DATASEC': '[1:512,1:512]', 'DETSEC': '[1025:2048,1025:2048]', 'CCDSUM': '2 2'},
+                                  {'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,1025:2048]', 'CCDSUM': '2 2'},
+                                  {'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,3072:2049]', 'CCDSUM': '2 2'}]
 
     def update_shape(self, nx, ny):
         pass
@@ -38,6 +43,12 @@ def test_null_input_image():
     mosaic_creator = MosaicCreator(None)
     image = mosaic_creator.run(None)
     assert image is None
+
+
+def test_mosaic_size():
+    image = FakeMosaicImage()
+    image.ccdsum = '2 2'
+    assert get_mosaic_size(image, 4) == (1024, 1024)
 
 
 def test_2d_images():
