@@ -33,7 +33,7 @@ def celery_join():
         queues = [celery_inspector.active(), celery_inspector.scheduled(), celery_inspector.reserved()]
         time.sleep(1)
         if any([queue is None or 'celery@banzai-celery-worker' not in queue for queue in queues]):
-            logger.warn('No valid celery queues were detected, retrying...', extra_tags={'queues': queues})
+            logger.warning('No valid celery queues were detected, retrying...', extra_tags={'queues': queues})
             # Reset the celery connection
             celery_inspector = app.control.inspect()
             continue

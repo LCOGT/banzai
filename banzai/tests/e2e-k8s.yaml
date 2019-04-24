@@ -55,7 +55,7 @@ spec:
       resources:
         requests:
           cpu: 0.1
-          memory: 256M
+          memory: 512M
         limits:
           cpu: 1
           memory: 1Gi
@@ -88,10 +88,10 @@ spec:
       resources:
         requests:
           cpu: 0.1
-          memory: 256M
+          memory: 8Gi
         limits:
-          cpu: 1
-          memory: 1Gi
+          cpu: 4
+          memory: 8Gi
     - name: banzai-celery-beat
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
@@ -117,10 +117,10 @@ spec:
       resources:
         requests:
           cpu: 0.1
-          memory: 5.0Gi
+          memory: 1Gi
         limits:
-          cpu: 4
-          memory: 8Gi
+          cpu: 1
+          memory: 1Gi
     - name: banzai-listener
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
@@ -143,7 +143,7 @@ spec:
       resources:
         requests:
           cpu: 0.1
-          memory: 256M
+          memory: 512M
         limits:
           cpu: 1
           memory: 1Gi
