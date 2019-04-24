@@ -86,6 +86,35 @@ spec:
       resources:
         requests:
           cpu: 0.1
+          memory: 256M
+        limits:
+          cpu: 1
+          memory: 1Gi
+    - name: banzai-celert-beat:
+      image: @BANZAI_IMAGE@
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: banzai-data
+          mountPath: /archive/engineering
+          subPath: engineering
+          readOnly: false
+      env:
+        - name: DB_ADDRESS
+          value: "sqlite:////archive/engineering/test.db"
+        - name: RETRY_DELAY
+          value: "0"
+        - name: REDIS_HOST
+          value: "redis://localhost:6379/0"
+      command:
+        - celery
+        - -A
+        - banzai
+        - beat
+        - -l
+        - "info"
+      resources:
+        requests:
+          cpu: 0.1
           memory: 5.0Gi
         limits:
           cpu: 4
