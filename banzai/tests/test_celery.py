@@ -5,8 +5,7 @@ from datetime import datetime, timedelta
 
 from celery.exceptions import Retry
 
-from banzai.celery import schedule_stack
-from banzai.calibrations import schedule_stacking_checks
+from banzai.celery import schedule_stack, schedule_stacking_checks
 from banzai.settings import CALIBRATION_STACK_DELAYS
 from banzai.utils import date_utils
 from banzai.context import Context

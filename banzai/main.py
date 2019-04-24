@@ -17,11 +17,11 @@ from kombu.mixins import ConsumerMixin
 from lcogt_logging import LCOGTFormatter
 
 from banzai import dbs, logs, calibrations
-from banzai.calibrations import schedule_stacking_checks
+from banzai.calibrations import logger
 from banzai.context import Context
 from banzai.utils.stage_utils import run
 from banzai.utils import image_utils, date_utils, fits_utils
-from banzai.celery import process_image, setup_stacking_schedule
+from banzai.celery import process_image, setup_stacking_schedule, schedule_stacking_checks
 
 # Logger set up
 logging.captureWarnings(True)
