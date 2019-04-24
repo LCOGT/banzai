@@ -82,11 +82,6 @@ REDIS_QUEUE_NAMES = {'DEFAULT': 'default',
                      'PROCESS_IMAGE': 'process_image',
                      'SCHEDULE_STACK': 'schedule_stack'}
 
-CELERY_REDIS_HOST = 'redis://redis:6379/0'
-CELERY_IMPORTS = ('banzai.main', 'banzai.celery')
-CELERY_PREFETCH_MULTIPLIER = 1
-CELERYD_MAX_TASKS_PER_CHILD = 1000
-
 
 def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):
     def get_calibration_filename(image):

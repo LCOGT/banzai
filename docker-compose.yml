@@ -52,7 +52,7 @@ services:
     container_name: banzai-celery-workers
     entrypoint: ["celery", "-A", "banzai", "worker",
                  "--hostname", "banzai-celery-worker",
-                 "-l", "info"]
+                 "-l", "debug"]
     mem_limit: '8g'
     depends_on:
       - banzai-redis
@@ -77,7 +77,7 @@ services:
     image: ${DOCKER_IMG}
     container_name: banzai-celery-beat
     entrypoint: ["celery", "-A", "banzai", "beat",
-                 "-l", "info"]
+                 "-l", "debug"]
     mem_limit: '8g'
     depends_on:
       - banzai-redis

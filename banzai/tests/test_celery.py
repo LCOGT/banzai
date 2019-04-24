@@ -105,17 +105,3 @@ class TestMain():
         with pytest.raises(Retry) as e:
             schedule_stack(runtime_context_json, [fake_blocks_response_json['results'][0]], process_any_images=False)
         assert e.type is Retry
-
-    # @mock.patch('banzai.celery.schedule_stack')
-    # def test_should_retry_schedule_stack_one_retry(self, mock_schedule_stack):
-    #     test_message = Message(options={'retries': 1}, args=('test_arg1', 'test_arg2'),
-    #                            queue_name='schedule_stack', actor_name='', kwargs={})
-    #     return_value = should_retry_schedule_stack(test_message._asdict(), {'type': Exception, 'message': 'test'})
-    #     assert not return_value
-
-    # @mock.patch('banzai.celery.schedule_stack')
-    # def test_should_retry_schedule_stack_two_retries(self, mock_schedule_stack):
-    #     test_message = Message(options={'retries': 2}, args=('test_arg1', 'test_arg2'),
-    #                            queue_name='schedule_stack', actor_name='', kwargs={})
-    #     should_retry_schedule_stack(test_message._asdict(), {'type': Exception, 'message': 'test'})
-    #     mock_schedule_stack.assert_called_with(*test_message._asdict()['args'], process_any_images=True)

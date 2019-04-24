@@ -1,7 +1,4 @@
-# import json
-
 from collections import namedtuple
-# from dramatiq import JSONEncoder
 
 
 def Context(args):
@@ -11,5 +8,3 @@ def Context(args):
         args_dict = args
     constructor = namedtuple('Context', args_dict.keys())
     return constructor(**args_dict)
-
-

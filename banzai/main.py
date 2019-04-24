@@ -16,8 +16,6 @@ from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 from celery.schedules import crontab
 from lcogt_logging import LCOGTFormatter
-# from apscheduler.triggers.cron import CronTrigger
-# from apscheduler.schedulers.blocking import BlockingScheduler
 
 from banzai import dbs, logs, calibrations
 from banzai.context import Context
@@ -211,7 +209,7 @@ def setup_stacking_schedule(sender, runtime_context=None, raw_path=None, **kwarg
         worker_runtime_context = Context(runtime_context_json)
         sender.add_periodic_task(
             crontab(minute=entry['minute'], hour=entry['hour']),
-            schedule_calibration_stacking.s(runtime_context=worker_runtime_context, raw_path=raw_path),
+            schedule_calibration_stacking.s(runtime_context=worker_runtime_context, raw_path=raw_path)
         )
 
 
