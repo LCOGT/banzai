@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 
 from celery.exceptions import Retry
 
-from banzai.celery import schedule_stacking_checks, schedule_stack
+from banzai.celery import schedule_stack
+from banzai.calibrations import schedule_stacking_checks
 from banzai.settings import CALIBRATION_STACK_DELAYS
 from banzai.utils import date_utils
 from banzai.context import Context
@@ -54,8 +55,8 @@ fake_instruments_response = FakeInstrument()
 class TestMain():
     @mock.patch('banzai.celery.schedule_stack.apply_async')
     @mock.patch('banzai.celery.dbs.get_instruments_at_site')
-    @mock.patch('banzai.celery.lake_utils.get_calibration_blocks_for_time_range')
-    @mock.patch('banzai.celery.lake_utils.filter_calibration_blocks_for_type')
+    @mock.patch('banzai.utils.lake_utils.get_calibration_blocks_for_time_range')
+    @mock.patch('banzai.utils.lake_utils.filter_calibration_blocks_for_type')
     def test_schedule_stacking_checks_queues_task_no_delay(self, mock_filter_blocks, mock_get_blocks,     mock_get_instruments, mock_schedule_stack):
         mock_get_instruments.return_value = [FakeInstrument(site='coj', camera='2m0-SciCam-Spectral',
                                                             enclosure='clma', telescope='2m0a')]
@@ -69,8 +70,8 @@ class TestMain():
 
     @mock.patch('banzai.celery.schedule_stack.apply_async')
     @mock.patch('banzai.celery.dbs.get_instruments_at_site')
-    @mock.patch('banzai.celery.lake_utils.get_calibration_blocks_for_time_range')
-    @mock.patch('banzai.celery.lake_utils.filter_calibration_blocks_for_type')
+    @mock.patch('banzai.utils.lake_utils.get_calibration_blocks_for_time_range')
+    @mock.patch('banzai.utils.lake_utils.filter_calibration_blocks_for_type')
     def test_schedule_stacking_checks_queues_task_with_delay(self, mock_filter_blocks, mock_get_blocks,   mock_get_instruments, mock_schedule_stack):
         mock_get_instruments.return_value = [FakeInstrument(site='coj', camera='2m0-SciCam-Spectral',
                                                             enclosure='clma', telescope='2m0a')]

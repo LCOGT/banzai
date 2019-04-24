@@ -14,15 +14,14 @@ import sys
 
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
-from celery.schedules import crontab
 from lcogt_logging import LCOGTFormatter
 
 from banzai import dbs, logs, calibrations
+from banzai.calibrations import schedule_stacking_checks
 from banzai.context import Context
-from banzai.utils import image_utils, date_utils, fits_utils, import_utils, realtime_utils
-from banzai.celery import app, schedule_stacking_checks, schedule_calibration_stacking
-from banzai import settings
-
+from banzai.utils.stage_utils import run
+from banzai.utils import image_utils, date_utils, fits_utils
+from banzai.celery import process_image, setup_stacking_schedule
 
 # Logger set up
 logging.captureWarnings(True)
@@ -62,40 +61,6 @@ class RealtimeModeListener(ConsumerMixin):
         path = body.get('path')
         process_image.apply_async(args=(path, self.runtime_context._asdict()))
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
-
-
-def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
-    """
-
-    Parameters
-    ----------
-    ordered_stages: list of banzai.stages.Stage objects
-    last_stage: banzai.stages.Stage
-                Last stage to do
-    extra_stages: Stages to do after the last stage
-
-    Returns
-    -------
-    stages_todo: list of banzai.stages.Stage
-                 The stages that need to be done
-
-    Notes
-    -----
-    Extra stages can be other stages that are not in the ordered_stages list.
-    """
-    if extra_stages is None:
-        extra_stages = []
-
-    if last_stage is None:
-        last_index = None
-    else:
-        last_index = ordered_stages.index(last_stage) + 1
-
-    stages_todo = [import_utils.import_attribute(stage) for stage in ordered_stages[:last_index]]
-
-    stages_todo += [import_utils.import_attribute(stage) for stage in extra_stages]
-
-    return stages_todo
 
 
 def parse_args(extra_console_arguments=None, parser_description='Process LCO data.'):
@@ -148,25 +113,6 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
     return runtime_context
 
 
-def run(image_path, runtime_context):
-    """
-    Main driver script for banzai.
-    """
-    image = image_utils.read_image(image_path, runtime_context)
-    stages_to_do = get_stages_todo(settings.ORDERED_STAGES,
-                                   last_stage=settings.LAST_STAGE[image.obstype],
-                                   extra_stages=settings.EXTRA_STAGES[image.obstype])
-    logger.info("Starting to reduce frame", image=image)
-    for stage in stages_to_do:
-        stage_to_run = stage(runtime_context)
-        image = stage_to_run.run(image)
-    if image is None:
-        logger.error('Reduction stopped', extra_tags={'filename': image_path})
-        return
-    image.write(runtime_context)
-    logger.info("Finished reducing frame", image=image)
-
-
 def process_directory(runtime_context, raw_path, image_types=None, log_message=''):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
@@ -198,41 +144,6 @@ def process_single_frame(runtime_context, raw_path, filename, log_message=''):
         run(full_path, runtime_context)
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
-
-
-@app.on_after_configure.connect
-def setup_stacking_schedule(sender, runtime_context=None, raw_path=None, **kwargs):
-    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
-    for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
-        runtime_context_json = dict(runtime_context._asdict())
-        runtime_context_json['site'] = site
-        worker_runtime_context = Context(runtime_context_json)
-        sender.add_periodic_task(
-            crontab(minute=entry['minute'], hour=entry['hour']),
-            schedule_calibration_stacking.s(runtime_context=worker_runtime_context, raw_path=raw_path)
-        )
-
-
-@app.task(name='celery.process_image')
-def process_image(path, runtime_context_dict):
-    logger.info('Got into actor.')
-    runtime_context = Context(runtime_context_dict)
-    try:
-        # pipeline_context = PipelineContext.from_dict(pipeline_context_json)
-        if realtime_utils.need_to_process_image(path, runtime_context,
-                                                db_address=runtime_context.db_address,
-                                                max_tries=runtime_context.max_tries):
-            logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
-
-            # Increment the number of tries for this file
-            realtime_utils.increment_try_number(path, db_address=runtime_context.db_address)
-
-            run(path, runtime_context)
-            realtime_utils.set_file_as_processed(path, db_address=runtime_context.db_address)
-
-    except Exception:
-        logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
-                     extra_tags={'filename': os.path.basename(path)})
 
 
 def parse_directory_args(runtime_context=None, raw_path=None, extra_console_arguments=None):
@@ -291,6 +202,11 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                           enclosure=runtime_context.enclosure, telescope=runtime_context.telescope)
     calibrations.process_master_maker(runtime_context, instrument,  runtime_context.frame_type.upper(),
                                       runtime_context.min_date, runtime_context.max_date)
+
+
+def start_stacking_scheduler(runtime_context=None, raw_path=None):
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
+    setup_stacking_schedule(runtime_context, raw_path)
 
 
 def e2e_stack_calibrations(runtime_context=None, raw_path=None):

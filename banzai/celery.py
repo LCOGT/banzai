@@ -1,12 +1,13 @@
 import os
 import logging
 
-from datetime import datetime, timedelta
 from celery import Celery
 
-from banzai import settings, dbs, calibrations
-from banzai.utils import lake_utils, date_utils
+from celery.schedules import crontab
+from banzai import settings, dbs, calibrations, logs
+from banzai.utils import date_utils, realtime_utils
 from banzai.context import Context
+from banzai.utils.stage_utils import run
 
 app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
@@ -29,7 +30,7 @@ def schedule_calibration_stacking(runtime_context=None, raw_path=None):
     for frame_type in settings.CALIBRATION_IMAGE_TYPES:
         runtime_context_json['frame_type'] = frame_type
         runtime_context = Context(runtime_context_json)
-        schedule_stacking_checks(runtime_context)
+        calibrations.schedule_stacking_checks(runtime_context)
 
 
 @app.task(name='celery.schedule_stack', bind=True, default_retry_delay=RETRY_DELAY)
@@ -58,32 +59,35 @@ def schedule_stack(self, runtime_context_json, blocks, process_any_images=True):
                                           runtime_context.min_date, runtime_context.max_date)
 
 
-def schedule_stacking_checks(runtime_context):
-    logger.info('scheduling stacking checks')
-    calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(runtime_context.site,
-                                                                          runtime_context.max_date,
-                                                                          runtime_context.min_date)
-    instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
-    for instrument in instruments:
-        worker_runtime_context = dict(runtime_context._asdict())
-        worker_runtime_context['enclosure'] = instrument.enclosure
-        worker_runtime_context['telescope'] = instrument.telescope
-        worker_runtime_context['camera'] = instrument.camera
-        blocks_for_calibration = lake_utils.filter_calibration_blocks_for_type(instrument,
-                                                                               worker_runtime_context['frame_type'],
-                                                                               calibration_blocks)
-        if len(blocks_for_calibration) > 0:
-            block_end = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
-            stack_delay = timedelta(
-                seconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context['frame_type'].upper()]
-            )
-            now = datetime.utcnow().replace(microsecond=0)
-            logger.info('before schedule stack for block type {0}'.format(worker_runtime_context['frame_type']))
-            message_delay = block_end - now + stack_delay
-            if message_delay.days < 0:
-                message_delay_in_seconds = 0  # Remove delay if block end is in the past
-            else:
-                message_delay_in_seconds = message_delay.seconds
-            logger.info('scheduling with message delay {0}'.format(str(message_delay_in_seconds)))
-            schedule_stack.apply_async(args=(worker_runtime_context, blocks_for_calibration),
-                                       countdown=message_delay_in_seconds)
+@app.on_after_configure.connect
+def setup_stacking_schedule(sender, runtime_context, raw_path, **kwargs):
+    for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
+        runtime_context_json = dict(runtime_context._asdict())
+        runtime_context_json['site'] = site
+        worker_runtime_context = Context(runtime_context_json)
+        sender.add_periodic_task(
+            crontab(minute=entry['minute'], hour=entry['hour']),
+            schedule_calibration_stacking.s(runtime_context=worker_runtime_context, raw_path=raw_path)
+        )
+
+
+@app.task(name='celery.process_image')
+def process_image(path, runtime_context_dict):
+    logger.info('Got into actor.')
+    runtime_context = Context(runtime_context_dict)
+    try:
+        # pipeline_context = PipelineContext.from_dict(pipeline_context_json)
+        if realtime_utils.need_to_process_image(path, runtime_context,
+                                                db_address=runtime_context.db_address,
+                                                max_tries=runtime_context.max_tries):
+            logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
+
+            # Increment the number of tries for this file
+            realtime_utils.increment_try_number(path, db_address=runtime_context.db_address)
+
+            run(path, runtime_context)
+            realtime_utils.set_file_as_processed(path, db_address=runtime_context.db_address)
+
+    except Exception:
+        logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
+                     extra_tags={'filename': os.path.basename(path)})
