@@ -90,7 +90,7 @@ spec:
         limits:
           cpu: 1
           memory: 1Gi
-    - name: banzai-celert-beat:
+    - name: banzai-celery-beat
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
       volumeMounts:
