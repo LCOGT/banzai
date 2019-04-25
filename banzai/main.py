@@ -209,6 +209,7 @@ def stack_calibrations(runtime_context=None, raw_path=None):
 
 
 def start_stacking_scheduler(runtime_context=None, raw_path=None):
+    logger.info('Entered entrypoint to celery beat scheduling')
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
     for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
         runtime_context_json = dict(runtime_context._asdict())
@@ -218,6 +219,7 @@ def start_stacking_scheduler(runtime_context=None, raw_path=None):
             schedule_calibration_stacking.s(runtime_context_json=runtime_context_json, raw_path=raw_path)
         )
         beat = celery.bin.beat.beat(app=app)
+        logger.info('Starting celery beat')
         beat.run()
 
 

@@ -20,9 +20,10 @@ RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 
 @app.task(name='celery.schedule_calibration_stacking')
 def schedule_calibration_stacking(runtime_context_json=None, raw_path=None):
-    logger.info('starting schedule_calibration_stacking for end-to-end tests')
+    logger.info('Starting schedule_calibration_stacking for {0}'.format(runtime_context_json['site']))
     timezone_for_site = dbs.get_timezone(runtime_context_json['site'], db_address=runtime_context_json['db_address'])
-    min_date, max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(timezone_for_site, return_string=True)
+    min_date, max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(timezone_for_site,
+                                                                                     return_string=True)
     logger.info('scheduling stacking for {0} to {1}'.format(min_date, max_date))
     runtime_context_json['min_date'] = min_date
     runtime_context_json['max_date'] = max_date
@@ -63,7 +64,6 @@ def process_image(path, runtime_context_dict):
     logger.info('Got into actor.')
     runtime_context = Context(runtime_context_dict)
     try:
-        # pipeline_context = PipelineContext.from_dict(pipeline_context_json)
         if realtime_utils.need_to_process_image(path, runtime_context,
                                                 db_address=runtime_context.db_address,
                                                 max_tries=runtime_context.max_tries):
@@ -81,12 +81,14 @@ def process_image(path, runtime_context_dict):
 
 
 def schedule_stacking_checks(runtime_context):
-    logger.info('scheduling stacking checks')
+    logger.info('Scheduling stacking checks')
     calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(runtime_context.site,
                                                                           runtime_context.max_date,
                                                                           runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
     for instrument in instruments:
+        logger.info('checking for scheduled calibration blocks for {0} at site {1}'.format(instrument.camera,
+                                                                                           instrument.site))
         worker_runtime_context = dict(runtime_context._asdict())
         worker_runtime_context['enclosure'] = instrument.enclosure
         worker_runtime_context['telescope'] = instrument.telescope
