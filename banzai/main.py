@@ -25,6 +25,7 @@ from banzai import settings
 from banzai.celery import process_image, schedule_stacking_checks, schedule_calibration_stacking, app
 from celery.schedules import crontab
 import celery
+import celery.bin.beat
 
 # Logger set up
 logging.captureWarnings(True)
