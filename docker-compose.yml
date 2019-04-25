@@ -76,8 +76,7 @@ services:
   banzai-celery-beat:
     image: ${DOCKER_IMG}
     container_name: banzai-celery-beat
-    entrypoint: ["celery", "-A", "banzai", "beat",
-                 "-l", "debug"]
+    entrypoint: ["banzai_automate_stack_calibrations"]
     mem_limit: '8g'
     depends_on:
       - banzai-redis
