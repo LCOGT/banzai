@@ -108,12 +108,7 @@ spec:
         - name: REDIS_HOST
           value: "redis://localhost:6379/0"
       command:
-        - celery
-        - -A
-        - banzai
-        - beat
-        - -l
-        - "debug"
+        - banzai_automate_stack_calibrations
       resources:
         requests:
           cpu: 0.1

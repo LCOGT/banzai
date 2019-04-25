@@ -4,8 +4,6 @@ from datetime import datetime, timedelta
 
 from celery import Celery
 
-from celery.schedules import crontab
-
 from banzai import settings, dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, lake_utils
 from banzai.context import Context
@@ -59,18 +57,6 @@ def schedule_stack(self, runtime_context_json, blocks, process_any_images=True):
     else:
         calibrations.process_master_maker(runtime_context, instrument, runtime_context.frame_type,
                                           runtime_context.min_date, runtime_context.max_date)
-
-
-@app.on_after_configure.connect
-def setup_stacking_schedule(sender, runtime_context, raw_path, **kwargs):
-    for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
-        runtime_context_json = dict(runtime_context._asdict())
-        runtime_context_json['site'] = site
-        worker_runtime_context = Context(runtime_context_json)
-        sender.add_periodic_task(
-            crontab(minute=entry['minute'], hour=entry['hour']),
-            schedule_calibration_stacking.s(runtime_context=worker_runtime_context, raw_path=raw_path)
-        )
 
 
 @app.task(name='celery.process_image')

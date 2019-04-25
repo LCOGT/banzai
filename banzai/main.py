@@ -21,7 +21,11 @@ from banzai.calibrations import logger
 from banzai.context import Context
 from banzai.utils.stage_utils import run
 from banzai.utils import image_utils, date_utils, fits_utils
-from banzai.celery import process_image, setup_stacking_schedule, schedule_stacking_checks
+from banzai import settings
+from banzai.celery import process_image, schedule_stacking_checks, app, schedule_calibration_stacking
+import celery
+
+from celery.schedules import crontab
 
 # Logger set up
 logging.captureWarnings(True)
@@ -204,9 +208,19 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                       runtime_context.min_date, runtime_context.max_date)
 
 
-def start_stacking_scheduler(runtime_context=None, raw_path=None):
+@app.on_after_configure.connect
+def start_stacking_scheduler(sender, runtime_context=None, raw_path=None, **kwargs):
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
-    setup_stacking_schedule(runtime_context, raw_path)
+    for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
+        runtime_context_json = dict(runtime_context._asdict())
+        runtime_context_json['site'] = site
+        worker_runtime_context = Context(runtime_context_json)
+        sender.add_periodic_task(
+            crontab(minute=entry['minute'], hour=entry['hour']),
+            schedule_calibration_stacking.s(runtime_context=worker_runtime_context, raw_path=raw_path)
+        )
+    beat = celery.bin.beat.beat(app=app)
+    beat.run()
 
 
 def e2e_stack_calibrations(runtime_context=None, raw_path=None):
