@@ -24,6 +24,7 @@ FRAME_CLASS = 'banzai.images.Image'
 ORDERED_STAGES = ['banzai.bpm.BPMUpdater',
                   'banzai.qc.HeaderSanity',
                   'banzai.qc.ThousandsTest',
+                  'banzai.qc.ZerosTest',
                   'banzai.qc.SaturationTest',
                   'banzai.bias.OverscanSubtractor',
                   'banzai.crosstalk.CrosstalkCorrector',

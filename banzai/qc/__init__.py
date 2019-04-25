@@ -3,6 +3,7 @@ from banzai.qc.pointing import PointingTest
 from banzai.qc.sinistro_1000s import ThousandsTest
 from banzai.qc.pattern_noise import PatternNoiseDetector
 from banzai.qc.header_checker import HeaderSanity
+from banzai.qc.zeros import ZerosTest
 
 __all__ = ['SaturationTest', 'PointingTest', 'ThousandsTest',
-           'PatternNoiseDetector', 'HeaderSanity']
+           'PatternNoiseDetector', 'HeaderSanity', 'ZerosTest']
