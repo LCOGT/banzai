@@ -213,10 +213,9 @@ def start_stacking_scheduler(runtime_context=None, raw_path=None):
     for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
         runtime_context_json = dict(runtime_context._asdict())
         runtime_context_json['site'] = site
-        worker_runtime_context = Context(runtime_context_json)
         app.add_periodic_task(
             crontab(minute=entry['minute'], hour=entry['hour']),
-            schedule_calibration_stacking.s(runtime_context=worker_runtime_context, raw_path=raw_path)
+            schedule_calibration_stacking.s(runtime_context_json=runtime_context_json, raw_path=raw_path)
         )
         beat = celery.bin.beat.beat(app=app)
         beat.run()

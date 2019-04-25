@@ -19,12 +19,11 @@ RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 
 
 @app.task(name='celery.schedule_calibration_stacking')
-def schedule_calibration_stacking(runtime_context=None, raw_path=None):
+def schedule_calibration_stacking(runtime_context_json=None, raw_path=None):
     logger.info('starting schedule_calibration_stacking for end-to-end tests')
-    timezone_for_site = dbs.get_timezone(runtime_context.site, db_address=runtime_context.db_address)
+    timezone_for_site = dbs.get_timezone(runtime_context_json['site'], db_address=runtime_context_json['db_address'])
     min_date, max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(timezone_for_site, return_string=True)
     logger.info('scheduling stacking for {0} to {1}'.format(min_date, max_date))
-    runtime_context_json = dict(runtime_context._asdict())
     runtime_context_json['min_date'] = min_date
     runtime_context_json['max_date'] = max_date
     for frame_type in settings.CALIBRATION_IMAGE_TYPES:
