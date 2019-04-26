@@ -18,6 +18,11 @@ logger = logging.getLogger(__name__)
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 
 
+@app.task(name='celery.test_task')
+def test_task():
+    logger.info('Running test task')
+
+
 @app.task(name='celery.schedule_calibration_stacking')
 def schedule_calibration_stacking(runtime_context_json=None, raw_path=None):
     logger.info('Starting schedule_calibration_stacking for {0}'.format(runtime_context_json['site']))

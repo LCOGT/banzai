@@ -22,7 +22,7 @@ from banzai.context import Context
 from banzai.utils.stage_utils import run
 from banzai.utils import image_utils, date_utils, fits_utils
 from banzai import settings
-from banzai.celery import process_image, schedule_stacking_checks, schedule_calibration_stacking, app
+from banzai.celery import process_image, schedule_stacking_checks, schedule_calibration_stacking, test_task, app
 from celery.schedules import crontab
 import celery
 import celery.bin.beat
@@ -210,6 +210,7 @@ def stack_calibrations(runtime_context=None, raw_path=None):
 
 def start_stacking_scheduler(runtime_context=None, raw_path=None):
     logger.info('Entered entrypoint to celery beat scheduling')
+    app.add_periodic_task(60.0, test_task.s(), expires=120)
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
     for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
         runtime_context_json = dict(runtime_context._asdict())
