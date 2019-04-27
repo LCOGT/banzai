@@ -210,7 +210,7 @@ def stack_calibrations(runtime_context=None, raw_path=None):
 
 def start_stacking_scheduler(runtime_context=None, raw_path=None):
     logger.info('Entered entrypoint to celery beat scheduling')
-    app.add_periodic_task(60.0, test_task.s(), expires=120)
+    app.add_periodic_task(60.0, test_task.s('test task every minute'), expires=600)
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
     for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
         runtime_context_json = dict(runtime_context._asdict())
@@ -219,9 +219,9 @@ def start_stacking_scheduler(runtime_context=None, raw_path=None):
             crontab(minute=entry['minute'], hour=entry['hour']),
             schedule_calibration_stacking.s(runtime_context_json=runtime_context_json, raw_path=raw_path)
         )
-        beat = celery.bin.beat.beat(app=app)
-        logger.info('Starting celery beat')
-        beat.run()
+    beat = celery.bin.beat.beat(app=app)
+    logger.info('Starting celery beat')
+    beat.run()
 
 
 def e2e_stack_calibrations(runtime_context=None, raw_path=None):
