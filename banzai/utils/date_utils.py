@@ -137,7 +137,7 @@ def validate_date(s):
 def get_min_and_max_dates_for_calibration_scheduling(timezone, return_string=False):
     # Gets next midnight relative to date of observation
     current_date = datetime.datetime.utcnow().replace(hour=12, minute=0, second=0)
-    noon_at_site = current_date + datetime.timedelta(hours=24-timezone)
+    noon_at_site = current_date + datetime.timedelta(hours=0-timezone)
     min_date = noon_at_site - datetime.timedelta(days=0.5)
     max_date = noon_at_site + datetime.timedelta(days=0.5)
     if return_string:
