@@ -7,7 +7,7 @@ import numpy as np
 from banzai.qc import pattern_noise
 from banzai.tests.utils import FakeImage, gaussian2d
 
-logger = logging.getLogger('banzai.qc.pattern_noise')
+logger = logging.getLogger('banzai')
 
 
 @pytest.fixture(scope='module')
