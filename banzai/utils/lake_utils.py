@@ -1,7 +1,7 @@
 import requests
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 LAKE_URL = 'http://lake.lco.gtn/blocks/'
 CALIBRATE_PROPOSAL_ID = 'calibrate'

@@ -7,7 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from banzai import dbs, logs, main
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 Base = declarative_base()
 

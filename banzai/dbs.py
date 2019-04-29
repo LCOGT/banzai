@@ -32,7 +32,7 @@ _CONFIGDB_ADDRESS = 'http://configdb.lco.gtn/sites/'
 
 Base = declarative_base()
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 @contextmanager

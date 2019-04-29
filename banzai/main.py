@@ -10,11 +10,10 @@ October 2015
 import argparse
 import os
 import logging
-import sys
 
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
-from lcogt_logging import LCOGTFormatter
+
 
 from banzai import dbs, logs, calibrations
 from banzai.calibrations import logger
@@ -27,18 +26,7 @@ from celery.schedules import crontab
 import celery
 import celery.bin.beat
 
-# Logger set up
-logging.captureWarnings(True)
-# Set up the root logger
-root_logger = logging.getLogger()
-root_handler = logging.StreamHandler(sys.stdout)
-# Add handler
-formatter = LCOGTFormatter()
-root_handler.setFormatter(formatter)
-root_handler.setLevel(getattr(logging, 'DEBUG'))
-root_logger.addHandler(root_handler)
-
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',

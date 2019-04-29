@@ -11,7 +11,7 @@ from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, import_
 
 FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class CalibrationMaker(MultiFrameStage):

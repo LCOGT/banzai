@@ -13,7 +13,7 @@ app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
 app.conf.update(broker_url=os.getenv('REDIS_HOST', 'redis://localhost:6379/0'))
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 

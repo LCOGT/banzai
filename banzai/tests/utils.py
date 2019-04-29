@@ -9,7 +9,7 @@ from banzai.stages import Stage
 from banzai.images import Image
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class FakeImage(Image):
