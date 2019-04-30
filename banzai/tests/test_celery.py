@@ -40,48 +40,70 @@ fake_blocks_response_json = {
                                 "instrument_class": "2M0-SCICAM-SPECTRAL",
                                 "canceled": 'false',
                                 "aborted": 'false'
+                            },
+                            {
+                                "id": 459503917,
+                                "molecules": [
+                                    {
+                                        "id": 974434567,
+                                        "prop_id": "calibrate",
+                                        "type": "BIAS",
+                                        "completed": 'false',
+                                        "exposure_count": 2
+                                    },
+                                ],
+                                "start": "2019-02-20T08:27:49",
+                                "end": "2019-02-20T09:55:09",
+                                "site": "coj",
+                                "observatory": "clma",
+                                "telescope": "2m0a",
+                                "instrument_class": "2M0-SCICAM-SPECTRAL",
+                                "canceled": 'false',
+                                "aborted": 'false'
                             }
                         ]
                     }
 
 runtime_context_json = {'site': 'coj', 'min_date': '2019-02-19T20:27:49',
-                        'max_date': '2019-02-19T21:55:09', 'frame_type': 'BIAS', 'db_address': 'db_address',
+                        'max_date': '2019-02-20T09:55:09', 'frame_type': 'BIAS', 'db_address': 'db_address',
                         'camera': '2m0-SciCam-Spectral', 'enclosure': 'clma', 'telescope': '2m0a'}
 
 fake_instruments_response = FakeInstrument()
 
 
 class TestMain():
+    @mock.patch('banzai.celery.dbs.get_timezone')
     @mock.patch('banzai.celery.schedule_stack.apply_async')
     @mock.patch('banzai.celery.dbs.get_instruments_at_site')
     @mock.patch('banzai.utils.lake_utils.get_calibration_blocks_for_time_range')
     @mock.patch('banzai.utils.lake_utils.filter_calibration_blocks_for_type')
-    def test_schedule_stacking_checks_queues_task_no_delay(self, mock_filter_blocks, mock_get_blocks,     mock_get_instruments, mock_schedule_stack):
+    def test_schedule_stacking_checks_queues_task_no_delay(self, mock_filter_blocks, mock_get_blocks,     mock_get_instruments, mock_schedule_stack, mock_get_timezone):
         mock_get_instruments.return_value = [FakeInstrument(site='coj', camera='2m0-SciCam-Spectral',
                                                             enclosure='clma', telescope='2m0a')]
         mock_get_blocks.return_value = fake_blocks_response_json
-        mock_filter_blocks.return_value = [fake_blocks_response_json['results'][0]]
+        mock_filter_blocks.return_value = [block for block in fake_blocks_response_json['results']]
+        mock_get_timezone.return_value = 0
         runtime_context = Context(runtime_context_json)
         schedule_stacking_checks(runtime_context)
         mock_schedule_stack.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value),
                                                countdown=0)
-        # assert stub_broker.queues['schedule_stack.DQ'].qsize() == 1
 
+    @mock.patch('banzai.celery.dbs.get_timezone')
     @mock.patch('banzai.celery.schedule_stack.apply_async')
     @mock.patch('banzai.celery.dbs.get_instruments_at_site')
     @mock.patch('banzai.utils.lake_utils.get_calibration_blocks_for_time_range')
     @mock.patch('banzai.utils.lake_utils.filter_calibration_blocks_for_type')
-    def test_schedule_stacking_checks_queues_task_with_delay(self, mock_filter_blocks, mock_get_blocks,   mock_get_instruments, mock_schedule_stack):
+    def test_schedule_stacking_checks_queues_task_with_delay(self, mock_filter_blocks, mock_get_blocks,   mock_get_instruments, mock_schedule_stack, mock_get_timezone):
         mock_get_instruments.return_value = [FakeInstrument(site='coj', camera='2m0-SciCam-Spectral',
                                                             enclosure='clma', telescope='2m0a')]
         fake_blocks_response_json['results'][0]['end'] = datetime.strftime(datetime.utcnow() + timedelta(minutes=1), date_utils.TIMESTAMP_FORMAT)
         mock_get_blocks.return_value = fake_blocks_response_json
-        mock_filter_blocks.return_value = [fake_blocks_response_json['results'][0]]
+        mock_get_timezone.return_value = 0
+        mock_filter_blocks.return_value = [block for block in fake_blocks_response_json['results']]
         runtime_context = Context(runtime_context_json)
         schedule_stacking_checks(runtime_context)
         mock_schedule_stack.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value),
                                                countdown=(60+CALIBRATION_STACK_DELAYS['BIAS']))
-        # assert stub_broker.queues['schedule_stack.DQ'].qsize() == 1
 
     @mock.patch('banzai.calibrations.process_master_maker')
     @mock.patch('banzai.celery.dbs.get_individual_calibration_images')

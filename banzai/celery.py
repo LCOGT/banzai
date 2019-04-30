@@ -97,13 +97,23 @@ def schedule_stacking_checks(runtime_context):
                                                                                worker_runtime_context['frame_type'],
                                                                                calibration_blocks)
         if len(blocks_for_calibration) > 0:
-            block_end = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
+            # block_end should be the latest block end time with a time before local midnight
+            timezone_for_site = dbs.get_timezone(worker_runtime_context['site'],
+                                                 db_address=worker_runtime_context['db_address'])
+            local_midnight = datetime.utcnow().replace(hour=0, minute=0, second=0) + timedelta(days=1, hours=timezone_for_site)
+            calibration_end_time = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
+            for block in blocks_for_calibration:
+                block_end = datetime.strptime(block['end'], date_utils.TIMESTAMP_FORMAT)
+                if block_end > local_midnight:
+                    break
+                elif block_end > calibration_end_time:
+                    calibration_end_time = block_end
             stack_delay = timedelta(
                 seconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context['frame_type'].upper()]
             )
             now = datetime.utcnow().replace(microsecond=0)
             logger.info('before schedule stack for block type {0}'.format(worker_runtime_context['frame_type']))
-            message_delay = block_end - now + stack_delay
+            message_delay = calibration_end_time - now + stack_delay
             if message_delay.days < 0:
                 message_delay_in_seconds = 0  # Remove delay if block end is in the past
             else:
