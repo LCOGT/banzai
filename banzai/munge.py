@@ -3,7 +3,7 @@ import logging
 import numpy as np
 from astropy.io import fits
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class SinistroModeNotSupported(Exception):

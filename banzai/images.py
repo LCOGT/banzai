@@ -13,7 +13,7 @@ from banzai import dbs, settings, exceptions
 from banzai.utils import date_utils, file_utils, fits_utils
 from banzai import logs
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class DataTable(object):
@@ -111,7 +111,7 @@ class Image(object):
         if self.obstype in settings.CALIBRATION_IMAGE_TYPES:
             dbs.save_calibration_info(filepath, self, db_address=runtime_context.db_address)
         if runtime_context.post_to_archive:
-            self._post_to_archive(filepath)
+            self._post_to_archive(filepath, runtime_context)
 
     def _save_pipeline_metadata(self, runtime_context):
         self.datecreated = datetime.datetime.utcnow()
@@ -147,6 +147,7 @@ class Image(object):
         base_filename = os.path.basename(filepath).split('.fz')[0]
         with tempfile.TemporaryDirectory() as temp_directory:
             hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True, output_verify='fix+warn')
+            hdu_list.close()
             if fpack:
                 if os.path.exists(filepath):
                     os.remove(filepath)
@@ -195,10 +196,10 @@ class Image(object):
             hdu_list.append(bpm_hdu)
         return hdu_list
 
-    def _post_to_archive(self, filepath):
+    def _post_to_archive(self, filepath, runtime_context):
         logger.info('Posting file to the archive', image=self)
         try:
-            file_utils.post_to_archive_queue(filepath)
+            file_utils.post_to_archive_queue(filepath, runtime_context.broker_url)
         except Exception:
             logger.error("Could not post to ingester: {error}".format(error=logs.format_exception()), image=self)
 

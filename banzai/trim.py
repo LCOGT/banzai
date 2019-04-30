@@ -3,7 +3,7 @@ import logging
 from banzai.utils import fits_utils
 from banzai.stages import Stage
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 def _trim_image(image):

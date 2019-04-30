@@ -22,6 +22,7 @@ htmlcov
 .coverage
 MANIFEST
 .ipynb_checkpoints
+env
 
 # Sphinx
 docs/api
@@ -52,6 +53,9 @@ sdist
 develop-eggs
 .installed.cfg
 distribute-*.tar.gz
+
+# VS Code
+.vscode
 
 # Other
 .cache

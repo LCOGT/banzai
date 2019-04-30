@@ -7,7 +7,7 @@ from banzai.utils import stats
 from banzai.stages import Stage
 from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class FlatNormalizer(Stage):

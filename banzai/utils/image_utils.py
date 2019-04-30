@@ -13,7 +13,7 @@ from banzai.utils import import_utils
 from banzai.exceptions import InhomogeneousSetException
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
@@ -74,10 +74,23 @@ def check_image_homogeneity(images, group_by_attributes=None):
 
 
 def image_can_be_processed(header, db_address):
-    instrument = dbs.get_instrument(header, db_address=db_address)
+    if header is None:
+        logger.warning('Header being checked to process image is None')
+        return False
+    # Short circuit if the instrument is a guider even if they don't exist in configdb
+    if not get_obstype(header) in settings.LAST_STAGE:
+        logger.warning('Image has an obstype that is not supported by banzai.')
+        return False
+    try:
+        instrument = dbs.get_instrument(header, db_address=db_address)
+    except ValueError:
+        return False
     passes = instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
-    passes &= get_obstype(header) in settings.LAST_STAGE
+    if not passes:
+        logger.debug('Image does not pass reduction criteria')
     passes &= get_reduction_level(header) == '00'
+    if get_reduction_level(header) != '00':
+        logger.debug('Image has nonzero reduction level')
     return passes
 
 

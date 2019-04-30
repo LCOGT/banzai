@@ -9,7 +9,7 @@ from banzai.stages import Stage
 from banzai.images import DataTable
 from banzai import logs
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class SourceDetector(Stage):
