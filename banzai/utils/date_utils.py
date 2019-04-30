@@ -125,6 +125,14 @@ def get_dayobs(timezone):
     return epoch_date_to_string(yesterday.date())
 
 
+def get_nightobs(timezone):
+    # Get the current utc
+    now = datetime.datetime.utcnow()
+    # Add the timezone offset
+    now += datetime.timedelta(hours=timezone)
+    return epoch_date_to_string(now.date())
+
+
 def validate_date(s):
     try:
         datetime.datetime.strptime(s, TIMESTAMP_FORMAT)

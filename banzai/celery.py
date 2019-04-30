@@ -100,7 +100,7 @@ def schedule_stacking_checks(runtime_context):
             # block_end should be the latest block end time with a time before local midnight
             timezone_for_site = dbs.get_timezone(worker_runtime_context['site'],
                                                  db_address=worker_runtime_context['db_address'])
-            local_midnight = datetime.utcnow().replace(hour=0, minute=0, second=0) + timedelta(days=1, hours=timezone_for_site)
+            local_midnight = datetime.strptime(date_utils.get_nightobs(timezone_for_site), 'YYYYMMDD') - timedelta(seconds=1)
             calibration_end_time = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
             for block in blocks_for_calibration:
                 block_end = datetime.strptime(block['end'], date_utils.TIMESTAMP_FORMAT)
