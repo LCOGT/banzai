@@ -13,7 +13,7 @@ from banzai.tests.utils import FakeResponse, get_min_and_max_dates
 
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 app.conf.update(CELERY_TASK_ALWAYS_EAGER=True)
 

@@ -2,7 +2,7 @@ from banzai import settings
 from banzai.utils import import_utils, image_utils
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):

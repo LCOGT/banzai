@@ -4,7 +4,7 @@ import logging
 
 from kombu import Connection, Exchange
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):

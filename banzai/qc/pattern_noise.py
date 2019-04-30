@@ -9,7 +9,7 @@ from banzai.stages import Stage
 from banzai.utils import qc
 from banzai.utils.stats import robust_standard_deviation
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class PatternNoiseDetector(Stage):

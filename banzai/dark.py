@@ -6,7 +6,7 @@ import numpy as np
 from banzai.stages import Stage
 from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class DarkNormalizer(Stage):

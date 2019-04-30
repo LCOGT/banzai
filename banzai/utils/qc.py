@@ -5,7 +5,7 @@ import elasticsearch
 
 from banzai import logs
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 def format_qc_results(qc_results, image):

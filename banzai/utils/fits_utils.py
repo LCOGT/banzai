@@ -10,7 +10,7 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 def sanitizeheader(header):

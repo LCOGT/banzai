@@ -3,6 +3,7 @@ services:
   banzai-e2e:
     image: docker.lco.global/banzai-e2e-data:1.0.1
     container_name: banzai-e2e
+    network_mode: "bridge"
     entrypoint:
     - /bin/true
     labels:
@@ -16,6 +17,7 @@ services:
         max-file: '3'
   banzai-fits-exchange:
     image: rabbitmq:3.7.9
+    network_mode: "bridge"
     container_name: banzai-fits-exchange
     mem_limit: '1g'
     logging:
@@ -24,31 +26,14 @@ services:
         max-file: '3'
   banzai-redis:
     image: redis:5.0.3
+    network_mode: "bridge"
     container_name: banzai-redis
     labels:
       io.rancher.container.pull_image: always
     mem_limit: '1g'
-  banzai-init:
-    image: ${DOCKER_IMG}
-    container_name: banzai-init
-    working_dir: /lco/banzai
-    depends_on:
-      - banzai-e2e
-    entrypoint: ["python", "-c", "from banzai.tests import test_end_to_end;
-                 test_end_to_end.init(); exit()"]
-    environment:
-      DB_ADDRESS: sqlite:////archive/engineering/test.db
-    volumes_from:
-      - banzai-e2e
-    labels:
-      io.rancher.container.pull_image: always
-      io.rancher.sidekicks: banzai-e2e
-    logging:
-      options:
-        max-size: '100m'
-        max-file: '3'
   banzai-celery-workers:
     image: ${DOCKER_IMG}
+    network_mode: "bridge"
     container_name: banzai-celery-workers
     entrypoint: ["celery", "-A", "banzai", "worker",
                  "--hostname", "banzai-celery-worker",
@@ -75,6 +60,7 @@ services:
         max-file: '3'
   banzai-celery-beat:
     image: ${DOCKER_IMG}
+    network_mode: "bridge"
     container_name: banzai-celery-beat
     entrypoint: ["banzai_automate_stack_calibrations"]
     mem_limit: '8g'
@@ -99,6 +85,7 @@ services:
         max-file: '3'
   banzai-listener:
     image: ${DOCKER_IMG}
+    network_mode: "bridge"
     container_name: banzai-listener
     mem_limit: '1g'
     depends_on:

@@ -13,7 +13,7 @@ from banzai import dbs, settings, exceptions
 from banzai.utils import date_utils, file_utils, fits_utils
 from banzai import logs
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class DataTable(object):

@@ -3,7 +3,7 @@ import logging
 from banzai import dbs
 from banzai.utils import fits_utils, image_utils, file_utils
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 def set_file_as_processed(path, db_address=dbs._DEFAULT_DB):
@@ -60,6 +60,7 @@ def need_to_process_image(path, ignore_schedulability=False, db_address=dbs._DEF
     except ValueError:
         return False
     if not ignore_schedulability and not instrument.schedulable:
+        logger.info('Image will not be processed because instrument is not schedulable', extra_tags={"filename": path})
         return False
 
     # Get the image in db. If it doesn't exist add it.
