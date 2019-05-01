@@ -16,7 +16,7 @@ def test_min_images():
 
 def test_group_by_attributes():
     maker = DarkMaker(FakeContext())
-    assert maker.group_by_attributes() == ['ccdsum']
+    assert maker.group_by_attributes() == ['configuration_mode']
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
@@ -30,8 +30,8 @@ def test_header_cal_type_dark(mock_frame):
     assert images[0].header['OBSTYPE'].upper() == 'DARK'
 
 
-def test_returns_null_if_ccdsums_are_different():
-    handles_inhomogeneous_set(DarkMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
+def test_returns_null_if_configuration_modes_are_different():
+    handles_inhomogeneous_set(DarkMaker, FakeContext(),'configuration_mode', 'central_2k_2x2', calibration_maker=True)
 
 
 def test_returns_null_if_nx_are_different():

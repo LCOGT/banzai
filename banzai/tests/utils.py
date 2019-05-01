@@ -45,6 +45,8 @@ class FakeImage(Image):
         self.obstype = 'TEST'
         self.is_bad = False
         self.configuration_mode = 'full_frame'
+        for keyword in kwargs:
+            setattr(self, keyword, kwargs[keyword])
 
     def get_calibration_filename(self):
         return '/tmp/{0}_{1}_{2}_bin{3}.fits'.format(self.caltype, self.instrument,
@@ -85,11 +87,8 @@ def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_ma
     else:
         image = FakeImage(**kwargs)
         image = stage.do_stage(image)
-        #assert image is None
-        logger.error(vars(context))
+        assert image is None
 
-        logger.error(image)
-        import pdb; pdb.set_trace()
 
 def gaussian2d(image_shape, x0, y0, brightness, fwhm):
     x = np.arange(image_shape[1])

@@ -20,13 +20,13 @@ def test_null_input_image():
 
 def test_master_selection_criteria():
     comparer = DarkComparer(FakeContext())
-    assert comparer.master_selection_criteria == ['ccdsum']
+    assert comparer.master_selection_criteria == ['configuration_mode']
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
-def test_returns_null_if_ccdsums_are_different(mock_cal, mock_frame):
-    handles_inhomogeneous_set(DarkComparer, FakeContext(), 'ccdsum', '1 1')
+def test_returns_null_if_configuration_modes_are_different(mock_cal, mock_frame):
+    handles_inhomogeneous_set(DarkComparer, FakeContext(), 'configuration_mode', 'central_2k_2x2')
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)

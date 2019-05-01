@@ -46,8 +46,12 @@ def instantly_public(proposal_id):
     return public_now
 
 
-def ccdsum_to_filename(image):
-    return 'bin{ccdsum}'.format(ccdsum=image.ccdsum.replace(' ', 'x'))
+def ccdsum_to_filename(ccdsum):
+    if ccdsum is None:
+        ccdsum_str = ''
+    else:
+        ccdsum_str = 'bin{ccdsum}'.format(ccdsum=ccdsum.replace(' ', 'x'))
+    return ccdsum_str
 
 
 def filter_to_filename(image):
