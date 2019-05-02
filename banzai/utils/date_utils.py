@@ -120,16 +120,6 @@ def get_dayobs(timezone):
     now = datetime.datetime.utcnow()
     # Add the timezone offset
     now += datetime.timedelta(hours=timezone)
-    # Assume that the night is over, so we want yesterday's dayobs
-    yesterday = now - datetime.timedelta(days=1)
-    return epoch_date_to_string(yesterday.date())
-
-
-def get_nightobs(timezone):
-    # Get the current utc
-    now = datetime.datetime.utcnow()
-    # Add the timezone offset
-    now += datetime.timedelta(hours=timezone)
     return epoch_date_to_string(now.date())
 
 
@@ -144,10 +134,12 @@ def validate_date(s):
 
 def get_min_and_max_dates_for_calibration_scheduling(timezone, return_string=False):
     # Gets next midnight relative to date of observation
-    current_date = datetime.datetime.utcnow().replace(hour=12, minute=0, second=0)
-    noon_at_site = current_date + datetime.timedelta(hours=0-timezone)
-    min_date = noon_at_site - datetime.timedelta(days=0.5)
-    max_date = noon_at_site + datetime.timedelta(days=0.5)
+    current_date = get_dayobs(timezone)
+    current_date = datetime.datetime.strptime(current_date, '%Y%m%d')
+    current_date = current_date.replace(hour=12)
+    utc_noon_at_site = current_date - datetime.timedelta(hours=timezone)
+    min_date = utc_noon_at_site - datetime.timedelta(days=0.5)
+    max_date = utc_noon_at_site + datetime.timedelta(days=0.5)
     if return_string:
         min_date = min_date.strftime(TIMESTAMP_FORMAT)
         max_date = max_date.strftime(TIMESTAMP_FORMAT)

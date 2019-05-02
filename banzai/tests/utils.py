@@ -121,9 +121,10 @@ class FakeResponse(object):
 
 
 class FakeInstrument(object):
-    def __init__(self, site='', camera='', enclosure='', telescope='', schedulable=True):
+    def __init__(self, site='', camera='', enclosure='', telescope='', type='', schedulable=True):
         self.site = site
         self.camera = camera
         self.enclosure = enclosure
         self.telescope = telescope
         self.schedulable = schedulable
+        self.type = type
