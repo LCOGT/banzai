@@ -16,38 +16,37 @@ def teardown_module():
 
 
 def test_add_or_update():
-    db_session = dbs.get_session(db_address='sqlite:///test.db')
-    # Add a fake telescope
-    dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma',
-                                                          'telescope': '1m0a'},
-                             {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma', 'telescope': '1m0a',
-                              'type': 'SBig', 'schedulable': False})
-    db_session.commit()
+    with dbs.get_session(db_address='sqlite:///test.db') as db_session:
+        # Add a fake telescope
+        dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma',
+                                                              'telescope': '1m0a'},
+                                 {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma', 'telescope': '1m0a',
+                                  'type': 'SBig', 'schedulable': False})
+        db_session.commit()
 
-    # Make sure it got added
-    query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
-    telescope = query.filter(dbs.Instrument.camera == 'kb101').first()
-    assert telescope is not None
+        # Make sure it got added
+        query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
+        telescope = query.filter(dbs.Instrument.camera == 'kb101').first()
+        assert telescope is not None
 
-    # Update the fake telescope
-    dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma',
-                                                          'telescope': '1m0a'},
-                             {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma', 'telescope': '1m0a',
-                              'type': 'SBig', 'schedulable': True})
+        # Update the fake telescope
+        dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma',
+                                                              'telescope': '1m0a'},
+                                 {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma', 'telescope': '1m0a',
+                                  'type': 'SBig', 'schedulable': True})
 
-    db_session.commit()
-    # Make sure the update took
-    query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
-    telescope = query.filter(dbs.Instrument.camera == 'kb101').first()
-    assert telescope is not None
-    assert telescope.schedulable
+        db_session.commit()
+        # Make sure the update took
+        query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
+        telescope = query.filter(dbs.Instrument.camera == 'kb101').first()
+        assert telescope is not None
+        assert telescope.schedulable
 
-    # make sure there is only one new telescope in the table
-    query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
-    telescopes = query.filter(dbs.Instrument.camera == 'kb101').all()
-    assert len(telescopes) == 1
+        # make sure there is only one new telescope in the table
+        query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
+        telescopes = query.filter(dbs.Instrument.camera == 'kb101').all()
+        assert len(telescopes) == 1
 
-    # Clean up for other methods
-    db_session.delete(telescope)
-    db_session.commit()
-    db_session.close()
+        # Clean up for other methods
+        db_session.delete(telescope)
+        db_session.commit()

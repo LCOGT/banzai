@@ -1,7 +1,9 @@
 version: '2'
 services:
-  BANZAIpipelineE2EData:
+  banzai-e2e:
     image: docker.lco.global/banzai-e2e-data:1.0.1
+    container_name: banzai-e2e
+    network_mode: "bridge"
     entrypoint:
     - /bin/true
     labels:
@@ -13,18 +15,99 @@ services:
       options:
         max-size: '100m'
         max-file: '3'
-  BANZAITest:
-    image: ${DOCKER_IMG}
-    entrypoint:
-    - tail
-    command: ["-f", "/dev/null"]
-    environment:
-      DB_ADDRESS: sqlite:////archive/engineering/test.db
-    volumes_from:
-    - BANZAIpipelineE2EData
+  banzai-fits-exchange:
+    image: rabbitmq:3.7.9
+    network_mode: "bridge"
+    container_name: banzai-fits-exchange
+    mem_limit: '1g'
+    logging:
+      options:
+        max-size: '100m'
+        max-file: '3'
+  banzai-redis:
+    image: redis:5.0.3
+    network_mode: "bridge"
+    container_name: banzai-redis
     labels:
       io.rancher.container.pull_image: always
-      io.rancher.sidekicks: BANZAIpipelineE2EData
+    mem_limit: '1g'
+  banzai-celery-workers:
+    image: ${DOCKER_IMG}
+    network_mode: "bridge"
+    container_name: banzai-celery-workers
+    entrypoint: ["celery", "-A", "banzai", "worker",
+                 "--hostname", "banzai-celery-worker",
+                 "-l", "debug"]
+    mem_limit: '8g'
+    depends_on:
+      - banzai-redis
+      - banzai-fits-exchange
+      - banzai-e2e
+      - banzai-init
+    links:
+      - banzai-redis:redis
+    volumes_from:
+      - banzai-e2e
+    environment:
+      RETRY_DELAY: "0"
+      REDIS_HOST: "redis://redis:6379/0"
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.sidekicks: banzai-e2e
+    logging:
+      options:
+        max-size: '100m'
+        max-file: '3'
+  banzai-celery-beat:
+    image: ${DOCKER_IMG}
+    network_mode: "bridge"
+    container_name: banzai-celery-beat
+    entrypoint: ["banzai_automate_stack_calibrations"]
+    mem_limit: '8g'
+    depends_on:
+      - banzai-redis
+      - banzai-fits-exchange
+      - banzai-e2e
+      - banzai-init
+    links:
+      - banzai-redis:redis
+    volumes_from:
+      - banzai-e2e
+    environment:
+      RETRY_DELAY: "0"
+      REDIS_HOST: "redis://redis:6379/0"
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.sidekicks: banzai-e2e
+    logging:
+      options:
+        max-size: '100m'
+        max-file: '3'
+  banzai-listener:
+    image: ${DOCKER_IMG}
+    network_mode: "bridge"
+    container_name: banzai-listener
+    mem_limit: '1g'
+    depends_on:
+      - banzai-redis
+      - banzai-fits-exchange
+      - banzai-e2e
+      - banzai-init
+    links:
+      - banzai-fits-exchange:broker
+      - banzai-redis:redis
+    entrypoint: ["banzai_run_realtime_pipeline", "--fpack",
+                 "--db-address=sqlite:////archive/engineering/test.db",
+                 "--broker-url=broker"]
+    environment:
+      DB_ADDRESS: sqlite:////archive/engineering/test.db
+      REDIS_HOST: "redis://redis:6379/0"
+      FITS_BROKER_URL: "broker"
+    volumes_from:
+    - banzai-e2e
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.sidekicks: banzai-e2e
     logging:
       options:
         max-size: '100m'

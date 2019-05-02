@@ -6,6 +6,7 @@ settings.py: Settings script for banzai.
     pipeline context.
 
 """
+import os
 import operator
 
 from banzai.utils.instrument_utils import InstrumentCriterion
@@ -61,7 +62,25 @@ CALIBRATION_STACKER_STAGE = {'BIAS': 'banzai.bias.BiasMaker',
 
 CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT']
 
+# Stack delays are expressed in seconds--namely, each is five minutes
+CALIBRATION_STACK_DELAYS = {'BIAS': 300,
+                            'DARK': 300,
+                            'SKYFLAT': 300}
+
 SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
+
+SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
+                                  'cpt': {'minute': 0, 'hour': 15},
+                                  'tfn': {'minute': 30, 'hour': 17},
+                                  'lsc': {'minute': 0, 'hour': 21},
+                                  'elp': {'minute': 0, 'hour': 23},
+                                  'ogg': {'minute': 0, 'hour': 3}}
+
+ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/catalog/')
+
+REDIS_QUEUE_NAMES = {'DEFAULT': 'default',
+                     'PROCESS_IMAGE': 'process_image',
+                     'SCHEDULE_STACK': 'schedule_stack'}
 
 
 def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):

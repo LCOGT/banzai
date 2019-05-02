@@ -5,7 +5,7 @@ import mock
 from banzai.tests.utils import FakeImage
 from banzai.qc import header_checker
 
-logger = logging.getLogger('banzai.qc.header_checker')
+logger = logging.getLogger('banzai')
 
 
 class FakeHeaderImage(FakeImage):
