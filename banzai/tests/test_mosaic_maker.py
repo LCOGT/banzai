@@ -51,16 +51,38 @@ def test_mosaic_size():
     assert get_mosaic_size(image, 4) == (1024, 1024)
 
 
-def test_2d_images():
-    pass
+binned_windowed_extension_headers = [{'DETSEC': '[1025:2048,3072:2049]', 'CCDSUM': '2 2', 'DATASEC': '[1:512]'},
+                                     {'DETSEC': '[1025:2048,1025:2048]', 'CCDSUM': '2 2', 'DATASEC': '[1:512]'},
+                                     {'DETSEC': '[3072:2049,1025:2048]', 'CCDSUM': '2 2', 'DATASEC': '[1:512]'},
+                                     {'DETSEC': '[3072:2049,3072:2049]', 'CCDSUM': '2 2', 'DATASEC': '[1:512]'}]
 
 
-def test_missing_detsecs():
-    pass
+def test_mosaic_size_for_binned_windowed_mode():
+    image = FakeMosaicImage()
+    image.extension_headers = binned_windowed_extension_headers
+    image.ccdsum = '2 2'
+    assert get_mosaic_size(image, 4) == (1024, 1024)
 
 
-def test_missing_datasecs():
-    pass
+def test_mosaic_maker_for_binned_windowed_mode():
+    data_size = (4, 512, 512)
+    expected_quad_slices = [(slice(1023, 511, -1), slice(0, 512)), (slice(0, 512, -1), slice(0, 512)),
+                            (slice(0, 512), slice(1023, 511, -1)), (slice(1023, 511, -1), slice(1023, 511, -1))]
+    data = np.random.uniform(0, 1, size=data_size)
+    bpm = np.random.choice([0, 1], size=data_size)
+    image = FakeMosaicImage()
+    image.ny, image.nx = 512, 512
+    image.data = data.copy()
+    image.bpm = bpm.copy()
+    image.extension_headers = binned_windowed_extension_headers
+
+    mosaic_creator = MosaicCreator(None)
+    mosaiced_image = mosaic_creator.do_stage(image)
+
+    assert mosaiced_image.data.shape == (1024, 1024)
+    for j, s in enumerate(expected_quad_slices):
+        np.testing.assert_allclose(mosaiced_image.data[s], data[j])
+        np.testing.assert_allclose(mosaiced_image.bpm[s], bpm[j])
 
 
 def test_mosaic_maker(set_random_seed):
