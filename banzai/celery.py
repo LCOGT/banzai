@@ -30,11 +30,45 @@ def schedule_calibration_stacking(runtime_context_json=None, raw_path=None):
     for frame_type in settings.CALIBRATION_IMAGE_TYPES:
         runtime_context_json['frame_type'] = frame_type
         runtime_context = Context(runtime_context_json)
-        schedule_stacking_checks(runtime_context)
+        submit_stacking_tasks_to_queue(runtime_context)
 
 
-@app.task(name='celery.schedule_stack', bind=True, default_retry_delay=RETRY_DELAY)
-def schedule_stack(self, runtime_context_json, blocks, process_any_images=True):
+def submit_stacking_tasks_to_queue(runtime_context):
+    logger.info('Scheduling stacking checks')
+    calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(runtime_context.site,
+                                                                          runtime_context.max_date,
+                                                                          runtime_context.min_date)
+    instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
+    for instrument in instruments:
+        logger.info('checking for scheduled calibration blocks for {0} at site {1}'.format(instrument.camera,
+                                                                                           instrument.site))
+        worker_runtime_context = dict(runtime_context._asdict())
+        worker_runtime_context['enclosure'] = instrument.enclosure
+        worker_runtime_context['telescope'] = instrument.telescope
+        worker_runtime_context['camera'] = instrument.camera
+        blocks_for_calibration = lake_utils.filter_calibration_blocks_for_type(instrument,
+                                                                               worker_runtime_context['frame_type'],
+                                                                               calibration_blocks)
+        if len(blocks_for_calibration) > 0:
+            # block_end should be the latest block end time
+            calibration_end_time = max([datetime.strptime(block['end'], date_utils.TIMESTAMP_FORMAT) for block in blocks_for_calibration])
+            stack_delay = timedelta(
+                seconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context['frame_type'].upper()]
+            )
+            now = datetime.utcnow().replace(microsecond=0)
+            logger.info('before schedule stack for block type {0}'.format(worker_runtime_context['frame_type']))
+            message_delay = calibration_end_time - now + stack_delay
+            if message_delay.days < 0:
+                message_delay_in_seconds = 0  # Remove delay if block end is in the past
+            else:
+                message_delay_in_seconds = message_delay.seconds
+            logger.info('Scheduling stacking for block type {0} with message delay {1}'.format(worker_runtime_context['frame_type'], str(message_delay_in_seconds)))
+            stack_calibrations.apply_async(args=(worker_runtime_context, blocks_for_calibration),
+                                       countdown=message_delay_in_seconds)
+
+
+@app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY)
+def stack_calibrations(self, runtime_context_json, blocks, process_any_images=True):
     logger.info('schedule stack for matching blocks')
     runtime_context = Context(runtime_context_json)
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site,
@@ -78,37 +112,3 @@ def process_image(path, runtime_context_dict):
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
                      extra_tags={'filename': os.path.basename(path)})
-
-
-def schedule_stacking_checks(runtime_context):
-    logger.info('Scheduling stacking checks')
-    calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(runtime_context.site,
-                                                                          runtime_context.max_date,
-                                                                          runtime_context.min_date)
-    instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
-    for instrument in instruments:
-        logger.info('checking for scheduled calibration blocks for {0} at site {1}'.format(instrument.camera,
-                                                                                           instrument.site))
-        worker_runtime_context = dict(runtime_context._asdict())
-        worker_runtime_context['enclosure'] = instrument.enclosure
-        worker_runtime_context['telescope'] = instrument.telescope
-        worker_runtime_context['camera'] = instrument.camera
-        blocks_for_calibration = lake_utils.filter_calibration_blocks_for_type(instrument,
-                                                                               worker_runtime_context['frame_type'],
-                                                                               calibration_blocks)
-        if len(blocks_for_calibration) > 0:
-            # block_end should be the latest block end time
-            calibration_end_time = max([datetime.strptime(block['end'], date_utils.TIMESTAMP_FORMAT) for block in blocks_for_calibration])
-            stack_delay = timedelta(
-                seconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context['frame_type'].upper()]
-            )
-            now = datetime.utcnow().replace(microsecond=0)
-            logger.info('before schedule stack for block type {0}'.format(worker_runtime_context['frame_type']))
-            message_delay = calibration_end_time - now + stack_delay
-            if message_delay.days < 0:
-                message_delay_in_seconds = 0  # Remove delay if block end is in the past
-            else:
-                message_delay_in_seconds = message_delay.seconds
-            logger.info('Scheduling stacking for block type {0} with message delay {1}'.format(worker_runtime_context['frame_type'], str(message_delay_in_seconds)))
-            schedule_stack.apply_async(args=(worker_runtime_context, blocks_for_calibration),
-                                       countdown=message_delay_in_seconds)

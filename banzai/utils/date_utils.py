@@ -125,14 +125,13 @@ def get_dayobs(timezone):
 
 def validate_date(s):
     try:
-        datetime.datetime.strptime(s, TIMESTAMP_FORMAT)
-        return s
+        return datetime.datetime.strptime(s, TIMESTAMP_FORMAT)
     except ValueError:
         msg = "Not a valid date: '{0}'.".format(s)
         raise argparse.ArgumentTypeError(msg)
 
 
-def get_min_and_max_dates_for_calibration_scheduling(timezone, return_string=False):
+def get_min_and_max_dates_for_calibration_scheduling(timezone, dayobs=None, return_string=False):
     # Gets next midnight relative to date of observation
     current_date = get_dayobs(timezone)
     current_date = datetime.datetime.strptime(current_date, '%Y%m%d')

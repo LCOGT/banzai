@@ -73,6 +73,7 @@ def check_image_homogeneity(images, group_by_attributes=None):
             raise InhomogeneousSetException('Images have different {0}s'.format(attribute))
 
 
+# TODO: Ensure NRES images return False
 def image_can_be_processed(header, db_address):
     if header is None:
         logger.warning('Header being checked to process image is None')

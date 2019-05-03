@@ -4,6 +4,9 @@ import logging
 
 logger = logging.getLogger('banzai')
 
+# TODO: This module should be renamed and/or refactored. It was put in place to resolve an issue with circular imports
+# in an expedient manner and should be given more attention.
+
 
 def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
     """

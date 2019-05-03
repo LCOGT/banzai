@@ -21,7 +21,7 @@ from banzai.context import Context
 from banzai.utils.stage_utils import run
 from banzai.utils import image_utils, date_utils, fits_utils
 from banzai import settings
-from banzai.celery import process_image, schedule_stacking_checks, schedule_calibration_stacking, app
+from banzai.celery import process_image, submit_stacking_tasks_to_queue, schedule_calibration_stacking, app
 from celery.schedules import crontab
 import celery
 import celery.bin.beat
@@ -215,6 +215,7 @@ def start_stacking_scheduler(runtime_context=None, raw_path=None):
     beat.run()
 
 
+# TODO: This entrypoint was retained for use with manual stacking, can likely be consolidated
 def e2e_stack_calibrations(runtime_context=None, raw_path=None):
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
@@ -232,7 +233,7 @@ def e2e_stack_calibrations(runtime_context=None, raw_path=None):
 
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
                                                      extra_console_arguments=extra_console_arguments)
-    schedule_stacking_checks(runtime_context)
+    submit_stacking_tasks_to_queue(runtime_context)
 
 
 def run_realtime_pipeline():
