@@ -30,9 +30,36 @@ spec:
         - -a
         - /archive/engineering
         - /data/
+      resources:
+        requests:
+          cpu: 0.1
+          memory: 256M
+        limits:
+          cpu: 1
+          memory: 1Gi
 
   containers:
-    - name: banzai
+    - name: banzai-redis
+      image: redis:5.0.3
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          cpu: 0.1
+          memory: 256M
+        limits:
+          cpu: 1
+          memory: 1Gi
+    - name: banzai-fits-exchange
+      image: rabbitmq:3.7.9
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          cpu: 0.1
+          memory: 512M
+        limits:
+          cpu: 1
+          memory: 1Gi
+    - name: banzai-celery-workers
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
       volumeMounts:
@@ -43,17 +70,78 @@ spec:
       env:
         - name: DB_ADDRESS
           value: "sqlite:////archive/engineering/test.db"
+        - name: RETRY_DELAY
+          value: "0"
+        - name: REDIS_HOST
+          value: "redis://localhost:6379/0"
       command:
-        - /bin/tail
-        - -f
-        - /dev/null
+        - celery
+        - -A
+        - banzai
+        - worker
+        - --hostname
+        - "banzai-celery-worker"
+        - --concurrency
+        - "2"
+        - -l
+        - "debug"
       resources:
         requests:
-          cpu: 1
-          memory: 4Gi
+          cpu: 0.1
+          memory: 8Gi
         limits:
           cpu: 4
           memory: 8Gi
+    - name: banzai-celery-beat
+      image: @BANZAI_IMAGE@
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: banzai-data
+          mountPath: /archive/engineering
+          subPath: engineering
+          readOnly: false
+      env:
+        - name: DB_ADDRESS
+          value: "sqlite:////archive/engineering/test.db"
+        - name: RETRY_DELAY
+          value: "0"
+        - name: REDIS_HOST
+          value: "redis://localhost:6379/0"
+      command:
+        - banzai_automate_stack_calibrations
+      resources:
+        requests:
+          cpu: 0.1
+          memory: 1Gi
+        limits:
+          cpu: 1
+          memory: 1Gi
+    - name: banzai-listener
+      image: @BANZAI_IMAGE@
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: banzai-data
+          mountPath: /archive/engineering
+          subPath: engineering
+          readOnly: false
+      env:
+        - name: DB_ADDRESS
+          value: "sqlite:////archive/engineering/test.db"
+        - name: FITS_BROKER_URL
+          value: "localhost"
+        - name: REDIS_HOST
+          value: "redis://localhost:6379/0"
+      command:
+        - banzai_run_realtime_pipeline
+        - "--db-address=sqlite:////archive/engineering/test.db"
+        - "--fpack"
+      resources:
+        requests:
+          cpu: 0.1
+          memory: 512M
+        limits:
+          cpu: 1
+          memory: 1Gi
 
   dnsPolicy: ClusterFirst
   restartPolicy: Never

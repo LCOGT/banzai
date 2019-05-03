@@ -4,7 +4,7 @@ import itertools
 
 from banzai import logs
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class Stage(abc.ABC):

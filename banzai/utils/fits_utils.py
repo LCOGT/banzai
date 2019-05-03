@@ -1,6 +1,7 @@
 import os
 import tempfile
 import logging
+import copy
 
 from banzai import logs
 
@@ -9,7 +10,7 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 def sanitizeheader(header):
@@ -124,10 +125,13 @@ def open_fits_file(filename):
             output_filename = os.path.join(tmpdirname, base_filename)
             os.system('funpack -O {0} {1}'.format(output_filename, filename))
             hdulist = fits.open(output_filename, 'readonly')
+            hdulist_copy = copy.deepcopy(hdulist)
+            hdulist.close()
     else:
         hdulist = fits.open(filename, 'readonly')
-
-    return hdulist
+        hdulist_copy = copy.deepcopy(hdulist)
+        hdulist.close()
+    return hdulist_copy
 
 
 def get_primary_header(filename):

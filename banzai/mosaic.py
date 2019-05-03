@@ -5,7 +5,7 @@ import numpy as np
 from banzai.stages import Stage
 from banzai.utils import fits_utils
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class MosaicCreator(Stage):

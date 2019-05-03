@@ -8,74 +8,51 @@ Author
 October 2015
 """
 import argparse
-import multiprocessing
 import os
 import logging
-import copy
-import sys
 
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
-from lcogt_logging import LCOGTFormatter
 
-from banzai import dbs, realtime, logs
+
+from banzai import dbs, logs, calibrations
+from banzai.calibrations import logger
 from banzai.context import Context
-from banzai.utils import image_utils, date_utils, fits_utils, instrument_utils, import_utils
-from banzai.utils.image_utils import read_image
+from banzai.utils.stage_utils import run
+from banzai.utils import image_utils, date_utils, fits_utils
 from banzai import settings
+from banzai.celery import process_image, submit_stacking_tasks_to_queue, schedule_calibration_stacking, app
+from celery.schedules import crontab
+import celery
+import celery.bin.beat
 
-
-# Logger set up
-logging.captureWarnings(True)
-# Set up the root logger
-root_logger = logging.getLogger()
-root_handler = logging.StreamHandler(sys.stdout)
-# Add handler
-formatter = LCOGTFormatter()
-root_handler.setFormatter(formatter)
-root_handler.setLevel(getattr(logging, 'DEBUG'))
-root_logger.addHandler(root_handler)
-
-
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
                              'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
                                         'help': 'Top level directory where the raw data is stored'}}
 
 
-def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
-    """
+class RealtimeModeListener(ConsumerMixin):
+    def __init__(self, runtime_context):
+        self.runtime_context = runtime_context
+        self.broker_url = runtime_context.broker_url
 
-    Parameters
-    ----------
-    ordered_stages: list of banzai.stages.Stage objects
-    last_stage: banzai.stages.Stage
-                Last stage to do
-    extra_stages: Stages to do after the last stage
+    def on_connection_error(self, exc, interval):
+        logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
+        self.connection = self.connection.clone()
+        self.connection.ensure_connection(max_retries=10)
 
-    Returns
-    -------
-    stages_todo: list of banzai.stages.Stage
-                 The stages that need to be done
+    def get_consumers(self, Consumer, channel):
+        consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
+        # Only fetch one thing off the queue at a time
+        consumer.qos(prefetch_count=1)
+        return [consumer]
 
-    Notes
-    -----
-    Extra stages can be other stages that are not in the ordered_stages list.
-    """
-    if extra_stages is None:
-        extra_stages = []
-
-    if last_stage is None:
-        last_index = None
-    else:
-        last_index = ordered_stages.index(last_stage) + 1
-
-    stages_todo = [import_utils.import_attribute(stage) for stage in ordered_stages[:last_index]]
-
-    stages_todo += [import_utils.import_attribute(stage) for stage in extra_stages]
-
-    return stages_todo
+    def on_message(self, body, message):
+        path = body.get('path')
+        process_image.apply_async(args=(path, self.runtime_context._asdict()))
+        message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
 def parse_args(extra_console_arguments=None, parser_description='Process LCO data.'):
@@ -112,6 +89,8 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
                         action='store_true', help='Only use calibrations that were created before the start of the block')
     parser.add_argument('--preview-mode', dest='preview_mode', default=False, action='store_true',
                         help='Save the reductions to the preview directory')
+    parser.add_argument('--max-tries', dest='max_tries', default=5,
+                        help='Maximum number of times to try to process a frame')
 
     if extra_console_arguments is None:
         extra_console_arguments = []
@@ -124,34 +103,6 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
     runtime_context = Context(args)
 
     return runtime_context
-
-
-def run(image_path, runtime_context):
-    """
-    Main driver script for banzai.
-    """
-    image = read_image(image_path, runtime_context)
-    stages_to_do = get_stages_todo(settings.ORDERED_STAGES,
-                                   last_stage=settings.LAST_STAGE[image.obstype],
-                                   extra_stages=settings.EXTRA_STAGES[image.obstype])
-    logger.info("Starting to reduce frame", image=image)
-    for stage in stages_to_do:
-        stage_to_run = stage(runtime_context)
-        image = stage_to_run.run(image)
-    if image is None:
-        logger.error('Reduction stopped', extra_tags={'filename': image_path})
-        return
-    image.write(runtime_context)
-    logger.info("Finished reducing frame", image=image)
-
-
-def run_master_maker(image_path_list, runtime_context, frame_type):
-    images = [read_image(image_path, runtime_context) for image_path in image_path_list]
-    stage_constructor = import_utils.import_attribute(settings.CALIBRATION_STACKER_STAGE[frame_type])
-    stage_to_run = stage_constructor(runtime_context)
-    images = stage_to_run.run(images)
-    for image in images:
-        image.write(runtime_context)
 
 
 def process_directory(runtime_context, raw_path, image_types=None, log_message=''):
@@ -185,24 +136,6 @@ def process_single_frame(runtime_context, raw_path, filename, log_message=''):
         run(full_path, runtime_context)
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filename': filename})
-
-
-def process_master_maker(runtime_context, instrument, frame_type, min_date, max_date, use_masters=False):
-    extra_tags = {'instrument': instrument.camera, 'obstype': frame_type,
-                  'min_date': min_date.strftime(date_utils.TIMESTAMP_FORMAT),
-                  'max_date': max_date.strftime(date_utils.TIMESTAMP_FORMAT)}
-    logger.info("Making master frames", extra_tags=extra_tags)
-    image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
-                                                            use_masters=use_masters,
-                                                            db_address=runtime_context.db_address)
-    if len(image_path_list) == 0:
-        logger.info("No calibration frames found to stack", extra_tags=extra_tags)
-
-    try:
-        run_master_maker(image_path_list, runtime_context, frame_type)
-    except Exception:
-        logger.error(logs.format_exception())
-    logger.info("Finished")
 
 
 def parse_directory_args(runtime_context=None, raw_path=None, extra_console_arguments=None):
@@ -247,20 +180,60 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                 'kwargs': {'dest': 'frame_type', 'help': 'Type of frames to process',
                                            'choices': ['bias', 'dark', 'skyflat'], 'required': True}},
                                {'args': ['--min-date'],
-                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.valid_date,
+                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.validate_date,
                                            'help': 'Earliest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}},
                                {'args': ['--max-date'],
-                                'kwargs': {'dest': 'max_date', 'required': True, 'type': date_utils.valid_date,
+                                'kwargs': {'dest': 'max_date', 'required': True, 'type': date_utils.validate_date,
                                            'help': 'Latest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
     runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
                                                      extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera,
-                                          runtime_context.enclosure, runtime_context.telescope)
-    process_master_maker(runtime_context, instrument,  runtime_context.frame_type.upper(),
-                         runtime_context.min_date, runtime_context.max_date)
+                                          enclosure=runtime_context.enclosure, telescope=runtime_context.telescope)
+    calibrations.process_master_maker(runtime_context, instrument,  runtime_context.frame_type.upper(),
+                                      runtime_context.min_date, runtime_context.max_date)
+
+
+def start_stacking_scheduler(runtime_context=None, raw_path=None):
+    extra_console_arguments = [{'args': ['--broker-url'],
+                                'kwargs': {'dest': 'broker_url', 'default': 'localhost',
+                                           'help': 'URL for the broker service.'}}]
+    logger.info('Entered entrypoint to celery beat scheduling')
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
+                                                     extra_console_arguments=extra_console_arguments)
+    for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
+        runtime_context_json = dict(runtime_context._asdict())
+        runtime_context_json['site'] = site
+        app.add_periodic_task(
+            crontab(minute=entry['minute'], hour=entry['hour']),
+            schedule_calibration_stacking.s(runtime_context_json=runtime_context_json, raw_path=raw_path)
+        )
+    beat = celery.bin.beat.beat(app=app)
+    logger.info('Starting celery beat')
+    beat.run()
+
+
+# TODO: This entrypoint was retained for use with manual stacking, can likely be consolidated
+def e2e_stack_calibrations(runtime_context=None, raw_path=None):
+    extra_console_arguments = [{'args': ['--site'],
+                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
+                               {'args': ['--frame-type'],
+                                'kwargs': {'dest': 'frame_type', 'help': 'Type of frames to process',
+                                           'choices': ['bias', 'dark', 'skyflat'], 'required': True}},
+                               {'args': ['--min-date'],
+                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.validate_date,
+                                           'help': 'Earliest observation time of the individual calibration frames. '
+                                                   'Must be in the format "YYYY-MM-DDThh:mm:ss".'}},
+                               {'args': ['--max-date'],
+                                'kwargs': {'dest': 'max_date', 'required': True, 'type': date_utils.validate_date,
+                                           'help': 'Latest observation time of the individual calibration frames. '
+                                                   'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
+
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
+                                                     extra_console_arguments=extra_console_arguments)
+    submit_stacking_tasks_to_queue(runtime_context)
 
 
 def run_realtime_pipeline():
@@ -268,7 +241,7 @@ def run_realtime_pipeline():
                                 'kwargs': {'dest': 'n_processes', 'default': 12,
                                            'help': 'Number of listener processes to spawn.', 'type': int}},
                                {'args': ['--broker-url'],
-                                'kwargs': {'dest': 'broker_url', 'default': 'amqp://guest:guest@rabbitmq.lco.gtn:5672/',
+                                'kwargs': {'dest': 'broker_url', 'default': 'localhost',
                                            'help': 'URL for the broker service.'}},
                                {'args': ['--queue-name'],
                                 'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
@@ -288,21 +261,12 @@ def run_realtime_pipeline():
 
     logger.info('Starting pipeline listener')
 
-    for i in range(runtime_context.n_processes):
-        p = multiprocessing.Process(target=run_individual_listener, args=(runtime_context.broker_url,
-                                                                          runtime_context.queue_name,
-                                                                          copy.deepcopy(runtime_context)))
-        p.start()
-
-
-def run_individual_listener(broker_url, queue_name, runtime_context):
-
     fits_exchange = Exchange('fits_files', type='fanout')
-    listener = RealtimeModeListener(broker_url, runtime_context)
+    listener = RealtimeModeListener(runtime_context)
 
-    with Connection(listener.broker_url) as connection:
+    with Connection(runtime_context.broker_url) as connection:
         listener.connection = connection.clone()
-        listener.queue = Queue(queue_name, fits_exchange)
+        listener.queue = Queue(runtime_context.queue_name, fits_exchange)
         try:
             listener.run()
         except listener.connection.connection_errors:
@@ -310,43 +274,6 @@ def run_individual_listener(broker_url, queue_name, runtime_context):
             listener.ensure_connection(max_retries=10)
         except KeyboardInterrupt:
             logger.info('Shutting down pipeline listener.')
-
-
-class RealtimeModeListener(ConsumerMixin):
-    def __init__(self, broker_url, runtime_context):
-        self.broker_url = broker_url
-        self.runtime_context = runtime_context
-
-    def on_connection_error(self, exc, interval):
-        logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
-        self.connection = self.connection.clone()
-        self.connection.ensure_connection(max_retries=10)
-
-    def get_consumers(self, Consumer, channel):
-        consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
-        # Only fetch one thing off the queue at a time
-        consumer.qos(prefetch_count=1)
-        return [consumer]
-
-    def on_message(self, body, message):
-        path = body.get('path')
-        message.ack()  # acknowledge to the sender we got this message (it can be popped)
-        try:
-            if realtime.need_to_process_image(path, self.runtime_context.ignore_schedulability,
-                                              db_address=self.runtime_context.db_address,
-                                              max_tries=self.runtime_context.max_tries):
-
-                logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
-
-                # Increment the number of tries for this file
-                realtime.increment_try_number(path, db_address=self.runtime_context.db_address)
-
-                run(path, self.runtime_context)
-                realtime.set_file_as_processed(path, db_address=self.runtime_context.db_address)
-
-        except Exception:
-            logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
-                         extra_tags={'filename': os.path.basename(path)})
 
 
 def mark_frame(mark_as):
@@ -387,7 +314,8 @@ def add_instrument():
                   'camera': args.camera,
                   'type': args.camera_type,
                   'schedulable': args.schedulable}
-    dbs.add_instrument(instrument, db_address=args.db_address)
+    with dbs.get_session(db_address=args.db_address) as db_session:
+        dbs.add_instrument(instrument, db_session)
 
 
 def mark_frame_as_good():

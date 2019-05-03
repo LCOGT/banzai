@@ -8,10 +8,9 @@ from astropy import units
 import numpy as np
 
 from banzai.stages import Stage
+from banzai import settings
 
-logger = logging.getLogger(__name__)
-
-_ASTROMETRY_SERVICE_URL = 'http://astrometry.lco.gtn/catalog/'
+logger = logging.getLogger('banzai')
 
 
 class WCSSolver(Stage):
@@ -29,6 +28,11 @@ class WCSSolver(Stage):
 
         image_catalog = image.data_tables.get('catalog')
 
+        # Short circuit
+        if image_catalog is None:
+            logger.warning('Not attempting WCS solve because no catalog exists', image=image)
+            return image
+
         catalog_payload = {'X': list(image_catalog['x']),
                            'Y': list(image_catalog['y']),
                            'FLUX': list(image_catalog['flux']),
@@ -40,7 +44,7 @@ class WCSSolver(Stage):
                            'dec': image.dec,
                            'statistics': False}
         try:
-            astrometry_response = requests.post(_ASTROMETRY_SERVICE_URL, json=catalog_payload)
+            astrometry_response = requests.post(settings.ASTROMETRY_SERVICE_URL, json=catalog_payload)
             astrometry_response.raise_for_status()
         except ConnectionError:
             logger.error('Astrometry service unreachable.', image=image)
@@ -48,14 +52,17 @@ class WCSSolver(Stage):
             return image
         except HTTPError:
             if astrometry_response.status_code == 400:
-                logger.error('Astrometry service query malformed', image=image)
+                logger.error('Astrometry service query malformed: {msg}'.format(msg=astrometry_response.json()),
+                             image=image)
             else:
-                logger.error('Astrometry service encountered an error.', image=image)
+                logger.error('Astrometry service encountered an error.', image=image,
+                             extra_tags={'astrometry_message': astrometry_response.json().get('message', ''),
+                                         'astrometry_solve_id': astrometry_response.json().get('solve_id', 'UnknownID')})
 
             image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             return image
 
-        if astrometry_response.json()['solved'] == False:
+        if not astrometry_response.json()['solved']:
             logger.warning('WCS solution failed.', image=image)
             image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             return image

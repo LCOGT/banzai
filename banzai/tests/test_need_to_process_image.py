@@ -1,7 +1,7 @@
 import mock
-from banzai.tests.utils import FakeContext, FakeInstrument
+from banzai.tests.utils import FakeInstrument
 
-from banzai.realtime import need_to_process_image
+from banzai.utils.realtime_utils import need_to_process_image
 
 md5_hash1 = '49a6bb35cdd3859224c0214310b1d9b6'
 md5_hash2 = 'aec5ef355e7e43a59fedc88ac95caed6'
@@ -16,7 +16,7 @@ class FakeRealtimeImage(object):
 
 @mock.patch('banzai.utils.file_utils.get_md5')
 @mock.patch('banzai.dbs.get_processed_image')
-@mock.patch('banzai.realtime.get_primary_header')
+@mock.patch('banzai.utils.fits_utils.get_primary_header')
 @mock.patch('banzai.dbs.get_instrument')
 @mock.patch('banzai.utils.image_utils.image_can_be_processed')
 def test_no_processing_if_previous_success(mock_can_process, mock_instrument, mock_header, mock_processed, mock_md5):
@@ -30,7 +30,7 @@ def test_no_processing_if_previous_success(mock_can_process, mock_instrument, mo
 @mock.patch('banzai.dbs.commit_processed_image')
 @mock.patch('banzai.utils.file_utils.get_md5')
 @mock.patch('banzai.dbs.get_processed_image')
-@mock.patch('banzai.realtime.get_primary_header')
+@mock.patch('banzai.utils.fits_utils.get_primary_header')
 @mock.patch('banzai.dbs.get_instrument')
 @mock.patch('banzai.utils.image_utils.image_can_be_processed')
 def test_do_process_if_never_tried(mock_can_process, mock_instrument, mock_header, mock_processed, mock_md5, mock_commit):
@@ -44,7 +44,7 @@ def test_do_process_if_never_tried(mock_can_process, mock_instrument, mock_heade
 @mock.patch('banzai.dbs.commit_processed_image')
 @mock.patch('banzai.utils.file_utils.get_md5')
 @mock.patch('banzai.dbs.get_processed_image')
-@mock.patch('banzai.realtime.get_primary_header')
+@mock.patch('banzai.utils.fits_utils.get_primary_header')
 @mock.patch('banzai.dbs.get_instrument')
 @mock.patch('banzai.utils.image_utils.image_can_be_processed')
 def test_do_process_if_tries_less_than_max(mock_can_process, mock_instrument, mock_header, mock_processed, mock_md5, mock_commit):
@@ -58,7 +58,7 @@ def test_do_process_if_tries_less_than_max(mock_can_process, mock_instrument, mo
 @mock.patch('banzai.dbs.commit_processed_image')
 @mock.patch('banzai.utils.file_utils.get_md5')
 @mock.patch('banzai.dbs.get_processed_image')
-@mock.patch('banzai.realtime.get_primary_header')
+@mock.patch('banzai.utils.fits_utils.get_primary_header')
 @mock.patch('banzai.dbs.get_instrument')
 @mock.patch('banzai.utils.image_utils.image_can_be_processed')
 def test_no_processing_if_tries_at_max(mock_can_process, mock_instrument, mock_header, mock_processed, mock_md5, mock_commit):
@@ -73,7 +73,7 @@ def test_no_processing_if_tries_at_max(mock_can_process, mock_instrument, mock_h
 @mock.patch('banzai.dbs.commit_processed_image')
 @mock.patch('banzai.utils.file_utils.get_md5')
 @mock.patch('banzai.dbs.get_processed_image')
-@mock.patch('banzai.realtime.get_primary_header')
+@mock.patch('banzai.utils.fits_utils.get_primary_header')
 @mock.patch('banzai.dbs.get_instrument')
 @mock.patch('banzai.utils.image_utils.image_can_be_processed')
 def test_do_process_if_new_checksum(mock_can_process, mock_instrument, mock_header, mock_processed, mock_md5, mock_commit):
