@@ -51,10 +51,10 @@ def test_mosaic_size():
     assert get_mosaic_size(image, 4) == (1024, 1024)
 
 
-binned_windowed_extension_headers = [{'DETSEC': '[1025:2048,3072:2049]', 'CCDSUM': '2 2', 'DATASEC': '[1:512]'},
-                                     {'DETSEC': '[1025:2048,1025:2048]', 'CCDSUM': '2 2', 'DATASEC': '[1:512]'},
-                                     {'DETSEC': '[3072:2049,1025:2048]', 'CCDSUM': '2 2', 'DATASEC': '[1:512]'},
-                                     {'DETSEC': '[3072:2049,3072:2049]', 'CCDSUM': '2 2', 'DATASEC': '[1:512]'}]
+binned_windowed_extension_headers = [{'DETSEC': '[1025:2048,3072:2049]', 'CCDSUM': '2 2', 'DATASEC': '[1:512,1:512]'},
+                                     {'DETSEC': '[1025:2048,1025:2048]', 'CCDSUM': '2 2', 'DATASEC': '[1:512,1:512]'},
+                                     {'DETSEC': '[3072:2049,1025:2048]', 'CCDSUM': '2 2', 'DATASEC': '[1:512,1:512]'},
+                                     {'DETSEC': '[3072:2049,3072:2049]', 'CCDSUM': '2 2', 'DATASEC': '[1:512,1:512]'}]
 
 
 def test_mosaic_size_for_binned_windowed_mode():
@@ -66,11 +66,12 @@ def test_mosaic_size_for_binned_windowed_mode():
 
 def test_mosaic_maker_for_binned_windowed_mode():
     data_size = (4, 512, 512)
-    expected_quad_slices = [(slice(1023, 511, -1), slice(0, 512)), (slice(0, 512, -1), slice(0, 512)),
+    expected_quad_slices = [(slice(1023, 511, -1), slice(0, 512)), (slice(0, 512), slice(0, 512)),
                             (slice(0, 512), slice(1023, 511, -1)), (slice(1023, 511, -1), slice(1023, 511, -1))]
     data = np.random.uniform(0, 1, size=data_size)
     bpm = np.random.choice([0, 1], size=data_size)
     image = FakeMosaicImage()
+    image.ccdsum = '2 2'
     image.ny, image.nx = 512, 512
     image.data = data.copy()
     image.bpm = bpm.copy()
