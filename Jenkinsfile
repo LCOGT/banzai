@@ -4,6 +4,12 @@
 
 pipeline {
 	agent any
+	parameters {
+		booleanParam(
+			name: 'forceEndToEnd',
+			defaultValue: false,
+			description: 'When true, forces the end-to-end tests to always run.')
+	}
 	environment {
 		dockerImage = null
 		PROJ_NAME = projName()
