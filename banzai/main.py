@@ -197,8 +197,12 @@ def stack_calibrations(runtime_context=None, raw_path=None):
 
 
 def start_stacking_scheduler(runtime_context=None, raw_path=None):
+    extra_console_arguments = [{'args': ['--broker-url'],
+                                'kwargs': {'dest': 'broker_url', 'default': 'localhost',
+                                           'help': 'URL for the broker service.'}}]
     logger.info('Entered entrypoint to celery beat scheduling')
-    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
+                                                     extra_console_arguments=extra_console_arguments)
     for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
         runtime_context_json = dict(runtime_context._asdict())
         runtime_context_json['site'] = site

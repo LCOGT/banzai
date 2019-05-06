@@ -1,5 +1,6 @@
 import requests
 import logging
+import copy
 
 logger = logging.getLogger('banzai')
 
@@ -23,8 +24,10 @@ def filter_calibration_blocks_for_type(instrument, calibration_type, blocks):
     calibration_blocks = []
     for block in blocks:
         if instrument.type.upper() == block['instrument_class'] and instrument.site == block['site'] and instrument.enclosure == block['observatory']:
+            filtered_block = copy.deepcopy(block)
+            filtered_block['molecules'] = []
             for molecule in block['molecules']:
                 if calibration_type.upper() == molecule['type'] and instrument.camera == molecule['inst_name']:
-                    calibration_blocks.append(block) #TODO: this could append the same block multiple times and should be fixed
-                    break
+                    filtered_block['molecules'].append(molecule)
+            calibration_blocks.append(filtered_block)
     return calibration_blocks

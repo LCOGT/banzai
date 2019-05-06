@@ -61,7 +61,7 @@ def schedule_stack(self, runtime_context_json, blocks, process_any_images=True):
 
 @app.task(name='celery.process_image')
 def process_image(path, runtime_context_dict):
-    logger.info('Got into actor.')
+    logger.info('Running process image.')
     runtime_context = Context(runtime_context_dict)
     try:
         if realtime_utils.need_to_process_image(path, runtime_context,
@@ -97,17 +97,8 @@ def schedule_stacking_checks(runtime_context):
                                                                                worker_runtime_context['frame_type'],
                                                                                calibration_blocks)
         if len(blocks_for_calibration) > 0:
-            # block_end should be the latest block end time with a time before local midnight
-            timezone_for_site = dbs.get_timezone(worker_runtime_context['site'],
-                                                 db_address=worker_runtime_context['db_address'])
-            local_midnight = datetime.strptime(date_utils.get_nightobs(timezone_for_site), '%Y%m%d') - timedelta(seconds=1)
-            calibration_end_time = datetime.strptime(blocks_for_calibration[0]['end'], date_utils.TIMESTAMP_FORMAT)
-            for block in blocks_for_calibration:
-                block_end = datetime.strptime(block['end'], date_utils.TIMESTAMP_FORMAT)
-                if block_end > local_midnight:
-                    break
-                elif block_end > calibration_end_time:
-                    calibration_end_time = block_end
+            # block_end should be the latest block end time
+            calibration_end_time = max([datetime.strptime(block['end'], date_utils.TIMESTAMP_FORMAT) for block in blocks_for_calibration])
             stack_delay = timedelta(
                 seconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context['frame_type'].upper()]
             )
@@ -118,6 +109,6 @@ def schedule_stacking_checks(runtime_context):
                 message_delay_in_seconds = 0  # Remove delay if block end is in the past
             else:
                 message_delay_in_seconds = message_delay.seconds
-            logger.info('scheduling with message delay {0}'.format(str(message_delay_in_seconds)))
+            logger.info('Scheduling stacking for block type {0} with message delay {1}'.format(worker_runtime_context['frame_type'], str(message_delay_in_seconds)))
             schedule_stack.apply_async(args=(worker_runtime_context, blocks_for_calibration),
                                        countdown=message_delay_in_seconds)
