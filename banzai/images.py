@@ -80,6 +80,9 @@ class Image(object):
 
         self.ccdsum = header.get('CCDSUM')
         self.configuration_mode = header.get('CONFMODE', file_utils.ccdsum_to_filename(self.ccdsum))
+        if self.configuration_mode == 'N/A':
+            self.configuration_mode = file_utils.ccdsum_to_filename(self.ccdsum)
+        self.header['CONFMODE'] = self.configuration_mode
         self.filter = header.get('FILTER')
 
         self.obstype = header.get('OBSTYPE')
