@@ -125,8 +125,7 @@ def get_dayobs(timezone):
 
 def validate_date(s):
     try:
-        datetime.datetime.strptime(s, TIMESTAMP_FORMAT)
-        return s
+        return datetime.datetime.strptime(s, TIMESTAMP_FORMAT)
     except ValueError:
         msg = "Not a valid date: '{0}'.".format(s)
         raise argparse.ArgumentTypeError(msg)

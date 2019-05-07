@@ -47,6 +47,26 @@ class MosaicCreator(Stage):
 
 
 def get_windowed_mosaic_slices(detsec, xmin, ymin, x_binning, y_binning):
+    """
+    Get the array slices to map the image coordinates for a given detector section to the output mosaic coordinates.
+
+    Parameters
+    ----------
+    detsec: str
+            Detector section keyword from the header in IRAF section format.
+    xmin: int
+          Minimum x detector coordinate for the mosaic to go the bottom left of the array
+    ymin: int
+          Minimum y detector coordinate for the mosaic to go the bottom left of the array
+    x_binning: int
+               Binning factor in the x direction for the output mosaic
+    y_binning: int
+               Binning factor in the y direction for the output mosaic
+    Returns
+    -------
+    y_slice, x_slice: slice, slice
+                      Slice to index the output mosaic data array for the given detsec.
+    """
     unbinned_slice = fits_utils.parse_region_keyword(detsec)
     return (slice((unbinned_slice[0].start - ymin) // int(y_binning),
                   (unbinned_slice[0].stop - ymin) // int(y_binning),
@@ -65,6 +85,21 @@ def update_naxis_keywords(image, nx, ny):
 
 
 def get_detsec_limits(image, n_amps):
+    """
+    Parse the detector section keyword from each extension and return a list of x and y detector positions
+
+    Parameters
+    ----------
+    image: banzai.images.Image
+           image with detector section header keywords to parse
+    n_amps: int
+            Number of amplifiers (fits extensions)
+
+    Returns
+    -------
+    x_detsec_limits, y_detsec_limits: list. list
+                                      x and y list of the detector positions in the each of the DETSEC keywords
+    """
     x_pixel_limits = []
     y_pixel_limits = []
     for i in range(n_amps):
@@ -89,6 +124,25 @@ def get_detsec_limits(image, n_amps):
 
 
 def get_mosaic_size(image, n_amps):
+    """
+    Get the necessary size of the output mosaic image
+
+    Parameters
+    ----------
+    image: banzai.images.Image
+           image (with extensions) to mosaic
+    n_amps: int
+            number of amplifiers (fits extensions) in the image
+
+    Returns
+    -------
+    nx, ny: int, int
+            The number of pixels in x and y that needed for the output mosaic.
+
+    Notes
+    -----
+    Astropy fits data arrays are indexed y, x.
+    """
     ccdsum = image.ccdsum.split(' ')
     x_pixel_limits, y_pixel_limits = get_detsec_limits(image, n_amps)
     nx = (np.max(x_pixel_limits) - np.min(x_pixel_limits) + 1) // int(ccdsum[0])
