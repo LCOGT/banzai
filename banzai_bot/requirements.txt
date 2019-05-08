@@ -1,0 +1,5 @@
+Flask==1.0.2
+gevent==1.4.0
+gunicorn==19.9.0
+lcogt-logging==0.3.2
+flask-wtf==0.14.2

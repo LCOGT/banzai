@@ -1,0 +1,3 @@
+#!/bin/bash
+
+export ARCHIVE_API_TOKEN=823606217def6f65721b9494f00a6007b5da3e50
