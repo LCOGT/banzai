@@ -1,3 +1,7 @@
+0.23.0 (2019-05-08)
+-------------------
+- Changed license from BSD to GPLv3, the standard LCO license
+
 0.21.0 (2019-03-25)
 -------------------
 - Significant refactor to the pipeline context and settings files. We have now
