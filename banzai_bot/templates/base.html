@@ -12,8 +12,13 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css">
 
 
+    {% if title%}
+    <title>Banzai Bot-{{title}} </title>
+    {% else %}
+    <title>Banzai Bot</title>
+    {% endif %}
 
-    <title>{% block title %}{% endblock %}</title>
+
   </head>
   <body>
     <!-- navbar -->

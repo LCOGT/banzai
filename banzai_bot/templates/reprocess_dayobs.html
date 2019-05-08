@@ -1,3 +1,26 @@
 {% extends "base.html" %}
 {% block title %}Reprocess Dayobs{% endblock %}
+{%block content%}
+<form class="" method="post">
 
+<div class="form-group">
+{{form.dayobs_start}}
+</div>
+
+<div class="form-group">
+{{form.dayobs_end}}
+</div>
+
+<div class="form-group">
+{{site}}
+</div>
+
+<div class="form-group">
+{{instrument}}
+</div>
+</form>
+
+<div class="form-group">
+  {{form.submit(class="btn btn-outline-info")}}
+</div>
+{%endblock%}
