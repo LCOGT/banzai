@@ -1,9 +1,11 @@
 from flask import Flask, render_template
 import requests
-from banzai_bot.utils import get_sites_and_instruments
-from banzai_bot.forms import ReprocessDayObsForm
+from banzai_tools.utils import get_sites_and_instruments
+from banzai_tools.forms import ReprocessDayObsForm
 
 app = Flask(__name__)
+
+app.config['SECRET_KEY'] = 'asdf'
 
 @app.route('/')
 def index():

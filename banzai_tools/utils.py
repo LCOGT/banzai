@@ -2,7 +2,7 @@ import glob
 import requests
 import datetime
 import os
-from banzai_bot import settings
+from banzai_tools import settings
 
 
 def get_missing_frames(camera, dayobs):
@@ -40,4 +40,4 @@ def get_sites_and_instruments():
     site_info = requests.get(settings.ARCHIVE_API_ROOT + 'frames/aggregate/').json()
     site_info['sites'].sort()
     site_info['instruments'].sort()
-    return (site_info['sites'], site_info['instruments'])
+    return site_info['sites'], site_info['instruments']
