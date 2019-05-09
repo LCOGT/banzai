@@ -38,6 +38,6 @@ def fetch_frames(url, authentication_headers, collection):
 
 def get_sites_and_instruments():
     site_info = requests.get(settings.ARCHIVE_API_ROOT + 'frames/aggregate/').json()
-    print(site_info['sites'].sort())
-    return (site_info['sites'].sort(), site_info['instruments'].sort())
-   
+    site_info['sites'].sort()
+    site_info['instruments'].sort()
+    return (site_info['sites'], site_info['instruments'])
