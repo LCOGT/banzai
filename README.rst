@@ -25,6 +25,14 @@ Please cite the following DOI if you are using processed LCOGT data.
 
 Installation
 ------------
+BANZAI can be installed in the usual way, by running
+
+.. code-block:: bash
+
+    python setup.py install
+
+This will automatically install the dependencies from PyPi, so it is recommended to install
+BANZAI in a virtual environment.
 
 Usage
 -----
@@ -39,9 +47,30 @@ agnostic as it uses SQLAlchemy. To create a new database to run BANZAI, run
     from banzai.dbs import create_db
     create_db('.', db_address='sqlite:///banzai.db')
 
-This will create an sqlite3 database file in your current directory called ``banzai.db``.
+This will create an sqlite3 database file in your current directory called `banzai.db`.
 
-banzai_reduce_individual_frame
+The list of command line entry points are in setup.cfg. You can see more about the parameters
+the commands take by adding a `--help` to any command of interest.
+
+If you are not running this at LCO, you will have to add the instrument of interest to your database
+by running `banzai_add_instrument` before you can process any data.
+
+By default, BANZAI requires a bad pixel mask. You can create one that BANZAI can use by using the tool
+`here <https://github.com/LCOGT/pixel-mask-gen>`_. If the bad pixel mask is in the current directory when you
+create the database it will get automatically added. Otherwise run
+
+.. code-block:: python
+
+    from banzai.dbs import populate_calibration_table_with_bpms
+    populate_calibration_table_with_bpms('/directory/with/bad/pixel/mask', db_address='sqlite://banzai.db')
+
+Generally, you have to reduce individual bias frames first by running `banzai_reduce_individual_frame` command.
+If the processing went well, you can mark them as good in the database using `banzai_mark_frame_as_good`.
+Once you have individually processed bias frames, you can create a master calibration using
+`banzai_stack_calibrations`. This master calibration will then be available for future reductions of
+other observation types. Next, similarly reduce individual dark frames and then stack them to
+create a master dark frame. Then, the same for skyflats. At this point, you will be able to process
+science images using the `banzai_reduce_individual_frame` command.
 
 To run the pipeline in its active mode, you need to setup a task queue and a filename queue.
 See the `docker-compose.yml` file for details on this setup.
@@ -85,8 +114,7 @@ This project is Copyright (c) Las Cumbres Observatory and licensed under the ter
 
 Support
 -------
-[API documentation]()
-[Create an issue](https://issues.lco.global/)
+`Create an issue <https://github.com/LCOGT/banzai/issues>`_
 
 .. image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
     :target: http://www.astropy.org

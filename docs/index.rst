@@ -1,21 +1,11 @@
-***************
-BANZAI package
-***************
+******
+BANZAI
+******
 
 
 This pipeline is designed to take raw data taken from Las Cumbres Observatory,
-and produce science quality data products.
-
-Data Format
------------
-
-Sinistro Cameras
-================
-While the Spectral and SBIG cameras produce single extension fits files, the Sinistro frames produce
-four amplifier outputs. In some historic data, there is a missing row in the center. This is because
-the top amplifiers (3 and 4) have more light sensitive pixels than the bottom amplifiers (1 and 2).
-While all of the parallel overscan rows are discarded, one edge row is discarded for the amplifiers
-that have an extra light sensitive row.
+and produce science quality data products. BANZAI is capable of reducing single or multi-extension
+fits files. For historical data, BANZAI can also reduce the data cubes that were produced by the Sinistro cameras.
 
 Stages
 ------
@@ -23,8 +13,8 @@ BANZAI is comprised of different stages, each corresponding to a single reductio
 to process images. The individual stages are described below, in the order that they are executed.
 
 
-Overscan
-========
+Overscan Subtraction
+====================
 We currently use the header the keyword ``BIASSEC`` to identify the overscan region. If this keyword is set to
 "Unknown", then we simply skip subtracting the overscan. We estimate a single overscan value for the whole image
 (rather than row by row).
@@ -34,9 +24,10 @@ from the average value from the bias frames.
 
 Crosstalk
 =========
-Currently, only Sinistro images are read out using multiple amplifiers. The Sinistro frames do have significant
-crosstalk between amplifiers, which is removed using
-linear coefficients that relate each quadrant to every other quadrant.
+Currently, only 1-meter imagesr are read out using multiple amplifiers. These frames do have significant
+crosstalk between amplifiers, which is removed using linear coefficients that relate each
+quadrant to every other quadrant. These values are read from the ``CRSTLK{i}{j}`` keywords in the header.
+These coefficients are hard coded for historical data.
 
 
 Gain
@@ -47,13 +38,18 @@ frames output by BANZAI are all in units of electrons.
 
 Mosaic
 ======
-Again, only the Sinistro frames currently read out with multiple amplifiers so mosaicing the amplifiers
-is only required for Sinsitros.
+If the file it multi-extension BANZAI produces a single mosaiced frame.
+This relies on the ``DETSEC`` header keywords to mosaic the extensions together.
+
+In some historical Sinistro data, there is a missing row in the center. This is because
+the top amplifiers (3 and 4) have more light sensitive pixels than the bottom amplifiers (1 and 2).
+While all of the parallel overscan rows are discarded, one edge row is discarded for the amplifiers
+that have an extra light sensitive row.
 
 
 Trim
 ====
-After the overscan is subtracted, the bias, dark, flat-field, and science images are trimmed
+After being mosaiced, the data is trimmed to a useable region for science. This is set
 based on the ``TRIMSEC`` header keyword.
 
 
@@ -108,6 +104,9 @@ Astrometry
 The WCS is found by using Astrometry.net (Lang et al. 2012, ascl:1208.001, http://astrometry.net).
 We use the catalog from the source detection (the previous step) as input.
 
+We have built our astrometry.net index files from the recent GAIA DR2 catalog. This is an exceptionally clean
+catalog that reduces false positives and improves the likelihood of finding a solve for a given frame.
+
 We adopt a code tolerance of 0.003 (a factor of 3 smaller than the default), but increase the centroid
 uncertainty to be 20 pixels. The large centroid uncertainty allows the algorithm to find quads even
 if the initial guess is quite poor and even if there is significant distortion. However, decreasing
@@ -160,14 +159,14 @@ Master Dark Creation
 ====================
 For all instruments, we take full-frame dark exposures every afternoon and morning. Like the bias frames,
 the afternoon and morning dark frames are combined together to increase statistics. Typically, a
-total of 20x300s images are taken.
+total of 10x900s images are taken.
 
 When creating a master dark frame, each individual frame is scaled by the exposure time (read from the
 header). The sigma clipped mean of the scaled frames is then calculated on a pixel by pixel basis.
 We reject any 3 rstd outliers, similar to the master bias creation.
 
-Our cameras have dark currents of 0.1-0.2 electrons / s per pixel. For 20x300s this corresponds to
-1 - 2 electrons of additional noise per pixel added in quadrature (given the same length science frame,
+Our cameras have dark currents of 0.1-0.2 electrons / s per pixel. For 10x900s this corresponds to
+1 - 3 electrons of additional noise per pixel added in quadrature (given the same length science frame,
 and not including the Poisson noise from the dark current itself). Again, this is much smaller than the
 read noise so it will not affect the noise properties of the final science frames.
 
@@ -175,15 +174,15 @@ read noise so it will not affect the noise properties of the final science frame
 Master Flat Field Creation
 ==========================
 Twilight flats are taken every day. However, flat-field images for every filter are not taken daily,
-because twilight is not long enough to take all of them. Instead the choice of filter is rotated,
+because twilight is not long enough to take all of them in a single night. Instead the choice of filter is rotated,
 based on the necessary exposure time to get a high signal to noise image and the popularity of the
-filter for science programs. Typically, a master flat field is produced about once a week for any
+filter for science programs. Typically, a master flat field is produced about once every 3 days for any
 given filter. When a flat-field image is taken for a given filter is taken in the evening twilight,
 it is also taken in morning twilight for quality control. Typically, 5 flat field frames are taken
 in the evening and 5 taken in the morning per filter. The frames are dithered so that we can remove
 stars in the combined master flat field.
 
-Each individual flat-field image is normalized to unity before combing them.
+Each individual flat-field image is normalized to unity before combining them.
 The normalization is calculated finding the robust sigma clipped mean (3.5 rstd outliers are rejected) of
 the central region of the image. For the central region, we choose the central 25% of the field (the region
 has dimensions that are half of the full image).
@@ -284,8 +283,3 @@ The individual frame preprocessing steps and noise parameters for the different 
 
   - preprocessing: bias and dark subtraction, normalization by the sigma clipped mean of image
   - noise = sqrt( RN\^2 + PN\^2) / normalization
-
-Reference/API
--------------
-
-.. automodapi:: banzai
