@@ -14,7 +14,7 @@ def index():
 @app.route('/reprocess_dayobs')
 def reprocess_dayobs():
     form = ReprocessDayObsForm()
-    # sites, instruments = get_sites_and_instruments()
+    sites, instruments = get_sites_and_instruments()
     sites = ['tfn', 'ogg']
     instruments = ['kb95', 'fa06']
     form.site.choices = sites
