@@ -5,6 +5,8 @@ This repo contains the data reduction package for Las Cumbres Observatory (LCO).
 
 BANZAI stands for Beautiful Algorithms to Normalize Zillions of Astronomical Images.
 
+See also `<https://banzai.readthedocs.io>`_ for more information.
+
 Please cite the following DOI if you are using processed LCOGT data.
 
 .. image:: https://zenodo.org/badge/26836413.svg
