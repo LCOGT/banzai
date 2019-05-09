@@ -28,4 +28,4 @@ Status reports for developers
 License
 -------
 
-This project is Copyright (c) Las Cumbres Observatory and licensed under the terms of the BSD 3-Clause license. See the licenses folder for more information.
+This project is Copyright (c) Las Cumbres Observatory and licensed under the terms of GPLv3. See the LICENSE file for more information.
