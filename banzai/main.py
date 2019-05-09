@@ -1,6 +1,6 @@
 """ main.py: Main driver script for banzai.
 
-    The main() function is a console entry point.
+    Console entry points to run the BANZAI pipeline.
 
 Author
     Curtis McCully (cmccully@lcogt.net)
