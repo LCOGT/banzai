@@ -41,7 +41,7 @@ Usage
 BANZAI can be deployed in two ways, an active pipeline that
 processes data as it arrives or a manual pipeline that is run from the command line.
 
-The main requirement to run BANZAI is that the database is setup. BANZAI is database type
+The main requirement to run BANZAI is that the database has been set up. BANZAI is database type
 agnostic as it uses SQLAlchemy. To create a new database to run BANZAI, run
 
 .. code-block:: python
@@ -79,7 +79,7 @@ See the `docker-compose.yml` file for details on this setup.
 
 Tests
 -----
-BANZAI uses the astropy helpers that wrap pytest to run both of it's unit
+BANZAI uses the astropy helpers that wrap pytest to run both of its unit
 tests and end-to-end tests.
 
 The end-to-end tests require more setup, so to run only the unit tests locally
