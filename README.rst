@@ -105,6 +105,14 @@ run:
 
     python setup.py test -a "-m 'not e2e'"
 
+The `-m` is short for marker. The following markers are defined if you only want to run a subset of the tests:
+
+* e2e: End-to-end tests. Skip these if you only want to run unit tests.
+* master_bias: Only test making a master bias
+* master_dark: Only test making a master dark, assumes master bias frame already exists
+* master_flat: Only test making a master flat, assumes master bias and dark frames already exist
+* science_files: Only test processing science data, assumes master bias, dark, and flat frames already exist.
+
 The end-to-end tests run on Jenkins at LCO automatically for every pull request.
 
 To run the end-to-end tests locally, the easiest setup uses docker-compose.
