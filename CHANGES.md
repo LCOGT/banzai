@@ -1,6 +1,7 @@
 0.23.1 (2019-05-21)
 -------------------
 - Fixed a bug in stacking master calibrations from the command line.
+- Fixed logging format to conform to LCO standard format and to not be overridden by celery
 
 0.23.0 (2019-05-08)
 -------------------
