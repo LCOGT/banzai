@@ -1,3 +1,7 @@
+0.23.1 (2019-05-21)
+-------------------
+- Fixed a bug in stacking master calibrations from the command line.
+
 0.23.0 (2019-05-08)
 -------------------
 - Changed license from BSD to GPLv3, the standard LCO license

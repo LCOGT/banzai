@@ -114,8 +114,8 @@ class TestMain():
         mock_get_calibration_images.return_value = [FakeBiasImage(), FakeBiasImage()]
         stack_calibrations(runtime_context_json, [fake_blocks_response_json['results'][0]])
         mock_process_master_maker.assert_called_with(Context(runtime_context_json), fake_inst, 'BIAS',
-                                                     runtime_context_json['min_date'],
-                                                     runtime_context_json['max_date'])
+                                                     datetime.strptime(runtime_context_json['min_date'], date_utils.TIMESTAMP_FORMAT),
+                                                     datetime.strptime(runtime_context_json['max_date'], date_utils.TIMESTAMP_FORMAT))
 
     @mock.patch('banzai.calibrations.process_master_maker')
     @mock.patch('banzai.celery.dbs.get_individual_calibration_images')
