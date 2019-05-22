@@ -8,6 +8,7 @@ from banzai import settings, dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, lake_utils
 from banzai.context import Context
 from banzai.utils.stage_utils import run
+from celery.signals import setup_logging
 
 app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
@@ -16,6 +17,11 @@ app.conf.update(broker_url=os.getenv('REDIS_HOST', 'redis://localhost:6379/0'))
 logger = logging.getLogger('banzai')
 
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
+
+
+@setup_logging.connect
+def setup_loggers(*args, **kwargs):
+    logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
 
 
 @app.task(name='celery.schedule_calibration_stacking')
