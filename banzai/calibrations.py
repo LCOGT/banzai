@@ -8,6 +8,7 @@ from astropy.io import fits
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs, settings
 from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, import_utils
+import datetime
 
 FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
 
@@ -236,8 +237,8 @@ def process_master_maker(runtime_context, instrument, frame_type, min_date, max_
     extra_tags = {'type': instrument.type, 'site': instrument.site,
                   'enclosure': instrument.enclosure, 'telescope': instrument.telescope,
                   'camera': instrument.camera, 'obstype': frame_type,
-                  'min_date': min_date,
-                  'max_date': max_date}
+                  'min_date': datetime.datetime.strftime(min_date, date_utils.TIMESTAMP_FORMAT),
+                  'max_date': datetime.datetime.strftime(max_date, date_utils.TIMESTAMP_FORMAT)}
     logger.info("Making master frames", extra_tags=extra_tags)
     image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
                                                             use_masters=use_masters,

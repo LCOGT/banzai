@@ -84,6 +84,7 @@ def stack_calibrations(self, runtime_context_json, blocks, process_any_images=Tr
                                           telescope=runtime_context.telescope)
     completed_image_count = len(dbs.get_individual_calibration_images(instrument, runtime_context.frame_type,
                                                                       min_date, max_date, use_masters=False,
+                                                                      include_bad_frames=True,
                                                                       db_address=runtime_context.db_address))
     expected_image_count = 0
     for block in blocks:
