@@ -6,6 +6,7 @@ import multiprocessing
 
 from banzai.utils import date_utils
 
+
 class BanzaiLogger(logging.getLoggerClass()):
     def __init__(self, name, level='NOTSET'):
         super(BanzaiLogger, self).__init__(name, level)
@@ -45,7 +46,7 @@ def _image_to_tags(image_config):
 
 
 def set_log_level(log_level='INFO'):
-    root_logger = logging.getLogger()
+    root_logger = logging.getLogger('banzai')
     root_logger.setLevel(log_level.upper())
 
 
