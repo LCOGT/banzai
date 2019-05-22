@@ -21,7 +21,7 @@ RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 
 @setup_logging.connect
 def setup_loggers(*args, **kwargs):
-    pass
+    logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
 
 
 @app.task(name='celery.schedule_calibration_stacking')
