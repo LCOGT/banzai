@@ -1,3 +1,7 @@
+0.23.2 (2019-05-22)
+-------------------
+- Made broker-url a required argument for all console entry points
+
 0.23.1 (2019-05-21)
 -------------------
 - Fixed a bug in stacking master calibrations from the command line.

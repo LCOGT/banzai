@@ -137,6 +137,7 @@ spec:
         - banzai_run_realtime_pipeline
         - "--db-address=sqlite:////archive/engineering/test.db"
         - "--fpack"
+        - "--broker-url=localhost"
       resources:
         requests:
           cpu: 0.1
