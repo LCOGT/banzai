@@ -464,7 +464,7 @@ def get_individual_calibration_images(instrument, calibration_type, min_date: da
     calibration_criteria &= CalibrationImage.dateobs <= max_date
 
     if not include_bad_frames:
-        calibration_criteria &= not CalibrationImage.is_bad
+        calibration_criteria &= CalibrationImage.is_bad == False
 
     with get_session(db_address=db_address) as db_session:
         images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
