@@ -157,7 +157,7 @@ def parse_directory_args(runtime_context=None, raw_path=None, extra_console_argu
 
 def reduce_directory(runtime_context=None, raw_path=None, image_types=None):
     # TODO: Remove image_types once reduce_night is not needed
-    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path, extra_console_arguments=extra)
+    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
     process_directory(runtime_context, raw_path, image_types=image_types,
                       log_message='Reducing all frames in directory')
 
