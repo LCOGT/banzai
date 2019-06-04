@@ -15,9 +15,9 @@ class DarkNormalizer(Stage):
         super(DarkNormalizer, self).__init__(runtime_context)
 
     def do_stage(self, image):
-        if image.exptime == 0.0:
-            logger.error('EXPTIME is 0.0. Rejecting frame', image=image)
-            qc_results = {'exptime': 0.0, 'rejected': True}
+        if image.exptime <= 0.0:
+            logger.error('EXPTIME is <= 0.0. Rejecting frame', image=image)
+            qc_results = {'exptime': image.exptime, 'rejected': True}
             qc.save_qc_results(self.runtime_context, qc_results, image)
             return None
         image.data /= image.exptime
