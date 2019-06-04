@@ -1,3 +1,7 @@
+0.23.3 (2019-06-04)
+-------------------
+- Added an explicit check to make sure the exposure time is not zero in dark frames before stacking.
+
 0.23.2 (2019-05-22)
 -------------------
 - Made broker-url a required argument for all console entry points
