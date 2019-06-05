@@ -78,7 +78,7 @@ pipeline {
 			post {
 				always {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-bias.xml .')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-bias.xml pytest-master-bias.xml')
 						junit 'pytest-master-bias.xml'
 					}
 				}
@@ -99,7 +99,7 @@ pipeline {
 			post {
 				always {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-dark.xml .')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-dark.xml pytest-master-dark.xml')
 						junit 'pytest-master-dark.xml'
 					}
 				}
@@ -120,7 +120,7 @@ pipeline {
 			post {
 				always {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-flat.xml .')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-flat.xml pytest-master-flat.xml')
 						junit 'pytest-master-flat.xml'
 					}
 				}
@@ -141,7 +141,7 @@ pipeline {
 			post {
 				always {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-science-files.xml .')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-science-files.xml pytest-science-files.xml ')
 						junit 'pytest-science-files.xml'
 						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} logs -n dev --all-containers=True banzai-e2e-test')
 
