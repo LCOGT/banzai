@@ -20,7 +20,7 @@ def test_null_input_image():
 
 def test_master_selection_criteria():
     comparer = BiasComparer(FakeContext())
-    assert comparer.master_selection_criteria == ['configuration_mode']
+    assert comparer.master_selection_criteria == ['configuration_mode', 'ccdsum']
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)

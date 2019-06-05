@@ -79,11 +79,12 @@ class Image(object):
             self.gain = eval(str(header.get('GAIN')))
 
         self.ccdsum = header.get('CCDSUM')
-        self.configuration_mode = header.get('CONFMODE', 'N/A')
+        self.configuration_mode = header.get('CONFMODE', 'default')
 
-        # If the configuration mode is not in the header, fallback to the binning to support legacy data
+        # If the configuration mode is not in the header, fallback to default to support legacy data
         if self.configuration_mode == 'N/A':
-            self.configuration_mode = file_utils.ccdsum_to_filename(self)
+            self.configuration_mode = 'default'
+
         self.header['CONFMODE'] = self.configuration_mode
         self.filter = header.get('FILTER')
 

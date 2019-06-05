@@ -14,7 +14,7 @@ def test_min_images():
 
 def test_group_by_attributes():
     maker = BiasMaker(FakeContext())
-    assert maker.group_by_attributes() == ['configuration_mode']
+    assert maker.group_by_attributes() == ['configuration_mode', 'ccdsum']
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)

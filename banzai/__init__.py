@@ -26,7 +26,6 @@ __all__ = ['utils']
 logging.setLoggerClass(BanzaiLogger)
 logging.captureWarnings(True)
 logger = logging.getLogger('banzai')
-logger.propagate = False
 
 handler = logging.StreamHandler(stream=sys.stdout)
 handler.setFormatter(LCOGTFormatter())

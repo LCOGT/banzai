@@ -20,7 +20,7 @@ def test_null_input_image():
 
 def test_master_selection_criteria():
     comparer = FlatComparer(FakeContext())
-    assert comparer.master_selection_criteria == ['configuration_mode', 'filter']
+    assert comparer.master_selection_criteria == ['configuration_mode', 'ccdsum', 'filter']
 
 
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')

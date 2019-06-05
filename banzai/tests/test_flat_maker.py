@@ -14,7 +14,7 @@ def test_min_images():
 
 def test_group_by_attributes():
     maker = FlatMaker(FakeContext())
-    assert maker.group_by_attributes() == ['configuration_mode', 'filter']
+    assert maker.group_by_attributes() == ['configuration_mode', 'ccdsum', 'filter']
 
 
 @mock.patch('banzai.images.Image._init_instrument_info')
