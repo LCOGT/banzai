@@ -126,14 +126,16 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
     return runtime_context
 
 
-def run(image_path, runtime_context):
+def run(image_path, runtime_context, calibration_type=None):
     """
     Main driver script for banzai.
     """
     image = read_image(image_path, runtime_context)
+    if calibration_type is None:
+        calibration_type = image.obstype
     stages_to_do = get_stages_todo(settings.ORDERED_STAGES,
-                                   last_stage=settings.LAST_STAGE[image.obstype],
-                                   extra_stages=settings.EXTRA_STAGES[image.obstype])
+                                   last_stage=settings.LAST_STAGE[calibration_type],
+                                   extra_stages=settings.EXTRA_STAGES[calibration_type])
     logger.info("Starting to reduce frame", image=image)
     for stage in stages_to_do:
         stage_to_run = stage(runtime_context)
@@ -154,7 +156,7 @@ def run_master_maker(image_path_list, runtime_context, frame_type):
         image.write(runtime_context)
 
 
-def process_directory(runtime_context, raw_path, image_types=None, log_message='', use_masters=False):
+def process_directory(runtime_context, raw_path, image_types=None, log_message='', use_masters=False, calibration_type=None):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     image_path_list = image_utils.make_image_path_list(raw_path)
@@ -166,7 +168,7 @@ def process_directory(runtime_context, raw_path, image_types=None, log_message='
                                                       runtime_context.ignore_schedulability, use_masters=use_masters)
     for image_path in images_to_reduce:
         try:
-            run(image_path, runtime_context)
+            run(image_path, runtime_context, calibration_type=calibration_type)
         except Exception:
             logger.error(logs.format_exception(), extra_tags={'filename': image_path})
 
