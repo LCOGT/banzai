@@ -156,10 +156,12 @@ def run_master_maker(image_path_list, runtime_context, frame_type):
         image.write(runtime_context)
 
 
-def process_directory(runtime_context, raw_path, image_types=None, log_message='', use_masters=False, calibration_type=None):
+def process_directory(runtime_context, raw_path, image_types=None, log_message='', use_masters=False,
+                      calibration_type=None, image_path_list=None):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
-    image_path_list = image_utils.make_image_path_list(raw_path)
+    if image_path_list is None:
+        image_path_list = image_utils.make_image_path_list(raw_path)
     if image_types is None:
         image_types = [None]
     images_to_reduce = []
