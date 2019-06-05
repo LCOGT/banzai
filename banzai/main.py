@@ -154,7 +154,7 @@ def run_master_maker(image_path_list, runtime_context, frame_type):
         image.write(runtime_context)
 
 
-def process_directory(runtime_context, raw_path, image_types=None, log_message=''):
+def process_directory(runtime_context, raw_path, image_types=None, log_message='', use_masters=False):
     if len(log_message) > 0:
         logger.info(log_message, extra_tags={'raw_path': raw_path})
     image_path_list = image_utils.make_image_path_list(raw_path)
@@ -163,7 +163,7 @@ def process_directory(runtime_context, raw_path, image_types=None, log_message='
     images_to_reduce = []
     for image_type in image_types:
         images_to_reduce += image_utils.select_images(image_path_list, image_type, runtime_context.db_address,
-                                                      runtime_context.ignore_schedulability)
+                                                      runtime_context.ignore_schedulability, use_masters=use_masters)
     for image_path in images_to_reduce:
         try:
             run(image_path, runtime_context)

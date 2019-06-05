@@ -27,12 +27,16 @@ def get_reduction_level(header):
     return header.get('RLEVEL', '00')
 
 
-def select_images(image_list, image_type, db_address, ignore_schedulability):
+def is_master(header):
+    return header.get('ISMASTER', False)
+
+
+def select_images(image_list, image_type, db_address, ignore_schedulability, use_masters=False):
     images = []
     for filename in image_list:
         try:
             header = get_primary_header(filename)
-            should_process = image_can_be_processed(header, db_address)
+            should_process = image_can_be_processed(header, db_address, use_masters=use_masters)
             should_process &= (image_type is None or get_obstype(header) == image_type)
             if not ignore_schedulability:
                 instrument = dbs.get_instrument(header, db_address=db_address)
@@ -73,11 +77,14 @@ def check_image_homogeneity(images, group_by_attributes=None):
             raise InhomogeneousSetException('Images have different {0}s'.format(attribute))
 
 
-def image_can_be_processed(header, db_address):
+def image_can_be_processed(header, db_address, use_masters=False):
     instrument = dbs.get_instrument(header, db_address=db_address)
     passes = instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
     passes &= get_obstype(header) in settings.LAST_STAGE
-    passes &= get_reduction_level(header) == '00'
+    if not use_masters:
+        passes &= get_reduction_level(header) == '00'
+    if use_masters:
+        passes &= is_master(header)
     return passes
 
 
