@@ -8,6 +8,7 @@ from banzai import settings, dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, lake_utils
 from banzai.context import Context
 from banzai.utils.stage_utils import run
+from celery.signals import setup_logging
 
 app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
@@ -16,6 +17,11 @@ app.conf.update(broker_url=os.getenv('REDIS_HOST', 'redis://localhost:6379/0'))
 logger = logging.getLogger('banzai')
 
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
+
+
+@setup_logging.connect
+def setup_loggers(*args, **kwargs):
+    logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
 
 
 @app.task(name='celery.schedule_calibration_stacking')
@@ -71,13 +77,14 @@ def submit_stacking_tasks_to_queue(runtime_context):
 def stack_calibrations(self, runtime_context_json, blocks, process_any_images=True):
     logger.info('schedule stack for matching blocks')
     runtime_context = Context(runtime_context_json)
+    min_date = datetime.strptime(runtime_context.min_date, date_utils.TIMESTAMP_FORMAT)
+    max_date = datetime.strptime(runtime_context.max_date, date_utils.TIMESTAMP_FORMAT)
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site,
                                           runtime_context.camera, enclosure=runtime_context.enclosure,
                                           telescope=runtime_context.telescope)
     completed_image_count = len(dbs.get_individual_calibration_images(instrument, runtime_context.frame_type,
-                                                                      runtime_context.min_date,
-                                                                      runtime_context.max_date,
-                                                                      use_masters=False,
+                                                                      min_date, max_date, use_masters=False,
+                                                                      include_bad_frames=True,
                                                                       db_address=runtime_context.db_address))
     expected_image_count = 0
     for block in blocks:
@@ -86,11 +93,11 @@ def stack_calibrations(self, runtime_context_json, blocks, process_any_images=Tr
                 expected_image_count += molecule['exposure_count']
     logger.info('expected image count: {0}'.format(str(expected_image_count)))
     logger.info('completed image count: {0}'.format(str(completed_image_count)))
-    if (completed_image_count < expected_image_count and self.request.retries < 3):
+    if completed_image_count < expected_image_count and self.request.retries < 3:
         raise self.retry()
     else:
         calibrations.process_master_maker(runtime_context, instrument, runtime_context.frame_type,
-                                          runtime_context.min_date, runtime_context.max_date)
+                                          min_date, max_date)
 
 
 @app.task(name='celery.process_image')

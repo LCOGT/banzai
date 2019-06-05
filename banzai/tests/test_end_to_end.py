@@ -74,9 +74,10 @@ def run_stack_calibrations(frame_type):
         command = 'banzai_e2e_stack_calibrations --frame-type {frame_type} ' \
                   '--site {site} ' \
                   '--min-date {min_date} --max-date {max_date} ' \
-                  '--db-address={db_address} --ignore-schedulability --fpack'
+                  '--db-address={db_address} --ignore-schedulability --fpack --broker-url={broker_url}'
         command = command.format(raw_path=raw_path, frame_type=frame_type, site=site,
-                                 min_date=min_date, max_date=max_date, db_address=os.environ['DB_ADDRESS'])
+                                 min_date=min_date, max_date=max_date, db_address=os.environ['DB_ADDRESS'],
+                                 broker_url=os.getenv('FITS_BROKER_URL'))
         logger.info('Running the following stacking command: {command}'.format(command=command))
         os.system(command)
     celery_join()

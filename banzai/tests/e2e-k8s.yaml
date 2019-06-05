@@ -74,6 +74,8 @@ spec:
           value: "0"
         - name: REDIS_HOST
           value: "redis://localhost:6379/0"
+        - name: BANZAI_WORKER_LOGLEVEL
+          value: debug
       command:
         - celery
         - -A
@@ -135,6 +137,7 @@ spec:
         - banzai_run_realtime_pipeline
         - "--db-address=sqlite:////archive/engineering/test.db"
         - "--fpack"
+        - "--broker-url=localhost"
       resources:
         requests:
           cpu: 0.1
