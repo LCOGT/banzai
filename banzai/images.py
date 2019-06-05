@@ -31,8 +31,8 @@ class DataTable(object):
     def __setitem__(self, key, value):
         self._data_table[key] = value
 
-    def add_column(self, arr, name, insert_index=0):
-        self._data_table.add_column(Column(arr), name=name, index=insert_index)
+    def add_column(self, arr, name, index=None):
+        self._data_table.add_column(Column(arr), name=name, index=index)
 
     def table_to_hdu(self):
         table_hdu = fits_utils.table_to_fits(self._data_table)
