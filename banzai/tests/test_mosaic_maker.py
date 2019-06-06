@@ -8,7 +8,6 @@ from banzai.tests.utils import FakeImage
 class FakeMosaicImage(FakeImage):
     def __init__(self, *args, **kwargs):
         super(FakeMosaicImage, self).__init__(*args, **kwargs)
-        self.extension_headers = None
         self.ccdsum = '1 1'
         self.extension_headers = [{'DATASEC': '[1:512,1:512]', 'DETSEC': '[1025:2048,3072:2049]', 'CCDSUM': '2 2'},
                                   {'DATASEC': '[1:512,1:512]', 'DETSEC': '[1025:2048,1025:2048]', 'CCDSUM': '2 2'},

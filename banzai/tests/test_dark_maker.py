@@ -31,7 +31,7 @@ def test_header_cal_type_dark(mock_frame):
 
 
 def test_returns_null_if_configuration_modes_are_different():
-    handles_inhomogeneous_set(DarkMaker, FakeContext(),'configuration_mode', 'central_2k_2x2', calibration_maker=True)
+    handles_inhomogeneous_set(DarkMaker, FakeContext(), 'configuration_mode', 'central_2k_2x2', calibration_maker=True)
 
 
 def test_returns_null_if_nx_are_different():
