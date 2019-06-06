@@ -47,8 +47,20 @@ def instantly_public(proposal_id):
 
 
 def ccdsum_to_filename(image):
-    return 'bin{ccdsum}'.format(ccdsum=image.ccdsum.replace(' ', 'x'))
+    if image.ccdsum is None:
+        ccdsum_str = ''
+    else:
+        ccdsum_str = 'bin{ccdsum}'.format(ccdsum=image.ccdsum.replace(' ', 'x'))
+    return ccdsum_str
 
 
 def filter_to_filename(image):
     return str(image.filter)
+
+
+def config_to_filename(image):
+    filename = str(image.configuration_mode)
+    filename = filename.replace('full_frame', '')
+    filename = filename.replace('default', '')
+    filename = filename.replace('central_2k_2x2', 'center')
+    return filename

@@ -44,6 +44,9 @@ class FakeImage(Image):
         self.exptime = 30.0
         self.obstype = 'TEST'
         self.is_bad = False
+        self.configuration_mode = 'full_frame'
+        for keyword in kwargs:
+            setattr(self, keyword, kwargs[keyword])
 
     def get_calibration_filename(self):
         return '/tmp/{0}_{1}_{2}_bin{3}.fits'.format(self.caltype, self.instrument,
@@ -73,6 +76,7 @@ class FakeStage(Stage):
 
 
 def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_maker=False):
+    logger.error(vars(context))
     stage = stagetype(context)
     kwargs = {keyword: value}
     if calibration_maker:

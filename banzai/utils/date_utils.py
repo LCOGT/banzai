@@ -131,7 +131,7 @@ def validate_date(s):
         raise argparse.ArgumentTypeError(msg)
 
 
-def get_min_and_max_dates_for_calibration_scheduling(timezone, dayobs=None, return_string=False):
+def get_min_and_max_dates_for_calibration_scheduling(timezone, return_string=False):
     # Gets next midnight relative to date of observation
     current_date = get_dayobs(timezone)
     current_date = datetime.datetime.strptime(current_date, '%Y%m%d')

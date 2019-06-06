@@ -43,7 +43,6 @@ services:
       - banzai-redis
       - banzai-fits-exchange
       - banzai-e2e
-      - banzai-init
     links:
       - banzai-redis:redis
     volumes_from:
@@ -68,7 +67,6 @@ services:
       - banzai-redis
       - banzai-fits-exchange
       - banzai-e2e
-      - banzai-init
     links:
       - banzai-redis:redis
     volumes_from:
@@ -92,7 +90,6 @@ services:
       - banzai-redis
       - banzai-fits-exchange
       - banzai-e2e
-      - banzai-init
     links:
       - banzai-fits-exchange:broker
       - banzai-redis:redis
