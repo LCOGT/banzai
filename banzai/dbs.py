@@ -22,7 +22,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
 
-from banzai.utils import date_utils
+from banzai.utils import date_utils, fits_utils
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
@@ -307,14 +307,11 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
     with get_session(db_address=db_address) as db_session:
         bpm_filenames = glob(os.path.join(directory, '*bpm*.fits*'))
         for bpm_filename in bpm_filenames:
-            if bpm_filename[-3:] == '.fz':
-                extension_number = 1
-            else:
-                extension_number = 0
+            hdu = fits_utils.open_fits_file(bpm_filename)
 
-            header = fits.getheader(bpm_filename, extension_number)
-            ccdsum = fits.getval(bpm_filename, 'CCDSUM', extension_number)
-            dateobs = date_utils.parse_date_obs(fits.getval(bpm_filename, 'DATE-OBS', extension_number))
+            header = hdu[0].header
+            ccdsum = header.get('CCDSUM')
+            dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
 
             try:
                 instrument = get_instrument(header, db_address=db_address)
