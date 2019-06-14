@@ -3912,7 +3912,7 @@
                   "telescope": "http://configdb.lco.gtn/telescopes/11/?format=json",
                   "science_camera": {
                     "id": 14,
-                    "code": "fa03",
+                    "code": "fl03",
                     "camera_type": {
                       "id": 3,
                       "size": "26.4x26.4",
@@ -4027,7 +4027,7 @@
                   "telescope": "http://configdb.lco.gtn/telescopes/12/?format=json",
                   "science_camera": {
                     "id": 15,
-                    "code": "fl04",
+                    "code": "fa03",
                     "camera_type": {
                       "id": 3,
                       "size": "26.4x26.4",
@@ -4109,7 +4109,7 @@
                     "filter_wheel": 10,
                     "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
                   },
-                  "__str__": "lsc.domc.1m0a.fl04-ef08"
+                  "__str__": "lsc.domc.1m0a.fa03-ef08"
                 },
                 {
                   "id": 36,
