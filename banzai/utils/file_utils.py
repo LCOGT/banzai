@@ -4,12 +4,12 @@ import logging
 
 from kombu import Connection, Exchange
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
-def post_to_archive_queue(image_path):
-    exchange = Exchange('fits_files', type='fanout')
-    with Connection('amqp://guest:guest@rabbitmq.lco.gtn:5672//?heartbeat=10') as conn:
+def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):
+    exchange = Exchange(exchange_name, type='fanout')
+    with Connection(broker_url) as conn:
         producer = conn.Producer(exchange=exchange)
         producer.publish({'path': image_path})
         producer.release()
@@ -47,8 +47,20 @@ def instantly_public(proposal_id):
 
 
 def ccdsum_to_filename(image):
-    return 'bin{ccdsum}'.format(ccdsum=image.ccdsum.replace(' ', 'x'))
+    if image.ccdsum is None:
+        ccdsum_str = ''
+    else:
+        ccdsum_str = 'bin{ccdsum}'.format(ccdsum=image.ccdsum.replace(' ', 'x'))
+    return ccdsum_str
 
 
 def filter_to_filename(image):
     return str(image.filter)
+
+
+def config_to_filename(image):
+    filename = str(image.configuration_mode)
+    filename = filename.replace('full_frame', '')
+    filename = filename.replace('default', '')
+    filename = filename.replace('central_2k_2x2', 'center')
+    return filename

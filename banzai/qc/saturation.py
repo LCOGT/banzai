@@ -3,7 +3,7 @@ import logging
 from banzai.stages import Stage
 from banzai.utils import qc
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class SaturationTest(Stage):
@@ -36,10 +36,9 @@ class SaturationTest(Stage):
         if is_saturated:
             logger.error('SATFRAC exceeds threshold.', image=image, extra_tags=logging_tags)
             qc_results['rejected'] = True
-            return None
         else:
             image.header['SATFRAC'] = (saturation_fraction,
                                        "Fraction of Pixels that are Saturated")
-        qc.save_qc_results(self.runtime_context, qc_results, image)
 
-        return image
+        qc.save_qc_results(self.runtime_context, qc_results, image)
+        return None if is_saturated else image

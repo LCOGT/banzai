@@ -1,3 +1,31 @@
+0.24.0 (2019-06-06)
+-------------------
+- Added support for named configuration modes
+
+0.23.3 (2019-06-04)
+-------------------
+- Added an explicit check to make sure the exposure time is not zero in dark frames before stacking.
+
+0.23.2 (2019-05-22)
+-------------------
+- Made broker-url a required argument for all console entry points
+
+0.23.1 (2019-05-21)
+-------------------
+- Fixed a bug in stacking master calibrations from the command line.
+- Fixed logging format to conform to LCO standard format and to not be overridden by celery
+- Fixed a bug that would use calibration frames to stack even if they were marked as bad
+
+0.23.0 (2019-05-08)
+-------------------
+- Changed license from BSD to GPLv3, the standard LCO license
+
+0.22.0 (2019-05-05)
+-------------------
+- Significant refactor to how BANZAI runs. BANZAI now runs via celery tasks.
+- Calibration stacking is now scheduled by checking the Lake for calibration 
+  blocks.
+  
 0.21.0 (2019-03-25)
 -------------------
 - Significant refactor to the pipeline context and settings files. We have now

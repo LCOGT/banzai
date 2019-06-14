@@ -1,4 +1,4 @@
-name: packagename
+name: banzai
 
 channels:
     - astropy

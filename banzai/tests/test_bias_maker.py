@@ -14,7 +14,7 @@ def test_min_images():
 
 def test_group_by_attributes():
     maker = BiasMaker(FakeContext())
-    assert maker.group_by_attributes() == ['ccdsum']
+    assert maker.group_by_attributes() == ['configuration_mode', 'ccdsum']
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
@@ -28,8 +28,8 @@ def test_header_cal_type_bias(mock_frame):
     assert images[0].header['OBSTYPE'].upper() == 'BIAS'
 
 
-def test_returns_null_if_ccdsums_are_different():
-    handles_inhomogeneous_set(BiasMaker, FakeContext(), 'ccdsum', '1 1', calibration_maker=True)
+def test_returns_null_if_configuration_modes_are_different():
+    handles_inhomogeneous_set(BiasMaker, FakeContext(), 'configuration_mode', 'central_2k_2x2', calibration_maker=True)
 
 
 def test_returns_null_if_nx_are_different():
@@ -60,7 +60,7 @@ def test_bias_level_is_average_of_inputs(mock_instrument_info):
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
-def test_makes_a_sensible_master_bias(mock_fream):
+def test_makes_a_sensible_master_bias(mock_frame):
     nimages = 20
     expected_readnoise = 15.0
 

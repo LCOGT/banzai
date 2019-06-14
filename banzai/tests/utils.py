@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 from astropy.io.fits import Header
@@ -7,8 +7,9 @@ from astropy.utils.data import get_pkg_data_filename
 
 from banzai.stages import Stage
 from banzai.images import Image
+from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class FakeImage(Image):
@@ -43,6 +44,9 @@ class FakeImage(Image):
         self.exptime = 30.0
         self.obstype = 'TEST'
         self.is_bad = False
+        self.configuration_mode = 'full_frame'
+        for keyword in kwargs:
+            setattr(self, keyword, kwargs[keyword])
 
     def get_calibration_filename(self):
         return '/tmp/{0}_{1}_{2}_bin{3}.fits'.format(self.caltype, self.instrument,
@@ -72,6 +76,7 @@ class FakeStage(Stage):
 
 
 def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_maker=False):
+    logger.error(vars(context))
     stage = stagetype(context)
     kwargs = {keyword: value}
     if calibration_maker:
@@ -99,6 +104,17 @@ def gaussian2d(image_shape, x0, y0, brightness, fwhm):
     return normfactor * np.exp(exponent)
 
 
+def get_min_and_max_dates(timezone, dayobs, return_string=False):
+    # Gets next midnight relative to date of observation
+    midnight_at_site = datetime.strptime(dayobs, '%Y%m%d') + timedelta(hours=24-timezone)
+    min_date = midnight_at_site - timedelta(days=0.5)
+    max_date = midnight_at_site + timedelta(days=0.5)
+    if return_string:
+        min_date = min_date.strftime(TIMESTAMP_FORMAT)
+        max_date = max_date.strftime(TIMESTAMP_FORMAT)
+    return min_date, max_date
+
+
 class FakeResponse(object):
     def __init__(self):
         with open(get_pkg_data_filename('data/configdb_example.json')) as f:
@@ -109,5 +125,10 @@ class FakeResponse(object):
 
 
 class FakeInstrument(object):
-    def __init__(self, schedulable=True):
+    def __init__(self, site='', camera='', enclosure='', telescope='', type='', schedulable=True):
+        self.site = site
+        self.camera = camera
+        self.enclosure = enclosure
+        self.telescope = telescope
         self.schedulable = schedulable
+        self.type = type

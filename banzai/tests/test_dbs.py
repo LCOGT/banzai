@@ -17,41 +17,40 @@ def teardown_module():
 
 
 def test_add_or_update():
-    db_session = dbs.get_session(db_address='sqlite:///test.db')
-    # Add a fake telescope
-    dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma',
-                                                          'telescope': '1m0a', 'name': 'kb101'},
-                             {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma', 'telescope': '1m0a',
-                              'type': 'SBig', 'schedulable': False, 'name': 'kb101'})
-    db_session.commit()
+    with dbs.get_session(db_address='sqlite:///test.db') as db_session:
+        # Add a fake telescope
+        dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma',
+                                                              'telescope': '1m0a'},
+                                 {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma', 'telescope': '1m0a',
+                                  'type': 'SBig', 'schedulable': False, 'name': 'kb101'})
+        db_session.commit()
 
-    # Make sure it got added
-    query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
-    telescope = query.filter(dbs.Instrument.camera == 'kb101').first()
-    assert telescope is not None
+        # Make sure it got added
+        query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
+        telescope = query.filter(dbs.Instrument.camera == 'kb101').first()
+        assert telescope is not None
 
-    # Update the fake telescope
-    dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma',
-                                                          'telescope': '1m0a', 'name': 'kb101'},
-                             {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma', 'telescope': '1m0a',
-                              'type': 'SBig', 'schedulable': True})
+        # Update the fake telescope
+        dbs.add_or_update_record(db_session, dbs.Instrument, {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma',
+                                                              'telescope': '1m0a'},
+                                 {'site': 'bpl', 'camera': 'kb101', 'enclosure': 'doma', 'telescope': '1m0a',
+                                  'type': 'SBig', 'schedulable': True, 'name': 'kb101'})
 
-    db_session.commit()
-    # Make sure the update took
-    query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
-    telescope = query.filter(dbs.Instrument.camera == 'kb101').first()
-    assert telescope is not None
-    assert telescope.schedulable
+        db_session.commit()
+        # Make sure the update took
+        query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
+        telescope = query.filter(dbs.Instrument.camera == 'kb101').first()
+        assert telescope is not None
+        assert telescope.schedulable
 
-    # make sure there is only one new telescope in the table
-    query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
-    telescopes = query.filter(dbs.Instrument.camera == 'kb101').all()
-    assert len(telescopes) == 1
+        # make sure there is only one new telescope in the table
+        query = db_session.query(dbs.Instrument).filter(dbs.Instrument.site == 'bpl')
+        telescopes = query.filter(dbs.Instrument.camera == 'kb101').all()
+        assert len(telescopes) == 1
 
-    # Clean up for other methods
-    db_session.delete(telescope)
-    db_session.commit()
-    db_session.close()
+        # Clean up for other methods
+        db_session.delete(telescope)
+        db_session.commit()
 
 
 def test_removing_duplicates():
@@ -83,32 +82,3 @@ def test_not_removing_singlets():
     assert len(culled_list) == 2
     assert culled_list[1]['name'] == 'nres01'
     assert culled_list[0]['name'] == 'cam01'
-
-
-def test_fl_cameras_are_added():
-    nres_inst = {'site': 'tlv', 'name': 'nres01', 'camera': 'fa18', 'schedulable': True}
-    nres_fl_inst = {'site': 'tlv', 'name': 'nres01', 'camera': 'fl18', 'schedulable': True}
-    instruments = [nres_inst, nres_fl_inst, nres_fl_inst]
-    culled_list = dbs.remove_nres_duplicates(instruments)
-    assert len(culled_list) == 2
-    assert culled_list[1]['camera'] == 'fl18'
-    assert culled_list[0]['camera'] == 'fa18'
-
-
-@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse())
-def test_db_adds_fl_cameras_from_configdb_which_is_missing_fl(fake_configdb):
-    with tempfile.TemporaryDirectory() as bpm_dir:
-        dbs.create_db(bpm_dir, db_address=os.path.join('sqlite:///' + bpm_dir, 'test.db'),
-                  configdb_address='http://configdbdev.lco.gtn/sites/')
-        instrument = dbs.query_for_instrument(os.path.join('sqlite:///' + bpm_dir, 'test.db'),
-                                              'lsc',
-                                              camera='fa09',
-                                              name='nres01',
-                                              enclosure=None, telescope=None)
-        assert instrument is not None
-        instrument = dbs.query_for_instrument(os.path.join('sqlite:///' + bpm_dir, 'test.db'),
-                                              'lsc',
-                                              camera='fl09',
-                                              name='nres01',
-                                              enclosure=None, telescope=None)
-        assert instrument is not None

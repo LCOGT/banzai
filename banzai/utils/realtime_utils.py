@@ -1,10 +1,9 @@
 import logging
 
 from banzai import dbs
-from banzai.utils import file_utils, image_utils
-from banzai.utils.fits_utils import get_primary_header
+from banzai.utils import fits_utils, image_utils, file_utils
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 def set_file_as_processed(path, db_address=dbs._DEFAULT_DB):
@@ -52,11 +51,16 @@ def need_to_process_image(path, ignore_schedulability=False, db_address=dbs._DEF
         logger.warning("Filename does not have a .fits extension, stopping reduction", extra_tags={"filename": path})
         return False
 
-    header = get_primary_header(path)
+    header = fits_utils.get_primary_header(path)
     if not image_utils.image_can_be_processed(header, db_address):
         return False
 
-    if not ignore_schedulability and not dbs.get_instrument(header, db_address=db_address).schedulable:
+    try:
+        instrument = dbs.get_instrument(header, db_address=db_address)
+    except ValueError:
+        return False
+    if not ignore_schedulability and not instrument.schedulable:
+        logger.info('Image will not be processed because instrument is not schedulable', extra_tags={"filename": path})
         return False
 
     # Get the image in db. If it doesn't exist add it.

@@ -7,7 +7,7 @@ from banzai.stages import Stage
 from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
 from banzai.utils import stats, fits_utils
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class BiasMaker(CalibrationStacker):

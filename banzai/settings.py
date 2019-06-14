@@ -6,10 +6,11 @@ settings.py: Settings script for banzai.
     pipeline context.
 
 """
+import os
 import operator
 
 from banzai.utils.instrument_utils import InstrumentCriterion
-from banzai.utils.file_utils import ccdsum_to_filename, filter_to_filename
+from banzai.utils.file_utils import config_to_filename, filter_to_filename, ccdsum_to_filename
 
 
 def telescope_to_filename(image):
@@ -42,9 +43,9 @@ CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,
                           'SKYFLAT': 5}
 
-CALIBRATION_SET_CRITERIA = {'BIAS': ['ccdsum'],
-                            'DARK': ['ccdsum'],
-                            'SKYFLAT': ['ccdsum', 'filter']}
+CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'ccdsum'],
+                            'DARK': ['configuration_mode', 'ccdsum'],
+                            'SKYFLAT': ['configuration_mode', 'ccdsum', 'filter']}
 
 LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer', 'DARK': 'banzai.bias.BiasSubtractor', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
               'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None}
@@ -61,7 +62,21 @@ CALIBRATION_STACKER_STAGE = {'BIAS': 'banzai.bias.BiasMaker',
 
 CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT']
 
+# Stack delays are expressed in seconds--namely, each is five minutes
+CALIBRATION_STACK_DELAYS = {'BIAS': 300,
+                            'DARK': 300,
+                            'SKYFLAT': 300}
+
 SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
+
+SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
+                                  'cpt': {'minute': 0, 'hour': 15},
+                                  'tfn': {'minute': 30, 'hour': 17},
+                                  'lsc': {'minute': 0, 'hour': 21},
+                                  'elp': {'minute': 0, 'hour': 23},
+                                  'ogg': {'minute': 0, 'hour': 3}}
+
+ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/catalog/')
 
 
 def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):
@@ -71,13 +86,21 @@ def make_calibration_filename_function(calibration_type, attribute_filename_func
                            'cal_type': calibration_type.lower()}
         cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
         for filename_function in attribute_filename_functions:
-            cal_file += '-{}'.format(filename_function(image))
+            filename_part = filename_function(image)
+            if len(filename_part) > 0:
+                cal_file += '-{}'.format(filename_part)
         cal_file += '.fits'
         return cal_file
     return get_calibration_filename
 
 
-CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': make_calibration_filename_function('BIAS', [ccdsum_to_filename], telescope_to_filename),
-                                  'DARK': make_calibration_filename_function('DARK', [ccdsum_to_filename], telescope_to_filename),
-                                  'SKYFLAT': make_calibration_filename_function('SKYFLAT', [ccdsum_to_filename, filter_to_filename],
+CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': make_calibration_filename_function('BIAS', [config_to_filename,
+                                                                                      ccdsum_to_filename],
+                                                                             telescope_to_filename),
+                                  'DARK': make_calibration_filename_function('DARK', [config_to_filename,
+                                                                                      ccdsum_to_filename],
+                                                                             telescope_to_filename),
+                                  'SKYFLAT': make_calibration_filename_function('SKYFLAT', [config_to_filename,
+                                                                                            ccdsum_to_filename,
+                                                                                            filter_to_filename],
                                                                                 telescope_to_filename)}

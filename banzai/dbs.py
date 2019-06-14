@@ -20,8 +20,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
+from contextlib import contextmanager
 
-from banzai.utils import date_utils, fits_utils
+from banzai.utils import date_utils
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
@@ -31,9 +32,10 @@ _CONFIGDB_ADDRESS = 'http://configdb.lco.gtn/sites/'
 
 Base = declarative_base()
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
+@contextmanager
 def get_session(db_address=_DEFAULT_DB):
     """
     Get a connection to the database.
@@ -50,8 +52,14 @@ def get_session(db_address=_DEFAULT_DB):
     # incomplete records causing a crash. None of the queries here are large, so it should be ok.
     db_session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     session = db_session()
-
-    return session
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 class CalibrationImage(Base):
@@ -174,11 +182,6 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
                         if instrument['name'] in CAMERAS_FOR_INSTRUMENTS:
                             instrument['camera'] = CAMERAS_FOR_INSTRUMENTS[instrument['name']]
                         instruments.append(instrument)
-                        if 'nres' in instrument['name']:
-                            # hotfix so that we can reduce old nres frames when the cameras were flXX instead of faXX
-                            fl_instrument = instrument.copy()
-                            fl_instrument['camera'] = instrument['camera'].replace('fa', 'fl')
-                            instruments.append(fl_instrument)
 
     instruments = remove_nres_duplicates(instruments)
     return sites, instruments
@@ -225,30 +228,23 @@ def populate_instrument_tables(db_address=_DEFAULT_DB,
 
     sites, instruments = parse_configdb(configdb_address=configdb_address)
 
-    db_session = get_session(db_address=db_address)
+    with get_session(db_address=db_address) as db_session:
+        for site in sites:
+            add_or_update_record(db_session, Site, {'id': site['code']},
+                                 {'id': site['code'], 'timezone': site['timezone']})
+        db_session.commit()
 
-    for site in sites:
-        add_or_update_record(db_session, Site, {'id': site['code']},
-                             {'id': site['code'], 'timezone': site['timezone']})
-    db_session.commit()
+        # Set all instruments in the table to be schedulable and turn them back on below as needed.
+        all_instruments = db_session.query(Instrument).all()
+        for instrument in all_instruments:
+            instrument.schedulable = False
+        db_session.commit()
 
-    # Set all instruments in the table to be schedulable and turn them back on below as needed.
-    all_instruments = db_session.query(Instrument).all()
-    for instrument in all_instruments:
-        instrument.schedulable = False
-    db_session.commit()
-
-    for instrument in instruments:
-        add_instrument(instrument, db_address=db_address, db_session=db_session)
-    db_session.close()
+        for instrument in instruments:
+            add_instrument(instrument, db_session=db_session)
 
 
-def add_instrument(instrument, db_address=_DEFAULT_DB, db_session=None):
-    if db_session is None:
-        existing_session = False
-        db_session = get_session(db_address)
-    else:
-        existing_session = True
+def add_instrument(instrument, db_session):
     equivalence_criteria = {'site': instrument['site'],
                             'enclosure': instrument['enclosure'],
                             'telescope': instrument['telescope'],
@@ -264,8 +260,6 @@ def add_instrument(instrument, db_address=_DEFAULT_DB, db_session=None):
 
     add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
     db_session.commit()
-    if not existing_session:
-        db_session.close()
 
 
 def add_or_update_record(db_session, table_model, equivalence_criteria, record_attributes):
@@ -310,57 +304,60 @@ def add_or_update_record(db_session, table_model, equivalence_criteria, record_a
 
 
 def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
-    db_session = get_session(db_address=db_address)
-    bpm_filenames = glob(os.path.join(directory, '*bpm*.fits*'))
-    for bpm_filename in bpm_filenames:
-        hdu = fits_utils.open_fits_file(bpm_filename)
-        ccdsum = hdu[0].header['CCDSUM']
-        dateobs = date_utils.parse_date_obs(hdu[0].header['DATE-OBS'])
+    with get_session(db_address=db_address) as db_session:
+        bpm_filenames = glob(os.path.join(directory, '*bpm*.fits*'))
+        for bpm_filename in bpm_filenames:
+            if bpm_filename[-3:] == '.fz':
+                extension_number = 1
+            else:
+                extension_number = 0
 
-        instrument = get_instrument(hdu[0].header, db_address=db_address)
+            header = fits.getheader(bpm_filename, extension_number)
+            ccdsum = fits.getval(bpm_filename, 'CCDSUM', extension_number)
+            dateobs = date_utils.parse_date_obs(fits.getval(bpm_filename, 'DATE-OBS', extension_number))
 
-        if instrument is None:
-            logger.error('Instrument is missing from database', extra_tags={'site': hdu[0].header['SITEID'],
-                                                                            'camera': hdu[0].header['INSTRUME']})
-            continue
+            try:
+                instrument = get_instrument(header, db_address=db_address)
+            except ValueError:
+                logger.error('Instrument is missing from database', extra_tags={'site': header['SITEID'],
+                                                                                'camera': header['INSTRUME']})
+                continue
 
-        bpm_attributes = {'type': 'BPM',
-                          'filename': os.path.basename(bpm_filename),
-                          'filepath': os.path.abspath(directory),
-                          'dateobs': dateobs,
-                          'datecreated': dateobs,
-                          'instrument_id': instrument.id,
-                          'is_master': True,
-                          'is_bad': False,
-                          'attributes': {'ccdsum': ccdsum}}
+            bpm_attributes = {'type': 'BPM',
+                              'filename': os.path.basename(bpm_filename),
+                              'filepath': os.path.abspath(directory),
+                              'dateobs': dateobs,
+                              'datecreated': dateobs,
+                              'instrument_id': instrument.id,
+                              'is_master': True,
+                              'is_bad': False,
+                              'attributes': {'ccdsum': ccdsum}}
 
-        add_or_update_record(db_session, CalibrationImage, {'filename': bpm_attributes['filename']}, bpm_attributes)
+            add_or_update_record(db_session, CalibrationImage, {'filename': bpm_attributes['filename']}, bpm_attributes)
 
-    db_session.commit()
-    db_session.close()
+        db_session.commit()
 
 
 class SiteMissingException(Exception):
     pass
 
 
-def query_for_instrument(db_address, site, camera, name=None, enclosure=None, telescope=None,
+def query_for_instrument(db_address, site, camera, enclosure=None, telescope=None, name=None,
                          must_be_schedulable=False):
     # Short circuit
     if None in [site, camera]:
         return None
-    db_session = get_session(db_address=db_address)
-    criteria = (Instrument.site == site) & (Instrument.camera == camera)
-    if enclosure is not None:
-        criteria &= Instrument.enclosure == enclosure
-    if telescope is not None:
-        criteria &= Instrument.telescope == telescope
-    if name is not None:
-        criteria &= Instrument.name == name
-    if must_be_schedulable:
-        criteria &= Instrument.schedulable.is_(True)
-    instrument = db_session.query(Instrument).filter(criteria).order_by(Instrument.id.desc()).first()
-    db_session.close()
+    with get_session(db_address=db_address) as db_session:
+        criteria = (Instrument.site == site) & (Instrument.camera == camera)
+        if enclosure is not None:
+            criteria &= Instrument.enclosure == enclosure
+        if telescope is not None:
+            criteria &= Instrument.telescope == telescope
+        if name is not None:
+            criteria &= Instrument.name == name
+        if must_be_schedulable:
+            criteria &= Instrument.schedulable.is_(True)
+        instrument = db_session.query(Instrument).filter(criteria).order_by(Instrument.id.desc()).first()
     return instrument
 
 
@@ -369,8 +366,8 @@ def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_AD
     camera = header.get('INSTRUME')
     enclosure = header.get('ENCID')
     telescope = header.get('TELID')
-    name = camera
     instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+    name = camera
     if instrument is None:
         # if instrument is missing, assume it is an NRES frame and check for the instrument again.
         name = header.get('TELESCOP')
@@ -389,76 +386,70 @@ def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_AD
 
 
 def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
-    db_session = get_session(db_address=db_address)
-    criteria = (CalibrationImage.type == 'BPM', CalibrationImage.instrument_id == instrument_id,
-                cast(CalibrationImage.attributes['ccdsum'], String) == type_coerce(ccdsum, JSON))
-    bpm_query = db_session.query(CalibrationImage).filter(*criteria)
-    bpm = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
-    db_session.close()
+    with get_session(db_address=db_address) as db_session:
+        criteria = (CalibrationImage.type == 'BPM', CalibrationImage.instrument_id == instrument_id,
+                    cast(CalibrationImage.attributes['ccdsum'], String) == type_coerce(ccdsum, JSON))
+        bpm_query = db_session.query(CalibrationImage).filter(*criteria)
+        bpm = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
 
-    if bpm is not None:
-        bpm_path = os.path.join(bpm.filepath, bpm.filename)
-    else:
-        bpm_path = None
+        if bpm is not None:
+            bpm_path = os.path.join(bpm.filepath, bpm.filename)
+        else:
+            bpm_path = None
     return bpm_path
 
 
 def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
     # Store the information into the calibration table
     # Check and see if the bias file is already in the database
-    db_session = get_session(db_address=db_address)
-    output_filename = os.path.basename(output_file)
-    record_attributes = {'type': image.obstype.upper(),
-                         'filename': output_filename,
-                         'filepath': os.path.dirname(output_file),
-                         'dateobs': image.dateobs,
-                         'datecreated': image.datecreated,
-                         'instrument_id': image.instrument.id,
-                         'is_master': image.is_master,
-                         'is_bad': image.is_bad,
-                         'attributes': {}}
-    for attribute in image.attributes:
-        record_attributes['attributes'][attribute] = getattr(image, attribute)
+    with get_session(db_address=db_address) as db_session:
+        output_filename = os.path.basename(output_file)
+        record_attributes = {'type': image.obstype.upper(),
+                             'filename': output_filename,
+                             'filepath': os.path.dirname(output_file),
+                             'dateobs': image.dateobs,
+                             'datecreated': image.datecreated,
+                             'instrument_id': image.instrument.id,
+                             'is_master': image.is_master,
+                             'is_bad': image.is_bad,
+                             'attributes': {}}
+        for attribute in image.attributes:
+            record_attributes['attributes'][attribute] = getattr(image, attribute)
 
-    add_or_update_record(db_session, CalibrationImage, {'filename': output_filename}, record_attributes)
+        add_or_update_record(db_session, CalibrationImage, {'filename': output_filename}, record_attributes)
 
-    db_session.commit()
-    db_session.close()
+        db_session.commit()
 
 
 def get_processed_image(path, db_address=_DEFAULT_DB):
     filename = os.path.basename(path)
-    db_session = get_session(db_address=db_address)
-    processed_image = add_or_update_record(db_session, ProcessedImage, {'filename': filename},
-                                         {'filename': filename})
-    db_session.commit()
-    db_session.close()
+    with get_session(db_address=db_address) as db_session:
+        processed_image = add_or_update_record(db_session, ProcessedImage, {'filename': filename},
+                                               {'filename': filename})
+        db_session.commit()
     return processed_image
 
 
 def commit_processed_image(processed_image, db_address=_DEFAULT_DB):
-    db_session = get_session(db_address=db_address)
-    db_session.add(processed_image)
-    db_session.commit()
-    db_session.close()
+    with get_session(db_address=db_address) as db_session:
+        db_session.add(processed_image)
+        db_session.commit()
 
 
 def get_timezone(site, db_address=_DEFAULT_DB):
-    db_session = get_session(db_address=db_address)
-    site_list = db_session.query(Site).filter(Site.id == site).all()
-    db_session.close()
+    with get_session(db_address=db_address) as db_session:
+        site_list = db_session.query(Site).filter(Site.id == site).all()
     if len(site_list) == 0:
         raise SiteMissingException
     return site_list[0].timezone
 
 
 def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=False):
-    db_session = get_session(db_address=db_address)
-    query = (Instrument.site == site)
-    if not ignore_schedulability:
-        query &= Instrument.schedulable
-    instruments = db_session.query(Instrument).filter(query).all()
-    db_session.close()
+    with get_session(db_address=db_address) as db_session:
+        query = (Instrument.site == site)
+        if not ignore_schedulability:
+            query &= Instrument.schedulable
+        instruments = db_session.query(Instrument).filter(query).all()
     return instruments
 
 
@@ -479,8 +470,8 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     if use_only_older_calibrations and image.block_start is not None:
         calibration_criteria &= CalibrationImage.datecreated < image.block_start
 
-    db_session = get_session(db_address=db_address)
-    calibration_images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
+    with get_session(db_address=db_address) as db_session:
+        calibration_images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
 
     # Exit if no calibration file found
     if len(calibration_images) == 0:
@@ -499,18 +490,21 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     return calibration_file
 
 
-def get_individual_calibration_images(instrument, calibration_type, min_date, max_date,
-                                      use_masters=False, db_address=_DEFAULT_DB):
+def get_individual_calibration_images(instrument, calibration_type, min_date: datetime.datetime,
+                                      max_date: datetime.datetime, use_masters=False, include_bad_frames=False,
+                                      db_address=_DEFAULT_DB):
 
     calibration_criteria = CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.is_master.is_(use_masters)
-    calibration_criteria &= CalibrationImage.dateobs > min_date
-    calibration_criteria &= CalibrationImage.dateobs < max_date
+    calibration_criteria &= CalibrationImage.dateobs >= min_date
+    calibration_criteria &= CalibrationImage.dateobs <= max_date
 
-    db_session = get_session(db_address=db_address)
-    images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
-    db_session.close()
+    if not include_bad_frames:
+        calibration_criteria &= CalibrationImage.is_bad == False
+
+    with get_session(db_address=db_address) as db_session:
+        images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
 
     image_paths = [os.path.join(image.filepath, image.filename) for image in images]
 
@@ -521,19 +515,18 @@ def mark_frame(filename, mark_as, db_address=_DEFAULT_DB):
     set_is_bad_to = True if mark_as == "bad" else False
     logger.debug("Setting the is_bad parameter for {filename} to {set_is_bad_to}".format(
         filename=filename, set_is_bad_to=set_is_bad_to))
-    db_session = get_session(db_address=db_address)
-    # First check to make sure the image is in the database
-    image = db_session.query(CalibrationImage).filter(CalibrationImage.filename == filename).first()
-    if image is None:
-        logger.error("Frame {filename} not found in database, exiting".format(filename=filename))
-        return
-    if image.is_bad is set_is_bad_to:
-        logger.error("The is_bad parameter for {filename} is already set to {is_bad}, exiting".format(
-            filename=filename, is_bad=image.is_bad))
-        return
-    equivalence_criteria = {'filename': filename}
-    record_attributes = {'filename': filename,
-                         'is_bad': set_is_bad_to}
-    add_or_update_record(db_session, CalibrationImage, equivalence_criteria, record_attributes)
-    db_session.commit()
-    db_session.close()
+    with get_session(db_address=db_address) as db_session:
+        # First check to make sure the image is in the database
+        image = db_session.query(CalibrationImage).filter(CalibrationImage.filename == filename).first()
+        if image is None:
+            logger.error("Frame {filename} not found in database, exiting".format(filename=filename))
+            return
+        if image.is_bad is set_is_bad_to:
+            logger.error("The is_bad parameter for {filename} is already set to {is_bad}, exiting".format(
+                filename=filename, is_bad=image.is_bad))
+            return
+        equivalence_criteria = {'filename': filename}
+        record_attributes = {'filename': filename,
+                             'is_bad': set_is_bad_to}
+        add_or_update_record(db_session, CalibrationImage, equivalence_criteria, record_attributes)
+        db_session.commit()

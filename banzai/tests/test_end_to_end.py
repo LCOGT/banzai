@@ -4,10 +4,18 @@ import argparse
 
 import pytest
 import mock
+import time
 
-from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
-from banzai.utils import fits_utils, date_utils
-from banzai.tests.utils import FakeResponse
+from banzai.celery import app
+from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone, mark_frame
+from banzai.utils import fits_utils, file_utils
+from banzai.tests.utils import FakeResponse, get_min_and_max_dates
+
+import logging
+
+logger = logging.getLogger('banzai')
+
+app.conf.update(CELERY_TASK_ALWAYS_EAGER=True)
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
 
@@ -18,17 +26,19 @@ INSTRUMENTS = [os.path.join(site, os.path.basename(instrument_path)) for site in
 DAYS_OBS = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrument in INSTRUMENTS
             for dayobs_path in glob(os.path.join(DATA_ROOT, instrument, '201*'))]
 
-ENCLOSURE_DICT = {
-    'fa03': 'domc',
-    'kb27': 'clma',
-    'fs02': 'clma',
-}
 
-TELESCOPE_DICT = {
-    'fa03': '1m0a',
-    'kb27': '0m4b',
-    'fs02': '2m0a',
-}
+def celery_join():
+    celery_inspector = app.control.inspect()
+    while True:
+        queues = [celery_inspector.active(), celery_inspector.scheduled(), celery_inspector.reserved()]
+        time.sleep(1)
+        if any([queue is None or 'celery@banzai-celery-worker' not in queue for queue in queues]):
+            logger.warning('No valid celery queues were detected, retrying...', extra_tags={'queues': queues})
+            # Reset the celery connection
+            celery_inspector = app.control.inspect()
+            continue
+        if all([len(queue['celery@banzai-celery-worker']) == 0 for queue in queues]):
+            break
 
 
 def run_end_to_end_tests():
@@ -39,42 +49,47 @@ def run_end_to_end_tests():
     args = parser.parse_args()
     os.chdir(args.code_path)
     command = 'python setup.py test -a "--durations=0 --junitxml={junit_file} -m {marker}"'
-    os.system(command.format(junit_file=args.junit_file, marker=args.marker))
+
+    # Bitshift by 8 because Python encodes exit status in the leftmost 8 bits
+    return os.system(command.format(junit_file=args.junit_file, marker=args.marker)) >> 8
 
 
-def run_reduce_individual_frame(raw_filenames):
+def run_reduce_individual_frames(raw_filenames):
+    logger.info('Reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
-            command = 'banzai_reduce_individual_frame --raw-path {raw_path} --filename {filename} ' \
-                      '--db-address={db_address} --ignore-schedulability --fpack'
-            command = command.format(raw_path=raw_path, filename=filename, db_address=os.environ['DB_ADDRESS'])
-            os.system(command)
+            file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
+    celery_join()
+    logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
 
 
 def run_stack_calibrations(frame_type):
+    logger.info('Stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         site, camera, dayobs = day_obs.split('/')
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
-        min_date, max_date = date_utils.get_min_and_max_dates(timezone, dayobs, return_string=True)
-        command = 'banzai_stack_calibrations --raw-path {raw_path} --frame-type {frame_type} ' \
-                  '--site {site} --camera {camera} ' \
-                  '--enclosure {enclosure} --telescope {telescope} ' \
+        min_date, max_date = get_min_and_max_dates(timezone, dayobs, return_string=True)
+        command = 'banzai_e2e_stack_calibrations --frame-type {frame_type} ' \
+                  '--site {site} ' \
                   '--min-date {min_date} --max-date {max_date} ' \
-                  '--db-address={db_address} --ignore-schedulability --fpack'
-        command = command.format(raw_path=raw_path, frame_type=frame_type, site=site, camera=camera,
-                                 enclosure=ENCLOSURE_DICT[camera], telescope=TELESCOPE_DICT[camera],
-                                 min_date=min_date, max_date=max_date, db_address=os.environ['DB_ADDRESS'])
+                  '--db-address={db_address} --ignore-schedulability --fpack --broker-url={broker_url}'
+        command = command.format(raw_path=raw_path, frame_type=frame_type, site=site,
+                                 min_date=min_date, max_date=max_date, db_address=os.environ['DB_ADDRESS'],
+                                 broker_url=os.getenv('FITS_BROKER_URL'))
+        logger.info('Running the following stacking command: {command}'.format(command=command))
         os.system(command)
+    celery_join()
+    logger.info('Finished stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
 
 
 def mark_frames_as_good(raw_filenames):
+    logger.info('Marking frames as good for filenames: {filenames}'.format(filenames=raw_filenames))
     for day_obs in DAYS_OBS:
         for filename in glob(os.path.join(DATA_ROOT, day_obs, 'processed', raw_filenames)):
-            command = 'banzai_mark_frame_as_good --filename {filename} --db-address={db_address}'
-            command = command.format(filename=os.path.basename(filename), db_address=os.environ['DB_ADDRESS'])
-            os.system(command)
+            mark_frame(os.path.basename(filename), "good", db_address=os.environ['DB_ADDRESS'])
+    logger.info('Finished marking frames as good for filenames: {filenames}'.format(filenames=raw_filenames))
 
 
 def get_expected_number_of_calibrations(raw_filenames, calibration_type):
@@ -86,7 +101,7 @@ def get_expected_number_of_calibrations(raw_filenames, calibration_type):
             observed_filters = []
             for raw_filename in raw_filenames_for_this_dayobs:
                 skyflat_hdu = fits_utils.open_fits_file(raw_filename)
-                observed_filters.append(skyflat_hdu[0].header['FILTER'])
+                observed_filters.append(skyflat_hdu[0].header.get('FILTER'))
             observed_filters = set(observed_filters)
             number_of_stacks_that_should_have_been_created += len(observed_filters)
         else:
@@ -108,10 +123,9 @@ def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_ty
 
 def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type):
     number_of_stacks_that_should_have_been_created = get_expected_number_of_calibrations(raw_filenames, calibration_type)
-    db_session = get_session(os.environ['DB_ADDRESS'])
-    calibrations_in_db = db_session.query(CalibrationImage).filter(CalibrationImage.type == calibration_type)
-    calibrations_in_db = calibrations_in_db.filter(CalibrationImage.is_master).all()
-    db_session.close()
+    with get_session(os.environ['DB_ADDRESS']) as db_session:
+        calibrations_in_db = db_session.query(CalibrationImage).filter(CalibrationImage.type == calibration_type)
+        calibrations_in_db = calibrations_in_db.filter(CalibrationImage.is_master).all()
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(calibrations_in_db) == number_of_stacks_that_should_have_been_created
 
@@ -131,7 +145,7 @@ def init(configdb):
 class TestMasterBiasCreation:
     @pytest.fixture(autouse=True)
     def stack_bias_frames(self, init):
-        run_reduce_individual_frame('*b00.fits*')
+        run_reduce_individual_frames('*b00.fits*')
         mark_frames_as_good('*b91.fits*')
         run_stack_calibrations('bias')
 
@@ -145,7 +159,7 @@ class TestMasterBiasCreation:
 class TestMasterDarkCreation:
     @pytest.fixture(autouse=True)
     def stack_dark_frames(self):
-        run_reduce_individual_frame('*d00.fits*')
+        run_reduce_individual_frames('*d00.fits*')
         mark_frames_as_good('*d91.fits*')
         run_stack_calibrations('dark')
 
@@ -159,7 +173,7 @@ class TestMasterDarkCreation:
 class TestMasterFlatCreation:
     @pytest.fixture(autouse=True)
     def stack_flat_frames(self):
-        run_reduce_individual_frame('*f00.fits*')
+        run_reduce_individual_frames('*f00.fits*')
         mark_frames_as_good('*f91.fits*')
         run_stack_calibrations('skyflat')
 
@@ -173,7 +187,7 @@ class TestMasterFlatCreation:
 class TestScienceFileCreation:
     @pytest.fixture(autouse=True)
     def reduce_science_frames(self):
-        run_reduce_individual_frame('*e00.fits*')
+        run_reduce_individual_frames('*e00.fits*')
 
     def test_if_science_frames_were_created(self):
         expected_files = []

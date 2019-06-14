@@ -7,7 +7,7 @@ from banzai.stages import Stage
 from banzai.utils import array_utils, fits_utils
 from banzai import dbs
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class BPMUpdater(Stage):

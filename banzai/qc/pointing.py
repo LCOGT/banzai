@@ -6,7 +6,7 @@ from astropy.coordinates import SkyCoord
 from banzai.stages import Stage
 from banzai.utils import qc
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class PointingTest(Stage):

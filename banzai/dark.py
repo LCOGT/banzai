@@ -5,8 +5,9 @@ import numpy as np
 
 from banzai.stages import Stage
 from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
+from banzai.utils import qc
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('banzai')
 
 
 class DarkNormalizer(Stage):
@@ -14,6 +15,11 @@ class DarkNormalizer(Stage):
         super(DarkNormalizer, self).__init__(runtime_context)
 
     def do_stage(self, image):
+        if image.exptime <= 0.0:
+            logger.error('EXPTIME is <= 0.0. Rejecting frame', image=image)
+            qc_results = {'exptime': image.exptime, 'rejected': True}
+            qc.save_qc_results(self.runtime_context, qc_results, image)
+            return None
         image.data /= image.exptime
         logger.info('Normalizing dark by exposure time', image=image)
         return image
