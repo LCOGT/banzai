@@ -1,7 +1,6 @@
 import os
 
 import mock
-import tempfile
 
 from banzai import dbs
 from banzai.tests.utils import FakeResponse
@@ -58,9 +57,10 @@ def test_removing_duplicates():
     other_inst = {'site': 'tlv', 'name': 'cam01', 'camera': 'fa12', 'schedulable': True}
     instruments = [other_inst] + [nres_inst]*3
     culled_list = dbs.remove_nres_duplicates(instruments)
+    culled_list.sort(key=lambda x: x['name'], reverse=True)
     assert len(culled_list) == 2
-    assert culled_list[1]['name'] == 'nres01'
-    assert culled_list[0]['name'] == 'cam01'
+    assert culled_list[0]['name'] == 'nres01'
+    assert culled_list[1]['name'] == 'cam01'
 
 
 def test_removing_duplicates_favors_scheduluable():
@@ -68,10 +68,11 @@ def test_removing_duplicates_favors_scheduluable():
     other_inst = {'site': 'tlv', 'name': 'cam01', 'camera': 'fa12', 'schedulable': True}
     instruments = [other_inst, nres_inst, {'site': 'tlv', 'name': 'nres01', 'camera': 'fa18', 'schedulable': False}]
     culled_list = dbs.remove_nres_duplicates(instruments)
+    culled_list.sort(key=lambda x: x['name'], reverse=True)
     assert len(culled_list) == 2
-    assert culled_list[1]['name'] == 'nres01'
-    assert culled_list[0]['name'] == 'cam01'
-    assert culled_list[1]['schedulable']
+    assert culled_list[0]['name'] == 'nres01'
+    assert culled_list[1]['name'] == 'cam01'
+    assert culled_list[0]['schedulable']
 
 
 def test_not_removing_singlets():
@@ -79,6 +80,7 @@ def test_not_removing_singlets():
     other_inst = {'site': 'tlv', 'name': 'cam01', 'camera': 'fa12', 'schedulable': True}
     instruments = [other_inst] + [nres_inst]
     culled_list = dbs.remove_nres_duplicates(instruments)
+    culled_list.sort(key=lambda x: x['name'], reverse=True)
     assert len(culled_list) == 2
-    assert culled_list[1]['name'] == 'nres01'
-    assert culled_list[0]['name'] == 'cam01'
+    assert culled_list[0]['name'] == 'nres01'
+    assert culled_list[1]['name'] == 'cam01'

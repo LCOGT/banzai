@@ -188,22 +188,10 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
 
 
 def remove_nres_duplicates(instruments):
-    nres_instruments = [instrument for instrument in instruments if 'nres' in instrument['name'].lower()]
-
-    indices_to_remove = []
-    for name, camera in set([(instrument['name'], instrument['camera']) for instrument in nres_instruments]):
-        nres_indicies = [i for i, instrument in enumerate(instruments)
-                         if instrument['name'] == name and instrument['camera'] == camera]
-        # If no duplicate, continue
-        if len(nres_indicies) == 1:
-            continue
-        # keep the schedulable instrument if there is one.
-        schedulable_indices = [i for i in nres_indicies if instruments[i]['schedulable']]
-        index_to_keep = nres_indicies[0]
-        if len(schedulable_indices) > 0:
-            index_to_keep = schedulable_indices[0]
-        indices_to_remove += [i for i in nres_indicies if i != index_to_keep]
-    return [instrument for i, instrument in enumerate(instruments) if i not in indices_to_remove]
+    instruments.sort(reverse=True, key=lambda instrument: (instrument['name'], instrument['schedulable']))
+    instrument_dupe_attributes = [(instrument['name'], instrument['camera']) for instrument in instruments]
+    return [instrument for i, instrument in enumerate(instruments)
+            if (instrument['name'], instrument['camera']) not in instrument_dupe_attributes[:i]]
 
 
 def populate_instrument_tables(db_address=_DEFAULT_DB,
