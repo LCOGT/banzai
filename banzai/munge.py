@@ -40,6 +40,27 @@ def update_saturate(image, saturation_level):
         image.header['MAXLIN'] = (saturation_level, '[ADU] Non-linearity level')
 
 
+def crosstalk_coefficients_in_header(image):
+    """
+    Check if there are crosstalk coeffients in the header of an image
+
+    Parameters
+    ----------
+    image: banzai.images.Image
+           Sinistro image to check
+
+    Returns
+    -------
+    in_header: bool
+               True if all the crosstalk coefficients are in the header
+    """
+    n_amps = image.get_n_amps()
+
+    crosstalk_values = [image.header.get('CRSTLK{0}{1}'.format(i+1, j+1))
+                        for i in range(n_amps) for j in range(n_amps) if i!=j]
+    return None in crosstalk_values
+
+
 def sinistro_mode_is_supported(image):
     """
     Check to make sure the Sinistro image was taken in a supported mode.
@@ -61,10 +82,7 @@ def sinistro_mode_is_supported(image):
     # TODO Add support for other binnings
     supported = True
 
-    if image.header['CCDSUM'] != '1 1':
-        supported = False
-        logger.error('Non-supported Sinistro mode', image=image)
-    if image.camera not in crosstalk_coefficients.keys():
+    if image.camera not in crosstalk_coefficients.keys() and not crosstalk_coefficients_in_header(image):
         supported = False
         logger.error('Crosstalk Coefficients missing!', image=image)
 

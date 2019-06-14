@@ -48,6 +48,8 @@ def run(image_path, runtime_context):
     Main driver script for banzai.
     """
     image = image_utils.read_image(image_path, runtime_context)
+    if image is None:
+        return
     stages_to_do = get_stages_todo(settings.ORDERED_STAGES,
                                    last_stage=settings.LAST_STAGE[image.obstype],
                                    extra_stages=settings.EXTRA_STAGES[image.obstype])

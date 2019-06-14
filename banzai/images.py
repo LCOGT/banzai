@@ -82,7 +82,11 @@ class Image(object):
         self.configuration_mode = header.get('CONFMODE', 'default')
 
         # If the configuration mode is not in the header, fallback to default to support legacy data
-        if self.configuration_mode == 'N/A':
+        if (
+                self.configuration_mode == 'N/A' or
+                self.configuration_mode == 0 or
+                self.configuration_mode.lower() == 'normal'
+        ):
             self.configuration_mode = 'default'
 
         self.header['CONFMODE'] = self.configuration_mode
