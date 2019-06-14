@@ -3912,7 +3912,7 @@
                   "telescope": "http://configdb.lco.gtn/telescopes/11/?format=json",
                   "science_camera": {
                     "id": 14,
-                    "code": "fl03",
+                    "code": "fa03",
                     "camera_type": {
                       "id": 3,
                       "size": "26.4x26.4",
