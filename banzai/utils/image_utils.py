@@ -31,12 +31,12 @@ def is_master(header):
     return header.get('ISMASTER', False)
 
 
-def select_images(image_list, image_type, db_address, ignore_schedulability, use_masters=False):
+def select_images(image_list, image_type, db_address, ignore_schedulability):
     images = []
     for filename in image_list:
         try:
             header = get_primary_header(filename)
-            should_process = image_can_be_processed(header, db_address, use_masters=use_masters)
+            should_process = image_can_be_processed(header, db_address)
             should_process &= (image_type is None or get_obstype(header) == image_type)
             if not ignore_schedulability:
                 instrument = dbs.get_instrument(header, db_address=db_address)
