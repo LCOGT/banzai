@@ -202,16 +202,14 @@ def create_master_calibration_header(old_header, images):
     header = fits.Header()
     for key in old_header.keys():
         try:
-            # Dump empty header keywords
-            if len(key) > 0:
+            # Dump empty header keywords and ignore old histories.
+            if len(key) > 0 and key != 'HISTORY':
                 for i in range(old_header.count(key)):
                     header[key] = (old_header[(key, i)], old_header.comments[(key, i)])
         except ValueError as e:
             logger.error('Could not add keyword {key}: {error}'.format(key=key, error=e))
             continue
-
     header = fits_utils.sanitizeheader(header)
-
     observation_dates = [image.dateobs for image in images]
     mean_dateobs = date_utils.mean_date(observation_dates)
 

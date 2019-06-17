@@ -1,3 +1,7 @@
+0.25.0 (2019-06-14)
+-------------------
+- Added name instrument table to support NRES
+
 0.24.0 (2019-06-06)
 -------------------
 - Added support for named configuration modes
