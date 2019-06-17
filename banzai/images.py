@@ -6,7 +6,7 @@ import datetime
 
 import numpy as np
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import Table, Column
 
 import banzai
 from banzai import dbs, settings, exceptions
@@ -19,7 +19,7 @@ logger = logging.getLogger('banzai')
 class DataTable(object):
     """
     Object for storing astropy (or another table type) tables with an additional .name attribute which
-    determines the tables' extension name when it is saved as a fits file.
+    sets the table's extension name when it is saved as a fits file.
     """
     def __init__(self, data_table, name):
         self.name = name
@@ -30,6 +30,9 @@ class DataTable(object):
 
     def __setitem__(self, key, value):
         self._data_table[key] = value
+
+    def add_column(self, arr, name, index=None):
+        self._data_table.add_column(Column(arr), name=name, index=index)
 
     def table_to_hdu(self):
         table_hdu = fits_utils.table_to_fits(self._data_table)

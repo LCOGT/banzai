@@ -22,7 +22,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
 
-from banzai.utils import date_utils
+from banzai.utils import date_utils, fits_utils
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
@@ -96,6 +96,7 @@ class Instrument(Base):
     telescope = Column(String(20), index=True, nullable=False)
     camera = Column(String(50), index=True, nullable=False)
     type = Column(String(100))
+    name = Column(String(100), index=True, nullable=False)
     schedulable = Column(Boolean, default=False)
     __table_args__ = (UniqueConstraint('site', 'enclosure', 'telescope', 'camera', name='instrument_constraint'),)
 
@@ -157,6 +158,10 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
     results = requests.get(configdb_address).json()['results']
     instruments = []
     sites = []
+    # this will be removed when configdb is updated
+    CAMERAS_FOR_INSTRUMENTS = {'nres01': 'fa09', 'nres02': 'fa17', 'nres03': 'fa13', 'nres04': 'fa18',
+                               'floyds01': 'en06', 'floyds02': 'en12'}
+    # end of hotfix
     for site in results:
         sites.append({'code': site['code'], 'timezone': site['timezone']})
         for enc in site['enclosure_set']:
@@ -164,13 +169,29 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
                 for ins in tel['instrument_set']:
                     sci_cam = ins.get('science_camera')
                     if sci_cam is not None:
-                        instruments.append({'site': site['code'],
-                                            'enclosure': enc['code'],
-                                            'telescope': tel['code'],
-                                            'camera': sci_cam['code'],
-                                            'type': sci_cam['camera_type']['code'],
-                                            'schedulable': ins['state'] == 'SCHEDULABLE'})
+                        instrument = {'site': site['code'],
+                                      'enclosure': enc['code'],
+                                      'telescope': tel['code'],
+                                      'camera': sci_cam['code'],
+                                      'name': ins.get('code'),
+                                      'type': sci_cam['camera_type']['code'],
+                                      'schedulable': ins['state'] == 'SCHEDULABLE'}
+                        # hotfix for configdb
+                        if instrument['name'] is None:
+                            instrument['name'] = instrument['camera']
+                        if instrument['name'] in CAMERAS_FOR_INSTRUMENTS:
+                            instrument['camera'] = CAMERAS_FOR_INSTRUMENTS[instrument['name']]
+                        instruments.append(instrument)
+
+    instruments = remove_nres_duplicates(instruments)
     return sites, instruments
+
+
+def remove_nres_duplicates(instruments):
+    instruments.sort(reverse=True, key=lambda instrument: (instrument['name'], instrument['schedulable']))
+    instrument_dupe_attributes = [(instrument['name'], instrument['camera']) for instrument in instruments]
+    return [instrument for i, instrument in enumerate(instruments)
+            if (instrument['name'], instrument['camera']) not in instrument_dupe_attributes[:i]]
 
 
 def populate_instrument_tables(db_address=_DEFAULT_DB,
@@ -215,11 +236,13 @@ def add_instrument(instrument, db_session):
     equivalence_criteria = {'site': instrument['site'],
                             'enclosure': instrument['enclosure'],
                             'telescope': instrument['telescope'],
-                            'camera': instrument['camera']}
+                            'camera': instrument['camera'],
+                            'name': instrument['name']}
     record_attributes = {'site': instrument['site'],
                          'enclosure': instrument['enclosure'],
                          'telescope': instrument['telescope'],
                          'camera': instrument['camera'],
+                         'name': instrument['name'],
                          'type': instrument['type'],
                          'schedulable': instrument['schedulable']}
 
@@ -270,16 +293,13 @@ def add_or_update_record(db_session, table_model, equivalence_criteria, record_a
 
 def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
     with get_session(db_address=db_address) as db_session:
-        bpm_filenames = glob(os.path.join(directory, 'bpm*.fits*'))
+        bpm_filenames = glob(os.path.join(directory, '*bpm*.fits*'))
         for bpm_filename in bpm_filenames:
-            if bpm_filename[-3:] == '.fz':
-                extension_number = 1
-            else:
-                extension_number = 0
+            hdu = fits_utils.open_fits_file(bpm_filename)
 
-            header = fits.getheader(bpm_filename, extension_number)
-            ccdsum = fits.getval(bpm_filename, 'CCDSUM', extension_number)
-            dateobs = date_utils.parse_date_obs(fits.getval(bpm_filename, 'DATE-OBS', extension_number))
+            header = hdu[0].header
+            ccdsum = header.get('CCDSUM')
+            dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
 
             try:
                 instrument = get_instrument(header, db_address=db_address)
@@ -307,7 +327,8 @@ class SiteMissingException(Exception):
     pass
 
 
-def query_for_instrument(db_address, site, camera, enclosure=None, telescope=None, must_be_schedulable=False):
+def query_for_instrument(db_address, site, camera, enclosure=None, telescope=None, name=None,
+                         must_be_schedulable=False):
     # Short circuit
     if None in [site, camera]:
         return None
@@ -317,6 +338,8 @@ def query_for_instrument(db_address, site, camera, enclosure=None, telescope=Non
             criteria &= Instrument.enclosure == enclosure
         if telescope is not None:
             criteria &= Instrument.telescope == telescope
+        if name is not None:
+            criteria &= Instrument.name == name
         if must_be_schedulable:
             criteria &= Instrument.schedulable.is_(True)
         instrument = db_session.query(Instrument).filter(criteria).order_by(Instrument.id.desc()).first()
@@ -325,25 +348,24 @@ def query_for_instrument(db_address, site, camera, enclosure=None, telescope=Non
 
 def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_ADDRESS):
     site = header.get('SITEID')
+    camera = header.get('INSTRUME')
     enclosure = header.get('ENCID')
     telescope = header.get('TELID')
-    camera = header.get('INSTRUME')
     instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
-    # if instrument is missing, try to check the configdb
+    name = camera
     if instrument is None:
+        # if instrument is missing, assume it is an NRES frame and check for the instrument again.
+        name = header.get('TELESCOP')
+        instrument = query_for_instrument(db_address, site, camera, name=name, enclosure=None, telescope=None)
+    if instrument is None:
+        # if instrument is still missing, try repopulating the database from configdb
         populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
         instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
-    # Test for NRES and/or FLOYDS which only require the site and camera name
     if instrument is None:
-        camera = header.get('TELESCOP')
-        if 'nres' in camera.lower():
-            instrument = query_for_instrument(db_address, site, camera)
-    if instrument is None:
-        # Change the camera in the logs back to the default keyword INSTRUME
-        camera = header.get('INSTRUME')
         msg = 'Instrument is not in the database, Please add it before reducing this data.'
-        logger.error(msg, extra_tags={'site': site, 'enclosure': enclosure,
-                                      'telescope': telescope, 'camera': camera})
+        tags = {'site': site, 'enclosure': enclosure,
+                'telescope': telescope, 'camera': camera, 'instrument': name}
+        logger.error(msg, extra_tags=tags)
         raise ValueError('Instrument is missing from the database.')
     return instrument
 

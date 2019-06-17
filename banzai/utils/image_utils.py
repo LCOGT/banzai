@@ -27,6 +27,10 @@ def get_reduction_level(header):
     return header.get('RLEVEL', '00')
 
 
+def is_master(header):
+    return header.get('ISMASTER', False)
+
+
 def select_images(image_list, image_type, db_address, ignore_schedulability):
     images = []
     for filename in image_list:

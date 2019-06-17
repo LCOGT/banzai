@@ -76,3 +76,12 @@ def test_image_creates_and_loads_tables_correctly():
         test_table_dict = regenerate_data_table_from_fits_hdu_list(fits_hdu_list, table_extension_name=table_name)
         test_table_recreated = test_table_dict[table_name]
         assert (test_table_recreated == test_table).all()
+
+
+def test_data_table_adds_columns():
+    fake_table = Table([[1, 2.5]], names=('a',))
+    data_table = DataTable(fake_table, name='test')
+    data_table.add_column(np.arange(2), name='b', index=0)
+    assert np.allclose(data_table['b'], np.arange(2))
+    data_table.add_column(np.arange(1, 3), name='c', index=1)
+    assert np.allclose(data_table['c'], np.arange(1, 3))
