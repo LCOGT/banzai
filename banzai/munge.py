@@ -58,7 +58,7 @@ def crosstalk_coefficients_in_header(image):
 
     crosstalk_values = [image.header.get('CRSTLK{0}{1}'.format(i+1, j+1))
                         for i in range(n_amps) for j in range(n_amps) if i!=j]
-    return None in crosstalk_values
+    return None not in crosstalk_values
 
 
 def sinistro_mode_is_supported(image):

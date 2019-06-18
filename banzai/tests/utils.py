@@ -59,6 +59,13 @@ class FakeImage(Image):
     def add_history(self, msg):
         pass
 
+    def get_n_amps(self):
+        if len(self.data.shape) > 2:
+            n_amps = self.data.shape[0]
+        else:
+            n_amps = 1
+        return n_amps
+
 
 class FakeContext(object):
     def __init__(self, preview_mode=False, frame_class=FakeImage):

@@ -1,7 +1,7 @@
 version: '2'
 services:
   banzai-e2e:
-    image: docker.lco.global/banzai-e2e-data:1.2.1
+    image: docker.lco.global/banzai-e2e-data:1.2.2
     container_name: banzai-e2e
     network_mode: "bridge"
     entrypoint:

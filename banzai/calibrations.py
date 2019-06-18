@@ -122,8 +122,9 @@ class ApplyCalibration(Stage):
         master_calibration_image = FRAME_CLASS(self.runtime_context, filename=master_calibration_filename)
         try:
             image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
-        except image_utils.InhomogeneousSetException:
-            logger.error(logs.format_exception(), image=image)
+        except image_utils.InhomogeneousSetException as e:
+            logger.error('Master calibration was not the same format as the input: '.format(e.message), image=image,
+                         extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
             return None
 
         return self.apply_master_calibration(image, master_calibration_image)

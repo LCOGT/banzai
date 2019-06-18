@@ -1,3 +1,7 @@
+0.26.0 (2019-06-17)
+-------------------
+- Fixes for named readout deployment
+
 0.25.0 (2019-06-14)
 -------------------
 - Added name instrument table to support NRES
