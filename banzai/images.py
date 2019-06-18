@@ -82,7 +82,7 @@ class Image(object):
             self.gain = eval(str(header.get('GAIN')))
 
         self.ccdsum = header.get('CCDSUM')
-        self.configuration_mode = image_utils.get_configuration_utils(header)
+        self.configuration_mode = image_utils.get_configuration_mode(header)
         self.filter = header.get('FILTER')
 
         self.obstype = header.get('OBSTYPE')

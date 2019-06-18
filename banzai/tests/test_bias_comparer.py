@@ -26,18 +26,21 @@ def test_master_selection_criteria():
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_returns_null_if_configuration_modes_are_different(mock_cal, mock_frame):
+    mock_cal.return_value = 'test.fits'
     handles_inhomogeneous_set(BiasComparer, FakeContext(), 'configuration_mode', 'central_2k_2x2')
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_returns_null_if_nx_are_different(mock_cal, mock_frame):
+    mock_cal.return_value = 'test.fits'
     handles_inhomogeneous_set(BiasComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_returns_null_if_ny_are_different(mock_cal, mock_frame):
+    mock_cal.return_value = 'test.fits'
     handles_inhomogeneous_set(BiasComparer, FakeContext(), 'ny', 107)
 
 

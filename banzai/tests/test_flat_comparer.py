@@ -26,24 +26,28 @@ def test_master_selection_criteria():
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
 def test_returns_null_if_configuration_modes_are_different(mock_frame, mock_cal):
+    mock_cal.return_value = 'test.fits'
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'configuration_mode', 'central_2k_2x2')
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_returns_null_if_nx_are_different(mock_cal, mock_frame):
+    mock_cal.return_value = 'test.fits'
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_returns_null_if_ny_are_different(mock_cal, mock_frame):
+    mock_cal.return_value = 'test.fits'
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'ny', 107)
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeFlatImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
 def test_returns_null_if_filters_are_different(mock_cal, mock_frame):
+    mock_cal.return_value = 'test.fits'
     handles_inhomogeneous_set(FlatComparer, FakeContext(), 'filter', 'w')
 
 
