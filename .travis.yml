@@ -36,14 +36,14 @@ env:
         - MAIN_CMD='python setup.py'
         - RUN_TESTS=1
         - SETUP_CMD=''
-        - PIP_DEPENDENCIES='astropy>=3.0 sqlalchemy logutils numpy cython mysql-connector-python lcogt_logging sep kombu requests mock pytest>=3.6 elasticsearch'
+        - PIP_DEPENDENCIES=''
         - EVENT_TYPE='pull_request push'
 
 
         # For this package-template, we include examples of Cython modules,
         # so Cython is required for testing. If your package does not include
         # Cython code, you can set CONDA_DEPENDENCIES=''
-        - CONDA_DEPENDENCIES='Cython'
+        - CONDA_DEPENDENCIES='Cython numpy'
 
         # List other runtime dependencies for the package that are available as
         # pip packages here.
