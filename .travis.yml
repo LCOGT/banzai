@@ -36,7 +36,7 @@ env:
         - MAIN_CMD='python setup.py'
         - RUN_TESTS=1
         - SETUP_CMD=''
-        - PIP_DEPENDENCIES='lcogt_logging==0.3.2 requests mock'
+        - PIP_DEPENDENCIES='lcogt_logging==0.3.2 requests mock kombu==4.4.0 sqlalchemy'
         - EVENT_TYPE='pull_request push'
 
 
