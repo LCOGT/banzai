@@ -7,11 +7,13 @@ RUN yum -y install epel-release gcc mariadb-devel \
         && yum -y clean all
 
 RUN conda install -y numpy==1.15.4 pip scipy astropy pytest mock requests ipython coverage pyyaml\
-        && conda install -y -c conda-forge kombu elasticsearch\<6.0.0,\>=5.0.0 pytest-astropy mysql-connector-python\
+        && conda install -y -c conda-forge kombu=4.4.0 elasticsearch\<6.0.0,\>=5.0.0 pytest-astropy mysql-connector-python\
         && conda clean -y --all
 
-RUN pip install --no-cache-dir git+https://github.com/cython/cython.git@master logutils lcogt_logging sqlalchemy\>=1.3.0b1 psycopg2-binary celery[redis] \
-        apscheduler git+https://github.com/kbarbary/sep.git@master
+RUN pip install --no-cache-dir cython logutils lcogt_logging sqlalchemy\>=1.3.0b1 psycopg2-binary celery[redis]==4.3.0 \
+        apscheduler
+
+RUN pip install --no-cache-dir  git+https://github.com/kbarbary/sep.git@master
 
 RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
         && /usr/sbin/useradd -g 10000 -d /home/archive -M -N -u 10087 archive \

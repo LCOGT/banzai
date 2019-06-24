@@ -110,3 +110,17 @@ def read_image(filename, runtime_context):
     except Exception:
         logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
                      extra_tags={'filename': filename})
+
+
+def get_configuration_mode(header):
+    configuration_mode = header.get('CONFMODE', 'default')
+    # If the configuration mode is not in the header, fallback to default to support legacy data
+    if (
+            configuration_mode == 'N/A' or
+            configuration_mode == 0 or
+            configuration_mode.lower() == 'normal'
+    ):
+        configuration_mode = 'default'
+
+    header['CONFMODE'] = configuration_mode
+    return configuration_mode

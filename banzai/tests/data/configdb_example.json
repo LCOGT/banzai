@@ -2867,7 +2867,7 @@
                   "telescope": "http://configdb.lco.gtn/telescopes/8/?format=json",
                   "science_camera": {
                     "id": 55,
-                    "code": "fl06",
+                    "code": "fa06",
                     "camera_type": {
                       "id": 3,
                       "size": "26.4x26.4",
@@ -2949,7 +2949,7 @@
                     "filter_wheel": 10,
                     "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
                   },
-                  "__str__": "cpt.domc.1m0a.fl06-ef04"
+                  "__str__": "cpt.domc.1m0a.fa06-ef04"
                 }
               ],
               "__str__": "cpt.domc.1m0a"

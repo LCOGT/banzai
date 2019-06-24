@@ -14,7 +14,6 @@ import datetime
 
 import numpy as np
 import requests
-from astropy.io import fits
 from sqlalchemy import create_engine, pool, desc, type_coerce, cast
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint
@@ -22,7 +21,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
 
-from banzai.utils import date_utils, fits_utils
+from banzai.utils import date_utils, fits_utils, image_utils
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
@@ -295,10 +294,13 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
     with get_session(db_address=db_address) as db_session:
         bpm_filenames = glob(os.path.join(directory, '*bpm*.fits*'))
         for bpm_filename in bpm_filenames:
+
             hdu = fits_utils.open_fits_file(bpm_filename)
 
             header = hdu[0].header
             ccdsum = header.get('CCDSUM')
+            configuration_mode = image_utils.get_configuration_mode(header)
+
             dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
 
             try:
@@ -316,7 +318,7 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
                               'instrument_id': instrument.id,
                               'is_master': True,
                               'is_bad': False,
-                              'attributes': {'ccdsum': ccdsum}}
+                              'attributes': {'ccdsum': ccdsum, 'configuration_mode': configuration_mode}}
 
             add_or_update_record(db_session, CalibrationImage, {'filename': bpm_attributes['filename']}, bpm_attributes)
 

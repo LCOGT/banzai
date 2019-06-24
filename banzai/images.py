@@ -10,7 +10,7 @@ from astropy.table import Table, Column
 
 import banzai
 from banzai import dbs, settings, exceptions
-from banzai.utils import date_utils, file_utils, fits_utils
+from banzai.utils import date_utils, file_utils, fits_utils, image_utils
 from banzai import logs
 
 logger = logging.getLogger('banzai')
@@ -82,13 +82,7 @@ class Image(object):
             self.gain = eval(str(header.get('GAIN')))
 
         self.ccdsum = header.get('CCDSUM')
-        self.configuration_mode = header.get('CONFMODE', 'default')
-
-        # If the configuration mode is not in the header, fallback to default to support legacy data
-        if self.configuration_mode == 'N/A':
-            self.configuration_mode = 'default'
-
-        self.header['CONFMODE'] = self.configuration_mode
+        self.configuration_mode = image_utils.get_configuration_mode(header)
         self.filter = header.get('FILTER')
 
         self.obstype = header.get('OBSTYPE')
