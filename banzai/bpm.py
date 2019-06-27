@@ -50,6 +50,8 @@ def add_empty_bpm(image):
 def load_bpm(bpm_filename):
     bpm_hdu = fits_utils.open_fits_file(bpm_filename)
     bpm_extensions = fits_utils.get_extensions_by_name(bpm_hdu, 'BPM')
+    # Filter out BPM extensions without data
+    bpm_extensions = [extension for extension in bpm_extensions if extension.data is not None]
     if len(bpm_extensions) > 1:
         extension_shape = bpm_extensions[0].data.shape
         bpm_shape = (len(bpm_extensions), extension_shape[0], extension_shape[1])

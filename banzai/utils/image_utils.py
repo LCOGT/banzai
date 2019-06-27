@@ -2,10 +2,9 @@ import os
 from glob import glob
 import logging
 
-from banzai import settings, logs
+from banzai import settings
 from banzai import logs
 from banzai import dbs
-from banzai.images import logger
 from banzai.munge import munge
 from banzai.utils.fits_utils import get_primary_header
 from banzai.utils.instrument_utils import instrument_passes_criteria

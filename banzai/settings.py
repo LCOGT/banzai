@@ -104,3 +104,6 @@ CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': make_calibration_filename_function('BI
                                                                                             ccdsum_to_filename,
                                                                                             filter_to_filename],
                                                                                 telescope_to_filename)}
+
+LAKE_URL = os.getenv('LAKE_URL', 'http://lake.lco.gtn/blocks/')
+CALIBRATE_PROPOSAL_ID = os.getenv('CALIBRATE_PROPOSAL_ID', 'calibrate')

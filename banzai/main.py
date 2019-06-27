@@ -16,7 +16,6 @@ from kombu.mixins import ConsumerMixin
 
 
 from banzai import dbs, logs, calibrations
-from banzai.calibrations import logger
 from banzai.context import Context
 from banzai.utils.stage_utils import run
 from banzai.utils import image_utils, date_utils, fits_utils

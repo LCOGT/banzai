@@ -22,9 +22,11 @@ class Stage(abc.ABC):
         logger.info('Running {0}'.format(self.stage_name), image=image)
         try:
             image = self.do_stage(image)
+            return image
+
         except Exception:
             logger.error(logs.format_exception())
-        return image
+            return None
 
     @abc.abstractmethod
     def do_stage(self, image):

@@ -1,16 +1,14 @@
 import requests
 import logging
 import copy
+from banzai.settings import CALIBRATE_PROPOSAL_ID, LAKE_URL
 
 logger = logging.getLogger('banzai')
-
-LAKE_URL = 'http://lake.lco.gtn/blocks/'
-CALIBRATE_PROPOSAL_ID = 'calibrate'
 
 
 def get_calibration_blocks_for_time_range(site, start_before, start_after):
     payload = {'start_before': start_before, 'start_after': start_after, 'site': site,
-               'proposal': CALIBRATE_PROPOSAL_ID, 'aborted': False, 'canceled': False, 'order': '-start'}
+               'proposal': CALIBRATE_PROPOSAL_ID, 'aborted': 'false', 'canceled': 'false', 'order': '-start'}
     response = requests.get(LAKE_URL, params=payload)
     response.raise_for_status()
     results = response.json()['results']

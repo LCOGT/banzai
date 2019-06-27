@@ -1,3 +1,8 @@
+0.26.1 (2019-06-25)
+-------------------
+- Fixes for bad pixel masks.
+- If a frame causes an uncaught exception, stop the reduction
+
 0.26.0 (2019-06-17)
 -------------------
 - Fixes for named readout deployment
