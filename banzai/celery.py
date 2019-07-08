@@ -58,7 +58,7 @@ def submit_stacking_tasks_to_queue(runtime_context):
                                                                                calibration_blocks)
         if len(blocks_for_calibration) > 0:
             # block_end should be the latest block end time
-            calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration])
+            calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)
             stack_delay = timedelta(
                 seconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context['frame_type'].upper()]
             )
