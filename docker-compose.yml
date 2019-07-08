@@ -1,7 +1,7 @@
 version: '2'
 services:
   banzai-e2e:
-    image: docker.lco.global/banzai-e2e-data:1.2.2
+    image: docker.lco.global/banzai-e2e-data:1.2.3
     container_name: banzai-e2e
     network_mode: "bridge"
     entrypoint:
@@ -50,6 +50,7 @@ services:
     environment:
       RETRY_DELAY: "0"
       REDIS_HOST: "redis://redis:6379/0"
+      LAKE_URL: "http://lake-old.lco.gtn/blocks/"
     labels:
       io.rancher.container.pull_image: always
       io.rancher.sidekicks: banzai-e2e
@@ -100,6 +101,7 @@ services:
       DB_ADDRESS: sqlite:////archive/engineering/test.db
       REDIS_HOST: "redis://redis:6379/0"
       FITS_BROKER_URL: "broker"
+      LAKE_URL: "http://lake-old.lco.gtn/blocks/"
     volumes_from:
     - banzai-e2e
     labels:

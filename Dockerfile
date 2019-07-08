@@ -1,5 +1,5 @@
 ARG MINICONDA_VERSION
-FROM docker.lco.global/docker-miniconda3:${MINICONDA_VERSION}
+FROM docker.lco.global/docker-miniconda3:4.5.11
 MAINTAINER Las Cumbres Observatory <webmaster@lco.global>
 
 RUN yum -y install epel-release gcc mariadb-devel \
@@ -10,7 +10,7 @@ RUN conda install -y numpy==1.15.4 pip scipy astropy pytest mock requests ipytho
         && conda install -y -c conda-forge kombu=4.4.0 elasticsearch\<6.0.0,\>=5.0.0 pytest-astropy mysql-connector-python\
         && conda clean -y --all
 
-RUN pip install --no-cache-dir cython logutils lcogt_logging sqlalchemy\>=1.3.0b1 psycopg2-binary celery[redis]==4.3.0 \
+RUN pip install --no-cache-dir cython logutils lcogt_logging python-dateutil sqlalchemy\>=1.3.0b1 psycopg2-binary celery[redis]==4.3.0 \
         apscheduler
 
 RUN pip install --no-cache-dir  git+https://github.com/kbarbary/sep.git@master
