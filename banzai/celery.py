@@ -42,23 +42,30 @@ def schedule_calibration_stacking(runtime_context_json=None, raw_path=None):
 
 def submit_stacking_tasks_to_queue(runtime_context):
     logger.info('Scheduling stacking checks')
+    print(runtime_context.max_date)
+    print(runtime_context.min_date)
     calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(runtime_context.site,
                                                                           runtime_context.max_date,
                                                                           runtime_context.min_date)
     instruments = dbs.get_instruments_at_site(site=runtime_context.site, db_address=runtime_context.db_address)
+    print(instruments)
     for instrument in instruments:
+        print("checking")
         logger.info('checking for scheduled calibration blocks for {0} at site {1}'.format(instrument.camera,
                                                                                            instrument.site))
         worker_runtime_context = dict(runtime_context._asdict())
         worker_runtime_context['enclosure'] = instrument.enclosure
         worker_runtime_context['telescope'] = instrument.telescope
         worker_runtime_context['camera'] = instrument.camera
+        print(calibration_blocks)
         blocks_for_calibration = lake_utils.filter_calibration_blocks_for_type(instrument,
                                                                                worker_runtime_context['frame_type'],
                                                                                calibration_blocks)
+        print(blocks_for_calibration)
         if len(blocks_for_calibration) > 0:
             # block_end should be the latest block end time
             calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration])
+            print(calibration_end_time)
             stack_delay = timedelta(
                 seconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context['frame_type'].upper()]
             )
