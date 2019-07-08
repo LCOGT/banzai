@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse
 
 from celery import Celery
@@ -62,7 +62,7 @@ def submit_stacking_tasks_to_queue(runtime_context):
             stack_delay = timedelta(
                 seconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context['frame_type'].upper()]
             )
-            now = datetime.utcnow().replace(microsecond=0)
+            now = datetime.utcnow().replace(microsecond=0).replace(tzinfo=timezone.utc)
             logger.info('before schedule stack for block type {0}'.format(worker_runtime_context['frame_type']))
             message_delay = calibration_end_time - now + stack_delay
             if message_delay.days < 0:
