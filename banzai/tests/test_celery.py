@@ -1,8 +1,7 @@
 import mock
 import pytest
-import pytz
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from celery.exceptions import Retry
 
@@ -33,8 +32,8 @@ fake_blocks_response_json = {
                                         "exposure_count": 2
                                     },
                                 ],
-                                "start": "2019-02-19T20:27:49Z",
-                                "end": "2019-02-19T21:55:09Z",
+                                "start": "2019-02-19T20:27:49",
+                                "end": "2019-02-19T21:55:09",
                                 "site": "coj",
                                 "observatory": "clma",
                                 "telescope": "2m0a",
@@ -53,8 +52,8 @@ fake_blocks_response_json = {
                                         "exposure_count": 2
                                     },
                                 ],
-                                "start": "2019-02-20T08:27:49Z",
-                                "end": "2019-02-20T09:55:09Z",
+                                "start": "2019-02-20T08:27:49",
+                                "end": "2019-02-20T09:55:09",
                                 "site": "coj",
                                 "observatory": "clma",
                                 "telescope": "2m0a",
@@ -97,7 +96,7 @@ class TestMain():
     def test_submit_stacking_tasks_to_queue_with_delay(self, mock_filter_blocks, mock_get_blocks,   mock_get_instruments, mock_stack_calibrations, mock_get_timezone):
         mock_get_instruments.return_value = [FakeInstrument(site='coj', camera='2m0-SciCam-Spectral',
                                                             enclosure='clma', telescope='2m0a')]
-        fake_blocks_response_json['results'][0]['end'] = datetime.strftime(datetime.utcnow().replace(tzinfo=timezone.utc) + timedelta(minutes=1), '%Y-%m-%dT%H:%M:%S%Z')
+        fake_blocks_response_json['results'][0]['end'] = datetime.strftime(datetime.utcnow() + timedelta(minutes=1), date_utils.TIMESTAMP_FORMAT)
         mock_get_blocks.return_value = fake_blocks_response_json
         mock_get_timezone.return_value = 0
         mock_filter_blocks.return_value = [block for block in fake_blocks_response_json['results']]

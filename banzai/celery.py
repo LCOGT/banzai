@@ -64,12 +64,12 @@ def submit_stacking_tasks_to_queue(runtime_context):
         print(blocks_for_calibration)
         if len(blocks_for_calibration) > 0:
             # block_end should be the latest block end time
-            calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration])
+            calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)
             print(calibration_end_time)
             stack_delay = timedelta(
                 seconds=settings.CALIBRATION_STACK_DELAYS[worker_runtime_context['frame_type'].upper()]
             )
-            now = datetime.utcnow().replace(microsecond=0).replace(tzinfo=timezone.utc)
+            now = datetime.utcnow().replace(microsecond=0)
             logger.info('before schedule stack for block type {0}'.format(worker_runtime_context['frame_type']))
             message_delay = calibration_end_time - now + stack_delay
             if message_delay.days < 0:
