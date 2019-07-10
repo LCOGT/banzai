@@ -30,6 +30,7 @@ class WCSSolver(Stage):
 
         # Short circuit
         if image_catalog is None:
+            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
             logger.warning('Not attempting WCS solve because no catalog exists', image=image)
             return image
 
