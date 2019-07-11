@@ -5,9 +5,13 @@ import argparse
 import pytest
 import mock
 import time
+from datetime import datetime
 
+from banzai.main import e2e_stack_calibrations
+from banzai.context import Context
 from banzai.celery import app
-from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone, mark_frame
+from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
+from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates
 
@@ -70,16 +74,17 @@ def run_stack_calibrations(frame_type):
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         site, camera, dayobs = day_obs.split('/')
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
-        min_date, max_date = get_min_and_max_dates(timezone, dayobs, return_string=True)
-        command = 'banzai_e2e_stack_calibrations --frame-type {frame_type} ' \
-                  '--site {site} ' \
-                  '--min-date {min_date} --max-date {max_date} ' \
-                  '--db-address={db_address} --ignore-schedulability --fpack --broker-url={broker_url}'
-        command = command.format(raw_path=raw_path, frame_type=frame_type, site=site,
-                                 min_date=min_date, max_date=max_date, db_address=os.environ['DB_ADDRESS'],
-                                 broker_url=os.getenv('FITS_BROKER_URL'))
-        logger.info('Running the following stacking command: {command}'.format(command=command))
-        os.system(command)
+        min_date, max_date = get_min_and_max_dates(timezone, dayobs)
+        raw_path = '/archive/engineering'
+        runtime_context = Context(dict(processed_path='/archive/engineering', log_level='debug', post_to_archive=False,
+                                  post_to_elasticsearch=False, fpack=True, rlevel=91,
+                                  db_address=os.environ['DB_ADDRESS'], elasticsearch_qc_index='banzai_qc',
+                                  elasticsearch_url='http://elasticsearch.lco.gtn:9200', elasticsearch_doc_type='qc',
+                                  no_bpm=False, ignore_schedulability=True, use_only_older_calibrations=False,
+                                  preview_mode=False, max_tries=5, broker_url=os.getenv('FITS_BROKER_URL'), site=site,
+                                  frame_type=frame_type, min_date=min_date, max_date=max_date, raw_path=raw_path))
+        with mock.patch('banzai.main.parse_directory_args', return_value=(runtime_context, raw_path)):
+            e2e_stack_calibrations()
     celery_join()
     logger.info('Finished stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
 
@@ -130,9 +135,16 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
     assert len(calibrations_in_db) == number_of_stacks_that_should_have_been_created
 
 
+def lake_side_effect(*args, **kwargs):
+    site = kwargs['params']['site']
+    start = datetime.strftime(kwargs['params']['start_after'].date(), '%Y%m%d')
+    filename = 'test_lake_response_{site}_{start}.json'.format(site=site, start=start)
+    return FakeResponse('data/{filename}'.format(filename=filename))
+
+
 @pytest.mark.e2e
 @pytest.fixture(scope='module')
-@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse())
+@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse('data/configdb_example.json'))
 def init(configdb):
     create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
     for instrument in INSTRUMENTS:
@@ -144,7 +156,8 @@ def init(configdb):
 @pytest.mark.master_bias
 class TestMasterBiasCreation:
     @pytest.fixture(autouse=True)
-    def stack_bias_frames(self, init):
+    @mock.patch('banzai.utils.lake_utils.requests.get', side_effect=lake_side_effect)
+    def stack_bias_frames(self, mock_lake, init):
         run_reduce_individual_frames('*b00.fits*')
         mark_frames_as_good('*b91.fits*')
         run_stack_calibrations('bias')
@@ -158,7 +171,8 @@ class TestMasterBiasCreation:
 @pytest.mark.master_dark
 class TestMasterDarkCreation:
     @pytest.fixture(autouse=True)
-    def stack_dark_frames(self):
+    @mock.patch('banzai.utils.lake_utils.requests.get', side_effect=lake_side_effect)
+    def stack_dark_frames(self, mock_lake):
         run_reduce_individual_frames('*d00.fits*')
         mark_frames_as_good('*d91.fits*')
         run_stack_calibrations('dark')
@@ -172,7 +186,8 @@ class TestMasterDarkCreation:
 @pytest.mark.master_flat
 class TestMasterFlatCreation:
     @pytest.fixture(autouse=True)
-    def stack_flat_frames(self):
+    @mock.patch('banzai.utils.lake_utils.requests.get', side_effect=lake_side_effect)
+    def stack_flat_frames(self, mock_lake):
         run_reduce_individual_frames('*f00.fits*')
         mark_frames_as_good('*f91.fits*')
         run_stack_calibrations('skyflat')
@@ -186,7 +201,8 @@ class TestMasterFlatCreation:
 @pytest.mark.science_files
 class TestScienceFileCreation:
     @pytest.fixture(autouse=True)
-    def reduce_science_frames(self):
+    @mock.patch('banzai.utils.lake_utils.requests.get', side_effect=lake_side_effect)
+    def reduce_science_frames(self, mock_lake):
         run_reduce_individual_frames('*e00.fits*')
 
     def test_if_science_frames_were_created(self):

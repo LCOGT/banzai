@@ -6,7 +6,7 @@ from banzai import dbs
 from banzai.tests.utils import FakeResponse
 
 
-@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse())
+@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse('data/configdb_example.json'))
 def setup_module(mockrequests):
     dbs.create_db('.', db_address='sqlite:///test.db')
 
