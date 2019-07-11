@@ -12,6 +12,9 @@ from banzai import settings
 
 logger = logging.getLogger('banzai')
 
+FAILED_WCS = (4, 'Error status of WCS fit. 0 for no error')
+SUCCESSFUL_WCS = (0, 'Error status of WCS fit. 0 for no error')
+
 
 class WCSSolver(Stage):
 
@@ -23,7 +26,7 @@ class WCSSolver(Stage):
         # Skip the image if we don't have some kind of initial RA and Dec guess
         if np.isnan(image.ra) or np.isnan(image.dec):
             logger.error('Skipping WCS solution. No initial pointing guess from header.', image=image)
-            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+            image.header['WCSERR'] = FAILED_WCS
             return image
 
         image_catalog = image.data_tables.get('catalog')
@@ -31,6 +34,7 @@ class WCSSolver(Stage):
         # Short circuit
         if image_catalog is None:
             logger.warning('Not attempting WCS solve because no catalog exists', image=image)
+            image.header['WCSERR'] = FAILED_WCS
             return image
 
         catalog_payload = {'X': list(image_catalog['x']),
@@ -48,7 +52,7 @@ class WCSSolver(Stage):
             astrometry_response.raise_for_status()
         except ConnectionError:
             logger.error('Astrometry service unreachable.', image=image)
-            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+            image.header['WCSERR'] = FAILED_WCS
             return image
         except HTTPError:
             if astrometry_response.status_code == 400:
@@ -59,12 +63,12 @@ class WCSSolver(Stage):
                              extra_tags={'astrometry_message': astrometry_response.json().get('message', ''),
                                          'astrometry_solve_id': astrometry_response.json().get('solve_id', 'UnknownID')})
 
-            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+            image.header['WCSERR'] = FAILED_WCS
             return image
 
         if not astrometry_response.json()['solved']:
             logger.warning('WCS solution failed.', image=image)
-            image.header['WCSERR'] = (4, 'Error status of WCS fit. 0 for no error')
+            image.header['WCSERR'] = FAILED_WCS
             return image
 
         header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
@@ -78,7 +82,7 @@ class WCSSolver(Stage):
 
         add_ra_dec_to_catalog(image)
 
-        image.header['WCSERR'] = (0, 'Error status of WCS fit. 0 for no error')
+        image.header['WCSERR'] = SUCCESSFUL_WCS
 
         logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.header['WCSERR']})
         return image
