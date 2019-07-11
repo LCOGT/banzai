@@ -13,7 +13,7 @@ from banzai import settings
 logger = logging.getLogger('banzai')
 
 FAILED_WCS = (4, 'Error status of WCS fit. 0 for no error')
-SUCCESSFUL_WCS = (0, 'Error status of WCS fit. 0 for no error') 
+SUCCESSFUL_WCS = (0, 'Error status of WCS fit. 0 for no error')
 
 
 class WCSSolver(Stage):
