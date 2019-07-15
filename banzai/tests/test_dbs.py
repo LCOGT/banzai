@@ -3,6 +3,7 @@ import os
 import mock
 
 from banzai import dbs
+from banzai.dbs import get_sites
 from banzai.tests.utils import FakeResponse
 
 
@@ -84,3 +85,10 @@ def test_not_removing_singlets():
     assert len(culled_list) == 2
     assert culled_list[0]['name'] == 'nres01'
     assert culled_list[1]['name'] == 'cam01'
+
+def test_get_sites():
+    result = get_sites(db_address='sqlite:///test.db')
+    correct = ['bpl', 'coj', 'cpt', 'elp', 'lsc', 'ogg', 'sqa', 'tfn', 'tst']
+    assert len(result) == len(correct)
+    for r in result:
+        assert r in correct

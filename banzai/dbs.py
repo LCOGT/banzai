@@ -14,7 +14,7 @@ import datetime
 
 import numpy as np
 import requests
-from sqlalchemy import create_engine, pool, desc, type_coerce, cast
+from sqlalchemy import create_engine, pool, desc, type_coerce, cast, distinct
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
@@ -430,6 +430,12 @@ def get_timezone(site, db_address=_DEFAULT_DB):
         raise SiteMissingException
     return site_list[0].timezone
 
+
+def get_sites(db_address=_DEFAULT_DB):
+    with get_session(db_address=db_address) as db_session:
+        sites = db_session.query(Instrument.site).distinct()
+    return [site[0] for site in sites]
+        
 
 def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=False):
     with get_session(db_address=db_address) as db_session:
