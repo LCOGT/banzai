@@ -435,7 +435,7 @@ def get_sites(db_address=_DEFAULT_DB):
     with get_session(db_address=db_address) as db_session:
         sites = db_session.query(Instrument.site).distinct()
     return [site[0] for site in sites]
-        
+
 
 def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=False):
     with get_session(db_address=db_address) as db_session:
