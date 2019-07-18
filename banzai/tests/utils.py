@@ -123,12 +123,15 @@ def get_min_and_max_dates(timezone, dayobs, return_string=False):
 
 
 class FakeResponse(object):
-    def __init__(self):
-        with open(get_pkg_data_filename('data/configdb_example.json')) as f:
+    def __init__(self, filename):
+        with open(get_pkg_data_filename(filename)) as f:
             self.data = json.load(f)
 
     def json(self):
         return self.data
+
+    def raise_for_status(self):
+        pass
 
 
 class FakeInstrument(object):

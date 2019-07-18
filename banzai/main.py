@@ -212,27 +212,6 @@ def start_stacking_scheduler(runtime_context=None, raw_path=None):
     beat.run()
 
 
-# TODO: This entrypoint was retained for use with manual stacking, can likely be consolidated
-def e2e_stack_calibrations(runtime_context=None, raw_path=None):
-    extra_console_arguments = [{'args': ['--site'],
-                                'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
-                               {'args': ['--frame-type'],
-                                'kwargs': {'dest': 'frame_type', 'help': 'Type of frames to process',
-                                           'choices': ['bias', 'dark', 'skyflat'], 'required': True}},
-                               {'args': ['--min-date'],
-                                'kwargs': {'dest': 'min_date', 'required': True, 'type': date_utils.validate_date,
-                                           'help': 'Earliest observation time of the individual calibration frames. '
-                                                   'Must be in the format "YYYY-MM-DDThh:mm:ss".'}},
-                               {'args': ['--max-date'],
-                                'kwargs': {'dest': 'max_date', 'required': True, 'type': date_utils.validate_date,
-                                           'help': 'Latest observation time of the individual calibration frames. '
-                                                   'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
-
-    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
-                                                     extra_console_arguments=extra_console_arguments)
-    submit_stacking_tasks_to_queue(runtime_context)
-
-
 def run_realtime_pipeline():
     extra_console_arguments = [{'args': ['--n-processes'],
                                 'kwargs': {'dest': 'n_processes', 'default': 12,

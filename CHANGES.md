@@ -1,3 +1,11 @@
+0.26.3 (2019-07-17)
+-------------------
+- Updates end-to-end tests to mock the lake
+
+0.26.2 (2019-07-11)
+-------------------
+- Fixes for WCSERR keyword population
+
 0.26.1 (2019-06-25)
 -------------------
 - Fixes for bad pixel masks.
