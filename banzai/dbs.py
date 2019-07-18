@@ -21,7 +21,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
 
-from banzai.utils import date_utils, fits_utils, image_utils
+from banzai.utils import date_utils, fits_utils
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
@@ -299,7 +299,7 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
 
             header = hdu[0].header
             ccdsum = header.get('CCDSUM')
-            configuration_mode = image_utils.get_configuration_mode(header)
+            configuration_mode = fits_utils.get_configuration_mode(header)
 
             dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
 
