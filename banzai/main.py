@@ -20,7 +20,7 @@ from banzai.context import Context
 from banzai.utils.stage_utils import run
 from banzai.utils import image_utils, date_utils, fits_utils
 from banzai import settings
-from banzai.celery import process_image, submit_stacking_tasks_to_queue, schedule_calibration_stacking, app
+from banzai.celery import process_image, schedule_calibration_stacking, app
 from celery.schedules import crontab
 import celery
 import celery.bin.beat
