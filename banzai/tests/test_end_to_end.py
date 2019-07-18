@@ -71,19 +71,17 @@ def run_reduce_individual_frames(raw_filenames):
 def run_stack_calibrations(frame_type):
     logger.info('Stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
     for day_obs in DAYS_OBS:
-        raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         site, camera, dayobs = day_obs.split('/')
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
         min_date, max_date = get_min_and_max_dates(timezone, dayobs)
-        raw_path = '/archive/engineering'
-        runtime_context = Context(dict(processed_path='/archive/engineering', log_level='debug', post_to_archive=False,
+        runtime_context = Context(dict(processed_path=DATA_ROOT, log_level='debug', post_to_archive=False,
                                   post_to_elasticsearch=False, fpack=True, rlevel=91,
                                   db_address=os.environ['DB_ADDRESS'], elasticsearch_qc_index='banzai_qc',
                                   elasticsearch_url='http://elasticsearch.lco.gtn:9200', elasticsearch_doc_type='qc',
                                   no_bpm=False, ignore_schedulability=True, use_only_older_calibrations=False,
                                   preview_mode=False, max_tries=5, broker_url=os.getenv('FITS_BROKER_URL'), site=site,
-                                  frame_type=frame_type, min_date=min_date, max_date=max_date, raw_path=raw_path))
-        with mock.patch('banzai.main.parse_directory_args', return_value=(runtime_context, raw_path)):
+                                  frame_type=frame_type, min_date=min_date, max_date=max_date, raw_path=DATA_ROOT))
+        with mock.patch('banzai.main.parse_directory_args', return_value=(runtime_context, DATA_ROOT)):
             e2e_stack_calibrations()
     celery_join()
     logger.info('Finished stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
