@@ -6,6 +6,7 @@ import pytest
 import mock
 import time
 from datetime import datetime
+from astropy.utils.data import get_pkg_data_filename
 
 from banzai.context import Context
 from banzai.celery import app, submit_stacking_tasks_to_queue
@@ -15,6 +16,8 @@ from banzai.utils import fits_utils, file_utils
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates
 
 import logging
+
+TEST_PACKAGE = 'banzai.tests'
 
 logger = logging.getLogger('banzai')
 
@@ -135,7 +138,8 @@ def lake_side_effect(*args, **kwargs):
     site = kwargs['params']['site']
     start = datetime.strftime(kwargs['params']['start_after'].date(), '%Y%m%d')
     filename = 'test_lake_response_{site}_{start}.json'.format(site=site, start=start)
-    return FakeResponse('data/{filename}'.format(filename=filename))
+    filename = get_pkg_data_filename('data/{filename}'.format(filename=filename), TEST_PACKAGE)
+    return FakeResponse(filename)
 
 
 @pytest.mark.e2e

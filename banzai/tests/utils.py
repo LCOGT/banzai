@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 
 import numpy as np
 from astropy.io.fits import Header
-from astropy.utils.data import get_pkg_data_filename
 
 from banzai.stages import Stage
 from banzai.images import Image
@@ -124,7 +123,7 @@ def get_min_and_max_dates(timezone, dayobs, return_string=False):
 
 class FakeResponse(object):
     def __init__(self, filename):
-        with open(get_pkg_data_filename(filename)) as f:
+        with open(filename) as f:
             self.data = json.load(f)
 
     def json(self):
