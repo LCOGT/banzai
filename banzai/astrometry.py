@@ -61,8 +61,8 @@ class WCSSolver(Stage):
             else:
                 try:
                     logger.error('Astrometry service encountered an error.', image=image,
-                                extra_tags={'astrometry_message': astrometry_response.json().get('message', ''),
-                                            'astrometry_solve_id': astrometry_response.json().get('solve_id', 'UnknownID')})
+                                 extra_tags={'astrometry_message': astrometry_response.json().get('message', ''),
+                                             'astrometry_solve_id': astrometry_response.json().get('solve_id', 'UnknownID')})
                 except:
                     logger.error('Astrometry service encountered an error.', image=image)
 
