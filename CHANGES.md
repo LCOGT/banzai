@@ -1,3 +1,7 @@
+0.26.4 (2019-07-19)
+-------------------
+- Fix for uncaught exceptions in astrometry stage
+
 0.26.3 (2019-07-17)
 -------------------
 - Updates end-to-end tests to mock the lake
