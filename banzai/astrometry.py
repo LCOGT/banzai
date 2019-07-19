@@ -59,9 +59,12 @@ class WCSSolver(Stage):
                 logger.error('Astrometry service query malformed: {msg}'.format(msg=astrometry_response.json()),
                              image=image)
             else:
-                logger.error('Astrometry service encountered an error.', image=image,
-                             extra_tags={'astrometry_message': astrometry_response.json().get('message', ''),
-                                         'astrometry_solve_id': astrometry_response.json().get('solve_id', 'UnknownID')})
+                try:
+                    logger.error('Astrometry service encountered an error.', image=image,
+                                 extra_tags={'astrometry_message': astrometry_response.json().get('message', ''),
+                                             'astrometry_solve_id': astrometry_response.json().get('solve_id', 'UnknownID')})
+                except:
+                    logger.error('Astrometry service encountered an error.', image=image)
 
             image.header['WCSERR'] = FAILED_WCS
             return image
