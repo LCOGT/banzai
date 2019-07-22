@@ -1,3 +1,7 @@
+0.26.5 (2019-07-22)
+-------------------
+- Bug fix for ignore schedulability in call to need_to_process inside of process_image
+
 0.26.4 (2019-07-19)
 -------------------
 - Fix for uncaught exceptions in astrometry stage

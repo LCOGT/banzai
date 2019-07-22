@@ -106,7 +106,8 @@ def process_image(path, runtime_context_dict):
     logger.info('Running process image.')
     runtime_context = Context(runtime_context_dict)
     try:
-        if realtime_utils.need_to_process_image(path, runtime_context,
+        if realtime_utils.need_to_process_image(path,
+                                                ignore_schedulability=runtime_context.ignore_schedulability,
                                                 db_address=runtime_context.db_address,
                                                 max_tries=runtime_context.max_tries):
             logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
