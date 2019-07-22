@@ -1,3 +1,7 @@
+0.26.6 (2019-07-23)
+-------------------
+- We now do not include sources with a NaN FWHM in the catalogs.
+
 0.26.5 (2019-07-22)
 -------------------
 - Bug fix for ignore schedulability in call to need_to_process inside of process_image
