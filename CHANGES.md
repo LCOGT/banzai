@@ -1,6 +1,14 @@
-0.26.4 (2019-07-18)
+0.26.6 (2019-07-23)
 -------------------
 - Fixes for circular imports
+
+0.26.5 (2019-07-22)
+-------------------
+- Bug fix for ignore schedulability in call to need_to_process inside of process_image
+
+0.26.4 (2019-07-19)
+-------------------
+- Fix for uncaught exceptions in astrometry stage
 
 0.26.3 (2019-07-17)
 -------------------
