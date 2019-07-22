@@ -433,7 +433,7 @@ def get_timezone(site, db_address=_DEFAULT_DB):
 
 def get_sites(db_address=_DEFAULT_DB):
     with get_session(db_address=db_address) as db_session:
-        sites = db_session.query(Instrument.site).distinct()
+        sites = db_session.query(Site.id)
     return [site[0] for site in sites]
 
 
