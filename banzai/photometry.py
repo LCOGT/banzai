@@ -211,17 +211,23 @@ class SourceDetector(Stage):
 
             # Save some image statistics to the header
             good_objects = catalog['flag'] == 0
+            for quantity in ['fwhm', 'ellipticity', ' theta']:
+                good_objects = np.logical_and(good_objects, np.logical_not(np.isnan(catalog[quantity])))
+            if good_objects.sum() == 0:
+                image.header['L1FWHM'] = ('NaN', '[arcsec] Frame FWHM in arcsec')
+                image.header['L1ELLIP'] = ('NaN', 'Mean image ellipticity (1-B/A)')
+                image.header['L1ELLIPA'] = ('NaN', '[deg] PA of mean image ellipticity')
+            else:
+                seeing = np.median(catalog['fwhm'][good_objects]) * image.pixel_scale
+                image.header['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
 
-            seeing = np.median(catalog['fwhm'][good_objects]) * image.pixel_scale
-            image.header['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
+                mean_ellipticity = stats.sigma_clipped_mean(catalog['ellipticity'][good_objects],
+                                                            3.0)
+                image.header['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
 
-            mean_ellipticity = stats.sigma_clipped_mean(sources['ellipticity'][good_objects],
-                                                        3.0)
-            image.header['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
-
-            mean_position_angle = stats.sigma_clipped_mean(sources['theta'][good_objects], 3.0)
-            image.header['L1ELLIPA'] = (mean_position_angle,
-                                        '[deg] PA of mean image ellipticity')
+                mean_position_angle = stats.sigma_clipped_mean(catalog['theta'][good_objects], 3.0)
+                image.header['L1ELLIPA'] = (mean_position_angle,
+                                            '[deg] PA of mean image ellipticity')
 
             logging_tags = {key: float(image.header[key]) for key in ['L1MEAN', 'L1MEDIAN', 'L1SIGMA',
                                                                       'L1FWHM', 'L1ELLIP', 'L1ELLIPA']}
