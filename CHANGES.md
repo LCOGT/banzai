@@ -1,3 +1,7 @@
+0.26.7 (2019-07-24)
+-------------------
+- Fixed a typo in the photometry stage
+
 0.26.6 (2019-07-23)
 -------------------
 - We now do not include sources with a NaN FWHM in the catalogs.
