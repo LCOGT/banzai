@@ -8,7 +8,6 @@ Author
 October 2015
 """
 import argparse
-import os
 import logging
 
 from kombu import Exchange, Connection, Queue
@@ -20,16 +19,12 @@ from banzai.context import Context
 from banzai.utils.stage_utils import run
 from banzai.utils import image_utils, date_utils, fits_utils
 from banzai import settings
-from banzai.celery import process_image, submit_stacking_tasks_to_queue, schedule_calibration_stacking, app
+from banzai.celery import process_image, schedule_calibration_stacking, app
 from celery.schedules import crontab
 import celery
 import celery.bin.beat
 
 logger = logging.getLogger('banzai')
-
-RAW_PATH_CONSOLE_ARGUMENT = {'args': ["--raw-path"],
-                             'kwargs': {'dest': 'raw_path', 'default': '/archive/engineering',
-                                        'help': 'Top level directory where the raw data is stored'}}
 
 
 class RealtimeModeListener(ConsumerMixin):
@@ -106,66 +101,32 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
     return runtime_context
 
 
-def process_directory(runtime_context, raw_path, image_types=None, log_message=''):
-    if len(log_message) > 0:
-        logger.info(log_message, extra_tags={'raw_path': raw_path})
-    image_path_list = image_utils.make_image_path_list(raw_path)
-    if image_types is None:
-        image_types = [None]
-    images_to_reduce = []
-    for image_type in image_types:
-        images_to_reduce += image_utils.select_images(image_path_list, image_type, runtime_context.db_address,
-                                                      runtime_context.ignore_schedulability)
-    for image_path in images_to_reduce:
-        try:
-            run(image_path, runtime_context)
-        except Exception:
-            logger.error(logs.format_exception(), extra_tags={'filename': image_path})
-
-
-def process_single_frame(runtime_context, raw_path, filename, log_message=''):
-    if len(log_message) > 0:
-        logger.info(log_message, extra_tags={'raw_path': raw_path, 'filename': filename})
-    full_path = os.path.join(raw_path, filename)
-    # Short circuit
-    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(full_path), runtime_context.db_address):
-        logger.error('Image cannot be processed. Check to make sure the instrument '
-                     'is in the database and that the OBSTYPE is recognized by BANZAI',
-                     extra_tags={'raw_path': raw_path, 'filename': filename})
-        return
-    try:
-        run(full_path, runtime_context)
-    except Exception:
-        logger.error(logs.format_exception(), extra_tags={'filename': filename})
-
-
-def parse_directory_args(runtime_context=None, raw_path=None, extra_console_arguments=None):
+def parse_directory_args(runtime_context=None, extra_console_arguments=None):
     if extra_console_arguments is None:
         extra_console_arguments = []
 
     if runtime_context is None:
-        if raw_path is None:
-            extra_console_arguments += [RAW_PATH_CONSOLE_ARGUMENT]
+        runtime_context = parse_args(extra_console_arguments=extra_console_arguments)
 
-            runtime_context = parse_args(extra_console_arguments=extra_console_arguments)
-
-        if raw_path is None:
-            raw_path = runtime_context.raw_path
-    return runtime_context, raw_path
-
-
-def reduce_directory(runtime_context=None, raw_path=None, image_types=None):
-    # TODO: Remove image_types once reduce_night is not needed
-    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
-    process_directory(runtime_context, raw_path, image_types=image_types,
-                      log_message='Reducing all frames in directory')
+    return runtime_context
 
 
 def reduce_single_frame(runtime_context=None):
     extra_console_arguments = [{'args': ['--filename'],
-                                'kwargs': {'dest': 'filename', 'help': 'Name of file to process'}}]
-    runtime_context, raw_path = parse_directory_args(runtime_context, extra_console_arguments=extra_console_arguments)
-    process_single_frame(runtime_context, raw_path, runtime_context.filename)
+                                'kwargs': {'dest': 'filename', 'help': 'Full path to the file to process'}}]
+    runtime_context = parse_directory_args(runtime_context, extra_console_arguments=extra_console_arguments)
+
+    # Short circuit
+    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(runtime_context.filename),
+                                              runtime_context.db_address):
+        logger.error('Image cannot be processed. Check to make sure the instrument '
+                     'is in the database and that the OBSTYPE is recognized by BANZAI',
+                     extra_tags={'filename': runtime_context.filename})
+        return
+    try:
+        run(runtime_context.filename, runtime_context)
+    except Exception:
+        logger.error(logs.format_exception(), extra_tags={'filename': runtime_context.filename})
 
 
 def stack_calibrations(runtime_context=None, raw_path=None):
