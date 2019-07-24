@@ -133,13 +133,13 @@ class SourceDetector(Stage):
             sources['theta'] = np.degrees(sources['theta'])
 
             catalog = sources['x', 'y', 'xwin', 'ywin', 'xpeak', 'ypeak',
-                                    'flux', 'fluxerr', 'peak', 'fluxaper1', 'fluxerr1',
-                                    'fluxaper2', 'fluxerr2', 'fluxaper3', 'fluxerr3',
-                                    'fluxaper4', 'fluxerr4', 'fluxaper5', 'fluxerr5',
-                                    'fluxaper6', 'fluxerr6', 'background', 'fwhm',
-                                    'a', 'b', 'theta', 'kronrad', 'ellipticity',
-                                    'fluxrad25', 'fluxrad50', 'fluxrad75',
-                                    'x2', 'y2', 'xy', 'flag']
+                              'flux', 'fluxerr', 'peak', 'fluxaper1', 'fluxerr1',
+                              'fluxaper2', 'fluxerr2', 'fluxaper3', 'fluxerr3',
+                              'fluxaper4', 'fluxerr4', 'fluxaper5', 'fluxerr5',
+                              'fluxaper6', 'fluxerr6', 'background', 'fwhm',
+                              'a', 'b', 'theta', 'kronrad', 'ellipticity',
+                              'fluxrad25', 'fluxrad50', 'fluxrad75',
+                              'x2', 'y2', 'xy', 'flag']
 
             # Add the units and description to the catalogs
             catalog['x'].unit = 'pixel'
@@ -211,7 +211,7 @@ class SourceDetector(Stage):
 
             # Save some image statistics to the header
             good_objects = catalog['flag'] == 0
-            for quantity in ['fwhm', 'ellipticity', ' theta']:
+            for quantity in ['fwhm', 'ellipticity', 'theta']:
                 good_objects = np.logical_and(good_objects, np.logical_not(np.isnan(catalog[quantity])))
             if good_objects.sum() == 0:
                 image.header['L1FWHM'] = ('NaN', '[arcsec] Frame FWHM in arcsec')
