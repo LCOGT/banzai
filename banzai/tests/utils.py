@@ -72,6 +72,9 @@ class FakeContext(object):
         self.FRAME_CLASS = frame_class
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
+        self.db_address = 'sqlite:foo'
+        self.ignore_schedulability = False
+        self.max_tries = 5
 
     def image_can_be_processed(self, header):
         return True

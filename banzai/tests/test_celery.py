@@ -103,7 +103,7 @@ class TestMain():
         runtime_context = Context(runtime_context_json)
         submit_stacking_tasks_to_queue(runtime_context)
         mock_stack_calibrations.assert_called_with(args=(runtime_context._asdict(), mock_filter_blocks.return_value),
-                                               countdown=(60+CALIBRATION_STACK_DELAYS['BIAS']))
+                                                   countdown=(60+CALIBRATION_STACK_DELAYS['BIAS']))
 
     @mock.patch('banzai.calibrations.process_master_maker')
     @mock.patch('banzai.celery.dbs.get_individual_calibration_images')
