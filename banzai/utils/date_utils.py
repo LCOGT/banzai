@@ -7,8 +7,8 @@ October 2015
 """
 import datetime
 import argparse
-
 import numpy as np
+from dateutil.parser import parse
 
 
 TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S'
@@ -125,10 +125,11 @@ def get_dayobs(timezone):
 
 def validate_date(s):
     try:
-        return datetime.datetime.strptime(s, TIMESTAMP_FORMAT)
+        parse(s)
     except ValueError:
         msg = "Not a valid date: '{0}'.".format(s)
         raise argparse.ArgumentTypeError(msg)
+    return s
 
 
 def get_min_and_max_dates_for_calibration_scheduling(timezone, return_string=False):

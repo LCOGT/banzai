@@ -13,13 +13,13 @@ import logging
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
 
+from types import ModuleType
 
-from banzai import dbs, logs, calibrations
+from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils.stage_utils import run
 from banzai.utils import image_utils, date_utils, fits_utils
-from banzai import settings
-from banzai.celery import process_image, schedule_calibration_stacking, app
+from banzai.celery import process_image, app
 from celery.schedules import crontab
 import celery
 import celery.bin.beat
@@ -45,7 +45,7 @@ class RealtimeModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         path = body.get('path')
-        process_image.apply_async(args=(path, self.runtime_context._asdict()))
+        process_image.apply_async(args=(path, self.runtime_context))
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
@@ -96,40 +96,40 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
 
     logs.set_log_level(args.log_level)
 
-    runtime_context = Context(args)
+    for setting in dir(settings):
+        if '__' != setting[:2] and not isinstance(getattr(settings, setting), ModuleType):
+            setattr(args, setting, getattr(settings, setting))
 
-    return runtime_context
+    return Context(args)
 
 
-def parse_directory_args(runtime_context=None, extra_console_arguments=None):
+def parse_directory_args(extra_console_arguments=None):
     if extra_console_arguments is None:
         extra_console_arguments = []
 
-    if runtime_context is None:
-        runtime_context = parse_args(extra_console_arguments=extra_console_arguments)
+    runtime_context = parse_args(extra_console_arguments=extra_console_arguments)
 
     return runtime_context
 
 
-def reduce_single_frame(runtime_context=None):
-    extra_console_arguments = [{'args': ['--filename'],
-                                'kwargs': {'dest': 'filename', 'help': 'Full path to the file to process'}}]
-    runtime_context = parse_directory_args(runtime_context, extra_console_arguments=extra_console_arguments)
-
+def reduce_single_frame():
+    extra_console_arguments = [{'args': ['--filepath'],
+                                'kwargs': {'dest': 'path', 'help': 'Full path to the file to process'}}]
+    runtime_context = parse_directory_args(extra_console_arguments=extra_console_arguments)
     # Short circuit
-    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(runtime_context.filename),
-                                              runtime_context.db_address):
+    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(runtime_context.path),
+                                              runtime_context):
         logger.error('Image cannot be processed. Check to make sure the instrument '
                      'is in the database and that the OBSTYPE is recognized by BANZAI',
-                     extra_tags={'filename': runtime_context.filename})
+                     extra_tags={'filename': runtime_context.path})
         return
     try:
-        run(runtime_context.filename, runtime_context)
+        run(runtime_context.path, runtime_context)
     except Exception:
-        logger.error(logs.format_exception(), extra_tags={'filename': runtime_context.filename})
+        logger.error(logs.format_exception(), extra_tags={'filepath': runtime_context.path})
 
 
-def stack_calibrations(runtime_context=None, raw_path=None):
+def stack_calibrations():
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
                                {'args': ['--enclosure'],
@@ -150,24 +150,22 @@ def stack_calibrations(runtime_context=None, raw_path=None):
                                            'help': 'Latest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
-    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path,
-                                                     extra_console_arguments=extra_console_arguments)
+    runtime_context = parse_directory_args(extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera,
                                           enclosure=runtime_context.enclosure, telescope=runtime_context.telescope)
     calibrations.process_master_maker(runtime_context, instrument,  runtime_context.frame_type.upper(),
                                       runtime_context.min_date, runtime_context.max_date)
 
 
-def start_stacking_scheduler(runtime_context=None, raw_path=None):
+def start_stacking_scheduler():
     logger.info('Entered entrypoint to celery beat scheduling')
-    runtime_context, raw_path = parse_directory_args(runtime_context, raw_path)
-    for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
-        runtime_context_json = dict(runtime_context._asdict())
-        runtime_context_json['site'] = site
-        app.add_periodic_task(
-            crontab(minute=entry['minute'], hour=entry['hour']),
-            schedule_calibration_stacking.s(runtime_context_json=runtime_context_json, raw_path=raw_path)
-        )
+    runtime_context = parse_directory_args()
+    beat_schedule = {site + 'beat': {'task': 'banzai.celery.schedule_calibration_stacking',
+                                     'schedule': crontab(minute=entry['minute'], hour=entry['hour']),
+                                     'args': (site, runtime_context)}
+                     for site, entry in runtime_context.SCHEDULE_STACKING_CRON_ENTRIES.items()}
+
+    app.conf.update(beat_schedule=beat_schedule)
     beat = celery.bin.beat.beat(app=app)
     logger.info('Starting celery beat')
     beat.run()
@@ -181,8 +179,7 @@ def run_realtime_pipeline():
                                 'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
                                            'help': 'Name of the queue to listen to from the fits exchange.'}}]
 
-    runtime_context = parse_args(parser_description='Reduce LCO imaging data in real time.',
-                                 extra_console_arguments=extra_console_arguments)
+    runtime_context = parse_args(extra_console_arguments=extra_console_arguments)
 
     # Need to keep the amqp logger level at least as high as INFO,
     # or else it send heartbeat check messages every second

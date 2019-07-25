@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 
 from banzai.context import Context
-from banzai.celery import app, submit_stacking_tasks_to_queue
+from banzai.celery import app, schedule_calibration_stacking
 from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
 from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
@@ -78,9 +78,8 @@ def stack_calibrations(frame_type):
                                   db_address=os.environ['DB_ADDRESS'], elasticsearch_qc_index='banzai_qc',
                                   elasticsearch_url='http://elasticsearch.lco.gtn:9200', elasticsearch_doc_type='qc',
                                   no_bpm=False, ignore_schedulability=True, use_only_older_calibrations=False,
-                                  preview_mode=False, max_tries=5, broker_url=os.getenv('FITS_BROKER_URL'), site=site,
-                                  frame_type=frame_type, min_date=min_date, max_date=max_date, raw_path=DATA_ROOT))
-        submit_stacking_tasks_to_queue(runtime_context)
+                                  preview_mode=False, max_tries=5, broker_url=os.getenv('FITS_BROKER_URL')))
+        schedule_calibration_stacking(site, runtime_context, min_date=min_date, max_date=max_date)
     celery_join()
     logger.info('Finished stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
 
