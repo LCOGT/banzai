@@ -17,8 +17,10 @@ def test_group_by_attributes():
     assert maker.group_by_attributes() == ['configuration_mode', 'ccdsum', 'filter']
 
 
+@mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
 @mock.patch('banzai.images.Image._init_instrument_info')
-def test_header_cal_type_flat(mock_instrument_info):
+def test_header_cal_type_flat(mock_instrument_info, mock_namer):
+    mock_namer.return_value = lambda *x: 'foo.fits'
 
     mock_instrument_info.return_value = None, None, None
     fake_context = FakeContext()
