@@ -234,7 +234,7 @@ def run_master_maker(image_path_list, runtime_context, frame_type):
         image.write(runtime_context)
 
 
-def process_master_maker(runtime_context, instrument, frame_type, min_date, max_date):
+def process_master_maker(instrument, frame_type, min_date, max_date, runtime_context):
     extra_tags = {'type': instrument.type, 'site': instrument.site,
                   'enclosure': instrument.enclosure, 'telescope': instrument.telescope,
                   'camera': instrument.camera, 'obstype': frame_type,

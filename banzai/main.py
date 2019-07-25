@@ -153,8 +153,8 @@ def stack_calibrations():
     runtime_context = parse_directory_args(extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera,
                                           enclosure=runtime_context.enclosure, telescope=runtime_context.telescope)
-    calibrations.process_master_maker(runtime_context, instrument,  runtime_context.frame_type.upper(),
-                                      runtime_context.min_date, runtime_context.max_date)
+    calibrations.process_master_maker(instrument,  runtime_context.frame_type.upper(),
+                                      runtime_context.min_date, runtime_context.max_date, runtime_context)
 
 
 def start_stacking_scheduler():

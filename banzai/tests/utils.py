@@ -138,7 +138,8 @@ class FakeResponse(object):
 
 
 class FakeInstrument(object):
-    def __init__(self, site='', camera='', enclosure='', telescope='', type='', schedulable=True):
+    def __init__(self, id=0, site='', camera='', enclosure='', telescope='', type='', schedulable=True):
+        self.id = id
         self.site = site
         self.camera = camera
         self.enclosure = enclosure
