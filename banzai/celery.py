@@ -9,6 +9,7 @@ from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, lake_utils
 from banzai.utils.stage_utils import run
 from celery.signals import setup_logging
+from banzai.context import Context
 
 app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
@@ -25,11 +26,11 @@ def setup_loggers(*args, **kwargs):
 
 
 @app.task(name='celery.schedule_calibration_stacking')
-def schedule_calibration_stacking(site, runtime_context, min_date=None, max_date=None):
+def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=None, max_date=None):
+    runtime_context = Context(runtime_context)
     if min_date is None or max_date is None:
         timezone_for_site = dbs.get_timezone(site, db_address=runtime_context.db_address)
-        min_date, max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(timezone_for_site,
-                                                                                         return_string=True)
+        min_date, max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(timezone_for_site)
 
     calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(site, max_date, min_date)
     for frame_type in runtime_context.CALIBRATION_IMAGE_TYPES:
@@ -56,10 +57,11 @@ def schedule_calibration_stacking(site, runtime_context, min_date=None, max_date
                     message_delay_in_seconds = message_delay.seconds
 
                 schedule_time = now + timedelta(seconds=message_delay_in_seconds)
-                logger.info('Scheduling stacking at {}'.format(schedule_time.strptime(date_utils.TIMESTAMP_FORMAT)),
+                logger.info('Scheduling stacking at {}'.format(schedule_time.strftime(date_utils.TIMESTAMP_FORMAT)),
                             extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,
                                         'instrument': instrument.camera, 'frame_type': frame_type})
-                stack_calibrations.apply_async(args=(runtime_context, blocks_for_calibration),
+                stack_calibrations.apply_async(args=(min_date, max_date, instrument.id, frame_type,
+                                                     vars(runtime_context), blocks_for_calibration),
                                                countdown=message_delay_in_seconds)
             else:
                 logger.warning('No scheduled calibration blocks found.',
@@ -68,7 +70,9 @@ def schedule_calibration_stacking(site, runtime_context, min_date=None, max_date
 
 
 @app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY)
-def stack_calibrations(self, min_date, max_date, instrument_id, frame_type, runtime_context, blocks):
+def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, frame_type: str,
+                       runtime_context: dict, blocks: list):
+    runtime_context = Context(runtime_context)
     instrument = dbs.get_instrument_by_id(instrument_id, db_address=runtime_context.db_address)
     logger.info('Checking if we are ready to stack',
                 extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
@@ -93,13 +97,11 @@ def stack_calibrations(self, min_date, max_date, instrument_id, frame_type, runt
 
 
 @app.task(name='celery.process_image')
-def process_image(path, runtime_context):
+def process_image(path: str, runtime_context: dict):
+    runtime_context = Context(runtime_context)
     logger.info('Running process image.')
     try:
-        if realtime_utils.need_to_process_image(path,
-                                                ignore_schedulability=runtime_context.ignore_schedulability,
-                                                db_address=runtime_context.db_address,
-                                                max_tries=runtime_context.max_tries):
+        if realtime_utils.need_to_process_image(path, runtime_context):
             logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
 
             # Increment the number of tries for this file

@@ -45,7 +45,7 @@ class RealtimeModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         path = body.get('path')
-        process_image.apply_async(args=(path, self.runtime_context))
+        process_image.apply_async(args=(path, vars(self.runtime_context)))
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
@@ -162,7 +162,7 @@ def start_stacking_scheduler():
     runtime_context = parse_directory_args()
     beat_schedule = {site + 'beat': {'task': 'banzai.celery.schedule_calibration_stacking',
                                      'schedule': crontab(minute=entry['minute'], hour=entry['hour']),
-                                     'args': (site, runtime_context)}
+                                     'args': (site, vars(runtime_context))}
                      for site, entry in runtime_context.SCHEDULE_STACKING_CRON_ENTRIES.items()}
 
     app.conf.update(beat_schedule=beat_schedule)

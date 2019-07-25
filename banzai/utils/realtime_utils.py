@@ -20,7 +20,7 @@ def increment_try_number(path, db_address=dbs._DEFAULT_DB):
     dbs.commit_processed_image(image, db_address=db_address)
 
 
-def need_to_process_image(path, context, max_tries=5):
+def need_to_process_image(path, context):
     """
     Figure out if we need to try to make a process a given file.
 
@@ -30,8 +30,6 @@ def need_to_process_image(path, context, max_tries=5):
           Full path to the image possibly needing to be processed
     context: banzai.context.Context
              Context object with runtime environment info
-    max_tries: int
-               Maximum number of retries to reduce an image
 
     Returns
     -------
@@ -76,7 +74,7 @@ def need_to_process_image(path, context, max_tries=5):
         dbs.commit_processed_image(image, context.db_address)
 
     # Check if we need to try again
-    elif image.tries < max_tries and not image.success:
+    elif image.tries < context.max_tries and not image.success:
         need_to_process = True
         dbs.commit_processed_image(image, context.db_address)
 

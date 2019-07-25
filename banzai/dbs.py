@@ -489,8 +489,8 @@ def get_individual_calibration_images(instrument, calibration_type, min_date: st
 
     calibration_criteria = CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
-    calibration_criteria &= CalibrationImage.dateobs >= parse(min_date)
-    calibration_criteria &= CalibrationImage.dateobs <= parse(max_date)
+    calibration_criteria &= CalibrationImage.dateobs >= parse(min_date).replace(tzinfo=None)
+    calibration_criteria &= CalibrationImage.dateobs <= parse(max_date).replace(tzinfo=None)
 
     if not include_bad_frames:
         calibration_criteria &= CalibrationImage.is_bad == False

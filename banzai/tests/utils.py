@@ -111,15 +111,12 @@ def gaussian2d(image_shape, x0, y0, brightness, fwhm):
     return normfactor * np.exp(exponent)
 
 
-def get_min_and_max_dates(timezone, dayobs, return_string=False):
+def get_min_and_max_dates(timezone, dayobs):
     # Gets next midnight relative to date of observation
     midnight_at_site = datetime.strptime(dayobs, '%Y%m%d') + timedelta(hours=24-timezone)
     min_date = midnight_at_site - timedelta(days=0.5)
     max_date = midnight_at_site + timedelta(days=0.5)
-    if return_string:
-        min_date = min_date.strftime(TIMESTAMP_FORMAT)
-        max_date = max_date.strftime(TIMESTAMP_FORMAT)
-    return min_date, max_date
+    return min_date.strftime(TIMESTAMP_FORMAT), max_date.strftime(TIMESTAMP_FORMAT)
 
 
 class FakeResponse(object):
