@@ -1,3 +1,7 @@
+0.27.0 (2019-07-25)
+-------------------
+- Refactored configuration management to make it possible to override by BANZAI-NRES
+
 0.26.7 (2019-07-24)
 -------------------
 - Fixed a typo in the photometry stage
