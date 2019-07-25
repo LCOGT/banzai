@@ -65,10 +65,8 @@ class CalibrationStacker(CalibrationMaker):
         data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
-        filename_args = self.runtime_context.CALIBRATION_FILENAME_FUNCTIONS[self.calibration_type]
-        telescope_filename_function = self.runtime_context.TELESCOPE_FILENAME_FUNCTION
-        make_calibration_name = file_utils.make_calibration_filename_function(self.calibration_type, filename_args,
-                                                                              telescope_filename_function)
+        make_calibration_name = file_utils.make_calibration_filename_function(self.calibration_type,
+                                                                              self.runtime_context)
 
         master_calibration_filename = make_calibration_name(images[0])
 

@@ -26,7 +26,6 @@ class FakeImage(Image):
             self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
         else:
             self.data = data
-        logger.info(self.data)
         if n_amps > 1:
             self.data = np.stack(n_amps*[self.data])
         self.filename = 'test.fits'
@@ -65,6 +64,10 @@ class FakeImage(Image):
         else:
             n_amps = 1
         return n_amps
+
+
+def void(filename):
+    pass
 
 
 class FakeContext(object):
