@@ -240,8 +240,8 @@ def process_master_maker(runtime_context, instrument, frame_type, min_date, max_
     extra_tags = {'type': instrument.type, 'site': instrument.site,
                   'enclosure': instrument.enclosure, 'telescope': instrument.telescope,
                   'camera': instrument.camera, 'obstype': frame_type,
-                  'min_date': datetime.datetime.strftime(min_date, date_utils.TIMESTAMP_FORMAT),
-                  'max_date': datetime.datetime.strftime(max_date, date_utils.TIMESTAMP_FORMAT)}
+                  'min_date': min_date,
+                  'max_date': max_date}
     logger.info("Making master frames", extra_tags=extra_tags)
     image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
                                                             db_address=runtime_context.db_address)

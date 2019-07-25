@@ -93,6 +93,9 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
                                 'instrument': instrument.camera, 'frame_type': frame_type})
         raise self.retry()
     else:
+        logging.info('Starting to stack', extra_tags={'site': instrument.site, 'min_date': min_date,
+                                                      'max_date': max_date, 'instrument': instrument.camera,
+                                                      'frame_type': frame_type})
         calibrations.process_master_maker(runtime_context, instrument, frame_type, min_date, max_date)
 
 
