@@ -15,6 +15,7 @@ from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_sess
 from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates
+from astropy.utils.data import get_pkg_data_filename
 
 import logging
 
@@ -30,6 +31,9 @@ INSTRUMENTS = [os.path.join(site, os.path.basename(instrument_path)) for site in
 
 DAYS_OBS = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrument in INSTRUMENTS
             for dayobs_path in glob(os.path.join(DATA_ROOT, instrument, '201*'))]
+
+TEST_PACKAGE = 'banzai.tests'
+CONFIGDB_FILENAME = get_pkg_data_filename('data/configdb_example.json', TEST_PACKAGE)
 
 
 def celery_join():
@@ -141,12 +145,13 @@ def lake_side_effect(*args, **kwargs):
     site = kwargs['params']['site']
     start = datetime.strftime(parse(kwargs['params']['start_after']).replace(tzinfo=None).date(), '%Y%m%d')
     filename = 'test_lake_response_{site}_{start}.json'.format(site=site, start=start)
-    return FakeResponse('data/{filename}'.format(filename=filename))
+    filename = get_pkg_data_filename('data/{filename}'.format(filename=filename), TEST_PACKAGE)
+    return FakeResponse(filename)
 
 
 @pytest.mark.e2e
 @pytest.fixture(scope='module')
-@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse('data/configdb_example.json'))
+@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse(CONFIGDB_FILENAME))
 def init(configdb):
     create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
     for instrument in INSTRUMENTS:

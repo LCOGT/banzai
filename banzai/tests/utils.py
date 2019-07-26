@@ -127,7 +127,7 @@ def get_min_and_max_dates(timezone, dayobs):
 
 class FakeResponse(object):
     def __init__(self, filename):
-        with open(get_pkg_data_filename(filename)) as f:
+        with open(filename) as f:
             self.data = json.load(f)
 
     def json(self):
