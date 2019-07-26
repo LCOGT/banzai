@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 
 import numpy as np
 from astropy.io.fits import Header
-from astropy.utils.data import get_pkg_data_filename
 
 from banzai.stages import Stage
 from banzai.images import Image
@@ -64,10 +63,6 @@ class FakeImage(Image):
         else:
             n_amps = 1
         return n_amps
-
-
-def void(filename):
-    pass
 
 
 class FakeContext(object):
