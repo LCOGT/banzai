@@ -26,14 +26,18 @@ def setup_loggers(*args, **kwargs):
 
 
 @app.task(name='celery.schedule_calibration_stacking')
-def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=None, max_date=None):
+def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=None, max_date=None, frame_types=None):
     runtime_context = Context(runtime_context)
     if min_date is None or max_date is None:
         timezone_for_site = dbs.get_timezone(site, db_address=runtime_context.db_address)
         min_date, max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(timezone_for_site)
 
     calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(site, max_date, min_date)
-    for frame_type in runtime_context.CALIBRATION_IMAGE_TYPES:
+
+    if frame_types is None:
+        frame_types = runtime_context.CALIBRATION_IMAGE_TYPES
+
+    for frame_type in frame_types:
         logger.info('Scheduling stacking', extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,
                                                        'frame_type': frame_type})
 
