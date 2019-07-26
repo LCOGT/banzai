@@ -141,3 +141,4 @@ class FakeInstrument(object):
         self.telescope = telescope
         self.schedulable = schedulable
         self.type = type
+        self.name = camera
