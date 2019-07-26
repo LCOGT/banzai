@@ -78,7 +78,7 @@ def make_calibration_filename_function(calibration_type, context):
                            'camera': image.header.get('INSTRUME', ''), 'epoch': image.epoch,
                            'cal_type': calibration_type.lower()}
         cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
-        for function_name in context.CALIBRATION_FILENAME_FUNCTIONS[self.calibration_type]:
+        for function_name in context.CALIBRATION_FILENAME_FUNCTIONS[calibration_type]:
             filename_function = import_utils.import_attribute(function_name)
             filename_part = filename_function(image)
             if len(filename_part) > 0:
