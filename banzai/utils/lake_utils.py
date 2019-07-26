@@ -26,7 +26,7 @@ def filter_calibration_blocks_for_type(instrument, calibration_type, blocks):
             filtered_block = copy.deepcopy(block)
             filtered_block['molecules'] = []
             for molecule in block['molecules']:
-                if calibration_type.upper() == molecule['type'] and instrument.camera == molecule['inst_name']:
+                if calibration_type.upper() == molecule['type'] and instrument.name == molecule['inst_name']:
                     filtered_block['molecules'].append(molecule)
             calibration_blocks.append(filtered_block)
     return calibration_blocks
