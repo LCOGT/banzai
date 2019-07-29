@@ -48,7 +48,7 @@ class WCSSolver(Stage):
                            'ra': image.ra,
                            'dec': image.dec,
                            'statistics': False}
-        
+
         with requests.post(settings.ASTROMETRY_SERVICE_URL, json=catalog_payload) as astrometry_response:
             try:
                 astrometry_response.raise_for_status()
@@ -92,7 +92,7 @@ class WCSSolver(Stage):
             image.header['WCSERR'] = SUCCESSFUL_WCS
 
             logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.header['WCSERR']})
-        
+
         return image
 
 
