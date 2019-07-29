@@ -9,7 +9,7 @@ import numpy as np
 
 from banzai.stages import Stage
 from banzai import settings
-from logs import format_exception
+from banzai.logs import format_exception
 
 logger = logging.getLogger('banzai')
 
