@@ -9,6 +9,7 @@ import numpy as np
 
 from banzai.stages import Stage
 from banzai import settings
+from logs import format_exception
 
 logger = logging.getLogger('banzai')
 
@@ -47,27 +48,30 @@ class WCSSolver(Stage):
                            'ra': image.ra,
                            'dec': image.dec,
                            'statistics': False}
-        try:
-            astrometry_response = requests.post(settings.ASTROMETRY_SERVICE_URL, json=catalog_payload)
-            astrometry_response.raise_for_status()
-        except ConnectionError:
-            logger.error('Astrometry service unreachable.', image=image)
-            image.header['WCSERR'] = FAILED_WCS
-            return image
-        except HTTPError:
-            if astrometry_response.status_code == 400:
-                logger.error('Astrometry service query malformed: {msg}'.format(msg=astrometry_response.json()),
-                             image=image)
-            else:
-                try:
-                    logger.error('Astrometry service encountered an error.', image=image,
-                                 extra_tags={'astrometry_message': astrometry_response.json().get('message', ''),
-                                             'astrometry_solve_id': astrometry_response.json().get('solve_id', 'UnknownID')})
-                except:
-                    logger.error('Astrometry service encountered an error.', image=image)
+        
+        with requests.post(settings.ASTROMETRY_SERVICE_URL, json=catalog_payload) as astrometry_response:
+            try:
+                astrometry_response.raise_for_status()
+            except ConnectionError:
+                logger.error('Astrometry service unreachable.', image=image)
+                image.header['WCSERR'] = FAILED_WCS
+                return image
+            except:
+                if astrometry_response.status_code == 400:
+                    logger.error('Astrometry service query malformed: {msg}'.format(msg=astrometry_response.json()),
+                                image=image)
+                else:
+                    try:
+                        logger.error('Astrometry service encountered an error.', image=image,
+                                     extra_tags={'astrometry_message': astrometry_response.json().get('message', ''),
+                                                 'astrometry_solve_id': astrometry_response.json().get('solve_id', 'UnknownID'),
+                                                 'error': format_exception()})
+                    except:
+                        logger.error('Astrometry service encountered an error. No JSON response received.', image=image,
+                                     extra_tags={'error': format_exception()})
 
-            image.header['WCSERR'] = FAILED_WCS
-            return image
+                image.header['WCSERR'] = FAILED_WCS
+                return image
 
         if not astrometry_response.json()['solved']:
             logger.warning('WCS solution failed.', image=image)
