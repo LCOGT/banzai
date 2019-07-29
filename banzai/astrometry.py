@@ -73,25 +73,26 @@ class WCSSolver(Stage):
                 image.header['WCSERR'] = FAILED_WCS
                 return image
 
-        if not astrometry_response.json()['solved']:
-            logger.warning('WCS solution failed.', image=image)
-            image.header['WCSERR'] = FAILED_WCS
-            return image
+            if not astrometry_response.json()['solved']:
+                logger.warning('WCS solution failed.', image=image)
+                image.header['WCSERR'] = FAILED_WCS
+                return image
 
-        header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
-                                     'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
+            header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
+                                        'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
 
-        for keyword in header_keywords_to_update:
-            image.header[keyword] = astrometry_response.json()[keyword]
+            for keyword in header_keywords_to_update:
+                image.header[keyword] = astrometry_response.json()[keyword]
 
-        image.header['RA'], image.header['DEC'] = get_ra_dec_in_sexagesimal(image.header['CRVAL1'],
-                                                                            image.header['CRVAL2'])
+            image.header['RA'], image.header['DEC'] = get_ra_dec_in_sexagesimal(image.header['CRVAL1'],
+                                                                                image.header['CRVAL2'])
 
-        add_ra_dec_to_catalog(image)
+            add_ra_dec_to_catalog(image)
 
-        image.header['WCSERR'] = SUCCESSFUL_WCS
+            image.header['WCSERR'] = SUCCESSFUL_WCS
 
-        logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.header['WCSERR']})
+            logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.header['WCSERR']})
+        
         return image
 
 
