@@ -8,25 +8,25 @@ logger = logging.getLogger('banzai')
 
 def get_calibration_blocks_for_time_range(site, start_before, start_after):
     payload = {'start_before': start_before, 'start_after': start_after, 'site': site,
-               'proposal': CALIBRATE_PROPOSAL_ID, 'aborted': 'false', 'canceled': 'false', 'order': '-start',
+               'proposal': CALIBRATE_PROPOSAL_ID, 'state': ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED'], 'order': '-start',
                'offset': ''}
-    response = requests.get(LAKE_URL, params=payload)
+    response = requests.get('https://observe.lco.global/api/observations/', params=payload)
     response.raise_for_status()
     results = response.json()['results']
-    for block in results:
-        for molecule in block['molecules']:
-            molecule['type'] = molecule['type'].replace('_', '')
+    for observation in results:
+        for config in observation['configurations']:
+            config['type'] = config['type'].replace('_', '')
     return results
 
 
-def filter_calibration_blocks_for_type(instrument, calibration_type, blocks):
-    calibration_blocks = []
-    for block in blocks:
-        if instrument.type.upper() == block['instrument_class'] and instrument.site == block['site'] and instrument.enclosure == block['observatory']:
-            filtered_block = copy.deepcopy(block)
-            filtered_block['molecules'] = []
-            for molecule in block['molecules']:
-                if calibration_type.upper() == molecule['type'] and instrument.camera == molecule['inst_name']:
-                    filtered_block['molecules'].append(molecule)
-            calibration_blocks.append(filtered_block)
-    return calibration_blocks
+def filter_calibration_blocks_for_type(instrument, calibration_type, observations):
+    calibration_observations = []
+    for observation in observations:
+        if instrument.site == observation['site'] and instrument.enclosure == observation['enclosure']:
+            filtered_observation = copy.deepcopy(observation)
+            filtered_observation['configurations'] = []
+            for configuration in observation['configurations']:
+                if calibration_type.upper() == configuration['type'] and instrument.type.upper() == configuration['instrument_type'] and instrument.camera == configuration['instrument_name']:
+                    filtered_observation['configurations'].append(configuration)
+            calibration_observations.append(filtered_observation)
+    return calibration_observations
