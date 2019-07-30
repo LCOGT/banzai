@@ -88,6 +88,5 @@ def test_not_removing_singlets():
 
 def test_standby_marked_schedulable():
     instrument = dbs.query_for_instrument(db_address='sqlite:///test.db', site='coj', camera='kb98')
-    
     assert instrument.name == 'kb98'
     assert instrument.schedulable == True
