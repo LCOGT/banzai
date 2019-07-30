@@ -29,6 +29,8 @@ _DEFAULT_DB = 'mysql://cmccully:password@localhost/test'
 
 _CONFIGDB_ADDRESS = 'http://configdb.lco.gtn/sites/'
 
+INSTRUMENT_STATES_TO_REDUCE = ['SCHEDULABLE', 'STANDBY']
+
 Base = declarative_base()
 
 logger = logging.getLogger('banzai')
@@ -174,7 +176,7 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
                                       'camera': sci_cam['code'],
                                       'name': ins.get('code'),
                                       'type': sci_cam['camera_type']['code'],
-                                      'schedulable': ins['state'] == 'SCHEDULABLE'}
+                                      'schedulable': ins['state'] in INSTRUMENT_STATES_TO_REDUCE}
                         # hotfix for configdb
                         if instrument['name'] is None:
                             instrument['name'] = instrument['camera']
