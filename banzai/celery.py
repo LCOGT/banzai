@@ -75,8 +75,8 @@ def submit_stacking_tasks_to_queue(runtime_context):
 
 
 @app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY)
-def stack_calibrations(self, runtime_context_json, blocks, process_any_images=True):
-    logger.info('schedule stack for matching blocks')
+def stack_calibrations(self, runtime_context_json, observations, process_any_images=True):
+    logger.info('schedule stack for matching observations')
     runtime_context = Context(runtime_context_json)
     min_date = datetime.strptime(runtime_context.min_date, date_utils.TIMESTAMP_FORMAT)
     max_date = datetime.strptime(runtime_context.max_date, date_utils.TIMESTAMP_FORMAT)
@@ -88,10 +88,10 @@ def stack_calibrations(self, runtime_context_json, blocks, process_any_images=Tr
                                                                       include_bad_frames=True,
                                                                       db_address=runtime_context.db_address))
     expected_image_count = 0
-    for block in blocks:
-        for molecule in block['molecules']:
-            if runtime_context.frame_type.upper() == molecule['type']:
-                expected_image_count += molecule['exposure_count']
+    for observation in observations:
+        for configuration in observation['request']['configurations']:
+            if runtime_context.frame_type.upper() == configuration['type']:
+                expected_image_count += configuration['instrument_configs']['exposure_count']
     logger.info('expected image count: {0}'.format(str(expected_image_count)))
     logger.info('completed image count: {0}'.format(str(completed_image_count)))
     if completed_image_count < expected_image_count and self.request.retries < 3:

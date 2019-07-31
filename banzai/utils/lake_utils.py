@@ -14,7 +14,7 @@ def get_calibration_blocks_for_time_range(site, start_before, start_after):
     response.raise_for_status()
     results = response.json()['results']
     for observation in results:
-        for config in observation['configurations']:
+        for config in observation['request']['configurations']:
             config['type'] = config['type'].replace('_', '')
     return results
 
@@ -24,9 +24,9 @@ def filter_calibration_blocks_for_type(instrument, calibration_type, observation
     for observation in observations:
         if instrument.site == observation['site'] and instrument.enclosure == observation['enclosure']:
             filtered_observation = copy.deepcopy(observation)
-            filtered_observation['configurations'] = []
-            for configuration in observation['configurations']:
+            filtered_observation['request']['configurations'] = []
+            for configuration in observation['request']['configurations']:
                 if calibration_type.upper() == configuration['type'] and instrument.type.upper() == configuration['instrument_type'] and instrument.camera == configuration['instrument_name']:
-                    filtered_observation['configurations'].append(configuration)
+                    filtered_observation['request']['configurations'].append(configuration)
             calibration_observations.append(filtered_observation)
     return calibration_observations
