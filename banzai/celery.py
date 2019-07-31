@@ -75,7 +75,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
 
 @app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY)
 def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, frame_type: str,
-                       runtime_context: dict, blocks: list):
+                       runtime_context: dict, observations: list):
     runtime_context = Context(runtime_context)
     instrument = dbs.get_instrument_by_id(instrument_id, db_address=runtime_context.db_address)
     logger.info('Checking if we are ready to stack',
@@ -86,10 +86,12 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
                                                                       min_date, max_date, include_bad_frames=True,
                                                                       db_address=runtime_context.db_address))
     expected_image_count = 0
-    for block in blocks:
-        for molecule in block['molecules']:
-            if frame_type.upper() == molecule['type']:
-                expected_image_count += molecule['exposure_count']
+    for observation in observations:
+        for configuration in observation['request']['configurations']:
+            if runtime_context.frame_type.upper() == configuration['type']:
+                expected_image_count += configuration['instrument_configs']['exposure_count']
+    logger.info('expected image count: {0}'.format(str(expected_image_count)))
+    logger.info('completed image count: {0}'.format(str(completed_image_count)))
     if completed_image_count < expected_image_count and self.request.retries < 3:
         logger.info('Number of processed images less than expected. '
                     'Expected: {}, Completed: {}'.format(expected_image_count, completed_image_count),
