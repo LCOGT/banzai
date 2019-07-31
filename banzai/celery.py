@@ -74,6 +74,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
 
 
 @app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY)
+<<<<<<< HEAD
 def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, frame_type: str,
                        runtime_context: dict, blocks: list):
     runtime_context = Context(runtime_context)
@@ -84,12 +85,53 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
 
     completed_image_count = len(dbs.get_individual_calibration_images(instrument, frame_type,
                                                                       min_date, max_date, include_bad_frames=True,
+||||||| parent of 4950139... Change all structure to match new observations, attempt to update tests, change test data files from lake block -> obs portal observations
+def stack_calibrations(self, runtime_context_json, blocks, process_any_images=True):
+    logger.info('schedule stack for matching blocks')
+    runtime_context = Context(runtime_context_json)
+    min_date = datetime.strptime(runtime_context.min_date, date_utils.TIMESTAMP_FORMAT)
+    max_date = datetime.strptime(runtime_context.max_date, date_utils.TIMESTAMP_FORMAT)
+    instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site,
+                                          runtime_context.camera, enclosure=runtime_context.enclosure,
+                                          telescope=runtime_context.telescope)
+    completed_image_count = len(dbs.get_individual_calibration_images(instrument, runtime_context.frame_type,
+                                                                      min_date, max_date, use_masters=False,
+                                                                      include_bad_frames=True,
+=======
+def stack_calibrations(self, runtime_context_json, observations, process_any_images=True):
+    logger.info('schedule stack for matching observations')
+    runtime_context = Context(runtime_context_json)
+    min_date = datetime.strptime(runtime_context.min_date, date_utils.TIMESTAMP_FORMAT)
+    max_date = datetime.strptime(runtime_context.max_date, date_utils.TIMESTAMP_FORMAT)
+    instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site,
+                                          runtime_context.camera, enclosure=runtime_context.enclosure,
+                                          telescope=runtime_context.telescope)
+    completed_image_count = len(dbs.get_individual_calibration_images(instrument, runtime_context.frame_type,
+                                                                      min_date, max_date, use_masters=False,
+                                                                      include_bad_frames=True,
+>>>>>>> 4950139... Change all structure to match new observations, attempt to update tests, change test data files from lake block -> obs portal observations
                                                                       db_address=runtime_context.db_address))
     expected_image_count = 0
+<<<<<<< HEAD
     for block in blocks:
         for molecule in block['molecules']:
             if frame_type.upper() == molecule['type']:
                 expected_image_count += molecule['exposure_count']
+||||||| parent of 4950139... Change all structure to match new observations, attempt to update tests, change test data files from lake block -> obs portal observations
+    for block in blocks:
+        for molecule in block['molecules']:
+            if runtime_context.frame_type.upper() == molecule['type']:
+                expected_image_count += molecule['exposure_count']
+    logger.info('expected image count: {0}'.format(str(expected_image_count)))
+    logger.info('completed image count: {0}'.format(str(completed_image_count)))
+=======
+    for observation in observations:
+        for configuration in observation['request']['configurations']:
+            if runtime_context.frame_type.upper() == configuration['type']:
+                expected_image_count += configuration['instrument_configs']['exposure_count']
+    logger.info('expected image count: {0}'.format(str(expected_image_count)))
+    logger.info('completed image count: {0}'.format(str(completed_image_count)))
+>>>>>>> 4950139... Change all structure to match new observations, attempt to update tests, change test data files from lake block -> obs portal observations
     if completed_image_count < expected_image_count and self.request.retries < 3:
         logger.info('Number of processed images less than expected. '
                     'Expected: {}, Completed: {}'.format(expected_image_count, completed_image_count),
