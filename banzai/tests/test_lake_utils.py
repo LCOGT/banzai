@@ -25,7 +25,7 @@ fake_response_json = {
         },
         {
             'request': {
-                "configurations": [                
+                "configurations": [
                     {
                         'instrument_name': 'kb84',
                         'instrument_type': '0M4-SCICAM-SBIG',
@@ -43,7 +43,7 @@ fake_response_json = {
         },
         {
             "request": {
-                "configurations": [                
+                "configurations": [
                     {
                         'instrument_name': 'fa06',
                         'instrument_type': '1M0-SCICAM-SINISTRO',
