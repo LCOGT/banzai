@@ -91,7 +91,8 @@ def stack_calibrations(self, runtime_context_json, observations, process_any_ima
     for observation in observations:
         for configuration in observation['request']['configurations']:
             if runtime_context.frame_type.upper() == configuration['type']:
-                expected_image_count += configuration['instrument_configs']['exposure_count']
+                for instrument_config in configuration['instrument_configs']: 
+                    expected_image_count += instrument_config['exposure_count']
     logger.info('expected image count: {0}'.format(str(expected_image_count)))
     logger.info('completed image count: {0}'.format(str(completed_image_count)))
     if completed_image_count < expected_image_count and self.request.retries < 3:
