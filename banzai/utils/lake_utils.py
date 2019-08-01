@@ -28,5 +28,6 @@ def filter_calibration_blocks_for_type(instrument, calibration_type, observation
             for configuration in observation['request']['configurations']:
                 if calibration_type.upper() == configuration['type'] and instrument.type.upper() == configuration['instrument_type'] and instrument.camera == configuration['instrument_name']:
                     filtered_observation['request']['configurations'].append(configuration)
-            calibration_observations.append(filtered_observation)
+            if len(filtered_observation['request']['configurations']) != 0:
+                calibration_observations.append(filtered_observation)
     return calibration_observations
