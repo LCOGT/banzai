@@ -89,3 +89,8 @@ def test_filter_calibration_blocks_for_type():
     expected_response[0]['request']['configurations'].pop()
     filtered_blocks = lake_utils.filter_calibration_blocks_for_type(fake_inst, 'BIAS', fake_response_json['results'])
     assert filtered_blocks == expected_response
+
+def test_filter_calibration_blocks_for_type_ignore_empty_observations():
+    fake_inst = FakeInstrument(site='cpt', camera='fa06', enclosure='domc', telescope='2m0a', type='1m0-SciCam-Sinistro')
+    filtered_blocks = lake_utils.filter_calibration_blocks_for_type(fake_inst, 'SKYFLAT', fake_response_json['results'])
+    assert len(filtered_blocks) == 0
