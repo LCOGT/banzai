@@ -56,6 +56,9 @@ def submit_stacking_tasks_to_queue(runtime_context):
         blocks_for_calibration = lake_utils.filter_calibration_blocks_for_type(instrument,
                                                                                worker_runtime_context['frame_type'],
                                                                                calibration_blocks)
+
+        logger.info('Got block for camera', extra_tags={'site': runtime_context.site, 'instrument': instrument.camera, 'blocks': blocks_for_calibration})
+
         if len(blocks_for_calibration) > 0:
             # block_end should be the latest block end time
             calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)
