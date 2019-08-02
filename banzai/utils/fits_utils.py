@@ -219,3 +219,17 @@ def get_extensions_by_name(fits_hdulist, name):
     # deprecated at some point
     extension_info = fits_hdulist.info(False)
     return fits.HDUList([fits_hdulist[ext[0]] for ext in extension_info if ext[1] == name])
+
+
+def get_configuration_mode(header):
+    configuration_mode = header.get('CONFMODE', 'default')
+    # If the configuration mode is not in the header, fallback to default to support legacy data
+    if (
+            configuration_mode == 'N/A' or
+            configuration_mode == 0 or
+            configuration_mode.lower() == 'normal'
+    ):
+        configuration_mode = 'default'
+
+    header['CONFMODE'] = configuration_mode
+    return configuration_mode

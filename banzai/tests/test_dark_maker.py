@@ -7,7 +7,6 @@ from banzai.tests.dark_utils import FakeDarkImage
 import mock
 
 
-
 def test_min_images():
     dark_maker = DarkMaker(FakeContext())
     processed_images = dark_maker.do_stage([])
@@ -19,8 +18,11 @@ def test_group_by_attributes():
     assert maker.group_by_attributes() == ['configuration_mode', 'ccdsum']
 
 
+@mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
-def test_header_cal_type_dark(mock_frame):
+def test_header_cal_type_dark(mock_frame, mock_namer):
+    mock_namer.return_value = lambda *x: 'foo.fits'
+
     context = FakeContext()
     context.FRAME_CLASS = FakeDarkImage
 
@@ -42,8 +44,10 @@ def test_returns_null_if_ny_are_different():
     handles_inhomogeneous_set(DarkMaker, FakeContext(), 'ny', 107, calibration_maker=True)
 
 
+@mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
-def test_makes_a_sensible_master_dark(mock_frame):
+def test_makes_a_sensible_master_dark(mock_frame, mock_namer):
+    mock_namer.return_value = lambda *x: 'foo.fits'
     nimages = 20
     images = [FakeDarkImage() for x in range(nimages)]
     for i, image in enumerate(images):

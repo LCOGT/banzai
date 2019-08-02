@@ -7,7 +7,7 @@ from astropy.io import fits
 
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs, settings
-from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, import_utils
+from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, import_utils, file_utils
 import datetime
 
 FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
@@ -65,7 +65,8 @@ class CalibrationStacker(CalibrationMaker):
         data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
         stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
-        make_calibration_name = settings.CALIBRATION_FILENAME_FUNCTIONS[self.calibration_type]
+        make_calibration_name = file_utils.make_calibration_filename_function(self.calibration_type,
+                                                                              self.runtime_context)
 
         master_calibration_filename = make_calibration_name(images[0])
 
@@ -233,15 +234,14 @@ def run_master_maker(image_path_list, runtime_context, frame_type):
         image.write(runtime_context)
 
 
-def process_master_maker(runtime_context, instrument, frame_type, min_date, max_date, use_masters=False):
+def process_master_maker(instrument, frame_type, min_date, max_date, runtime_context):
     extra_tags = {'type': instrument.type, 'site': instrument.site,
                   'enclosure': instrument.enclosure, 'telescope': instrument.telescope,
                   'camera': instrument.camera, 'obstype': frame_type,
-                  'min_date': datetime.datetime.strftime(min_date, date_utils.TIMESTAMP_FORMAT),
-                  'max_date': datetime.datetime.strftime(max_date, date_utils.TIMESTAMP_FORMAT)}
+                  'min_date': min_date,
+                  'max_date': max_date}
     logger.info("Making master frames", extra_tags=extra_tags)
     image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
-                                                            use_masters=use_masters,
                                                             db_address=runtime_context.db_address)
     if len(image_path_list) == 0:
         logger.info("No calibration frames found to stack", extra_tags=extra_tags)

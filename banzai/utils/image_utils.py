@@ -2,7 +2,6 @@ import os
 from glob import glob
 import logging
 
-from banzai import settings
 from banzai import logs
 from banzai import dbs
 from banzai.munge import munge
@@ -13,10 +12,6 @@ from banzai.exceptions import InhomogeneousSetException
 
 
 logger = logging.getLogger('banzai')
-
-
-FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
-
 
 def get_obstype(header):
     return header.get('OBSTYPE', None)
@@ -30,15 +25,15 @@ def is_master(header):
     return header.get('ISMASTER', False)
 
 
-def select_images(image_list, image_type, db_address, ignore_schedulability):
+def select_images(image_list, image_type, context):
     images = []
     for filename in image_list:
         try:
             header = get_primary_header(filename)
-            should_process = image_can_be_processed(header, db_address)
+            should_process = image_can_be_processed(header, context)
             should_process &= (image_type is None or get_obstype(header) == image_type)
-            if not ignore_schedulability:
-                instrument = dbs.get_instrument(header, db_address=db_address)
+            if not context.ignore_schedulability:
+                instrument = dbs.get_instrument(header, db_address=context.db_address)
                 should_process &= instrument.schedulable
             if should_process:
                 images.append(filename)
@@ -77,19 +72,19 @@ def check_image_homogeneity(images, group_by_attributes=None):
 
 
 # TODO: Ensure NRES images return False
-def image_can_be_processed(header, db_address):
+def image_can_be_processed(header, context):
     if header is None:
         logger.warning('Header being checked to process image is None')
         return False
     # Short circuit if the instrument is a guider even if they don't exist in configdb
-    if not get_obstype(header) in settings.LAST_STAGE:
+    if not get_obstype(header) in context.LAST_STAGE:
         logger.warning('Image has an obstype that is not supported by banzai.')
         return False
     try:
-        instrument = dbs.get_instrument(header, db_address=db_address)
+        instrument = dbs.get_instrument(header, db_address=context.db_address)
     except ValueError:
         return False
-    passes = instrument_passes_criteria(instrument, settings.FRAME_SELECTION_CRITERIA)
+    passes = instrument_passes_criteria(instrument, context.FRAME_SELECTION_CRITERIA)
     if not passes:
         logger.debug('Image does not pass reduction criteria')
     passes &= get_reduction_level(header) == '00'
@@ -100,7 +95,8 @@ def image_can_be_processed(header, db_address):
 
 def read_image(filename, runtime_context):
     try:
-        image = FRAME_CLASS(runtime_context, filename=filename)
+        frame_class = import_utils.import_attribute(runtime_context.FRAME_CLASS)
+        image = frame_class(runtime_context, filename=filename)
         if image.instrument is None:
             logger.error("Image instrument attribute is None, aborting", image=image)
             raise IOError
@@ -109,17 +105,3 @@ def read_image(filename, runtime_context):
     except Exception:
         logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
                      extra_tags={'filename': filename})
-
-
-def get_configuration_mode(header):
-    configuration_mode = header.get('CONFMODE', 'default')
-    # If the configuration mode is not in the header, fallback to default to support legacy data
-    if (
-            configuration_mode == 'N/A' or
-            configuration_mode == 0 or
-            configuration_mode.lower() == 'normal'
-    ):
-        configuration_mode = 'default'
-
-    header['CONFMODE'] = configuration_mode
-    return configuration_mode
