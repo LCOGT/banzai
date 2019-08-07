@@ -97,7 +97,7 @@ class CalibrationStacker(CalibrationMaker):
 
         except:
             logger.error("Exception stacking calibrations: {error}".format(error=logs.format_exception()),
-            return
+            return None
 
 
 class ApplyCalibration(Stage):
