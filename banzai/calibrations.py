@@ -71,19 +71,34 @@ class CalibrationStacker(CalibrationMaker):
 
             master_calibration_filename = make_calibration_name(images[0])
 
+            if ('lsc' in master_calibration_filename):
+                logger.error("****************WE ARE NOW STACKING FOR LSC***********************")
+
             for i, image in enumerate(images):
                 logger.debug('Stacking Frames', image=image,
                             extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
                 data_stack[:, :, i] = image.data[:, :]
                 stack_mask[:, :, i] = image.bpm[:, :]
 
+            if ('lsc' in master_calibration_filename):
+                logger.error("****************FINISHED STACKING FRAMES FOR LSC***********************")
+
             stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
+
+            if ('lsc' in master_calibration_filename):
+                logger.error("****************GOT STAT FOR STACKED FRAMES FOR LSC***********************")
 
             # Memory cleanup
             del data_stack
             del stack_mask
 
+            if ('lsc' in master_calibration_filename):
+                logger.error("****************FINISHED MEMORY CLEANUP FOR LSC***********************")
+
             master_bpm = np.array(stacked_data == 0.0, dtype=np.uint8)
+
+            if ('lsc' in master_calibration_filename):
+                logger.error("****************CREATED MASTER BPM FOR LSC***********************")
 
             # Save the master dark image with all of the combined images in the header
             master_header = create_master_calibration_header(images[0].header, images)
