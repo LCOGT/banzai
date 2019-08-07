@@ -7,7 +7,7 @@ pipeline {
 	parameters {
 		booleanParam(
 			name: 'forceEndToEnd',
-			defaultValue: false,
+			defaultValue: true,
 			description: 'When true, forces the end-to-end tests to always run.')
 	}
 	environment {
