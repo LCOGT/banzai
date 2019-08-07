@@ -94,10 +94,10 @@ spec:
       resources:
         requests:
           cpu: 0.1
-          memory: 8Gi
+          memory: 9Gi
         limits:
           cpu: 5
-          memory: 8Gi
+          memory: 9Gi
     - name: banzai-celery-beat
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
