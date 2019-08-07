@@ -97,7 +97,7 @@ spec:
           memory: 8Gi
         limits:
           cpu: 4
-          memory: 12Gi
+          memory: 8Gi
     - name: banzai-celery-beat
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
