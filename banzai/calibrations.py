@@ -60,7 +60,7 @@ class CalibrationStacker(CalibrationMaker):
     def make_master_calibration_frame(self, images):
         # Sort the images by reverse observation date, so that the most recent one
         # is used to create the filename and select the day directory
-        try:        
+        try:    
             images.sort(key=lambda image: image.dateobs, reverse=True)
 
             data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
@@ -94,9 +94,8 @@ class CalibrationStacker(CalibrationMaker):
             logger.info('Created master calibration stack', image=master_image,
                         extra_tags={'calibration_type': self.calibration_type})
             return master_image
-
         except:
-            logger.error("Exception stacking calibrations: {error}".format(error=logs.format_exception()),
+            logger.error("Exception processing frame: {error}".format(error=logs.format_exception()))
             return None
 
 
