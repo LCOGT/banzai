@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: banzai-e2e-test
+  name: banzai-e2e-test-aye
   namespace: dev
   labels:
     app.kubernetes.io/name: banzai
@@ -94,10 +94,10 @@ spec:
       resources:
         requests:
           cpu: 0.1
-          memory: 4Gi
+          memory: 8Gi
         limits:
           cpu: 4
-          memory: 8Gi
+          memory: 12Gi
     - name: banzai-celery-beat
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
