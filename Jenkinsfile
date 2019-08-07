@@ -47,7 +47,7 @@ pipeline {
 			steps {
 				script {
 					// delete previous run if the previous failed somehow
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev delete pod banzai-e2e-test || true')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev delete pod banzai-e2e-test-aye || true')
 					// we will be testing the image that we just built
 					sh('sed -i -e "s^@BANZAI_IMAGE@^${DOCKER_IMG}^g" banzai/tests/e2e-k8s.yaml')
 					// deploy the test pod to the cluster
@@ -60,13 +60,13 @@ pipeline {
 		stage('Test-Master-Bias-Creation') {
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_bias --junit-file=/archive/engineering/pytest-master-bias.xml --code-path=/lco/banzai')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test-aye -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_bias --junit-file=/archive/engineering/pytest-master-bias.xml --code-path=/lco/banzai')
 				}
 			}
 			post {
 				always {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-bias.xml pytest-master-bias.xml')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test-aye:/archive/engineering/pytest-master-bias.xml pytest-master-bias.xml')
 						junit 'pytest-master-bias.xml'
 					}
 				}
@@ -81,13 +81,13 @@ pipeline {
 			}
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_dark --junit-file=/archive/engineering/pytest-master-dark.xml --code-path=/lco/banzai')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test-aye -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_dark --junit-file=/archive/engineering/pytest-master-dark.xml --code-path=/lco/banzai')
 				}
 			}
 			post {
 				always {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-dark.xml pytest-master-dark.xml')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test-aye:/archive/engineering/pytest-master-dark.xml pytest-master-dark.xml')
 						junit 'pytest-master-dark.xml'
 					}
 				}
