@@ -39,6 +39,7 @@ services:
                  "--hostname", "banzai-celery-worker",
                  "-l", "debug"]
     mem_limit: '8g'
+    memswap_limit: '16g'
     depends_on:
       - banzai-redis
       - banzai-fits-exchange
