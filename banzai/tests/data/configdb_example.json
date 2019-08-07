@@ -555,7 +555,7 @@
               "instrument_set": [
                 {
                   "id": 66,
-                  "state": "SCHEDULABLE",
+                  "state": "STANDBY",
                   "telescope": "http://configdb.lco.gtn/telescopes/22/?format=json",
                   "science_camera": {
                     "id": 71,
