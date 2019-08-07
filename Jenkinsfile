@@ -44,12 +44,6 @@ pipeline {
 			}
 		}
 		stage('DeployTestStack') {
-			when {
-				anyOf {
-					branch 'PR-*'
-					expression { return params.forceEndToEnd }
-				}
-			}
 			steps {
 				script {
 					// delete previous run if the previous failed somehow
@@ -64,12 +58,6 @@ pipeline {
 			}
 		}
 		stage('Test-Master-Bias-Creation') {
-			when {
-				anyOf {
-					branch 'PR-*'
-					expression { return params.forceEndToEnd }
-				}
-			}
 			steps {
 				script {
 					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_bias --junit-file=/archive/engineering/pytest-master-bias.xml --code-path=/lco/banzai')
