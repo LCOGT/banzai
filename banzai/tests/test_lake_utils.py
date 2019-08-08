@@ -14,16 +14,9 @@ fake_response_json = {
             "request": {
                 "configurations": [
                     {
-                        "state": "COMPLETED",
                         'instrument_name': 'fa14',
                         'instrument_type': '1M0-SCICAM-SINISTRO',
                         'type': 'SKY_FLAT',
-                        "instrument_configs": [
-                            {
-                                "exposure_time": 10.0,
-                                "exposure_count": 2
-                            },
-                        ]
                     },
                 ]
             },
@@ -34,28 +27,14 @@ fake_response_json = {
             'request': {
                 "configurations": [
                     {
-                        "state": "COMPLETED",
                         'instrument_name': 'kb84',
                         'instrument_type': '0M4-SCICAM-SBIG',
                         'type': 'BIAS',
-                        "instrument_configs": [
-                            {
-                                "exposure_time": 10.0,
-                                "exposure_count": 2
-                            },
-                        ]
                     },
                     {
-                        "state": "COMPLETED",
                         'instrument_name': 'kb84',
                         'instrument_type': '0M4-SCICAM-SBIG',
                         'type': 'DARK',
-                        "instrument_configs": [
-                            {
-                                "exposure_time": 10.0,
-                                "exposure_count": 2
-                            },
-                        ]
                     }
                 ]
             },
@@ -66,28 +45,14 @@ fake_response_json = {
             "request": {
                 "configurations": [
                     {
-                        "state": "COMPLETED",
                         'instrument_name': 'fa06',
                         'instrument_type': '1M0-SCICAM-SINISTRO',
                         'type': 'BIAS',
-                        "instrument_configs": [
-                            {
-                                "exposure_time": 10.0,
-                                "exposure_count": 2
-                            },
-                        ]
                     },
                     {
-                        "state": "COMPLETED",
                         'instrument_name': 'fa06',
                         'instrument_type': '1M0-SCICAM-SINISTRO',
                         'type': 'DARK',
-                        "instrument_configs": [
-                            {
-                                "exposure_time": 10.0,
-                                "exposure_count": 2
-                            },
-                        ]
                     }
                 ]
             },
@@ -96,27 +61,6 @@ fake_response_json = {
         }
     ]
 }
-
-valid_response = [
-    {
-        "request": {
-            "configurations": [
-                {
-                    'instrument_name': 'fa06',
-                    'type': 'BIAS',
-                    "instrument_configs": [
-                        {
-                            "exposure_time": 10.0,
-                            "exposure_count": 2
-                        },
-                    ]
-                },
-            ]
-        },
-        'site': 'cpt',
-        'enclosure': 'domc',
-    }
-]
 
 
 @mock.patch('banzai.utils.lake_utils.requests.get')
@@ -141,8 +85,9 @@ def test_can_parse_unsuccessful_response(mock_requests):
 
 def test_filter_calibration_blocks_for_type():
     fake_inst = FakeInstrument(site='cpt', camera='fa06', enclosure='domc', telescope='2m0a', type='1m0-SciCam-Sinistro')
+    expected_response = [copy.deepcopy(fake_response_json['results'][2])]
+    expected_response[0]['request']['configurations'].pop()
     filtered_blocks = lake_utils.filter_calibration_blocks_for_type(fake_inst, 'BIAS', fake_response_json['results'])
-    expected_response = valid_response
     assert filtered_blocks == expected_response
 
 def test_filter_calibration_blocks_for_type_ignore_empty_observations():
