@@ -72,6 +72,14 @@ def run_reduce_individual_frames(raw_filenames):
     celery_join()
     logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
 
+    processed_filenames = raw_filenames.replace('00', '91')
+    raw_filename_list = glob(os.path.join(DATA_ROOT, '*', 'processed', raw_filenames))
+    processed_filename_list = glob(os.path.join(pDATA_ROOT, '*', 'processed', processed_filenames))
+    logger.debug('^^ Processe {} of {}'.format(len(processed_filename_list), len(raw_filename_list)))
+    for raw_filename in raw_filename_list:
+        if not raw_filename.replace('raw', 'processed').replace('00', '91') in processed_filename_list:
+            logger.debug('^^ {} not processed'.format(raw_filename)) 
+
 
 def stack_calibrations(frame_type):
     logger.info('Stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
