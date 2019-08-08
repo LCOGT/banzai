@@ -53,13 +53,13 @@ pipeline {
 			steps {
 				script {
 					// delete previous run if the previous failed somehow
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev delete pod banzai-e2e-test-rc || true')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev delete pod banzai-e2e-test-rc2 || true')
 					// we will be testing the image that we just built
 					sh('sed -i -e "s^@BANZAI_IMAGE@^${DOCKER_IMG}^g" banzai/tests/e2e-k8s.yaml')
 					// deploy the test pod to the cluster
 					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev apply -f banzai/tests/e2e-k8s.yaml')
 					// wait for the test pod to be running
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev wait --for=condition=Ready --timeout=60m pod/banzai-e2e-test-rc')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev wait --for=condition=Ready --timeout=60m pod/banzai-e2e-test-rc2')
 				}
 			}
 		}
@@ -72,13 +72,13 @@ pipeline {
 			// }
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test-rc -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_bias --junit-file=/archive/engineering/pytest-master-bias.xml --code-path=/lco/banzai')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test-rc2 -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_bias --junit-file=/archive/engineering/pytest-master-bias.xml --code-path=/lco/banzai')
 				}
 			}
 			post {
 				always {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test-rc:/archive/engineering/pytest-master-bias.xml pytest-master-bias.xml')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test-rc2:/archive/engineering/pytest-master-bias.xml pytest-master-bias.xml')
 						junit 'pytest-master-bias.xml'
 					}
 				}
@@ -93,13 +93,13 @@ pipeline {
 			// }
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test-rc -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_dark --junit-file=/archive/engineering/pytest-master-dark.xml --code-path=/lco/banzai')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test-rc2 -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_dark --junit-file=/archive/engineering/pytest-master-dark.xml --code-path=/lco/banzai')
 				}
 			}
 			post {
 				always {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test-rc:/archive/engineering/pytest-master-dark.xml pytest-master-dark.xml')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test-rc2:/archive/engineering/pytest-master-dark.xml pytest-master-dark.xml')
 						junit 'pytest-master-dark.xml'
 					}
 				}
@@ -114,13 +114,13 @@ pipeline {
 			// }
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test-rc -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_flat --junit-file=/archive/engineering/pytest-master-flat.xml --code-path=/lco/banzai')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test-rc2 -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_flat --junit-file=/archive/engineering/pytest-master-flat.xml --code-path=/lco/banzai')
 				}
 			}
 			post {
 				always {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test-rc:/archive/engineering/pytest-master-flat.xml pytest-master-flat.xml')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test-rc2:/archive/engineering/pytest-master-flat.xml pytest-master-flat.xml')
 						junit 'pytest-master-flat.xml'
 					}
 				}
@@ -135,21 +135,21 @@ pipeline {
 			// }
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test-rc -c banzai-listener -- banzai_run_end_to_end_tests --marker=science_files --junit-file=/archive/engineering/pytest-science-files.xml --code-path=/lco/banzai')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test-rc2 -c banzai-listener -- banzai_run_end_to_end_tests --marker=science_files --junit-file=/archive/engineering/pytest-science-files.xml --code-path=/lco/banzai')
 				}
 			}
 			post {
 				always {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test-rc:/archive/engineering/pytest-science-files.xml pytest-science-files.xml ')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test-rc2:/archive/engineering/pytest-science-files.xml pytest-science-files.xml ')
 						junit 'pytest-science-files.xml'
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} logs -n dev --all-containers=True banzai-e2e-test-rc')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} logs -n dev --all-containers=True banzai-e2e-test-rc2')
 
 					}
 				}
 				success {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev delete pod banzai-e2e-test-rc || true')
+						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev delete pod banzai-e2e-test-rc2 || true')
 					}
 				}
 			}
