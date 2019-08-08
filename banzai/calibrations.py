@@ -60,43 +60,39 @@ class CalibrationStacker(CalibrationMaker):
     def make_master_calibration_frame(self, images):
         # Sort the images by reverse observation date, so that the most recent one
         # is used to create the filename and select the day directory
-        try:    
-            images.sort(key=lambda image: image.dateobs, reverse=True)
+        images.sort(key=lambda image: image.dateobs, reverse=True)
 
-            data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
-            stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
+        data_stack = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.float32)
+        stack_mask = np.zeros((images[0].ny, images[0].nx, len(images)), dtype=np.uint8)
 
-            make_calibration_name = file_utils.make_calibration_filename_function(self.calibration_type,
-                                                                                self.runtime_context)
+        make_calibration_name = file_utils.make_calibration_filename_function(self.calibration_type,
+                                                                              self.runtime_context)
 
-            master_calibration_filename = make_calibration_name(images[0])
+        master_calibration_filename = make_calibration_name(images[0])
 
-            for i, image in enumerate(images):
-                logger.debug('Stacking Frames', image=image,
-                            extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
-                data_stack[:, :, i] = image.data[:, :]
-                stack_mask[:, :, i] = image.bpm[:, :]
+        for i, image in enumerate(images):
+            logger.debug('Stacking Frames', image=image,
+                         extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
+            data_stack[:, :, i] = image.data[:, :]
+            stack_mask[:, :, i] = image.bpm[:, :]
 
-            stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
+        stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
 
-            # Memory cleanup
-            del data_stack
-            del stack_mask
+        # Memory cleanup
+        del data_stack
+        del stack_mask
 
-            master_bpm = np.array(stacked_data == 0.0, dtype=np.uint8)
+        master_bpm = np.array(stacked_data == 0.0, dtype=np.uint8)
 
-            # Save the master dark image with all of the combined images in the header
-            master_header = create_master_calibration_header(images[0].header, images)
-            master_image = FRAME_CLASS(self.runtime_context, data=stacked_data, header=master_header)
-            master_image.filename = master_calibration_filename
-            master_image.bpm = master_bpm
+        # Save the master dark image with all of the combined images in the header
+        master_header = create_master_calibration_header(images[0].header, images)
+        master_image = FRAME_CLASS(self.runtime_context, data=stacked_data, header=master_header)
+        master_image.filename = master_calibration_filename
+        master_image.bpm = master_bpm
 
-            logger.info('Created master calibration stack', image=master_image,
-                        extra_tags={'calibration_type': self.calibration_type})
-            return master_image
-        except:
-            logger.error("Exception processing frame: {error}".format(error=logs.format_exception()))
-            return None
+        logger.info('Created master calibration stack', image=master_image,
+                    extra_tags={'calibration_type': self.calibration_type})
+        return master_image
 
 
 class ApplyCalibration(Stage):
