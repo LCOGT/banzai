@@ -44,12 +44,12 @@ pipeline {
 			}
 		}
 		stage('DeployTestStack') {
-			when {
-				anyOf {
-					branch 'PR-*'
-					expression { return params.forceEndToEnd }
-				}
-			}
+			// when {
+			// 	anyOf {
+			// 		branch 'PR-*'
+			// 		expression { return params.forceEndToEnd }
+			// 	}
+			// }
 			steps {
 				script {
 					// delete previous run if the previous failed somehow
