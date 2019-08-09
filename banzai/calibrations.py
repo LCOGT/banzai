@@ -79,12 +79,14 @@ class CalibrationStacker(CalibrationMaker):
         stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
 
         # Memory cleanup
+        logger.debug('^^ Memory cleanup')
         del data_stack
         del stack_mask
 
         master_bpm = np.array(stacked_data == 0.0, dtype=np.uint8)
 
         # Save the master dark image with all of the combined images in the header
+        logger.debug('^^ wef')
         master_header = create_master_calibration_header(images[0].header, images)
         master_image = FRAME_CLASS(self.runtime_context, data=stacked_data, header=master_header)
         master_image.filename = master_calibration_filename
@@ -92,6 +94,8 @@ class CalibrationStacker(CalibrationMaker):
 
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})
+
+        logger.debug('^^ End of CalibrationStacker')
         return master_image
 
 
