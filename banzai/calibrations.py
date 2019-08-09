@@ -69,6 +69,8 @@ class CalibrationStacker(CalibrationMaker):
                                                                               self.runtime_context)
 
         master_calibration_filename = make_calibration_name(images[0])
+        
+        master_header = create_master_calibration_header(images[0].header, images)
 
         for i, image in enumerate(images):
             logger.debug('Stacking Frames', image=image,
@@ -76,8 +78,7 @@ class CalibrationStacker(CalibrationMaker):
             data_stack[:, :, i] = image.data[:, :]
             stack_mask[:, :, i] = image.bpm[:, :]
             # radical garbage clean
-            del image.data
-            del image.bpm
+            del image
 
         logger.debug('^^ Memory cleanup')
         stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
@@ -91,7 +92,6 @@ class CalibrationStacker(CalibrationMaker):
 
         # Save the master dark image with all of the combined images in the header
         logger.debug('^^ wef')
-        master_header = create_master_calibration_header(images[0].header, images)
         master_image = FRAME_CLASS(self.runtime_context, data=stacked_data, header=master_header)
         master_image.filename = master_calibration_filename
         master_image.bpm = master_bpm
