@@ -127,6 +127,7 @@ def get_expected_number_of_calibrations(raw_filenames, calibration_type):
             # Just one calibration per night
             if len(raw_filenames_for_this_dayobs) > 0:
                 number_of_stacks_that_should_have_been_created += 1
+                logger.info('^^ e2e expect BIAS image for date: ' + day_obs)
     return number_of_stacks_that_should_have_been_created
 
 
@@ -136,6 +137,8 @@ def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_ty
     for day_obs in DAYS_OBS:
         created_stacked_calibrations += glob(os.path.join(DATA_ROOT, day_obs, 'processed',
                                                           '*' + calibration_type.lower() + '*.fits*'))
+    for csc in created_stacked_calibrations:
+        logger.info('^^ e2e actually created: ' + csc)
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(created_stacked_calibrations) == number_of_stacks_that_should_have_been_created
 
