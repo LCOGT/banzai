@@ -127,12 +127,12 @@ pipeline {
 			}
 		}
 		stage('Test-Science-File-Creation') {
-			when {
-				anyOf {
-					branch 'PR-*'
-					expression { return params.forceEndToEnd }
-				}
-			}
+			// when {
+			// 	anyOf {
+			// 		branch 'PR-*'
+			// 		expression { return params.forceEndToEnd }
+			// 	}
+			// }
 			steps {
 				script {
 					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=science_files --junit-file=/archive/engineering/pytest-science-files.xml --code-path=/lco/banzai')
