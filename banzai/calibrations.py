@@ -79,13 +79,13 @@ class CalibrationStacker(CalibrationMaker):
             del image.data
             del image.bpm
 
+        stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
 
         # Memory cleanup
         logger.debug('^^ Memory cleanup')
         del data_stack
         del stack_mask
 
-        stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
         master_bpm = np.array(stacked_data == 0.0, dtype=np.uint8)
 
         # Save the master dark image with all of the combined images in the header
