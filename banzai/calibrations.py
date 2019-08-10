@@ -9,6 +9,7 @@ from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs, settings
 from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, import_utils, file_utils
 import datetime
+import psutil
 
 FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
 
@@ -76,8 +77,9 @@ class CalibrationStacker(CalibrationMaker):
             data_stack[:, :, i] = image.data[:, :]
             stack_mask[:, :, i] = image.bpm[:, :]
             # radical garbage clean
-            del image.data
-            del image.bpm
+            # del image.data
+            # del image.bpm
+            logging.info(psutil.virtual_memory())
 
         stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
 
