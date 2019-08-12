@@ -102,7 +102,9 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
         logger.info('Starting to stack', extra_tags={'site': instrument.site, 'min_date': min_date,
                                                       'max_date': max_date, 'instrument': instrument.camera,
                                                       'frame_type': frame_type})
+        logger.info('^^ stack_calib start')
         calibrations.process_master_maker(instrument, frame_type, min_date, max_date, runtime_context)
+        logger.info('^^ stack_calib end')
 
 
 @app.task(name='celery.process_image')
