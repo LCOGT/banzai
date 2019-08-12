@@ -256,7 +256,7 @@ def process_master_maker(instrument, frame_type, min_date, max_date, runtime_con
 
     try:
         run_master_maker(image_path_list, runtime_context, frame_type)
-        logger.info('^^ run_master_maker for {}.{}, {}~{}'.format(instrument, frame_type, min_date, max_date))
+        logger.info('^^ run_master_maker for {}.{}@{}, {}~{}'.format(instrument.site, instrument.camera, frame_type, min_date, max_date))
     except Exception:
         logger.error(logs.format_exception())
     logger.info("Finished")
