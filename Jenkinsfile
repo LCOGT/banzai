@@ -147,11 +147,11 @@ pipeline {
 
 					}
 				}
-				success {
-					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev delete pod banzai-e2e-test-rc2 || true')
-					}
-				}
+				// success {
+				// 	script {
+				// 		sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev delete pod banzai-e2e-test-rc2 || true')
+				// 	}
+				// }
 			}
 		}
 	}
