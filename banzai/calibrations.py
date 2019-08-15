@@ -79,7 +79,7 @@ class CalibrationStacker(CalibrationMaker):
             # radical garbage clean
             # del image.data
             # del image.bpm
-            logging.info(psutil.virtual_memory())
+            logger.info(psutil.virtual_memory())
 
         stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
 
