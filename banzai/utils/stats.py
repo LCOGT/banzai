@@ -94,8 +94,10 @@ def absolute_deviation(a, axis=None, mask=None):
     if axis is not None:
         logger.info('^^ In Mean absolute_deviation: 2 expand')
         a_median = np.expand_dims(a_median, axis=axis)
-    logger.info('^^ In Mean absolute_deviation: 3 abs')
-    return np.abs(a - a_median)
+    logger.info('^^ In Mean absolute_deviation: 3.1 -median')
+    deviation = a - a_median
+    logger.info('^^ In Mean absolute_deviation: 3.2 abs')
+    return np.abs(deviation)
 
 
 def median_absolute_deviation(a, axis=None, abs_deviation=None, mask=None):
