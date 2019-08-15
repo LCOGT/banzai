@@ -89,9 +89,12 @@ def absolute_deviation(a, axis=None, mask=None):
     are masked), the original array is returned.
     """
 
+    logger.info('^^ In Mean absolute_deviation: 1 median')
     a_median = median(a, axis=axis, mask=mask)
     if axis is not None:
+    logger.info('^^ In Mean absolute_deviation: 2 expand')
         a_median = np.expand_dims(a_median, axis=axis)
+    logger.info('^^ In Mean absolute_deviation: 3 abs')
     return np.abs(a - a_median)
 
 
