@@ -82,7 +82,10 @@ class CalibrationStacker(CalibrationMaker):
             logger.info(psutil.virtual_memory())
 
         logger.debug('^^ Mean')
-        stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
+        try:
+            stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
+        except Exception as e:
+            logger.info('^^ Mean exception ' + str(e))
 
         # Memory cleanup
         logger.debug('^^ Memory cleanup')
