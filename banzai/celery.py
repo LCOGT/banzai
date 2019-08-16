@@ -73,7 +73,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                                            'instrument': instrument.camera, 'frame_type': frame_type})
 
 
-@app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY)
+@app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY, autoretry_for=(Exception,))
 def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, frame_type: str,
                        runtime_context: dict, blocks: list):
     runtime_context = Context(runtime_context)
