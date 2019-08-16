@@ -88,9 +88,11 @@ spec:
         - --hostname
         - "banzai-celery-worker"
         - --concurrency
-        - "1"
+        - "2"
         - -l
         - "debug"
+        - "--max-tasks-per-child"
+        - "1"
       resources:
         requests:
           cpu: 0.1
