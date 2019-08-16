@@ -73,7 +73,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                                            'instrument': instrument.camera, 'frame_type': frame_type})
 
 
-@app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY, autoretry_for=(Exception,))
+@app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY)
 def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, frame_type: str,
                        runtime_context: dict, blocks: list):
     runtime_context = Context(runtime_context)
@@ -97,14 +97,10 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
                                 'instrument': instrument.camera, 'frame_type': frame_type})
         raise self.retry()
     else:
-        if self.request.retries >= 3:
-            logger.info('^^ Retry >=3 for instrument {}, expect image {} completed {}.'.format(instrument_id, expected_image_count, completed_image_count))
         logger.info('Starting to stack', extra_tags={'site': instrument.site, 'min_date': min_date,
                                                       'max_date': max_date, 'instrument': instrument.camera,
                                                       'frame_type': frame_type})
-        logger.info('^^ stack_calib start')
         calibrations.process_master_maker(instrument, frame_type, min_date, max_date, runtime_context)
-        logger.info('^^ stack_calib end')
 
 
 @app.task(name='celery.process_image')

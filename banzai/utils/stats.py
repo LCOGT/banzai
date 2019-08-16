@@ -5,8 +5,6 @@ from banzai.utils import median_utils
 
 __author__ = 'cmccully'
 
-import logging
-logger = logging.getLogger('banzai')
 
 def median(d, axis=None, mask=None):
     """
@@ -35,7 +33,6 @@ def median(d, axis=None, mask=None):
     If all of the elements in the array are masked (or all of the elements of the axis of interest
     are masked), we return zero.
     """
-    logger.info('^^ In Mean median : start')
     if axis is None:
         if mask is not None:
             median_mask = mask.ravel()
@@ -60,7 +57,6 @@ def median(d, axis=None, mask=None):
         median_array = np.array(med)
         output_median = median_array.reshape(output_shape)
 
-    logger.info('^^ In Mean median : end')
     return output_median
 
 
@@ -91,17 +87,10 @@ def absolute_deviation(a, axis=None, mask=None):
     are masked), the original array is returned.
     """
 
-    logger.info('^^ In Mean absolute_deviation: 1 median')
     a_median = median(a, axis=axis, mask=mask)
     if axis is not None:
-        logger.info('^^ In Mean absolute_deviation: 2 expand')
         a_median = np.expand_dims(a_median, axis=axis)
-    logger.info('^^ In Mean absolute_deviation: 3.1 -median')
-    deviation = a - a_median
-    logger.info('^^ In Mean absolute_deviation: 3.2 abs')
-    abs_value = np.abs(deviation)
-    logger.info('^^ In Mean absolute_deviation: 3.3 return')
-    return abs_value
+    return np.abs(a - a_median)
 
 
 def median_absolute_deviation(a, axis=None, abs_deviation=None, mask=None):
@@ -118,21 +107,16 @@ def robust_standard_deviation(a, axis=None, abs_deviation=None, mask=None):
 def sigma_clipped_mean(a, sigma, axis=None, mask=None, fill_value=0.0, inplace=False):
     """
     """
-    logger.info('^^ In Mean 1')
     abs_deviation = absolute_deviation(a, axis=axis, mask=mask)
 
-    logger.info('^^ In Mean 2')
     robust_std = robust_standard_deviation(a, axis=axis, abs_deviation=abs_deviation, mask=mask)
 
-    logger.info('^^ In Mean 3')
     if axis is not None:
         robust_std = np.expand_dims(robust_std, axis=axis)
 
-    logger.info('^^ In Mean 4')
     # Throw away any values that are N sigma from the median
     sigma_mask = abs_deviation > (sigma * robust_std)
 
-    logger.info('^^ In Mean 5')
     if mask is not None:
         sigma_mask = np.logical_or(sigma_mask, mask > 0)
     if inplace:
@@ -142,13 +126,10 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None, fill_value=0.0, inplace=F
 
     mean_array[sigma_mask] = 0.0
 
-    logger.info('^^ In Mean 6')
     # Take the sigma clipped mean
     mean_values = mean_array.sum(axis=axis)
 
-    logger.info('^^ In Mean 7')
     n_good_pixels = np.logical_not(sigma_mask).sum(axis=axis)
-    logger.info('^^ In Mean 8')
     if axis is None:
         if n_good_pixels > 0:
             mean_values /= n_good_pixels

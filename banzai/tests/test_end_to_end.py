@@ -32,9 +32,6 @@ INSTRUMENTS = [os.path.join(site, os.path.basename(instrument_path)) for site in
 DAYS_OBS = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrument in INSTRUMENTS
             for dayobs_path in glob(os.path.join(DATA_ROOT, instrument, '201*'))]
 
-for d in DAYS_OBS:
-    logger.info('^^ DAYS_OBS: ' + d)
-
 TEST_PACKAGE = 'banzai.tests'
 CONFIGDB_FILENAME = get_pkg_data_filename('data/configdb_example.json', TEST_PACKAGE)
 
@@ -74,14 +71,6 @@ def run_reduce_individual_frames(raw_filenames):
             file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
     celery_join()
     logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
-
-    processed_filenames = raw_filenames.replace('00', '91')
-    raw_filename_list = glob(os.path.join(DATA_ROOT, '*', 'processed', raw_filenames))
-    processed_filename_list = glob(os.path.join(DATA_ROOT, '*', 'processed', processed_filenames))
-    logger.info('^^ Processe {} of {}'.format(len(processed_filename_list), len(raw_filename_list)))
-    for raw_filename in raw_filename_list:
-        if not raw_filename.replace('raw', 'processed').replace('00', '91') in processed_filename_list:
-            logger.info('^^ {} not processed'.format(raw_filename)) 
 
 
 def stack_calibrations(frame_type):
@@ -130,7 +119,6 @@ def get_expected_number_of_calibrations(raw_filenames, calibration_type):
             # Just one calibration per night
             if len(raw_filenames_for_this_dayobs) > 0:
                 number_of_stacks_that_should_have_been_created += 1
-                logger.info('^^ e2e expect BIAS image for date: ' + day_obs)
     return number_of_stacks_that_should_have_been_created
 
 
@@ -140,8 +128,6 @@ def run_check_if_stacked_calibrations_were_created(raw_filenames, calibration_ty
     for day_obs in DAYS_OBS:
         created_stacked_calibrations += glob(os.path.join(DATA_ROOT, day_obs, 'processed',
                                                           '*' + calibration_type.lower() + '*.fits*'))
-    for csc in created_stacked_calibrations:
-        logger.info('^^ e2e actually created: ' + csc)
     assert number_of_stacks_that_should_have_been_created > 0
     assert len(created_stacked_calibrations) == number_of_stacks_that_should_have_been_created
 

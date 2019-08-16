@@ -9,7 +9,6 @@ from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs, settings
 from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, import_utils, file_utils
 import datetime
-import psutil
 
 FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
 
@@ -76,16 +75,10 @@ class CalibrationStacker(CalibrationMaker):
                          extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
             data_stack[:, :, i] = image.data[:, :]
             stack_mask[:, :, i] = image.bpm[:, :]
-            # radical garbage clean
-            # del image.data
-            # del image.bpm
-            logger.info(psutil.virtual_memory())
 
-        logger.debug('^^ Mean')
         stacked_data = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
 
         # Memory cleanup
-        logger.debug('^^ Memory cleanup')
         del data_stack
         del stack_mask
 
@@ -99,8 +92,6 @@ class CalibrationStacker(CalibrationMaker):
 
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})
-
-        logger.debug('^^ End of CalibrationStacker')
         return master_image
 
 
@@ -257,7 +248,6 @@ def process_master_maker(instrument, frame_type, min_date, max_date, runtime_con
 
     try:
         run_master_maker(image_path_list, runtime_context, frame_type)
-        logger.info('^^ run_master_maker for {}.{}@{}, {}~{}'.format(instrument.site, instrument.camera, frame_type, min_date, max_date))
     except Exception:
         logger.error(logs.format_exception())
     logger.info("Finished")
