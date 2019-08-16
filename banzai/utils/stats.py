@@ -35,6 +35,7 @@ def median(d, axis=None, mask=None):
     If all of the elements in the array are masked (or all of the elements of the axis of interest
     are masked), we return zero.
     """
+    logger.info('^^ In Mean median : start')
     if axis is None:
         if mask is not None:
             median_mask = mask.ravel()
@@ -59,6 +60,7 @@ def median(d, axis=None, mask=None):
         median_array = np.array(med)
         output_median = median_array.reshape(output_shape)
 
+    logger.info('^^ In Mean median : end')
     return output_median
 
 
