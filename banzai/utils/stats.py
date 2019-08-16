@@ -99,10 +99,6 @@ def absolute_deviation(a, axis=None, mask=None):
     logger.info('^^ In Mean absolute_deviation: 3.1 -median')
     deviation = a - a_median
     logger.info('^^ In Mean absolute_deviation: 3.2 abs')
-    # with np.nditer(deviation, op_flags=['readwrite']) as it:
-    #     for x in it:
-    #         x[...] = abs(x)
-    # return deviation
     abs_value = np.abs(deviation)
     logger.info('^^ In Mean absolute_deviation: 3.3 return')
     return abs_value
@@ -135,9 +131,6 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None, fill_value=0.0, inplace=F
     logger.info('^^ In Mean 4')
     # Throw away any values that are N sigma from the median
     sigma_mask = abs_deviation > (sigma * robust_std)
-    # Release mem
-    del abs_deviation
-    del robust_std
 
     logger.info('^^ In Mean 5')
     if mask is not None:
@@ -155,8 +148,6 @@ def sigma_clipped_mean(a, sigma, axis=None, mask=None, fill_value=0.0, inplace=F
 
     logger.info('^^ In Mean 7')
     n_good_pixels = np.logical_not(sigma_mask).sum(axis=axis)
-    # Release mem
-    del sigma_mask
     logger.info('^^ In Mean 8')
     if axis is None:
         if n_good_pixels > 0:
