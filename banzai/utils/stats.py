@@ -97,7 +97,9 @@ def absolute_deviation(a, axis=None, mask=None):
     logger.info('^^ In Mean absolute_deviation: 3.1 -median')
     deviation = a - a_median
     logger.info('^^ In Mean absolute_deviation: 3.2 abs')
-    logger.info('^^ ' + str(deviation.shape))
+    with np.nditer(deviation, op_flags=['readwrite']) as it:
+        for x in it:
+            x[...] = abs(x)
     return deviation
     # return np.abs(deviation)
 
