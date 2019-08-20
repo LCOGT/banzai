@@ -70,7 +70,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
             else:
                 logger.warning('No scheduled calibration blocks found.',
                                extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,
-                                           'instrument': instrument.camera, 'frame_type': frame_type})
+                                           'instrument': instrument.name, 'frame_type': frame_type})
 
 
 @app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY)

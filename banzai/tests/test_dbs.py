@@ -86,3 +86,9 @@ def test_not_removing_singlets():
     assert len(culled_list) == 2
     assert culled_list[0]['name'] == 'nres01'
     assert culled_list[1]['name'] == 'cam01'
+
+
+def test_standby_marked_schedulable():
+    instrument = dbs.query_for_instrument(db_address='sqlite:///test.db', site='coj', camera='kb98')
+    assert instrument.name == 'kb98'
+    assert instrument.schedulable == True
