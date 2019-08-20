@@ -1,3 +1,7 @@
+0.27.0 (2019-07-25)
+-------------------
+- Refactored configuration management to make it possible to override by BANZAI-NRES
+
 0.26.8 (2019-08-06)
 -------------------
 - Add ability to automatically reduce data from instruments in STANDBY state.

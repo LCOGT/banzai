@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 
 import numpy as np
 from astropy.io.fits import Header
-from astropy.utils.data import get_pkg_data_filename
 
 from banzai.stages import Stage
 from banzai.images import Image
@@ -26,7 +25,6 @@ class FakeImage(Image):
             self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
         else:
             self.data = data
-        logger.info(self.data)
         if n_amps > 1:
             self.data = np.stack(n_amps*[self.data])
         self.filename = 'test.fits'
@@ -72,6 +70,9 @@ class FakeContext(object):
         self.FRAME_CLASS = frame_class
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
+        self.db_address = 'sqlite:foo'
+        self.ignore_schedulability = False
+        self.max_tries = 5
 
     def image_can_be_processed(self, header):
         return True
@@ -111,20 +112,17 @@ def gaussian2d(image_shape, x0, y0, brightness, fwhm):
     return normfactor * np.exp(exponent)
 
 
-def get_min_and_max_dates(timezone, dayobs, return_string=False):
+def get_min_and_max_dates(timezone, dayobs):
     # Gets next midnight relative to date of observation
     midnight_at_site = datetime.strptime(dayobs, '%Y%m%d') + timedelta(hours=24-timezone)
     min_date = midnight_at_site - timedelta(days=0.5)
     max_date = midnight_at_site + timedelta(days=0.5)
-    if return_string:
-        min_date = min_date.strftime(TIMESTAMP_FORMAT)
-        max_date = max_date.strftime(TIMESTAMP_FORMAT)
-    return min_date, max_date
+    return min_date.strftime(TIMESTAMP_FORMAT), max_date.strftime(TIMESTAMP_FORMAT)
 
 
 class FakeResponse(object):
     def __init__(self, filename):
-        with open(get_pkg_data_filename(filename)) as f:
+        with open(filename) as f:
             self.data = json.load(f)
 
     def json(self):
@@ -135,10 +133,12 @@ class FakeResponse(object):
 
 
 class FakeInstrument(object):
-    def __init__(self, site='', camera='', enclosure='', telescope='', type='', schedulable=True):
+    def __init__(self, id=0, site='', camera='', enclosure='', telescope='', type='', schedulable=True):
+        self.id = id
         self.site = site
         self.camera = camera
         self.enclosure = enclosure
         self.telescope = telescope
         self.schedulable = schedulable
         self.type = type
+        self.name = camera

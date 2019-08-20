@@ -6,13 +6,16 @@ import pytest
 import mock
 import time
 from datetime import datetime
+from dateutil.parser import parse
 
-from banzai.context import Context
-from banzai.celery import app, submit_stacking_tasks_to_queue
+from banzai import settings
+from types import ModuleType
+from banzai.celery import app, schedule_calibration_stacking
 from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
 from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates
+from astropy.utils.data import get_pkg_data_filename
 
 import logging
 
@@ -28,6 +31,9 @@ INSTRUMENTS = [os.path.join(site, os.path.basename(instrument_path)) for site in
 
 DAYS_OBS = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrument in INSTRUMENTS
             for dayobs_path in glob(os.path.join(DATA_ROOT, instrument, '201*'))]
+
+TEST_PACKAGE = 'banzai.tests'
+CONFIGDB_FILENAME = get_pkg_data_filename('data/configdb_example.json', TEST_PACKAGE)
 
 
 def celery_join():
@@ -69,18 +75,22 @@ def run_reduce_individual_frames(raw_filenames):
 
 def stack_calibrations(frame_type):
     logger.info('Stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
+    logger.info('Stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
     for day_obs in DAYS_OBS:
         site, camera, dayobs = day_obs.split('/')
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
-        min_date, max_date = get_min_and_max_dates(timezone, dayobs)
-        runtime_context = Context(dict(processed_path=DATA_ROOT, log_level='debug', post_to_archive=False,
-                                  post_to_elasticsearch=False, fpack=True, rlevel=91,
-                                  db_address=os.environ['DB_ADDRESS'], elasticsearch_qc_index='banzai_qc',
-                                  elasticsearch_url='http://elasticsearch.lco.gtn:9200', elasticsearch_doc_type='qc',
-                                  no_bpm=False, ignore_schedulability=True, use_only_older_calibrations=False,
-                                  preview_mode=False, max_tries=5, broker_url=os.getenv('FITS_BROKER_URL'), site=site,
-                                  frame_type=frame_type, min_date=min_date, max_date=max_date, raw_path=DATA_ROOT))
-        submit_stacking_tasks_to_queue(runtime_context)
+        min_date, max_date = get_min_and_max_dates(timezone, dayobs=dayobs)
+        runtime_context = dict(processed_path=DATA_ROOT, log_level='debug', post_to_archive=False,
+                               post_to_elasticsearch=False, fpack=True, rlevel=91,
+                               db_address=os.environ['DB_ADDRESS'], elasticsearch_qc_index='banzai_qc',
+                               elasticsearch_url='http://elasticsearch.lco.gtn:9200', elasticsearch_doc_type='qc',
+                               no_bpm=False, ignore_schedulability=True, use_only_older_calibrations=False,
+                               preview_mode=False, max_tries=5, broker_url=os.getenv('FITS_BROKER_URL'))
+        for setting in dir(settings):
+            if '__' != setting[:2] and not isinstance(getattr(settings, setting), ModuleType):
+                runtime_context[setting] = getattr(settings, setting)
+        schedule_calibration_stacking(site, runtime_context, min_date=min_date, max_date=max_date,
+                                      frame_types=[frame_type])
     celery_join()
     logger.info('Finished stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
 
@@ -133,14 +143,15 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
 
 def lake_side_effect(*args, **kwargs):
     site = kwargs['params']['site']
-    start = datetime.strftime(kwargs['params']['start_after'].date(), '%Y%m%d')
+    start = datetime.strftime(parse(kwargs['params']['start_after']).replace(tzinfo=None).date(), '%Y%m%d')
     filename = 'test_lake_response_{site}_{start}.json'.format(site=site, start=start)
-    return FakeResponse('data/{filename}'.format(filename=filename))
+    filename = get_pkg_data_filename('data/{filename}'.format(filename=filename), TEST_PACKAGE)
+    return FakeResponse(filename)
 
 
 @pytest.mark.e2e
 @pytest.fixture(scope='module')
-@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse('data/configdb_example.json'))
+@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse(CONFIGDB_FILENAME))
 def init(configdb):
     create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
     for instrument in INSTRUMENTS:

@@ -20,7 +20,7 @@ def increment_try_number(path, db_address=dbs._DEFAULT_DB):
     dbs.commit_processed_image(image, db_address=db_address)
 
 
-def need_to_process_image(path, ignore_schedulability=False, db_address=dbs._DEFAULT_DB, max_tries=5):
+def need_to_process_image(path, context):
     """
     Figure out if we need to try to make a process a given file.
 
@@ -28,12 +28,8 @@ def need_to_process_image(path, ignore_schedulability=False, db_address=dbs._DEF
     ----------
     path: str
           Full path to the image possibly needing to be processed
-    ignore_schedulability: bool
-             Process non-schedulable instruments
-    db_address: str
-                SQLAlchemy style URL to the database with the status of previous reductions
-    max_tries: int
-               Maximum number of retries to reduce an image
+    context: banzai.context.Context
+             Context object with runtime environment info
 
     Returns
     -------
@@ -52,19 +48,19 @@ def need_to_process_image(path, ignore_schedulability=False, db_address=dbs._DEF
         return False
 
     header = fits_utils.get_primary_header(path)
-    if not image_utils.image_can_be_processed(header, db_address):
+    if not image_utils.image_can_be_processed(header, context):
         return False
 
     try:
-        instrument = dbs.get_instrument(header, db_address=db_address)
+        instrument = dbs.get_instrument(header, db_address=context.db_address)
     except ValueError:
         return False
-    if not ignore_schedulability and not instrument.schedulable:
+    if not context.ignore_schedulability and not instrument.schedulable:
         logger.info('Image will not be processed because instrument is not schedulable', extra_tags={"filename": path})
         return False
 
     # Get the image in db. If it doesn't exist add it.
-    image = dbs.get_processed_image(path, db_address=db_address)
+    image = dbs.get_processed_image(path, db_address=context.db_address)
     need_to_process = False
     # Check the md5.
     checksum = file_utils.get_md5(path)
@@ -75,11 +71,11 @@ def need_to_process_image(path, ignore_schedulability=False, db_address=dbs._DEF
         image.checksum = checksum
         image.tries = 0
         image.success = False
-        dbs.commit_processed_image(image, db_address)
+        dbs.commit_processed_image(image, context.db_address)
 
     # Check if we need to try again
-    elif image.tries < max_tries and not image.success:
+    elif image.tries < context.max_tries and not image.success:
         need_to_process = True
-        dbs.commit_processed_image(image, db_address)
+        dbs.commit_processed_image(image, context.db_address)
 
     return need_to_process
