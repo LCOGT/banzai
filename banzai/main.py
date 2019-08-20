@@ -96,6 +96,7 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
 
     logs.set_log_level(args.log_level)
 
+    # Get all of the settings that are not builtins and store them in the context object
     for setting in dir(settings):
         if '__' != setting[:2] and not isinstance(getattr(settings, setting), ModuleType):
             setattr(args, setting, getattr(settings, setting))
