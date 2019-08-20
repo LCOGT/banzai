@@ -48,7 +48,7 @@ def need_to_process_image(path, context):
         return False
 
     header = fits_utils.get_primary_header(path)
-    if not image_utils.image_can_be_processed(header, context):
+    if not image_utils.image_can_be_processed(header, context, path):
         return False
 
     try:

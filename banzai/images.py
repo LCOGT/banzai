@@ -96,7 +96,7 @@ class Image(object):
         self.is_bad = False
         self.is_master = header.get('ISMASTER', False)
         self.attributes = settings.CALIBRATION_SET_CRITERIA.get(self.obstype, {})
-
+        munge(self)
     def _init_instrument_info(self, runtime_context):
         if len(self.header) > 0:
             instrument = dbs.get_instrument(self.header, db_address=runtime_context.db_address)

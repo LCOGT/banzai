@@ -46,9 +46,9 @@ EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.B
                 'STANDARD': None,
                 'EXPOSE': None}
 
-CALIBRATION_STACKER_STAGE = {'BIAS': 'banzai.bias.BiasMaker',
-                             'DARK': 'banzai.dark.DarkMaker',
-                             'SKYFLAT': 'banzai.flats.FlatMaker'}
+CALIBRATION_STACKER_STAGES = {'BIAS': ['banzai.bias.BiasMaker'],
+                              'DARK': ['banzai.dark.DarkMaker'],
+                              'SKYFLAT': ['banzai.flats.FlatMaker']}
 
 CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT']
 

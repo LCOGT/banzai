@@ -1,3 +1,7 @@
+0.28.0 (2019-08-21)
+-------------------
+- Refactored Image class. Cleaned up a lot of plumbing code
+
 0.27.0 (2019-07-25)
 -------------------
 - Refactored configuration management to make it possible to override by BANZAI-NRES

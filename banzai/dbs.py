@@ -369,7 +369,7 @@ def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_AD
     if instrument is None:
         msg = 'Instrument is not in the database, Please add it before reducing this data.'
         tags = {'site': site, 'enclosure': enclosure,
-                'telescope': telescope, 'camera': camera, 'instrument': name}
+                'telescope': telescope, 'camera': camera, 'telescop': name}
         logger.error(msg, extra_tags=tags)
         raise ValueError('Instrument is missing from the database.')
     return instrument

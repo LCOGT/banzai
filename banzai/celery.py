@@ -6,8 +6,7 @@ from dateutil.parser import parse
 from celery import Celery
 
 from banzai import dbs, calibrations, logs
-from banzai.utils import date_utils, realtime_utils, lake_utils
-from banzai.utils.stage_utils import run
+from banzai.utils import date_utils, realtime_utils, lake_utils, stage_utils
 from celery.signals import setup_logging
 from banzai.context import Context
 
@@ -50,7 +49,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
             blocks_for_calibration = lake_utils.filter_calibration_blocks_for_type(instrument, frame_type,
                                                                                    calibration_blocks)
             if len(blocks_for_calibration) > 0:
-                # block_end should be the latest block end time
+                # Set the delay to after the latest block end
                 calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)
                 stack_delay = timedelta(seconds=runtime_context.CALIBRATION_STACK_DELAYS[frame_type.upper()])
                 now = datetime.utcnow().replace(microsecond=0)
@@ -100,7 +99,7 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
         logger.info('Starting to stack', extra_tags={'site': instrument.site, 'min_date': min_date,
                                                       'max_date': max_date, 'instrument': instrument.camera,
                                                       'frame_type': frame_type})
-        calibrations.process_master_maker(instrument, frame_type, min_date, max_date, runtime_context)
+        calibrations.make_master_calibrations(instrument, frame_type, min_date, max_date, runtime_context)
 
 
 @app.task(name='celery.process_image')
@@ -113,8 +112,7 @@ def process_image(path: str, runtime_context: dict):
 
             # Increment the number of tries for this file
             realtime_utils.increment_try_number(path, db_address=runtime_context.db_address)
-
-            run(path, runtime_context)
+            stage_utils.run_pipeline_stages(path, runtime_context)
             realtime_utils.set_file_as_processed(path, db_address=runtime_context.db_address)
 
     except Exception:

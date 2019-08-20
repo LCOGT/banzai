@@ -7,8 +7,8 @@ from astropy.io import fits
 
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs, settings
-from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, import_utils, file_utils
-import datetime
+from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, import_utils, file_utils, stage_utils
+
 
 FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
 
@@ -206,7 +206,7 @@ def create_master_calibration_header(old_header, images):
     for key in old_header.keys():
         try:
             # Dump empty header keywords and ignore old histories.
-            if len(key) > 0 and key != 'HISTORY':
+            if len(key) > 0 and key != 'HISTORY' and key != 'COMMENT':
                 for i in range(old_header.count(key)):
                     header[key] = (old_header[(key, i)], old_header.comments[(key, i)])
         except ValueError as e:
@@ -219,22 +219,12 @@ def create_master_calibration_header(old_header, images):
     header['DATE-OBS'] = (date_utils.date_obs_to_string(mean_dateobs), '[UTC] Mean observation start time')
     header['ISMASTER'] = (True, 'Is this a master calibration frame')
 
-    header.add_history("Images combined to create master calibration image:")
-    for image in images:
-        header.add_history(image.filename)
+    for i, image in enumerate(images):
+        header['IMCOM{:03d}'.format(i + 1)] = image.filename, 'Image combined to create master calibration image'
     return header
 
 
-def run_master_maker(image_path_list, runtime_context, frame_type):
-    images = [image_utils.read_image(image_path, runtime_context) for image_path in image_path_list]
-    stage_constructor = import_utils.import_attribute(settings.CALIBRATION_STACKER_STAGE[frame_type.upper()])
-    stage_to_run = stage_constructor(runtime_context)
-    images = stage_to_run.run(images)
-    for image in images:
-        image.write(runtime_context)
-
-
-def process_master_maker(instrument, frame_type, min_date, max_date, runtime_context):
+def make_master_calibrations(instrument, frame_type, min_date, max_date, runtime_context):
     extra_tags = {'type': instrument.type, 'site': instrument.site,
                   'enclosure': instrument.enclosure, 'telescope': instrument.telescope,
                   'camera': instrument.camera, 'obstype': frame_type,
@@ -245,9 +235,8 @@ def process_master_maker(instrument, frame_type, min_date, max_date, runtime_con
                                                             db_address=runtime_context.db_address)
     if len(image_path_list) == 0:
         logger.info("No calibration frames found to stack", extra_tags=extra_tags)
-
     try:
-        run_master_maker(image_path_list, runtime_context, frame_type)
+        stage_utils.run_pipeline_stages(image_path_list, runtime_context)
     except Exception:
         logger.error(logs.format_exception())
     logger.info("Finished")

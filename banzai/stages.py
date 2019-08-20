@@ -25,7 +25,7 @@ class Stage(abc.ABC):
             return image
 
         except Exception:
-            logger.error(logs.format_exception())
+            logger.error(logs.format_exception(), image=image)
             return None
 
     @abc.abstractmethod
