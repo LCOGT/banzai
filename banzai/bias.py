@@ -42,8 +42,8 @@ class BiasSubtractor(ApplyCalibration):
         master_logging_tags = {'bias': master_bias_level,
                                'master_bias': os.path.basename(master_calibration_image.filename)}
 
-        image.subtract(master_bias_level)
-        image.subtract(master_bias_data)
+        image.date -= master_bias_level
+        image.data -= master_bias_data
 
         image.bpm |= master_calibration_image.bpm
         image.header['BIASLVL'] = (master_bias_level, 'Mean bias level of master bias')

@@ -3,7 +3,9 @@ import os
 import logging
 
 from kombu import Connection, Exchange
-from banzai.utils import import_utils
+import datetime
+from banzai.utils import import_utils, date_utils
+import banzai
 
 logger = logging.getLogger('banzai')
 
@@ -16,12 +18,12 @@ def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):
         producer.release()
 
 
-def make_output_directory(runtime_context, image_config):
+def make_output_directory(top_path, site, instrument_name, epoch, preview_mode=False):
     # Create output directory if necessary
-    output_directory = os.path.join(runtime_context.processed_path, image_config.site,
-                                    image_config.instrument.name, image_config.epoch)
+    output_directory = os.path.join(top_path.processed_path, site,
+                                    instrument_name, epoch)
 
-    if runtime_context.preview_mode:
+    if preview_mode:
         output_directory = os.path.join(output_directory, 'preview')
     else:
         output_directory = os.path.join(output_directory, 'processed')
@@ -30,6 +32,13 @@ def make_output_directory(runtime_context, image_config):
         os.makedirs(output_directory)
 
     return output_directory
+
+
+def make_output_filename(filename: str, fpack: bool, reduction_level: str):
+    filename = os.path.basename(filename.replace('00.fits', '{:02d}.fits'.format(int(reduction_level))))
+    if fpack and not filename.endswith('.fz'):
+        filename += '.fz'
+    return filename
 
 
 def get_md5(filepath):
@@ -86,3 +95,19 @@ def make_calibration_filename_function(calibration_type, context):
         cal_file += '.fits'
         return cal_file
     return get_calibration_filename
+
+
+def save_pipeline_metadata(header, reduction_level):
+    datecreated = datetime.datetime.utcnow()
+    header['DATE'] = (date_utils.date_obs_to_string(datecreated), '[UTC] Date this FITS file was written')
+    header['RLEVEL'] = (reduction_level, 'Reduction level')
+
+    header['PIPEVER'] = (banzai.__version__, 'Pipeline version')
+
+    if instantly_public(header['PROPID']):
+        header['L1PUBDAT'] = (header['DATE-OBS'], '[UTC] Date the frame becomes public')
+    else:
+        # Wait a year
+        date_observed = date_utils.parse_date_obs(header['DATE-OBS'])
+        next_year = date_observed + datetime.timedelta(days=365)
+        header['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year), '[UTC] Date the frame becomes public')

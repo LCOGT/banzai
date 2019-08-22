@@ -74,12 +74,7 @@ def sinistro_mode_is_supported(image):
     -------
     supported: bool
                True if reduction is supported
-
-    Notes
-    -----
-    Currently we only support 1x1 binning images.
     """
-    # TODO Add support for other binnings
     supported = True
 
     if image.camera not in crosstalk_coefficients.keys() and not crosstalk_coefficients_in_header(image):
@@ -123,17 +118,12 @@ def munge_sinistro(image):
         detsecs = sinistro_detsecs['missing']
 
     for i in range(4):
-        biassec_comment = '[binned pixel] Section of overscan data for Q{0}'.format(i + 1)
-        _add_extension_header_keyword(image, i, 'BIASSEC',
-                                      ('[2055:2080,1:2048]', biassec_comment))
-
-        datasec_comment = '[binned pixel] Data section for Q{0}'.format(i + 1)
-        _add_extension_header_keyword(image, i, 'DATASEC',
-                                      (datasecs[i], datasec_comment))
-
-        detsec_comment = '[unbinned pixel] Detector section for Q{0}'.format(i + 1)
-        _add_extension_header_keyword(image, i, 'DETSEC',
-                                      (detsecs[i], detsec_comment))
+        for keyword, value, comment in [('BIASSEC', '[2055:2080,1:2048]', '[binned pixel] Overscan Region'),
+                                        ('DATASEC', datasecs[i], '[binned pixel] Data section'),
+                                        ('DETSEC', detsecs[i], '[unbinned pixel] Detector section')]:
+            # Don't override values if they exist already
+            if image.extension_headers[i].get(keyword) is None:
+                image.extension_headers[i][keyword] = value
 
 
 def image_has_valid_saturate_value(image):
@@ -163,16 +153,6 @@ def image_has_valid_saturate_value(image):
     return valid
 
 
-def _add_header_keyword(image, keyword, value):
-    if image.header.get(keyword) is None:
-        image.header[keyword] = value
-
-
-def _add_extension_header_keyword(image, extension, keyword, value):
-    if keyword not in image.extension_headers[extension].keys():
-        image.extension_headers[extension][keyword] = value
-
-
 def set_crosstalk_header_keywords(image):
     n_amps = image.get_n_amps()
     coefficients = crosstalk_coefficients[image.camera]
@@ -181,8 +161,11 @@ def set_crosstalk_header_keywords(image):
         for j in range(n_amps):
             if i != j:
                 crosstalk_comment = '[Crosstalk coefficient] Signal from Q{i} onto Q{j}'.format(i=i+1, j=j+1)
-                _add_header_keyword(image, 'CRSTLK{0}{1}'.format(i + 1, j + 1),
-                                    (coefficients[i, j], crosstalk_comment))
+                keyword = 'CRSTLK{0}{1}'.format(i + 1, j + 1)
+                # Don't override existing header keywords.
+                if image.header.get(keyword) is None:
+                    image.header[keyword] = coefficients[i, j], crosstalk_comment
+
 
 """These matrices should have the following structure:
 coeffs = [[Q11, Q12, Q13, Q14],

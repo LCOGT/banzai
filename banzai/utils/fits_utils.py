@@ -21,7 +21,7 @@ def sanitizeheader(header):
     header = header.copy()
 
     # Let the new data decide what these values should be
-    for i in ['SIMPLE', 'BITPIX', 'BSCALE', 'BZERO']:
+    for i in FITS_MANDATORY_KEYWORDS:
         if i in header.keys():
             header.pop(i)
 
@@ -102,38 +102,6 @@ def parse_ra_dec(header):
                              extra_tags={'filename': header.get('ORIGNAME')})
                 ra, dec = np.nan, np.nan
     return ra, dec
-
-
-def open_fits_file(filename):
-    """
-    Load a fits file
-
-    Parameters
-    ----------
-    filename: str
-              File name/path to open
-
-    Returns
-    -------
-    hdulist: astropy.io.fits
-
-    Notes
-    -----
-    This is a wrapper to astropy.io.fits.open but funpacks the file first.
-    """
-    base_filename, file_extension = os.path.splitext(os.path.basename(filename))
-    if file_extension == '.fz':
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            output_filename = os.path.join(tmpdirname, base_filename)
-            os.system('funpack -O {0} {1}'.format(output_filename, filename))
-            hdulist = fits.open(output_filename, 'readonly')
-            hdulist_copy = copy.deepcopy(hdulist)
-            hdulist.close()
-    else:
-        hdulist = fits.open(filename, 'readonly')
-        hdulist_copy = copy.deepcopy(hdulist)
-        hdulist.close()
-    return hdulist_copy
 
 
 def get_primary_header(filename):
@@ -237,6 +205,38 @@ def get_configuration_mode(header):
     return configuration_mode
 
 
+def open_fits_file(filename):
+    """
+    Load a fits file
+
+    Parameters
+    ----------
+    filename: str
+              File name/path to open
+
+    Returns
+    -------
+    hdulist: astropy.io.fits
+
+    Notes
+    -----
+    This is a wrapper to astropy.io.fits.open but funpacks the file first.
+    """
+    base_filename, file_extension = os.path.splitext(os.path.basename(filename))
+    if file_extension == '.fz':
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            output_filename = os.path.join(tmpdirname, base_filename)
+            os.system('funpack -O {0} {1}'.format(output_filename, filename))
+            hdulist = fits.open(output_filename, 'readonly')
+            hdulist_copy = copy.deepcopy(hdulist)
+            hdulist.close()
+    else:
+        hdulist = fits.open(filename, 'readonly')
+        hdulist_copy = copy.deepcopy(hdulist)
+        hdulist.close()
+    return hdulist_copy
+
+
 def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
     # If the primary fits header only has the mandatory keywords, then we throw away that extension
     # and extension 1 gets moved to 0
@@ -297,3 +297,52 @@ def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
         else:
             hdulist.append(hdu)
     return fits.HDUList(hdulist)
+
+
+def write_fits_file(filepath, hdu_list, runtime_context):
+    pass
+
+
+def _writeto(self, filepath, fpack=False):
+    logger.info('Writing file to {filepath}'.format(filepath=filepath), image=self)
+    hdu_list = self._get_hdu_list()
+    base_filename = os.path.basename(filepath).split('.fz')[0]
+    with tempfile.TemporaryDirectory() as temp_directory:
+        hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True, output_verify='fix+warn')
+        hdu_list.close()
+        if fpack:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            command = 'fpack -q 64 {temp_directory}/{basename}'
+            os.system(command.format(temp_directory=temp_directory, basename=base_filename))
+            base_filename += '.fz'
+        shutil.move(os.path.join(temp_directory, base_filename), filepath)
+
+
+def _get_hdu_list(self):
+    image_hdu = fits.PrimaryHDU(self.data.astype(np.float32), header=self.header)
+    image_hdu.header['BITPIX'] = -32
+    image_hdu.header['BSCALE'] = 1.0
+    image_hdu.header['BZERO'] = 0.0
+    image_hdu.header['SIMPLE'] = True
+    image_hdu.header['EXTEND'] = True
+    image_hdu.name = 'SCI'
+
+    hdu_list = [image_hdu]
+    hdu_list = self._add_data_tables_to_hdu_list(hdu_list)
+    hdu_list = self._add_bpm_to_hdu_list(hdu_list)
+    fits_hdu_list = fits.HDUList(hdu_list)
+    try:
+        fits_hdu_list.verify(option='exception')
+    except fits.VerifyError as fits_error:
+        logger.warning('Error in FITS Verification. {0}. Attempting fix.'.format(fits_error), image=self)
+        try:
+            fits_hdu_list.verify(option='silentfix+exception')
+        except fits.VerifyError as fix_attempt_error:
+            logger.error('Could not repair FITS header. {0}'.format(fix_attempt_error), image=self)
+    return fits.HDUList(hdu_list)
+
+
+def init_hdu():
+    file_handle = tempfile.NamedTemporaryFile()
+    return fits.open(file_handle, memmap=True)

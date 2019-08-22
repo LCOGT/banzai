@@ -24,11 +24,6 @@ from contextlib import contextmanager
 
 from banzai.utils import date_utils, fits_utils
 
-# Define how to get to the database
-# Note that we need to encode the database password outside of the code base
-_DEFAULT_DB = 'mysql://cmccully:password@localhost/test'
-
-_CONFIGDB_ADDRESS = 'http://configdb.lco.gtn/sites/'
 
 INSTRUMENT_STATES_TO_REDUCE = ['SCHEDULABLE', 'STANDBY']
 
@@ -38,7 +33,7 @@ logger = logging.getLogger('banzai')
 
 
 @contextmanager
-def get_session(db_address=_DEFAULT_DB):
+def get_session(db_address):
     """
     Get a connection to the database.
 
@@ -123,8 +118,7 @@ class ProcessedImage(Base):
     tries = Column(Integer, default=0)
 
 
-def create_db(bpm_directory, db_address=_DEFAULT_DB,
-              configdb_address=_CONFIGDB_ADDRESS):
+def create_db(bpm_directory, db_address, configdb_address):
     """
     Create the database structure.
 
@@ -141,7 +135,7 @@ def create_db(bpm_directory, db_address=_DEFAULT_DB,
     populate_calibration_table_with_bpms(bpm_directory, db_address=db_address)
 
 
-def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
+def parse_configdb(configdb_address):
     """
     Parse the contents of the configdb.
 
@@ -196,8 +190,7 @@ def remove_nres_duplicates(instruments):
             if (instrument['name'], instrument['camera']) not in instrument_dupe_attributes[:i]]
 
 
-def populate_instrument_tables(db_address=_DEFAULT_DB,
-                               configdb_address=_CONFIGDB_ADDRESS):
+def populate_instrument_tables(db_address, configdb_address):
     """
     Populate the instrument table
 
@@ -293,7 +286,7 @@ def add_or_update_record(db_session, table_model, equivalence_criteria, record_a
     return record
 
 
-def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
+def populate_calibration_table_with_bpms(directory, db_address):
     with get_session(db_address=db_address) as db_session:
         bpm_filenames = glob(os.path.join(directory, '*bpm*.fits*'))
         for bpm_filename in bpm_filenames:
@@ -351,7 +344,7 @@ def query_for_instrument(db_address, site, camera, enclosure=None, telescope=Non
     return instrument
 
 
-def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_ADDRESS):
+def get_instrument(header, db_address, configdb_address):
     site = header.get('SITEID')
     camera = header.get('INSTRUME')
     enclosure = header.get('ENCID')
@@ -375,7 +368,7 @@ def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_AD
     return instrument
 
 
-def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
+def get_bpm_filename(instrument_id, ccdsum, db_address):
     with get_session(db_address=db_address) as db_session:
         criteria = (CalibrationImage.type == 'BPM', CalibrationImage.instrument_id == instrument_id,
                     cast(CalibrationImage.attributes['ccdsum'], String) == type_coerce(ccdsum, JSON))
@@ -389,7 +382,7 @@ def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     return bpm_path
 
 
-def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
+def save_calibration_info(output_file, image, db_address):
     # Store the information into the calibration table
     # Check and see if the bias file is already in the database
     with get_session(db_address=db_address) as db_session:
@@ -411,7 +404,7 @@ def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
         db_session.commit()
 
 
-def get_processed_image(path, db_address=_DEFAULT_DB):
+def get_processed_image(path, db_address):
     filename = os.path.basename(path)
     with get_session(db_address=db_address) as db_session:
         processed_image = add_or_update_record(db_session, ProcessedImage, {'filename': filename},
@@ -420,13 +413,13 @@ def get_processed_image(path, db_address=_DEFAULT_DB):
     return processed_image
 
 
-def commit_processed_image(processed_image, db_address=_DEFAULT_DB):
+def commit_processed_image(processed_image, db_address):
     with get_session(db_address=db_address) as db_session:
         db_session.add(processed_image)
         db_session.commit()
 
 
-def get_timezone(site, db_address=_DEFAULT_DB):
+def get_timezone(site, db_address):
     with get_session(db_address=db_address) as db_session:
         site_list = db_session.query(Site).filter(Site.id == site).all()
     if len(site_list) == 0:
@@ -434,7 +427,7 @@ def get_timezone(site, db_address=_DEFAULT_DB):
     return site_list[0].timezone
 
 
-def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=False):
+def get_instruments_at_site(site, db_address, ignore_schedulability=False):
     with get_session(db_address=db_address) as db_session:
         query = (Instrument.site == site)
         if not ignore_schedulability:
@@ -443,14 +436,14 @@ def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=
     return instruments
 
 
-def get_instrument_by_id(id, db_address=_DEFAULT_DB):
+def get_instrument_by_id(id, db_address):
     with get_session(db_address=db_address) as db_session:
         instrument = db_session.query(Instrument).filter(Instrument.id==id).first()
     return instrument
 
 
-def get_master_calibration_image(image, calibration_type, master_selection_criteria,
-                                 use_only_older_calibrations=False, db_address=_DEFAULT_DB):
+def get_master_calibration_image(image, calibration_type, master_selection_criteria, db_address,
+                                 use_only_older_calibrations=False):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
@@ -486,8 +479,8 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     return calibration_file
 
 
-def get_individual_calibration_images(instrument, calibration_type, min_date: str, max_date: str,
-                                      include_bad_frames=False, db_address=_DEFAULT_DB):
+def get_individual_calibration_images(instrument, calibration_type, min_date: str, max_date: str, db_address: str,
+                                      include_bad_frames: Boolean = False):
 
     calibration_criteria = CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
@@ -505,7 +498,7 @@ def get_individual_calibration_images(instrument, calibration_type, min_date: st
     return image_paths
 
 
-def mark_frame(filename, mark_as, db_address=_DEFAULT_DB):
+def mark_frame(filename, mark_as, db_address):
     set_is_bad_to = True if mark_as == "bad" else False
     logger.debug("Setting the is_bad parameter for {filename} to {set_is_bad_to}".format(
         filename=filename, set_is_bad_to=set_is_bad_to))
