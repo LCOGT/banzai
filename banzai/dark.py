@@ -4,7 +4,7 @@ import logging
 import numpy as np
 
 from banzai.stages import Stage
-from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
+from banzai.calibrations import CalibrationStacker, CalibrationUser, CalibrationComparer
 from banzai.utils import qc
 
 logger = logging.getLogger('banzai')
@@ -34,7 +34,7 @@ class DarkMaker(CalibrationStacker):
         return 'DARK'
 
 
-class DarkSubtractor(ApplyCalibration):
+class DarkSubtractor(CalibrationUser):
     def __init__(self, runtime_context):
         super(DarkSubtractor, self).__init__(runtime_context)
 

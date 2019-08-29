@@ -58,9 +58,9 @@ def run_pipeline_stages(image_paths, runtime_context):
         stage = stage_constructor(runtime_context)
         images = stage.run(images)
 
-    if images is None:
-        logger.error('Reduction stopped', extra_tags={'filename': image_paths})
-        return
+        if images is None:
+            logger.error('Reduction stopped', extra_tags={'filename': image_paths})
+            return
 
     if isinstance(images, Iterable):
         for image in images:

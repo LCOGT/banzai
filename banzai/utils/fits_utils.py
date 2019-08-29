@@ -117,6 +117,21 @@ def get_primary_header(filename):
         return None
 
 
+def get_configuration_mode(header):
+    configuration_mode = header.get('CONFMODE', 'default')
+    # If the configuration mode is not in the header, fallback to default to support legacy data
+    if configuration_mode == 'N/A' or configuration_mode == 0 or configuration_mode.lower() == 'normal':
+        configuration_mode = 'default'
+
+    header['CONFMODE'] = configuration_mode
+    return configuration_mode
+
+
+def init_hdu():
+    file_handle = tempfile.NamedTemporaryFile()
+    return fits.open(file_handle, memmap=True)
+
+
 def open_image(filename):
     """
     Load an image from a FITS file
@@ -173,38 +188,6 @@ def open_image(filename):
     return data, header, bpm, extension_headers
 
 
-def get_extensions_by_name(fits_hdulist, name):
-    """
-    Get a list of the science extensions from a multi-extension fits file (HDU list)
-
-    Parameters
-    ----------
-    fits_hdulist: HDUList
-                  input fits HDUList to search for SCI extensions
-
-    name: str
-          Extension name to collect, e.g. SCI
-
-    Returns
-    -------
-    HDUList: an HDUList object with only the SCI extensions
-    """
-    # The following of using False is just an awful convention and will probably be
-    # deprecated at some point
-    extension_info = fits_hdulist.info(False)
-    return fits.HDUList([fits_hdulist[ext[0]] for ext in extension_info if ext[1] == name])
-
-
-def get_configuration_mode(header):
-    configuration_mode = header.get('CONFMODE', 'default')
-    # If the configuration mode is not in the header, fallback to default to support legacy data
-    if configuration_mode == 'N/A' or configuration_mode == 0 or configuration_mode.lower() == 'normal':
-        configuration_mode = 'default'
-
-    header['CONFMODE'] = configuration_mode
-    return configuration_mode
-
-
 def open_fits_file(filename):
     """
     Load a fits file
@@ -235,6 +218,28 @@ def open_fits_file(filename):
         hdulist_copy = copy.deepcopy(hdulist)
         hdulist.close()
     return hdulist_copy
+
+
+def get_extensions_by_name(fits_hdulist, name):
+    """
+    Get a list of the science extensions from a multi-extension fits file (HDU list)
+
+    Parameters
+    ----------
+    fits_hdulist: HDUList
+                  input fits HDUList to search for SCI extensions
+
+    name: str
+          Extension name to collect, e.g. SCI
+
+    Returns
+    -------
+    HDUList: an HDUList object with only the SCI extensions
+    """
+    # The following of using False is just an awful convention and will probably be
+    # deprecated at some point
+    extension_info = fits_hdulist.info(False)
+    return fits.HDUList([fits_hdulist[ext[0]] for ext in extension_info if ext[1] == name])
 
 
 def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
@@ -341,8 +346,3 @@ def _get_hdu_list(self):
         except fits.VerifyError as fix_attempt_error:
             logger.error('Could not repair FITS header. {0}'.format(fix_attempt_error), image=self)
     return fits.HDUList(hdu_list)
-
-
-def init_hdu():
-    file_handle = tempfile.NamedTemporaryFile()
-    return fits.open(file_handle, memmap=True)

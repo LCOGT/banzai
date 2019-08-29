@@ -5,7 +5,7 @@ import numpy as np
 
 from banzai.utils import stats
 from banzai.stages import Stage
-from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
+from banzai.calibrations import CalibrationStacker, CalibrationUser, CalibrationComparer
 
 logger = logging.getLogger('banzai')
 
@@ -39,7 +39,7 @@ class FlatMaker(CalibrationStacker):
         return master_image
 
 
-class FlatDivider(ApplyCalibration):
+class FlatDivider(CalibrationUser):
     def __init__(self, runtime_context):
 
         super(FlatDivider, self).__init__(runtime_context)

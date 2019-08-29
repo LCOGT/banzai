@@ -12,22 +12,30 @@ FRAME_SELECTION_CRITERIA = [('type', 'not contains', 'FLOYDS'), ('type', 'not co
 
 FRAME_CLASS = 'banzai.images.Image'
 
-ORDERED_STAGES = ['banzai.bpm.BPMUpdater',
-                  'banzai.qc.HeaderSanity',
-                  'banzai.qc.ThousandsTest',
-                  'banzai.qc.SaturationTest',
+# ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
+#                   #'banzai.bpm.SaturatedPixelFlagger',
+#                   #'banzai.qc.HeaderChecker',
+#                   #'banzai.qc.ThousandsTest',
+#                   #'banzai.qc.SaturationTest',
+#                   'banzai.bias.OverscanSubtractor',
+#                   #'banzai.crosstalk.CrosstalkCorrector',
+#                   'banzai.gain.GainNormalizer',
+#                   'banzai.mosaic.MosaicCreator',
+#                   'banzai.trim.Trimmer',
+#                   'banzai.bias.BiasSubtractor',
+#                   #'banzai.dark.DarkSubtractor',
+#                   #'banzai.flats.FlatDivider',
+#                   #'banzai.qc.PatternNoiseDetector',
+#                   #'banzai.photometry.SourceDetector',
+#                   #'banzai.astrometry.WCSSolver',
+#                   #'banzai.qc.pointing.PointingTest']
+ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
+                  'banzai.bpm.SaturatedPixelFlagger',
                   'banzai.bias.OverscanSubtractor',
-                  'banzai.crosstalk.CrosstalkCorrector',
                   'banzai.gain.GainNormalizer',
                   'banzai.mosaic.MosaicCreator',
                   'banzai.trim.Trimmer',
-                  'banzai.bias.BiasSubtractor',
-                  'banzai.dark.DarkSubtractor',
-                  'banzai.flats.FlatDivider',
-                  'banzai.qc.PatternNoiseDetector',
-                  'banzai.photometry.SourceDetector',
-                  'banzai.astrometry.WCSSolver',
-                  'banzai.qc.pointing.PointingTest']
+                  'banzai.bias.BiasSubtractor']
 
 CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,

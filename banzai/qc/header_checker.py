@@ -11,7 +11,7 @@ from banzai.utils import qc
 logger = logging.getLogger('banzai')
 
 
-class HeaderSanity(Stage):
+class HeaderChecker(Stage):
     """
     Stage to validate important header keywords.
     """
@@ -22,12 +22,11 @@ class HeaderSanity(Stage):
     DEC_MAX = 90.0
 
     def __init__(self, runtime_context):
-        super(HeaderSanity, self).__init__(runtime_context)
+        super(HeaderChecker, self).__init__(runtime_context)
 
         self.expected_header_keywords = ['RA', 'DEC', 'CAT-RA', 'CAT-DEC',
                                          'OFST-RA', 'OFST-DEC', 'TPT-RA',
-                                         'TPT-DEC', 'PM-RA', 'PM-DEC',
-                                         'CRVAL1', 'CRVAL2', 'CRPIX1',
+                                         'TPT-DEC', 'CRVAL1', 'CRVAL2', 'CRPIX1',
                                          'CRPIX2', 'EXPTIME']
 
     def do_stage(self, image):
