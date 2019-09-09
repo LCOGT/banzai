@@ -55,9 +55,6 @@ def need_to_process_image(path, context):
         instrument = dbs.get_instrument(header, db_address=context.db_address)
     except ValueError:
         return False
-    if not context.ignore_schedulability and not instrument.schedulable:
-        logger.info('Image will not be processed because instrument is not schedulable', extra_tags={"filename": path})
-        return False
 
     # Get the image in db. If it doesn't exist add it.
     image = dbs.get_processed_image(path, db_address=context.db_address)

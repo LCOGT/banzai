@@ -434,11 +434,9 @@ def get_timezone(site, db_address=_DEFAULT_DB):
     return site_list[0].timezone
 
 
-def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=False):
+def get_instruments_at_site(site, db_address=_DEFAULT_DB):
     with get_session(db_address=db_address) as db_session:
         query = (Instrument.site == site)
-        if not ignore_schedulability:
-            query &= Instrument.schedulable
         instruments = db_session.query(Instrument).filter(query).all()
     return instruments
 

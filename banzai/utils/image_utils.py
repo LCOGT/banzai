@@ -32,9 +32,6 @@ def select_images(image_list, image_type, context):
             header = get_primary_header(filename)
             should_process = image_can_be_processed(header, context)
             should_process &= (image_type is None or get_obstype(header) == image_type)
-            if not context.ignore_schedulability:
-                instrument = dbs.get_instrument(header, db_address=context.db_address)
-                should_process &= instrument.schedulable
             if should_process:
                 images.append(filename)
         except Exception:
