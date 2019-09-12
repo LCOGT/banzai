@@ -132,7 +132,7 @@ def create_db(bpm_directory, db_address, configdb_address):
     Base.metadata.create_all(engine)
 
     populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
-    populate_calibration_table_with_bpms(bpm_directory, db_address=db_address)
+    populate_calibration_table_with_bpms(bpm_directory, db_address=db_address, configdb_address=configdb_address)
 
 
 def parse_configdb(configdb_address):
@@ -286,7 +286,7 @@ def add_or_update_record(db_session, table_model, equivalence_criteria, record_a
     return record
 
 
-def populate_calibration_table_with_bpms(directory, db_address):
+def populate_calibration_table_with_bpms(directory, db_address, configdb_address):
     with get_session(db_address=db_address) as db_session:
         bpm_filenames = glob(os.path.join(directory, '*bpm*.fits*'))
         for bpm_filename in bpm_filenames:
@@ -300,7 +300,7 @@ def populate_calibration_table_with_bpms(directory, db_address):
             dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
 
             try:
-                instrument = get_instrument(header, db_address=db_address)
+                instrument = get_instrument(header, db_address=db_address, configdb_address=configdb_address)
             except ValueError:
                 logger.error('Instrument is missing from database', extra_tags={'site': header['SITEID'],
                                                                                 'camera': header['INSTRUME']})
@@ -405,6 +405,7 @@ def save_calibration_info(output_file, image, db_address):
 
 
 def get_processed_image(path, db_address):
+    # TODO: add support for AWS path styles
     filename = os.path.basename(path)
     with get_session(db_address=db_address) as db_session:
         processed_image = add_or_update_record(db_session, ProcessedImage, {'filename': filename},

@@ -1,8 +1,7 @@
 import os
 import tempfile
 import logging
-import copy
-
+from typing import Optional
 from banzai import logs
 
 import numpy as np
@@ -104,14 +103,14 @@ def parse_ra_dec(header):
     return ra, dec
 
 
-def get_primary_header(filename):
+def get_primary_header(filename) -> Optional[fits.Header]:
     try:
         header = fits.getheader(filename, ext=0)
         for keyword in header:
             if keyword not in FITS_MANDATORY_KEYWORDS:
-                header = fits.getheader(filename, ext=1)
-                break
-        return header
+                return header
+        return fits.getheader(filename, ext=1)
+
     except Exception:
         logger.error("Unable to open fits file: {}".format(logs.format_exception()), extra_tags={'filename': filename})
         return None
@@ -188,58 +187,16 @@ def open_image(filename):
     return data, header, bpm, extension_headers
 
 
-def open_fits_file(filename):
-    """
-    Load a fits file
-
-    Parameters
-    ----------
-    filename: str
-              File name/path to open
-
-    Returns
-    -------
-    hdulist: astropy.io.fits
-
-    Notes
-    -----
-    This is a wrapper to astropy.io.fits.open but funpacks the file first.
-    """
-    base_filename, file_extension = os.path.splitext(os.path.basename(filename))
-    if file_extension == '.fz':
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            output_filename = os.path.join(tmpdirname, base_filename)
-            os.system('funpack -O {0} {1}'.format(output_filename, filename))
-            hdulist = fits.open(output_filename, 'readonly')
-            hdulist_copy = copy.deepcopy(hdulist)
-            hdulist.close()
-    else:
-        hdulist = fits.open(filename, 'readonly')
-        hdulist_copy = copy.deepcopy(hdulist)
-        hdulist.close()
-    return hdulist_copy
-
-
-def get_extensions_by_name(fits_hdulist, name):
-    """
-    Get a list of the science extensions from a multi-extension fits file (HDU list)
-
-    Parameters
-    ----------
-    fits_hdulist: HDUList
-                  input fits HDUList to search for SCI extensions
-
-    name: str
-          Extension name to collect, e.g. SCI
-
-    Returns
-    -------
-    HDUList: an HDUList object with only the SCI extensions
-    """
-    # The following of using False is just an awful convention and will probably be
-    # deprecated at some point
-    extension_info = fits_hdulist.info(False)
-    return fits.HDUList([fits_hdulist[ext[0]] for ext in extension_info if ext[1] == name])
+def open_fits_file(filename: str):
+    # TODO: deal with a datacube and munging
+    # TODO: detect if AWS frame and stream the file in rather than just opening the file,
+    # this is done using boto3 and a io.BytesIO() buffer
+    with open(filename, 'rb') as f:
+        hdu_list = fits.open(f)
+        uncompressed_hdu_list = unpack(hdu_list)
+        hdu_list.close()
+        del hdu_list
+    return uncompressed_hdu_list
 
 
 def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
@@ -254,14 +211,15 @@ def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
     if not move_1_to_0 or not isinstance(compressed_hdulist[1], fits.CompImageHDU):
         primary_hdu = fits.PrimaryHDU(data=None, header=compressed_hdulist[0].header)
     else:
-        data_type = compressed_hdulist[1].data.dtype
-        if 'int' == str(data_type)[:3]:
-            data_type = getattr(np, 'u' + data_type)
+        data_type = str(compressed_hdulist[1].data.dtype)
+        if 'int' == data_type[:3]:
+            data_type = 'u' + data_type
             data = np.array(compressed_hdulist[1].data, getattr(np, data_type))
         else:
             data = compressed_hdulist[1].data
         primary_hdu = fits.PrimaryHDU(data=data, header=compressed_hdulist[1].header)
-        primary_hdu.header.pop('ZDITHER0')
+        if 'ZDITHER0' in primary_hdu.header:
+            primary_hdu.header.pop('ZDITHER0')
     hdulist = [primary_hdu]
     if move_1_to_0:
         starting_extension = 2
@@ -302,10 +260,6 @@ def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
         else:
             hdulist.append(hdu)
     return fits.HDUList(hdulist)
-
-
-def write_fits_file(filepath, hdu_list, runtime_context):
-    pass
 
 
 def _writeto(self, filepath, fpack=False):

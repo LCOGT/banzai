@@ -14,3 +14,6 @@ class GainNormalizer(Stage):
         for data in image.image_extensions:
             data *= data.gain
         return image
+
+def validate_gain():
+    pass

@@ -8,10 +8,14 @@ logger = logging.getLogger('banzai')
 
 class BadPixelMaskLoader(CalibrationUser):
     def apply_master_calibration(self, image, master_calibration_image):
-        for image_extension, bpm_extension in zip(image.image_extensions, master_calibration_image.image_extensions):
+        for image_extension, bpm_extension in zip(image.ccd_hdus, master_calibration_image.ccd_hdus):
             image_extension.add_mask(bpm_extension.data)
         image.meta['L1IDMASK'] = master_calibration_image.filename, 'Id. of mask file used'
         return image
+
+    @property
+    def calibration_type(self):
+        return 'BPM'
 
 
 class SaturatedPixelFlagger(Stage):

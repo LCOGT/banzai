@@ -10,6 +10,8 @@ from banzai.utils import qc
 
 logger = logging.getLogger('banzai')
 
+class HeaderSanity:
+    pass
 
 class HeaderChecker(Stage):
     """

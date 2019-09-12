@@ -10,7 +10,7 @@ import os
 
 FRAME_SELECTION_CRITERIA = [('type', 'not contains', 'FLOYDS'), ('type', 'not contains', 'NRES')]
 
-FRAME_CLASS = 'banzai.images.Image'
+FRAME_CLASS = 'banzai.images.LCOImagingFrame'
 
 # ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
 #                   #'banzai.bpm.SaturatedPixelFlagger',
@@ -29,13 +29,13 @@ FRAME_CLASS = 'banzai.images.Image'
 #                   #'banzai.photometry.SourceDetector',
 #                   #'banzai.astrometry.WCSSolver',
 #                   #'banzai.qc.pointing.PointingTest']
-ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
-                  'banzai.bpm.SaturatedPixelFlagger',
-                  'banzai.bias.OverscanSubtractor',
-                  'banzai.gain.GainNormalizer',
-                  'banzai.mosaic.MosaicCreator',
-                  'banzai.trim.Trimmer',
-                  'banzai.bias.BiasSubtractor']
+ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader']
+#                  'banzai.bpm.SaturatedPixelFlagger',
+#                  'banzai.bias.OverscanSubtractor',
+#                  'banzai.gain.GainNormalizer',
+#                  'banzai.mosaic.MosaicCreator',
+#                  'banzai.trim.Trimmer',
+#                  'banzai.bias.BiasSubtractor']
 
 CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,
@@ -45,10 +45,11 @@ CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'ccdsum'],
                             'DARK': ['configuration_mode', 'ccdsum'],
                             'SKYFLAT': ['configuration_mode', 'ccdsum', 'filter']}
 
-LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer', 'DARK': 'banzai.bias.BiasSubtractor', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
+LAST_STAGE = {'BIAS': None, #'banzai.trim.Trimmer',
+              'DARK': 'banzai.bias.BiasSubtractor', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
               'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None}
 
-EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
+EXTRA_STAGES = {'BIAS': None, # ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
                 'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkComparer'],
                 'SKYFLAT': ['banzai.flats.FlatNormalizer', 'banzai.qc.PatternNoiseDetector', 'banzai.flats.FlatComparer'],
                 'STANDARD': None,

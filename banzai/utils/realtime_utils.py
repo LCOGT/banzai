@@ -6,14 +6,14 @@ from banzai.utils import fits_utils, image_utils, file_utils
 logger = logging.getLogger('banzai')
 
 
-def set_file_as_processed(path, db_address=dbs._DEFAULT_DB):
+def set_file_as_processed(path, db_address):
     image = dbs.get_processed_image(path, db_address=db_address)
     if image is not None:
         image.success = True
         dbs.commit_processed_image(image, db_address=db_address)
 
 
-def increment_try_number(path, db_address=dbs._DEFAULT_DB):
+def increment_try_number(path, db_address):
     image = dbs.get_processed_image(path, db_address=db_address)
     # Otherwise increment the number of tries
     image.tries += 1
@@ -52,7 +52,7 @@ def need_to_process_image(path, context):
         return False
 
     try:
-        instrument = dbs.get_instrument(header, db_address=context.db_address)
+        instrument = dbs.get_instrument(header, db_address=context.db_address, configdb_address=context.CONFIGDB_URL)
     except ValueError:
         return False
     if not context.ignore_schedulability and not instrument.schedulable:

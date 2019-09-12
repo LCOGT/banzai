@@ -3,11 +3,10 @@ import abc
 import os
 
 import numpy as np
-from astropy.io import fits
 
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs, settings
-from banzai.utils import image_utils, stats, fits_utils, qc, date_utils, import_utils, file_utils, stage_utils
+from banzai.utils import image_utils, stats, qc, import_utils, stage_utils
 
 
 FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
@@ -43,12 +42,6 @@ class CalibrationMaker(MultiFrameStage):
             # Do nothing
             msg = 'Number of images less than minimum requirement of {min_images}, not combining'
             logger.warning(msg.format(min_images=min_images))
-            return []
-        try:
-            image_utils.check_image_homogeneity(images, self.group_by_attributes())
-        except image_utils.InhomogeneousSetException:
-            logger.error(logs.format_exception())
-            return []
 
         return [self.make_master_calibration_frame(images)]
 
@@ -63,8 +56,8 @@ class CalibrationStacker(CalibrationMaker):
             data_stack = np.zeros((*section.shape, len(images)), dtype=np.float32)
             stack_mask = np.zeros((i*section.shape, len(images)), dtype=np.uint8)
             for i, image in enumerate(images):
-                data_stack[*section, i] = image.data[section]
-                stack_mask[*section, i] = image.bpm[section]
+                data_stack[section, i] = image.data[section]
+                stack_mask[section, i] = image.bpm[section]
 
             stacked_data[section] = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
 
@@ -101,13 +94,7 @@ class CalibrationUser(Stage):
         if master_calibration_filename is None:
             return self.on_missing_master_calibration(image)
 
-        master_calibration_image = FRAME_CLASS(self.runtime_context, filename=master_calibration_filename)
-        try:
-            image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
-        except image_utils.InhomogeneousSetException as e:
-            logger.error('Master calibration was not the same format as the input: {0}'.format(e), image=image,
-                         extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
-            return None
+        master_calibration_image = FRAME_CLASS.open(self.runtime_context, filename=master_calibration_filename)
         logger.info('Applying master calibration', image=image,
                     extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
         return self.apply_master_calibration(image, master_calibration_image)

@@ -18,3 +18,6 @@ class MosaicCreator(Stage):
             image.image_extensions.pop(data)
         image.primary_hdu = mosaiced_data
         return image
+
+def get_mosaic_size():
+    pass

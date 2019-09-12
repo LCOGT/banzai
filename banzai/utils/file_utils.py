@@ -18,29 +18,6 @@ def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):
         producer.release()
 
 
-def make_output_directory(top_path, site, instrument_name, epoch, preview_mode=False):
-    # Create output directory if necessary
-    output_directory = os.path.join(top_path.processed_path, site,
-                                    instrument_name, epoch)
-
-    if preview_mode:
-        output_directory = os.path.join(output_directory, 'preview')
-    else:
-        output_directory = os.path.join(output_directory, 'processed')
-
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-
-    return output_directory
-
-
-def make_output_filename(filename: str, fpack: bool, reduction_level: str):
-    filename = os.path.basename(filename.replace('00.fits', '{:02d}.fits'.format(int(reduction_level))))
-    if fpack and not filename.endswith('.fz'):
-        filename += '.fz'
-    return filename
-
-
 def get_md5(filepath):
     with open(filepath, 'rb') as file:
         md5 = hashlib.md5(file.read()).hexdigest()

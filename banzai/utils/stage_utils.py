@@ -40,19 +40,19 @@ def get_stages_for_individual_frame(ordered_stages, last_stage=None, extra_stage
 
 
 def run_pipeline_stages(image_paths, runtime_context):
-    frame_class = import_utils.import_attribute(settings.FRAME_CLASS)
-    if isinstance(image_paths, Iterable):
-        images = [frame_class(runtime_context, filename=image_path) for image_path in image_paths]
-        stages_to_do = settings.CALIBRATION_STACKER_STAGES[images[0].obstype.upper()]
+    frame_class = import_utils.import_attribute(runtime_context.FRAME_CLASS)
+    if isinstance(image_paths, list):
+        images = [frame_class.open(runtime_context, image_path) for image_path in image_paths]
+        stages_to_do = runtime_context.CALIBRATION_STACKER_STAGES[images[0].obstype.upper()]
 
     else:
-        images = frame_class(runtime_context, filename=image_paths)
-        stages_to_do = get_stages_for_individual_frame(settings.ORDERED_STAGES,
+        images = frame_class.open(runtime_context, filename=image_paths)
+        stages_to_do = get_stages_for_individual_frame(runtime_context.ORDERED_STAGES,
                                                        last_stage=settings.LAST_STAGE[images.obstype.upper()],
                                                        extra_stages=settings.EXTRA_STAGES[images.obstype.upper()])
     if images is None:
         return
-
+    logger.info(f'Stages: {stages_to_do}')
     for stage_name in stages_to_do:
         stage_constructor = import_utils.import_attribute(stage_name)
         stage = stage_constructor(runtime_context)

@@ -19,6 +19,9 @@ from astropy.utils.data import get_pkg_data_filename
 
 import logging
 
+# TODO: Mock out AWS calls here
+# TODO: Mock out archived fits queue structure as well
+
 logger = logging.getLogger('banzai')
 
 app.conf.update(CELERY_TASK_ALWAYS_EAGER=True)
@@ -156,7 +159,8 @@ def init(configdb):
     create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
     for instrument in INSTRUMENTS:
         populate_calibration_table_with_bpms(os.path.join(DATA_ROOT, instrument, 'bpm'),
-                                             db_address=os.environ['DB_ADDRESS'])
+                                             db_address=os.environ['DB_ADDRESS'],
+                                             configdb_address='http://configdbdev.lco.gtn/sites/')
 
 
 @pytest.mark.e2e

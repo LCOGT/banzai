@@ -2,19 +2,9 @@ import logging
 
 from banzai import dbs
 from banzai.utils.instrument_utils import instrument_passes_criteria
-from banzai.exceptions import InhomogeneousSetException
 
 
 logger = logging.getLogger('banzai')
-
-
-def check_image_homogeneity(images, group_by_attributes=None):
-    attribute_list = ['nx', 'ny', 'site', 'camera']
-    if group_by_attributes is not None:
-        attribute_list += group_by_attributes
-    for attribute in attribute_list:
-        if len(set([getattr(image, attribute) for image in images])) > 1:
-            raise InhomogeneousSetException('Images have different {0}s'.format(attribute))
 
 
 def image_can_be_processed(header, context, filename):
@@ -26,7 +16,7 @@ def image_can_be_processed(header, context, filename):
         logger.warning('Image has an obstype that is not supported by banzai.', extra_tags={'filename': filename})
         return False
     try:
-        instrument = dbs.get_instrument(header, db_address=context.db_address)
+        instrument = dbs.get_instrument(header, db_address=context.db_address, configdb_address=context.CONFIGDB_URL)
     except ValueError:
         return False
     passes = instrument_passes_criteria(instrument, context.FRAME_SELECTION_CRITERIA)

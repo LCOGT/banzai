@@ -43,6 +43,7 @@ class RealtimeModeListener(ConsumerMixin):
         return [consumer]
 
     def on_message(self, body, message):
+        # TODO: Add detection for AWS style paths once we move to AWS
         path = body.get('path')
         process_image.apply_async(args=(path, vars(self.runtime_context)))
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
@@ -63,7 +64,7 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
                         default=False)
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
-    parser.add_argument('--rlevel', dest='rlevel', default=91, type=int, help='Reduction level')
+    parser.add_argument('--rlevel', dest='reduction_level', default=91, type=int, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')

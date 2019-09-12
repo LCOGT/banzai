@@ -37,7 +37,7 @@ services:
     container_name: banzai-celery-workers
     entrypoint: ["celery", "-A", "banzai", "worker",
                  "--hostname", "banzai-celery-worker",
-                 "-l", "debug"]
+                 "-l", "debug", "-c", "1"]
     mem_limit: '8g'
     depends_on:
       - banzai-redis
