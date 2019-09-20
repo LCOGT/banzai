@@ -10,5 +10,6 @@ class Trimmer(Stage):
 
     def do_stage(self, image):
         logger.info('Trimming image', image=image)
-        image.trim()
+        for data in image.ccd_hdus():
+            data.trim()
         return image

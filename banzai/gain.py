@@ -10,10 +10,7 @@ class GainNormalizer(Stage):
         super(GainNormalizer, self).__init__(runtime_context)
 
     def do_stage(self, image):
-        logger.info('Multiplying by gain', image=image, extra_tags={'gain': image.gain})
-        for data in image.image_extensions:
+        logger.info('Multiplying by gain', image=image)
+        for data in image.ccd_hdus:
             data *= data.gain
         return image
-
-def validate_gain():
-    pass

@@ -43,8 +43,10 @@ class OverscanSubtractor(Stage):
         super(OverscanSubtractor, self).__init__(runtime_context)
 
     def do_stage(self, image):
-        for data in image.image_hdus:
-            data.subtract_overscan()
+        for data in image.ccd_hdus:
+            overscan_section = data.get_overscan_region()
+            if overscan_section is not None:
+                data.subtract(stats.robust_standard_deviation(data.data[overscan_section], 3), kind='overscan')
         return image
 
 
@@ -53,7 +55,7 @@ class BiasMasterLevelSubtractor(Stage):
         super(BiasMasterLevelSubtractor, self).__init__(runtime_context)
 
     def do_stage(self, image):
-        image.subtract(stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm), caltype='bias_level')
+        image.subtract(stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm), kind='bias_level')
         return image
 
 

@@ -76,6 +76,11 @@ class HeaderOnly(Data):
 
 
 class CCDData(Data):
+    STATUS_KEYWORDS = {'overscan': {'L1STATOV': ('1', 'Status flag for overscan correction'),
+                                    'OVERSCAN': ('value', 'Overscan value that was subtracted')},
+                       'bias_level': {'BIASLVL': ('value', 'Bias level that was removed after overscan')}
+                       }
+
     def __init__(self, data: Union[np.array, Table], meta: Union[dict, fits.Header],
                  mask: np.array = None, name: str = '', uncertainty: np.array = None):
         super().__init__(data=data, meta=meta, mask=mask, name=name)
@@ -97,9 +102,40 @@ class CCDData(Data):
         super().__del__()
         del self.uncertainty
 
-    #     @property
-    #     def gain(self):
-    #         return self.meta['GAIN']
+    def subtract(self, value, uncertainty=None, kind=None):
+        self.data -= value
+        # Add uncertainties in quadrature
+        if uncertainty is not None:
+            self.uncertainty = np.sqrt(uncertainty * uncertainty + self.uncertainty * self.uncertainty)
+        if kind is not None:
+            for keyword, (status_value, comment) in self.STATUS_KEYWORDS.items():
+                self.meta[keyword] = eval(status_value), comment
+
+    def get_overscan_region(self):
+        return fits_utils.parse_region_keyword(self.meta.get('BIASSEC', 'N/A'))
+
+    def trim(self):
+        # TODO: update all section keywords
+        trim_section = fits_utils.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
+        self.data = self.data[trim_section]
+        self.mask = self.mask[trim_section]
+        self.uncertainty = self.uncertainty[trim_section]
+
+    @property
+    def gain(self):
+        return self.meta['GAIN']
+
+    @property
+    def binning(self):
+        return map(int, self.meta.get('CCDSUM', '1 1').split(' '))
+
+    @binning.setter
+    def binning(self, value):
+        x_binning, y_binning = value
+        self.meta['CCDSUM'] = f'{x_binning} {y_binning}'
+
+    def copy_to_mosaic(self, mosaiced_data):
+        pass
     #
     #     @gain.setter
     #     def gain(self, value):
@@ -139,6 +175,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @property
     def primary_hdu(self):
         return self._hdus[0]
+
+    @primary_hdu.setter
+    def primary_hdu(self, hdu):
+        self._hdus.insert(0, hdu)
 
     @property
     def ccd_hdus(self):
@@ -192,8 +232,21 @@ class ObservationFrame(metaclass=abc.ABCMeta):
             hdu_list_to_write = fits_utils.pack(hdu_list_to_write)
         return hdu_list_to_write
 
+    @property
+    def binning(self):
+        # Get the smallest binnings in every extension
+        x_binnings = []
+        y_binnings = []
+        for hdu in self.ccd_hdus:
+            x_binning, y_binning = hdu.meta.get('CCDSUM', '1 1').split(' ')
+            x_binnings.append(x_binning)
+            y_binnings.append(y_binning)
+        return min(x_binning), min(y_binning)
+
 
 class LCOObservationFrame(ObservationFrame, metaclass=abc.ABCMeta):
+    # TODO: Set all status check keywords to bad if they are not already set
+    # TODO: Add gain validation
     def get_output_filename(self, runtime_context):
         # TODO add a mode for AWS filenames
         output_directory = os.path.join(runtime_context.processed_path, self.instrument.site,
@@ -212,6 +265,21 @@ class LCOObservationFrame(ObservationFrame, metaclass=abc.ABCMeta):
     def dateobs(self):
         return Time(self.primary_hdu.meta.get('DATE-OBS'), scale='utc').datetime
 
+    def get_mosaic_size(self):
+        # get the min and max of the detector section of each ccd hdu
+        # Scale them to the minimum binning in each axis
+        x_detector_sections = []
+        y_detector_sections = []
+        for hdu in self.ccd_hdus:
+            detector_section = fits_utils.parse_region_keyword(hdu.meta.get('DETSEC', 'N/A'))
+            if detector_section is not None:
+                x_detector_sections += [detector_section[1].start, detector_section[1].stop]
+                y_detector_sections += [detector_section[0].start, detector_section[0].stop]
+        x_binning, y_binning = self.binning
+        nx = int(np.ceil((max(x_detector_sections) - min(x_detector_sections)) / float(x_binning)))
+        ny = int(np.ceil((max(y_detector_sections) - min(y_detector_sections)) / float(y_binning)))
+        return nx, ny
+
 
 class LCOImagingFrame(LCOObservationFrame):
     @classmethod
@@ -223,7 +291,6 @@ class LCOImagingFrame(LCOObservationFrame):
 
     def get_instrument(self, runtime_context):
         return dbs.get_instrument(self.primary_hdu.meta, runtime_context.db_address, runtime_context.CONFIGDB_URL)
-
 
 class DataTable:
     pass

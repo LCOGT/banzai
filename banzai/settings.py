@@ -29,13 +29,12 @@ FRAME_CLASS = 'banzai.images.LCOImagingFrame'
 #                   #'banzai.photometry.SourceDetector',
 #                   #'banzai.astrometry.WCSSolver',
 #                   #'banzai.qc.pointing.PointingTest']
-ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader']
-#                  'banzai.bpm.SaturatedPixelFlagger',
-#                  'banzai.bias.OverscanSubtractor',
-#                  'banzai.gain.GainNormalizer',
-#                  'banzai.mosaic.MosaicCreator',
-#                  'banzai.trim.Trimmer',
-#                  'banzai.bias.BiasSubtractor']
+ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader'
+                  'banzai.bias.OverscanSubtractor',
+                  'banzai.gain.GainNormalizer',
+                  'banzai.mosaic.MosaicCreator',
+                  'banzai.trim.Trimmer',
+                  'banzai.bias.BiasSubtractor']
 
 CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,

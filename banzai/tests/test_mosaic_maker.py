@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from banzai.mosaic import get_mosaic_size, MosaicCreator
+from banzai.mosaic import MosaicCreator
 from banzai.tests.utils import FakeImage
 
 
