@@ -89,6 +89,14 @@ class CCDData(Data):
             uncertainty = self.read_noise * np.ones(data.shape, dtype=data.dtype)
         self.uncertainty = self._init_array(uncertainty)
 
+    def __getitem__(self, section):
+        """
+        Return a new CCDData object with the given section of data
+        :param section:
+        :return:
+        """
+        pass
+
     def to_fits(self):
         data_hdu = fits.ImageHDU(data=self.data, header=self.meta)
         extension_name = self.meta.get('EXTNAME').replace('SCI', '')
@@ -114,12 +122,14 @@ class CCDData(Data):
     def get_overscan_region(self):
         return fits_utils.parse_region_keyword(self.meta.get('BIASSEC', 'N/A'))
 
-    def trim(self):
-        # TODO: update all section keywords
-        trim_section = fits_utils.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
-        self.data = self.data[trim_section]
-        self.mask = self.mask[trim_section]
-        self.uncertainty = self.uncertainty[trim_section]
+    def trim(self, trim_section=None):
+        if trim_section is None:
+            trim_section = fits_utils.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
+        trimmed_image = CCDData(self.data[trim_section], self.meta, self.mask[trim_section], self.name,
+                                uncertainty=self.uncertainty[trim_section])
+        # TODO: update all section keywords, DATASEC, DETSEC
+        trimmed_image.detector_section -= trim_section
+        return trimmed_image
 
     @property
     def gain(self):
@@ -134,8 +144,36 @@ class CCDData(Data):
         x_binning, y_binning = value
         self.meta['CCDSUM'] = f'{x_binning} {y_binning}'
 
-    def copy_to_mosaic(self, mosaiced_data):
+    @property
+    def detector_section(self):
+        return fits_utils.parse_region_keyword(self.meta.get('DETSEC'))
+
+    @detector_section.setter
+    def detector_section(self, value):
+        # TODO: Add detector section, see get_mosaic size
         pass
+
+    def rebin(self, binning):
+        pass
+
+    def get_overlap(self, detector_section):
+        pass
+
+    def copy_in(self, data_to_copy):
+        """
+        Copy in the data from another CCDData object based on the detector sections
+
+        :param data_to_copy:
+        :return:
+        """
+        mosaic_section, data_overlap_section = self.get_overlap(data_to_copy.detector_section)
+
+        data_to_copy.trim(data_overlap_section)
+        data_to_copy.rebin(self.binning)
+
+        for array_name_to_copy in ['data', 'mask', 'uncertainty']:
+            array_to_copy = getattr(data_to_copy, array_name_to_copy)
+            getattr(self, array_to_copy)[mosaic_section].ravel()[:] = array_to_copy.ravel()[:]
     #
     #     @gain.setter
     #     def gain(self, value):
@@ -194,6 +232,9 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def remove(self, hdu):
         self._hdus.remove(hdu)
 
+    def insert(self, index, hdu):
+        self._hdus.insert(index, hdu)
+
     @property
     def meta(self):
         return self.primary_hdu.meta
@@ -238,10 +279,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         x_binnings = []
         y_binnings = []
         for hdu in self.ccd_hdus:
-            x_binning, y_binning = hdu.meta.get('CCDSUM', '1 1').split(' ')
+            x_binning, y_binning = hdu.binning
             x_binnings.append(x_binning)
             y_binnings.append(y_binning)
-        return min(x_binning), min(y_binning)
+        return min(x_binnings), min(y_binnings)
 
 
 class LCOObservationFrame(ObservationFrame, metaclass=abc.ABCMeta):

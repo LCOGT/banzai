@@ -53,7 +53,7 @@ class CalibrationStacker(CalibrationMaker):
     def make_master_calibration_frame(self, images):
         stacked_data = np.memmap(NamedTemporaryFile(), (images[0].ny, images[0].nx), dtype=np.float32)
         for section in sections:
-            data_stack = np.zeros((*section.shape, len(images)), dtype=np.float32)
+            data_stack = np.zeros((i*section.shape, len(images)), dtype=np.float32)
             stack_mask = np.zeros((i*section.shape, len(images)), dtype=np.uint8)
             for i, image in enumerate(images):
                 data_stack[section, i] = image.data[section]

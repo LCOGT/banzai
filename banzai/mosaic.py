@@ -16,7 +16,7 @@ class MosaicCreator(Stage):
         mosaiced_data = CCDData(data=np.zeros(ny, nx), meta=image.primary_hdu.meta)
         mosaiced_data.binning = image.binning
         for data in image.image_extensions:
-            data.copy_to_mosaic(mosaiced_data)
+            mosaiced_data.copy_in(data)
             image.remove(data)
         image.primary_hdu = mosaiced_data
         return image
