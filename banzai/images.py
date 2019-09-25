@@ -202,7 +202,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def __init__(self, hdu_list: list, file_path: str, runtime_context):
         self._hdus = hdu_list
         self._file_path = file_path
-        self.instrument = self.get_instrument(runtime_context)
+        self.instrument = self._get_instrument(runtime_context)
         self.epoch = self.primary_hdu.meta.get('DAY-OBS')
 
     @classmethod
@@ -240,10 +240,6 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         return self.primary_hdu.meta
 
     @abc.abstractmethod
-    def get_instrument(self, runtime_context):
-        pass
-
-    @abc.abstractmethod
     def get_output_filename(self, runtime_context) -> str:
         pass
 
@@ -255,6 +251,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def dateobs(self):
+        pass
+
+    @abc.abstractmethod
+    def _get_instrument(self, context):
         pass
 
     def write(self, runtime_context):
@@ -298,36 +298,60 @@ class LCOObservationFrame(ObservationFrame, metaclass=abc.ABCMeta):
             output_filename += '.fz'
         return output_filename
 
-    def get_instrument():
+    def get_instrument(self):
         pass
 
-    def open():
+    @classmethod
+    @abc.abstractmethod
+    def open(cls, filename: str, runtime_context):
         pass
+
+    def get_instrument(self, runtime_context):
+        return
 
     @property
     def obstype(self):
         return self.primary_hdu.meta.get('OBSTYPE')
+
+    def _get_instrument(self, runtime_context):
+        site = header.get('SITEID')
+        camera = header.get('INSTRUME')
+        enclosure = header.get('ENCID')
+        telescope = header.get('TELID')
+        instrument = dbs.query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+        name = camera
+        if instrument is None:
+            # if instrument is missing, assume it is an NRES frame and check for the instrument again.
+            name = header.get('TELESCOP')
+            instrument = dbs.query_for_instrument(db_address, site, camera, name=name, enclosure=None, telescope=None)
+        if instrument is None:
+            msg = 'Instrument is not in the database, Please add it before reducing this data.'
+            tags = {'site': site, 'enclosure': enclosure,
+                    'telescope': telescope, 'camera': camera, 'telescop': name}
+            logger.error(msg, extra_tags=tags)
+            raise ValueError('Instrument is missing from the database.')
+        return instrument
 
     @property
     def dateobs(self):
         return Time(self.primary_hdu.meta.get('DATE-OBS'), scale='utc').datetime
 
     def get_mosaic_size(self):
-        # get the min and max of the detector section of each ccd hdu
-        # Scale them to the minimum binning in each axis
         x_detector_sections = []
         y_detector_sections = []
         for hdu in self.ccd_hdus:
             detector_section = fits_utils.parse_region_keyword(hdu.meta.get('DETSEC', 'N/A'))                                
             if detector_section is not None:
-                x_detector_sections += [detector_section[1].start, detector_section[1].stop]
-                y_detector_sections += [detector_section[0].start, detector_section[0].stop]
-            else:
-                x_detector_sections += [1, 1]
-                y_detector_sections += [1, 1]
+                for section, sections in zip(detector_section, [y_detector_sections, x_detector_sections]):
+                    if section.start > section.stop:
+                        sections += [section.start + 1, section.stop + 1]
+                    else:
+                        sections += [section.start, section.stop]
         x_binning, y_binning = self.binning
-        nx = int(np.ceil((max(x_detector_sections) - min(x_detector_sections)) + 1 / float(x_binning)))
-        ny = int(np.ceil((max(y_detector_sections) - min(y_detector_sections)) + 1 / float(y_binning)))
+        if len(x_detector_sections) == 0 or len(y_detector_sections) == 0:
+            raise ValueError('No Valid Detector Sections')
+        nx = int(np.ceil((max(x_detector_sections) - min(x_detector_sections)) / float(x_binning)))
+        ny = int(np.ceil((max(y_detector_sections) - min(y_detector_sections)) / float(y_binning)))
         return nx, ny
 
 
@@ -338,9 +362,6 @@ class LCOImagingFrame(LCOObservationFrame):
         hdu_list = [CCDData(data=hdu.data.astype(np.float32), meta=hdu.header, name=hdu.header.get('EXTNAME'))
                     if hdu.data is not None else HeaderOnly(meta=hdu.header) for hdu in fits_hdu_list]
         return cls(hdu_list, os.path.basename(filename), runtime_context)
-
-    def get_instrument(self, runtime_context):
-        return dbs.get_instrument(self.primary_hdu.meta, runtime_context.db_address, runtime_context.CONFIGDB_URL)
 
 class DataTable:
     pass

@@ -344,30 +344,6 @@ def query_for_instrument(db_address, site, camera, enclosure=None, telescope=Non
     return instrument
 
 
-def get_instrument(header, db_address, configdb_address):
-    site = header.get('SITEID')
-    camera = header.get('INSTRUME')
-    enclosure = header.get('ENCID')
-    telescope = header.get('TELID')
-    instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
-    name = camera
-    if instrument is None:
-        # if instrument is missing, assume it is an NRES frame and check for the instrument again.
-        name = header.get('TELESCOP')
-        instrument = query_for_instrument(db_address, site, camera, name=name, enclosure=None, telescope=None)
-    if instrument is None:
-        # if instrument is still missing, try repopulating the database from configdb
-        populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
-        instrument = query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
-    if instrument is None:
-        msg = 'Instrument is not in the database, Please add it before reducing this data.'
-        tags = {'site': site, 'enclosure': enclosure,
-                'telescope': telescope, 'camera': camera, 'telescop': name}
-        logger.error(msg, extra_tags=tags)
-        raise ValueError('Instrument is missing from the database.')
-    return instrument
-
-
 def get_bpm_filename(instrument_id, ccdsum, db_address):
     with get_session(db_address=db_address) as db_session:
         criteria = (CalibrationImage.type == 'BPM', CalibrationImage.instrument_id == instrument_id,
