@@ -5,11 +5,53 @@ import numpy as np
 from astropy.io.fits import Header
 
 from banzai.stages import Stage
-from banzai.images import Image
+from banzai.images import Image, CCDData, LCOObservationFrame
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
 logger = logging.getLogger('banzai')
 
+
+class FakeCCDData(CCDData):
+    def __init__(self, image_multiplier=1.0, nx=101, ny=103, n_amps=1, data=None, meta=None, mask=None, name='test_image',
+                 uncertainty=None, **kwargs):
+        if data is None:
+            self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
+        else:
+            self.data = data
+        if mask is None:
+            self.mask = np.zeros((ny, nx), dtype=np.uint8)
+        else:
+            self.mask = mask
+        if meta is None:
+            self.meta={'TELESCOP': '1m0-10'}
+        else:
+            self.meta = meta
+        if n_amps > 1:
+            self.data = np.stack(n_amps*[self.data])
+        self.readnoise = 11.0
+        self.name = name
+        if uncertainty is None:
+            self.uncertainty = self.readnoise * np.ones(self.data.shape, dtype=self.data.dtype)
+        else:
+            self.uncertainty = uncertainty
+
+        for keyword in kwargs:
+            setattr(self, keyword, kwargs[keyword])
+
+
+class FakeLCOObservationFrame(LCOObservationFrame):
+    def __init__(self, hdu_list=None, file_path='/tmp/test_image.fits', instrument=None, epoch='20160101'):
+        if hdu_list is None:
+            self._hdus = [FakeCCDData()]
+        else:
+            self._hdus = hdu_list
+        if instrument is None:
+            self.instrument = FakeInstrument(0, 'cpt', 'fa16', 'doma', '1m0a', '1M-SCICAM-SINISTRO', schedulable=True)
+        else:
+            self.instrument = instrument
+        self.epoch = epoch
+        self._file_path = file_path
+        
 
 class FakeImage(Image):
     def __init__(self, runtime_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',
@@ -66,13 +108,15 @@ class FakeImage(Image):
 
 
 class FakeContext(object):
-    def __init__(self, preview_mode=False, frame_class=FakeImage):
+    def __init__(self, preview_mode=False, fpack=True, frame_class=FakeImage):
         self.FRAME_CLASS = frame_class
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
         self.db_address = 'sqlite:foo'
         self.ignore_schedulability = False
         self.max_tries = 5
+        self.fpack = fpack
+        self.reduction_level = '91'
 
     def image_can_be_processed(self, header):
         return True

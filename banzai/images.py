@@ -98,7 +98,7 @@ class CCDData(Data):
         pass
 
     def to_fits(self):
-        data_hdu = fits.ImageHDU(data=self.data, header=self.meta)
+        data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta))
         extension_name = self.meta.get('EXTNAME').replace('SCI', '')
         bpm_extname = extension_name + 'BPM'
         mask_hdu = fits.ImageHDU(data=self.mask, header=fits.Header({'EXTNAME': bpm_extname}))
@@ -298,6 +298,12 @@ class LCOObservationFrame(ObservationFrame, metaclass=abc.ABCMeta):
             output_filename += '.fz'
         return output_filename
 
+    def get_instrument():
+        pass
+
+    def open():
+        pass
+
     @property
     def obstype(self):
         return self.primary_hdu.meta.get('OBSTYPE')
@@ -312,13 +318,16 @@ class LCOObservationFrame(ObservationFrame, metaclass=abc.ABCMeta):
         x_detector_sections = []
         y_detector_sections = []
         for hdu in self.ccd_hdus:
-            detector_section = fits_utils.parse_region_keyword(hdu.meta.get('DETSEC', 'N/A'))
+            detector_section = fits_utils.parse_region_keyword(hdu.meta.get('DETSEC', 'N/A'))                                
             if detector_section is not None:
                 x_detector_sections += [detector_section[1].start, detector_section[1].stop]
                 y_detector_sections += [detector_section[0].start, detector_section[0].stop]
+            else:
+                x_detector_sections += [1, 1]
+                y_detector_sections += [1, 1]
         x_binning, y_binning = self.binning
-        nx = int(np.ceil((max(x_detector_sections) - min(x_detector_sections)) / float(x_binning)))
-        ny = int(np.ceil((max(y_detector_sections) - min(y_detector_sections)) / float(y_binning)))
+        nx = int(np.ceil((max(x_detector_sections) - min(x_detector_sections)) + 1 / float(x_binning)))
+        ny = int(np.ceil((max(y_detector_sections) - min(y_detector_sections)) + 1 / float(y_binning)))
         return nx, ny
 
 
