@@ -11,3 +11,11 @@ def prune_nans_from_table(table):
     for col in table.colnames:
         nan_in_row |= np.isnan(table[col])
     return table[~nan_in_row]
+
+
+def sort_slice(section):
+    if section.start > section.stop:
+        sorted_slice = slice(start=section.stop + 1, stop=section.start + 1)
+    else:
+        sorted_slice = slice(start=section.start, stop=section.stop)
+    return sorted_slice

@@ -4,6 +4,7 @@ import logging
 from banzai import dbs
 #from banzai.utils import date_utils, file_utils, fits_utils
 from banzai.utils import fits_utils
+from banzai.utils.array_utils import sort_slice
 #from banzai import munge, settings
 import numpy as np
 from astropy.io import fits
@@ -127,8 +128,8 @@ class CCDData(Data):
             trim_section = fits_utils.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
         trimmed_image = CCDData(self.data[trim_section], self.meta, self.mask[trim_section], self.name,
                                 uncertainty=self.uncertainty[trim_section])
-        # TODO: update all section keywords, DATASEC, DETSEC
-        trimmed_image.detector_section -= trim_section
+        # TODO: update all section keywords, DATASEC, DETSEC, CCDSEC
+        trimmed_image.detector_section = self.get_detector_region(trim_section)
         return trimmed_image
 
     @property
@@ -149,31 +150,47 @@ class CCDData(Data):
         return fits_utils.parse_region_keyword(self.meta.get('DETSEC'))
 
     @detector_section.setter
-    def detector_section(self, value):
-        # TODO: Add detector section, see get_mosaic size
-        pass
+    def detector_section(self, section):
+        self.meta['DETSEC'] = f'[{section[1].start + 1}:' \
+                              f'{section[1].stop + 1 if section[1].start > section[1].stop else section[1].stop},' \
+                              f'{section[0].start + 1}:' \
+                              f'{section[0].stop + 1 if section[0].start > section[0].stop else section[0].stop}]'
 
     def rebin(self, binning):
         pass
 
     def get_overlap(self, detector_section):
+        overlap_sections = []
+        for this_section, input_section in zip(self.detector_section, detector_section):
+            sorted_input = sort_slice(input_section)
+            sorted_section = sort_slice(this_section)
+            overlap_sections.append(slice(max(sorted_input.start, sorted_section.start),
+                                          min(sorted_input.stop, sorted_section.stop)))
+        return overlap_sections
+
+    def get_data_section(self, region):
+        """Given a detector region, figure out the corresponding array slice"""
         pass
 
-    def copy_in(self, data_to_copy):
+    def get_detector_region(self, section):
+        """Given a data region, get the detector section that this covers.
+        This is the inverse of get_data section"""
+        pass
+
+    def copy_in(self, data):
         """
         Copy in the data from another CCDData object based on the detector sections
 
         :param data_to_copy:
         :return:
         """
-        mosaic_section, data_overlap_section = self.get_overlap(data_to_copy.detector_section)
-
-        data_to_copy.trim(data_overlap_section)
-        data_to_copy.rebin(self.binning)
+        overlap_section = self.get_overlap(data.detector_section)
+        data_to_copy = data.trim(data.get_data_section(overlap_section))
+        data_to_copy = data_to_copy.rebin(self.binning)
 
         for array_name_to_copy in ['data', 'mask', 'uncertainty']:
             array_to_copy = getattr(data_to_copy, array_name_to_copy)
-            getattr(self, array_to_copy)[mosaic_section].ravel()[:] = array_to_copy.ravel()[:]
+            getattr(self, array_to_copy)[self.get_data_section(overlap_section)].ravel()[:] = array_to_copy.ravel()[:]
     #
     #     @gain.setter
     #     def gain(self, value):
@@ -306,24 +323,23 @@ class LCOObservationFrame(ObservationFrame, metaclass=abc.ABCMeta):
     def open(cls, filename: str, runtime_context):
         pass
 
-    def get_instrument(self, runtime_context):
-        return
-
     @property
     def obstype(self):
         return self.primary_hdu.meta.get('OBSTYPE')
 
     def _get_instrument(self, runtime_context):
-        site = header.get('SITEID')
-        camera = header.get('INSTRUME')
-        enclosure = header.get('ENCID')
-        telescope = header.get('TELID')
-        instrument = dbs.query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+        site = self.meta.get('SITEID')
+        camera = self.meta.get('INSTRUME')
+        enclosure = self.meta.get('ENCID')
+        telescope = self.meta.get('TELID')
+        instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera,
+                                              enclosure=enclosure, telescope=telescope)
         name = camera
         if instrument is None:
             # if instrument is missing, assume it is an NRES frame and check for the instrument again.
-            name = header.get('TELESCOP')
-            instrument = dbs.query_for_instrument(db_address, site, camera, name=name, enclosure=None, telescope=None)
+            name = self.meta.get('TELESCOP')
+            instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera,
+                                                  name=name, enclosure=None, telescope=None)
         if instrument is None:
             msg = 'Instrument is not in the database, Please add it before reducing this data.'
             tags = {'site': site, 'enclosure': enclosure,
@@ -343,10 +359,9 @@ class LCOObservationFrame(ObservationFrame, metaclass=abc.ABCMeta):
             detector_section = fits_utils.parse_region_keyword(hdu.meta.get('DETSEC', 'N/A'))                                
             if detector_section is not None:
                 for section, sections in zip(detector_section, [y_detector_sections, x_detector_sections]):
-                    if section.start > section.stop:
-                        sections += [section.start + 1, section.stop + 1]
-                    else:
-                        sections += [section.start, section.stop]
+                    sorted_section = sort_slice(section)
+                    sections += [sorted_section.start, sorted_section.stop]
+
         x_binning, y_binning = self.binning
         if len(x_detector_sections) == 0 or len(y_detector_sections) == 0:
             raise ValueError('No Valid Detector Sections')
