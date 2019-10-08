@@ -169,20 +169,14 @@ class CCDData(Data):
         return self.detector_section.overlap(detector_section)
 
     def get_data_section(self, region):
-        """Given a detector region, figure out the corresponding array slice"""
-        start = region.x_slice.start // self.binning[0] + self.detector_section.x_slice.start//self.binning[0] - self._data_section.x_slice.start
-        stop = None if region.x_slice.stop is None else region.x_slice.stop // self.binning[0] - self.detector_section.x_slice.start//self.binning[0] + self._data_section.x_slice.start
-        if stop is None or stop <= 1:
-            stop = None
-        x_slice = slice(start, stop, region.x_slice.step)
+        """Given a detector region, figure out the corresponding array slice
+        datasec must be 1:N"""
+        x_start = (region.x_start - 1 + self.detector_section.x_start - 1) // self.binning[0] + 1 + self._data_section.x_start - 1
+        x_stop = (region.x_stop - 1 - self.detector_section.x_start + 1) // self.binning[0] + 1 + self._data_section.x_start - 1
+        y_start = (region.y_start - 1 + self.detector_section.y_start - 1) // self.binning[1] + 1 + self._data_section.y_start - 1
+        y_stop = (region.y_stop - 1 - self.detector_section.y_start + 1) // self.binning[1] + 1 + self._data_section.y_start - 1
 
-        start = region.y_slice.start // self.binning[1] + self.detector_section.y_slice.start//self.binning[1] - self._data_section.y_slice.start
-        stop = None if region.y_slice.stop is None else region.y_slice.stop // self.binning[1] - self.detector_section.y_slice.start//self.binning[1] + self._data_section.y_slice.start
-        if stop is None or stop <= 1:
-            stop = None
-        y_slice = slice(start, stop, region.y_slice.step)
-
-        return Section(x_slice, y_slice)
+        return Section(x_start, x_stop, y_start, y_stop)
 
     def get_detector_region(self, section):
         """Given a data region, get the detector section that this covers.
@@ -209,15 +203,29 @@ class CCDData(Data):
 
 
 class Section:
-    def __init__(self, x_slice, y_slice):
-        self.x_slice = x_slice
-        self.y_slice = y_slice
+    def __init__(self, x_start, x_stop, y_start, y_stop):
+        """
+        All 1 indexed inclusive (ala IRAF)
+        :param x_start:
+        :param x_stop:
+        :param y_start:
+        :param y_stop:
+        """
+        self.x_start = x_start
+        self.x_stop = x_stop
+        self.y_start = y_start
+        self.y_stop = y_stop
 
     def to_slice(self):
-        return self.y_slice, self.x_slice
+        pass
 
     def overlap(self, section):
-        return Section(slice_overlap(self.x_slice, section.x_slice), slice_overlap(self.y_slice, section.y_slice))
+        return Section(max(min(section.x_start, section.x_stop), min(self.detector_section.x_start, self.detector_section.x_stop)),
+                       min(max(section.x_start, section.x_stop), max(self.detector_section.x_start, self.detector_section.x_stop)),
+                       max(min(section.y_start, section.y_stop),
+                           min(self.detector_section.y_start, self.detector_section.y_stop)),
+                       min(max(section.y_start, section.y_stop),
+                           max(self.detector_section.y_start, self.detector_section.y_stop)))
 
     @classmethod
     def parse_region_keyword(cls, keyword_value):
@@ -235,24 +243,12 @@ class Section:
         else:
             # Strip off the brackets and split the coordinates
             pixel_sections = keyword_value[1:-1].split(',')
-            x_slice = fits_utils.split_region_keyword(pixel_sections[0])
-            y_slice = fits_utils.split_region_keyword(pixel_sections[1])
-        return cls(x_slice, y_slice)
+            x_start, x_stop = pixel_sections[0].split(':')
+            y_start, y_stop = pixel_sections[1].split(':')
+        return cls(int(x_start), int(x_stop), int(y_start), int(y_stop))
 
     def to_region_keyword(self):
-        if self.x_slice.stop is None:
-            x_stop = 1
-        else:
-            x_stop = self.x_slice.stop + 1 if self.x_slice.start > self.x_slice.stop else self.x_slice.stop
-
-        if self.y_slice.stop is None:
-            y_stop = 1
-        else:
-            y_stop = self.y_slice.stop + 1 if self.y_slice.start > self.y_slice.stop else self.y_slice.stop
-        return f'[{self.x_slice.start + 1}:' \
-               f'{x_stop},' \
-               f'{self.y_slice.start + 1}:' \
-               f'{y_stop}]'
+        return f'[{self.x_start}:{self.x_stop},{self.y_start}:{self.y_stop}]'
 
 
 class Image(CCDData):

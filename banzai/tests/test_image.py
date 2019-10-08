@@ -103,6 +103,69 @@ def test_get_data_section_with_binning():
     assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
 
 
+def test_get_data_section_with_binning_small_2():
+    nx = 1024
+    ny = 1024
+    datasec = '[1:1024,1:1024]'
+    detsec = '[1:2048,1:2048]'
+    test_image = CCDData(np.zeros((ny, nx)), {'CCDSUM': '2 2'})
+    test_image._data_section = Section.parse_region_keyword(datasec)
+    test_image.detector_section = Section.parse_region_keyword(detsec)
+
+    requested_detsec = '[5:14,1:2048]'
+    expected_datasec = '[3:7,1:1024]'
+
+    requested_detsec = Section.parse_region_keyword(requested_detsec)
+    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+
+
+def test_get_data_section_with_binning_small_3():
+    nx = 1024
+    ny = 1024
+    datasec = '[1:1024,1:1024]'
+    detsec = '[1:3072,1:3072]'
+    test_image = CCDData(np.zeros((ny, nx)), {'CCDSUM': '3 3'})
+    test_image._data_section = Section.parse_region_keyword(datasec)
+    test_image.detector_section = Section.parse_region_keyword(detsec)
+
+    requested_detsec = '[7:12,1:3072]'
+    expected_datasec = '[3:4,1:1024]'
+
+    requested_detsec = Section.parse_region_keyword(requested_detsec)
+    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+
+
+def test_get_data_section_offset_datasec():
+    nx = 1048
+    ny = 1048
+    datasec = '[25:1048,25:1048]'
+    detsec = '[1:1024,1:1024]'
+    test_image = CCDData(np.zeros((ny, nx)), {'CCDSUM': '1 1'})
+    test_image._data_section = Section.parse_region_keyword(datasec)
+    test_image.detector_section = Section.parse_region_keyword(detsec)
+
+    requested_detsec = '[1:1024,1:1024]'
+    expected_datasec = '[25:1048,25:1048]'
+
+    requested_detsec = Section.parse_region_keyword(requested_detsec)
+    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+
+
+def test_get_data_section_offset_datasec_with_binning():
+    nx = 1048
+    ny = 1048
+    datasec = '[25:1048,25:1048]'
+    detsec = '[1:2048,1:2048]'
+    test_image = CCDData(np.zeros((ny, nx)), {'CCDSUM': '2 2'})
+    test_image._data_section = Section.parse_region_keyword(datasec)
+    test_image.detector_section = Section.parse_region_keyword(detsec)
+
+    requested_detsec = '[1:2048,1:2048]'
+    expected_datasec = '[25:1048,25:1048]'
+
+    requested_detsec = Section.parse_region_keyword(requested_detsec)
+    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+
 def test_get_data_section_flipped():
     nx = 1024
     ny = 1024
@@ -118,55 +181,20 @@ def test_get_data_section_flipped():
     requested_detsec = Section.parse_region_keyword(requested_detsec)
     assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
 
-
-def test_get_data_section_flipped_both():
+def test_get_data_section_with_binning_small_3_flipped():
     nx = 1024
     ny = 1024
-    datasec = '[1024:1,1024:1]'
-    detsec = '[1024:1,1024:1]'
-    test_image = CCDData(np.zeros((ny, nx)), {})
+    datasec = '[1:1024,1:1024]'
+    detsec = '[1:3072,1:3072]'
+    test_image = CCDData(np.zeros((ny, nx)), {'CCDSUM': '3 3'})
     test_image._data_section = Section.parse_region_keyword(datasec)
     test_image.detector_section = Section.parse_region_keyword(detsec)
 
-    requested_detsec = '[1024:1,1024:1]'
-    expected_datasec = '[1024:1,1024:1]'
+    requested_detsec = '[12:7,1:3072]'
+    expected_datasec = '[4:3,1:1024]'
 
     requested_detsec = Section.parse_region_keyword(requested_detsec)
     assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
-
-def test_get_data_section_with_binning_offset_datasec():
-    nx = 1048
-    ny = 1048
-    datasec = '[25:1048,25:1048]'
-    detsec = '[1:2048,1:2048]'
-    test_image = CCDData(np.zeros((ny, nx)), {'CCDSUM': '2 2'})
-    test_image._data_section = Section.parse_region_keyword(datasec)
-    test_image.detector_section = Section.parse_region_keyword(detsec)
-
-    requested_detsec = '[1:2048,1:2048]'
-    expected_datasec = '[25:1048,25:1048]'
-
-    requested_detsec = Section.parse_region_keyword(requested_detsec)
-    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
-#
-#     nx = 1080
-#     ny = 1080
-#     datasec = '[10:1058,5:1053]'
-#     detsec = '[1:1048,1:1048]'
-#     test_image = CCDData(np.zeros((ny, nx)), {})
-#     test_image._data_section = Section.parse_region_keyword(datasec)
-#     test_image.detector_section = Section.parse_region_keyword(detsec)
-#
-#     requested_detsec = '[10:100,15:150]'
-#     expected_datasec = '[20:110,20:155]'
-#
-#     requested_detsec = Section.parse_region_keyword(requested_detsec)
-#     assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
-# # def test_null_filename():
-#     test_image = Image(FakeContext(), filename=None)
-#     assert test_image.data is None
-
-
 # def test_3d_is_3d():
 #     test_image = FakeImage(n_amps=4)
 #     assert test_image.data_is_3d()
