@@ -6,9 +6,9 @@ from astropy.io import fits
 # from banzai.images import Image, DataTable, regenerate_data_table_from_fits_hdu_list
 # from banzai.tests.utils import FakeContext, FakeImage
 
-from banzai.images import CCDData, LCOObservationFrame
+from banzai.images import CCDData, Section
 from banzai.tests.utils import FakeCCDData, FakeLCOObservationFrame, FakeContext
-
+from banzai.utils import fits_utils
 
 # @pytest.fixture(scope='module')
 # def set_random_seed():
@@ -33,13 +33,13 @@ def test_subtract():
     assert test_data.uncertainty == 5
 
 
-def test_trim():
-    test_data = FakeCCDData(nx=1000, ny=1000, meta={'TRIMSEC': '[1:950, 1:945]'})
-    test_data.trim()
-
-    assert test_data.data.shape == (945, 950)
-    assert test_data.mask.shape == (945, 950)
-    assert test_data.uncertainty.shape == (945, 950)
+# def test_trim():
+#     test_data = FakeCCDData(nx=1000, ny=1000, meta={'TRIMSEC': '[1:950, 1:945]'})
+#     test_data.trim()
+#
+#     assert test_data.data.shape == (945, 950)
+#     assert test_data.mask.shape == (945, 950)
+#     assert test_data.uncertainty.shape == (945, 950)
 
 
 def test_init_poisson_uncertainties():
@@ -59,10 +59,10 @@ def test_get_output_filename():
 
 def test_get_mosaic_size():
     detsecs = [['[1:100,1:100]', '[1:100,200:101]', '[200:101,1:100]', '[200:101,200:101]'],
-            ['[1:200,400:201]', '[1:200,1:200]', '[400:201,400:201]', '[400:201,1:200]'],
-            ['[600:301,600:301]', '[600:301,1:300]', '[1:300,1:300]', '[1:300,600:301]'],
-            ['[800:401,1:400]', '[800:401,800:401]', '[1:400,800:401]', '[1:400,1:400]'],
-            ['[800:401,1:400]', None, '[1:400,800:401]', '[1:400,1:400]']]
+               ['[1:200,400:201]', '[1:200,1:200]', '[400:201,400:201]', '[400:201,1:200]'],
+               ['[600:301,600:301]', '[600:301,1:300]', '[1:300,1:300]', '[1:300,600:301]'],
+               ['[800:401,1:400]', '[800:401,800:401]', '[1:400,800:401]', '[1:400,1:400]'],
+               ['[800:401,1:400]', None, '[1:400,800:401]', '[1:400,1:400]']]
     expected_mosaic_sizes = [(200, 200), (400, 400), (600, 600), (800, 800), (800, 800)]
 
     for idx, detsec in enumerate(detsecs):
@@ -71,7 +71,98 @@ def test_get_mosaic_size():
         assert test_frame.get_mosaic_size() == expected_mosaic_sizes[idx]
 
 
-# def test_null_filename():
+def test_get_data_section():
+    nx = 1024
+    ny = 1024
+    datasec = '[1:1024,1:1024]'
+    detsec = '[1:1024,1:1024]'
+    test_image = CCDData(np.zeros((ny, nx)), {})
+    test_image._data_section = Section.parse_region_keyword(datasec)
+    test_image.detector_section = Section.parse_region_keyword(detsec)
+
+    requested_detsec = '[1:1024,1:1024]'
+    expected_datasec = '[1:1024,1:1024]'
+
+    requested_detsec = Section.parse_region_keyword(requested_detsec)
+    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+
+
+def test_get_data_section_with_binning():
+    nx = 1024
+    ny = 1024
+    datasec = '[1:1024,1:1024]'
+    detsec = '[1:2048,1:2048]'
+    test_image = CCDData(np.zeros((ny, nx)), {'CCDSUM': '2 2'})
+    test_image._data_section = Section.parse_region_keyword(datasec)
+    test_image.detector_section = Section.parse_region_keyword(detsec)
+
+    requested_detsec = '[1:2048,1:2048]'
+    expected_datasec = '[1:1024,1:1024]'
+
+    requested_detsec = Section.parse_region_keyword(requested_detsec)
+    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+
+
+def test_get_data_section_flipped():
+    nx = 1024
+    ny = 1024
+    datasec = '[1:1024,1:1024]'
+    detsec = '[1024:1,1024:1]'
+    test_image = CCDData(np.zeros((ny, nx)), {})
+    test_image._data_section = Section.parse_region_keyword(datasec)
+    test_image.detector_section = Section.parse_region_keyword(detsec)
+
+    requested_detsec = '[1:1024,1:1024]'
+    expected_datasec = '[1024:1,1024:1]'
+
+    requested_detsec = Section.parse_region_keyword(requested_detsec)
+    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+
+
+def test_get_data_section_flipped_both():
+    nx = 1024
+    ny = 1024
+    datasec = '[1024:1,1024:1]'
+    detsec = '[1024:1,1024:1]'
+    test_image = CCDData(np.zeros((ny, nx)), {})
+    test_image._data_section = Section.parse_region_keyword(datasec)
+    test_image.detector_section = Section.parse_region_keyword(detsec)
+
+    requested_detsec = '[1024:1,1024:1]'
+    expected_datasec = '[1024:1,1024:1]'
+
+    requested_detsec = Section.parse_region_keyword(requested_detsec)
+    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+
+def test_get_data_section_with_binning_offset_datasec():
+    nx = 1048
+    ny = 1048
+    datasec = '[25:1048,25:1048]'
+    detsec = '[1:2048,1:2048]'
+    test_image = CCDData(np.zeros((ny, nx)), {'CCDSUM': '2 2'})
+    test_image._data_section = Section.parse_region_keyword(datasec)
+    test_image.detector_section = Section.parse_region_keyword(detsec)
+
+    requested_detsec = '[1:2048,1:2048]'
+    expected_datasec = '[25:1048,25:1048]'
+
+    requested_detsec = Section.parse_region_keyword(requested_detsec)
+    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+#
+#     nx = 1080
+#     ny = 1080
+#     datasec = '[10:1058,5:1053]'
+#     detsec = '[1:1048,1:1048]'
+#     test_image = CCDData(np.zeros((ny, nx)), {})
+#     test_image._data_section = Section.parse_region_keyword(datasec)
+#     test_image.detector_section = Section.parse_region_keyword(detsec)
+#
+#     requested_detsec = '[10:100,15:150]'
+#     expected_datasec = '[20:110,20:155]'
+#
+#     requested_detsec = Section.parse_region_keyword(requested_detsec)
+#     assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+# # def test_null_filename():
 #     test_image = Image(FakeContext(), filename=None)
 #     assert test_image.data is None
 

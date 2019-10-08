@@ -5,7 +5,7 @@ import numpy as np
 from astropy.io.fits import Header
 
 from banzai.stages import Stage
-from banzai.images import Image, CCDData, LCOObservationFrame
+from banzai.images import Image, CCDData, LCOImagingFrame
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
 logger = logging.getLogger('banzai')
@@ -39,7 +39,7 @@ class FakeCCDData(CCDData):
             setattr(self, keyword, kwargs[keyword])
 
 
-class FakeLCOObservationFrame(LCOObservationFrame):
+class FakeLCOObservationFrame(LCOImagingFrame):
     def __init__(self, hdu_list=None, file_path='/tmp/test_image.fits', instrument=None, epoch='20160101'):
         if hdu_list is None:
             self._hdus = [FakeCCDData()]

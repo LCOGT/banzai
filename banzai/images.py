@@ -4,7 +4,7 @@ import logging
 from banzai import dbs
 #from banzai.utils import date_utils, file_utils, fits_utils
 from banzai.utils import fits_utils
-from banzai.utils.array_utils import sort_slice
+from banzai.utils.array_utils import sort_slice, slice_overlap
 #from banzai import munge, settings
 import numpy as np
 from astropy.io import fits
@@ -138,7 +138,7 @@ class CCDData(Data):
 
     @property
     def binning(self):
-        return map(int, self.meta.get('CCDSUM', '1 1').split(' '))
+        return tuple(int(b) for b in self.meta.get('CCDSUM', '1 1').split(' '))
 
     @binning.setter
     def binning(self, value):
@@ -147,30 +147,42 @@ class CCDData(Data):
 
     @property
     def detector_section(self):
-        return fits_utils.parse_region_keyword(self.meta.get('DETSEC'))
+        return Section.parse_region_keyword(self.meta.get('DETSEC'))
 
     @detector_section.setter
     def detector_section(self, section):
-        self.meta['DETSEC'] = f'[{section[1].start + 1}:' \
-                              f'{section[1].stop + 1 if section[1].start > section[1].stop else section[1].stop},' \
-                              f'{section[0].start + 1}:' \
-                              f'{section[0].stop + 1 if section[0].start > section[0].stop else section[0].stop}]'
+        self.meta['DETSEC'] = section.to_region_keyword()
+
+    @property
+    def _data_section(self):
+        return Section.parse_region_keyword(self.meta.get('DATASEC'))
+
+    @_data_section.setter
+    def _data_section(self, section):
+        self.meta['DATASEC'] = section.to_region_keyword()
 
     def rebin(self, binning):
         pass
 
     def get_overlap(self, detector_section):
-        overlap_sections = []
-        for this_section, input_section in zip(self.detector_section, detector_section):
-            sorted_input = sort_slice(input_section)
-            sorted_section = sort_slice(this_section)
-            overlap_sections.append(slice(max(sorted_input.start, sorted_section.start),
-                                          min(sorted_input.stop, sorted_section.stop)))
-        return overlap_sections
+        # TODO: deal with binning
+        return self.detector_section.overlap(detector_section)
 
     def get_data_section(self, region):
         """Given a detector region, figure out the corresponding array slice"""
-        pass
+        start = region.x_slice.start // self.binning[0] + self.detector_section.x_slice.start//self.binning[0] - self._data_section.x_slice.start
+        stop = None if region.x_slice.stop is None else region.x_slice.stop // self.binning[0] - self.detector_section.x_slice.start//self.binning[0] + self._data_section.x_slice.start
+        if stop is None or stop <= 1:
+            stop = None
+        x_slice = slice(start, stop, region.x_slice.step)
+
+        start = region.y_slice.start // self.binning[1] + self.detector_section.y_slice.start//self.binning[1] - self._data_section.y_slice.start
+        stop = None if region.y_slice.stop is None else region.y_slice.stop // self.binning[1] - self.detector_section.y_slice.start//self.binning[1] + self._data_section.y_slice.start
+        if stop is None or stop <= 1:
+            stop = None
+        y_slice = slice(start, stop, region.y_slice.step)
+
+        return Section(x_slice, y_slice)
 
     def get_detector_region(self, section):
         """Given a data region, get the detector section that this covers.
@@ -191,21 +203,56 @@ class CCDData(Data):
         for array_name_to_copy in ['data', 'mask', 'uncertainty']:
             array_to_copy = getattr(data_to_copy, array_name_to_copy)
             getattr(self, array_to_copy)[self.get_data_section(overlap_section)].ravel()[:] = array_to_copy.ravel()[:]
-    #
-    #     @gain.setter
-    #     def gain(self, value):
-    #         self.meta['GAIN'] = value
-    #
-    #     @property
-    #     def saturate(self):
-    #         return self.meta['SATURATE']
-    #
-    #     @saturate.setter
-    #     def saturate(self, value):
-    #         self.meta['SATURATE'] = value
 
     def init_poisson_uncertainties(self):
         self.uncertainty += np.sqrt(np.abs(self.data))
+
+
+class Section:
+    def __init__(self, x_slice, y_slice):
+        self.x_slice = x_slice
+        self.y_slice = y_slice
+
+    def to_slice(self):
+        return self.y_slice, self.x_slice
+
+    def overlap(self, section):
+        return Section(slice_overlap(self.x_slice, section.x_slice), slice_overlap(self.y_slice, section.y_slice))
+
+    @classmethod
+    def parse_region_keyword(cls, keyword_value):
+        """
+        Convert a header keyword of the form [x1:x2],[y1:y2] into index slices
+        :param keyword_value: Header keyword string
+        :return: x, y index slices
+        """
+        if not keyword_value:
+            pixel_slices = None
+        elif keyword_value.lower() == 'unknown':
+            pixel_slices = None
+        elif keyword_value.lower() == 'n/a':
+            pixel_slices = None
+        else:
+            # Strip off the brackets and split the coordinates
+            pixel_sections = keyword_value[1:-1].split(',')
+            x_slice = fits_utils.split_region_keyword(pixel_sections[0])
+            y_slice = fits_utils.split_region_keyword(pixel_sections[1])
+        return cls(x_slice, y_slice)
+
+    def to_region_keyword(self):
+        if self.x_slice.stop is None:
+            x_stop = 1
+        else:
+            x_stop = self.x_slice.stop + 1 if self.x_slice.start > self.x_slice.stop else self.x_slice.stop
+
+        if self.y_slice.stop is None:
+            y_stop = 1
+        else:
+            y_stop = self.y_slice.stop + 1 if self.y_slice.start > self.y_slice.stop else self.y_slice.stop
+        return f'[{self.x_slice.start + 1}:' \
+               f'{x_stop},' \
+               f'{self.y_slice.start + 1}:' \
+               f'{y_stop}]'
 
 
 class Image(CCDData):

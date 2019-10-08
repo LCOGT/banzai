@@ -27,7 +27,7 @@ def sanitizeheader(header):
     return header
 
 
-def split_slice(pixel_section):
+def split_region_keyword(pixel_section):
     pixels = pixel_section.split(':')
     if int(pixels[1]) > int(pixels[0]):
         pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]), 1)
@@ -37,27 +37,6 @@ def split_slice(pixel_section):
         else:
             pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]) - 2, -1)
     return pixel_slice
-
-
-def parse_region_keyword(keyword_value):
-    """
-    Convert a header keyword of the form [x1:x2],[y1:y2] into index slices
-    :param keyword_value: Header keyword string
-    :return: x, y index slices
-    """
-    if not keyword_value:
-        pixel_slices = None
-    elif keyword_value.lower() == 'unknown':
-        pixel_slices = None
-    elif keyword_value.lower() == 'n/a':
-        pixel_slices = None
-    else:
-        # Strip off the brackets and split the coordinates
-        pixel_sections = keyword_value[1:-1].split(',')
-        x_slice = split_slice(pixel_sections[0])
-        y_slice = split_slice(pixel_sections[1])
-        pixel_slices = (y_slice, x_slice)
-    return pixel_slices
 
 
 def table_to_fits(table):

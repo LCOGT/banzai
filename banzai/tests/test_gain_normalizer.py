@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from banzai.gain import GainNormalizer, validate_gain
+from banzai.gain import GainNormalizer
 from banzai.tests.utils import FakeImage
 
 
