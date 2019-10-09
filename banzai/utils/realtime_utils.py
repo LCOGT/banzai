@@ -1,7 +1,7 @@
 import logging
 
 from banzai import dbs
-from banzai.utils import fits_utils, image_utils, file_utils
+from banzai.utils import file_utils
 
 logger = logging.getLogger('banzai')
 
@@ -42,22 +42,6 @@ def need_to_process_image(path, context):
     We only attempt to make images if the instrument is in the database and passes the given criteria.
     """
     logger.info("Checking if file needs to be processed", extra_tags={"filename": path})
-
-    if not (path.endswith('.fits') or path.endswith('.fits.fz')):
-        logger.warning("Filename does not have a .fits extension, stopping reduction", extra_tags={"filename": path})
-        return False
-
-    header = fits_utils.get_primary_header(path)
-    if not image_utils.image_can_be_processed(header, context, path):
-        return False
-
-    try:
-        instrument = dbs.get_instrument(header, db_address=context.db_address, configdb_address=context.CONFIGDB_URL)
-    except ValueError:
-        return False
-    if not context.ignore_schedulability and not instrument.schedulable:
-        logger.info('Image will not be processed because instrument is not schedulable', extra_tags={"filename": path})
-        return False
 
     # Get the image in db. If it doesn't exist add it.
     image = dbs.get_processed_image(path, db_address=context.db_address)

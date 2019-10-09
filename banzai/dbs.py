@@ -9,21 +9,17 @@ October 2015
 """
 import os.path
 import logging
-from glob import glob
 import datetime
 from dateutil.parser import parse
 
 import numpy as np
 import requests
-from sqlalchemy import create_engine, pool, desc, type_coerce, cast
+from sqlalchemy import create_engine, pool, type_coerce, cast
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
-
-from banzai.utils import date_utils, fits_utils
-
 
 INSTRUMENT_STATES_TO_REDUCE = ['SCHEDULABLE', 'STANDBY']
 
@@ -118,23 +114,6 @@ class ProcessedImage(Base):
     tries = Column(Integer, default=0)
 
 
-def create_db(bpm_directory, db_address, configdb_address):
-    """
-    Create the database structure.
-
-    This only needs to be run once on initialization of the database.
-    """
-    # Create an engine for the database
-    engine = create_engine(db_address)
-
-    # Create all tables in the engine
-    # This only needs to be run once on initialization.
-    Base.metadata.create_all(engine)
-
-    populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
-    populate_calibration_table_with_bpms(bpm_directory, db_address=db_address, configdb_address=configdb_address)
-
-
 def parse_configdb(configdb_address):
     """
     Parse the contents of the configdb.
@@ -190,59 +169,24 @@ def remove_nres_duplicates(instruments):
             if (instrument['name'], instrument['camera']) not in instrument_dupe_attributes[:i]]
 
 
-def populate_instrument_tables(db_address, configdb_address):
-    """
-    Populate the instrument table
-
-    Parameters
-    ----------
-    db_address : str
-                 sqlalchemy address to the database of the form
-                 mysql://username:password@localhost/test
-
-    configdb_address : str
-                       URL of the configdb
-
-    Notes
-    -----
-    This only works inside the LCOGT VPN. This should be run at least when a new camera is
-    added to the network.
-    """
-
-    sites, instruments = parse_configdb(configdb_address=configdb_address)
-
+def add_instrument(instrument, db_address):
     with get_session(db_address=db_address) as db_session:
-        for site in sites:
-            add_or_update_record(db_session, Site, {'id': site['code']},
-                                 {'id': site['code'], 'timezone': site['timezone']})
+        equivalence_criteria = {'site': instrument['site'],
+                                'enclosure': instrument['enclosure'],
+                                'telescope': instrument['telescope'],
+                                'camera': instrument['camera'],
+                                'name': instrument['name']}
+        record_attributes = {'site': instrument['site'],
+                             'enclosure': instrument['enclosure'],
+                             'telescope': instrument['telescope'],
+                             'camera': instrument['camera'],
+                             'name': instrument['name'],
+                             'type': instrument['type'],
+                             'schedulable': instrument['schedulable']}
+
+        instrument_record = add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
         db_session.commit()
-
-        # Set all instruments in the table to be schedulable and turn them back on below as needed.
-        all_instruments = db_session.query(Instrument).all()
-        for instrument in all_instruments:
-            instrument.schedulable = False
-        db_session.commit()
-
-        for instrument in instruments:
-            add_instrument(instrument, db_session=db_session)
-
-
-def add_instrument(instrument, db_session):
-    equivalence_criteria = {'site': instrument['site'],
-                            'enclosure': instrument['enclosure'],
-                            'telescope': instrument['telescope'],
-                            'camera': instrument['camera'],
-                            'name': instrument['name']}
-    record_attributes = {'site': instrument['site'],
-                         'enclosure': instrument['enclosure'],
-                         'telescope': instrument['telescope'],
-                         'camera': instrument['camera'],
-                         'name': instrument['name'],
-                         'type': instrument['type'],
-                         'schedulable': instrument['schedulable']}
-
-    add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
-    db_session.commit()
+    return instrument_record
 
 
 def add_or_update_record(db_session, table_model, equivalence_criteria, record_attributes):
@@ -286,41 +230,6 @@ def add_or_update_record(db_session, table_model, equivalence_criteria, record_a
     return record
 
 
-def populate_calibration_table_with_bpms(directory, db_address, configdb_address):
-    with get_session(db_address=db_address) as db_session:
-        bpm_filenames = glob(os.path.join(directory, '*bpm*.fits*'))
-        for bpm_filename in bpm_filenames:
-
-            hdu = fits_utils.open_fits_file(bpm_filename)
-
-            header = hdu[0].header
-            ccdsum = header.get('CCDSUM')
-            configuration_mode = fits_utils.get_configuration_mode(header)
-
-            dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
-
-            try:
-                instrument = get_instrument(header, db_address=db_address, configdb_address=configdb_address)
-            except ValueError:
-                logger.error('Instrument is missing from database', extra_tags={'site': header['SITEID'],
-                                                                                'camera': header['INSTRUME']})
-                continue
-
-            bpm_attributes = {'type': 'BPM',
-                              'filename': os.path.basename(bpm_filename),
-                              'filepath': os.path.abspath(directory),
-                              'dateobs': dateobs,
-                              'datecreated': dateobs,
-                              'instrument_id': instrument.id,
-                              'is_master': True,
-                              'is_bad': False,
-                              'attributes': {'ccdsum': ccdsum, 'configuration_mode': configuration_mode}}
-
-            add_or_update_record(db_session, CalibrationImage, {'filename': bpm_attributes['filename']}, bpm_attributes)
-
-        db_session.commit()
-
-
 class SiteMissingException(Exception):
     pass
 
@@ -344,20 +253,6 @@ def query_for_instrument(db_address, site, camera, enclosure=None, telescope=Non
     return instrument
 
 
-def get_bpm_filename(instrument_id, ccdsum, db_address):
-    with get_session(db_address=db_address) as db_session:
-        criteria = (CalibrationImage.type == 'BPM', CalibrationImage.instrument_id == instrument_id,
-                    cast(CalibrationImage.attributes['ccdsum'], String) == type_coerce(ccdsum, JSON))
-        bpm_query = db_session.query(CalibrationImage).filter(*criteria)
-        bpm = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
-
-        if bpm is not None:
-            bpm_path = os.path.join(bpm.filepath, bpm.filename)
-        else:
-            bpm_path = None
-    return bpm_path
-
-
 def save_calibration_info(output_file, image, db_address):
     # Store the information into the calibration table
     # Check and see if the bias file is already in the database
@@ -372,8 +267,8 @@ def save_calibration_info(output_file, image, db_address):
                              'is_master': image.is_master,
                              'is_bad': image.is_bad,
                              'attributes': {}}
-        for attribute in image.attributes:
-            record_attributes['attributes'][attribute] = getattr(image, attribute)
+        for attribute in image.grouping_criteria:
+            record_attributes['attributes'][attribute] = str(getattr(image, attribute))
 
         add_or_update_record(db_session, CalibrationImage, {'filename': output_filename}, record_attributes)
 
@@ -493,4 +388,49 @@ def mark_frame(filename, mark_as, db_address):
         record_attributes = {'filename': filename,
                              'is_bad': set_is_bad_to}
         add_or_update_record(db_session, CalibrationImage, equivalence_criteria, record_attributes)
+        db_session.commit()
+
+
+def create_db(db_address):
+    # Create an engine for the database
+    engine = create_engine(db_address)
+
+    # Create all tables in the engine
+    # This only needs to be run once on initialization.
+    Base.metadata.create_all(engine)
+
+
+def populate_instrument_tables(db_address, configdb_address):
+    """
+    Populate the instrument table from the configdb
+
+    Parameters
+    ----------
+    db_address : str
+                 sqlalchemy address to the database of the form
+                 mysql://username:password@localhost/test
+
+    configdb_address : str
+                       URL of the configdb
+
+    Notes
+    -----
+    This only works inside the LCOGT VPN. This should be run at least when a new camera is
+    added to the network.
+    """
+    sites, instruments = parse_configdb(configdb_address=configdb_address)
+
+    with get_session(db_address=db_address) as db_session:
+        for site in sites:
+            add_or_update_record(db_session, Site, {'id': site['code']},
+                                 {'id': site['code'], 'timezone': site['timezone']})
+        db_session.commit()
+
+        added_instruments = [add_instrument(instrument, db_address) for instrument in instruments]
+
+        # Set all instruments in the table to be schedulable and turn them back on below as needed.
+        all_instruments = db_session.query(Instrument).all()
+        for instrument in all_instruments:
+            if instrument not in added_instruments:
+                instrument.schedulable = False
         db_session.commit()

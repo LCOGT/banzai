@@ -11,7 +11,7 @@ from dateutil.parser import parse
 from banzai import settings
 from types import ModuleType
 from banzai.celery import app, schedule_calibration_stacking
-from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
+from banzai.dbs import get_session, CalibrationImage, get_timezone, populate_instrument_tables
 from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates
@@ -156,11 +156,11 @@ def lake_side_effect(*args, **kwargs):
 @pytest.fixture(scope='module')
 @mock.patch('banzai.dbs.requests.get', return_value=FakeResponse(CONFIGDB_FILENAME))
 def init(configdb):
-    create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
+    os.system(f'banzai_create_db --db-address={os.environ["DB_ADDRESS"]}')
+    populate_instrument_tables(db_address=os.environ["DB_ADDRESS"], configdb_address='http://fakeconfigdb')
     for instrument in INSTRUMENTS:
-        populate_calibration_table_with_bpms(os.path.join(DATA_ROOT, instrument, 'bpm'),
-                                             db_address=os.environ['DB_ADDRESS'],
-                                             configdb_address='http://configdbdev.lco.gtn/sites/')
+        for bpm_filename in glob(os.path.join(DATA_ROOT, instrument, 'bpm/*bpm*')):
+            os.system(f'banzai_add_bpm --filename {bpm_filename} --db-address={os.environ["DB_ADDRESS"]}')
 
 
 @pytest.mark.e2e
