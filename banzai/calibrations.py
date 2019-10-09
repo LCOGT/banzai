@@ -5,11 +5,8 @@ import os
 import numpy as np
 
 from banzai.stages import Stage, MultiFrameStage
-from banzai import dbs, logs, settings
-from banzai.utils import image_utils, stats, qc, import_utils, stage_utils
-
-
-FRAME_CLASS = import_utils.import_attribute(settings.FRAME_CLASS)
+from banzai import dbs, logs
+from banzai.utils import stats, qc, import_utils, stage_utils
 
 logger = logging.getLogger('banzai')
 
@@ -19,7 +16,7 @@ class CalibrationMaker(MultiFrameStage):
         super(CalibrationMaker, self).__init__(runtime_context)
 
     def group_by_attributes(self):
-        return settings.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
+        return self.runtime_context.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
 
     @property
     @abc.abstractmethod
@@ -32,7 +29,7 @@ class CalibrationMaker(MultiFrameStage):
 
     def do_stage(self, images):
         try:
-            min_images = settings.CALIBRATION_MIN_FRAMES[self.calibration_type.upper()]
+            min_images = self.runtime_context.CALIBRATION_MIN_FRAMES[self.calibration_type.upper()]
         except KeyError:
             msg = 'The minimum number of frames required to create a master calibration of type ' \
                   '{calibration_type} has not been specified in the settings.'
@@ -74,7 +71,7 @@ class CalibrationUser(Stage):
 
     @property
     def master_selection_criteria(self):
-        return settings.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
+        return self.runtime_context.CALIBRATION_SET_CRITERIA.get(self.calibration_type.upper(), [])
 
     @property
     @abc.abstractmethod
@@ -94,7 +91,10 @@ class CalibrationUser(Stage):
         if master_calibration_filename is None:
             return self.on_missing_master_calibration(image)
 
-        master_calibration_image = FRAME_CLASS.open(self.runtime_context, filename=master_calibration_filename)
+        frame_factory = import_utils.import_attribute(self.runtime_context.FRAME_FACTORY)
+
+        master_calibration_image = frame_factory.open(master_calibration_filename, self.runtime_context)
+        master_calibration_image.is_master = True
         logger.info('Applying master calibration', image=image,
                     extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
         return self.apply_master_calibration(image, master_calibration_image)

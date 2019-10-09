@@ -4,7 +4,7 @@ import logging
 from banzai import dbs
 #from banzai.utils import date_utils, file_utils, fits_utils
 from banzai.utils import fits_utils
-from banzai.utils.array_utils import sort_slice, slice_overlap
+from banzai.utils.array_utils import sort_slice
 #from banzai import munge, settings
 import numpy as np
 from astropy.io import fits
@@ -121,15 +121,14 @@ class CCDData(Data):
                 self.meta[keyword] = eval(status_value), comment
 
     def get_overscan_region(self):
-        return fits_utils.parse_region_keyword(self.meta.get('BIASSEC', 'N/A'))
+        return Section.parse_region_keyword(self.meta.get('BIASSEC', 'N/A'))
 
     def trim(self, trim_section=None):
         if trim_section is None:
-            trim_section = fits_utils.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
+            trim_section = Section.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
         trimmed_image = CCDData(self.data[trim_section], self.meta, self.mask[trim_section], self.name,
                                 uncertainty=self.uncertainty[trim_section])
         # TODO: update all section keywords, DATASEC, DETSEC, CCDSEC
-        trimmed_image.detector_section = self.get_detector_region(trim_section)
         return trimmed_image
 
     @property
@@ -138,7 +137,7 @@ class CCDData(Data):
 
     @property
     def binning(self):
-        return tuple(int(b) for b in self.meta.get('CCDSUM', '1 1').split(' '))
+        return [int(b) for b in self.meta.get('CCDSUM', '1 1').split(' ')]
 
     @binning.setter
     def binning(self, value):
@@ -162,19 +161,21 @@ class CCDData(Data):
         self.meta['DATASEC'] = section.to_region_keyword()
 
     def rebin(self, binning):
-        pass
+        # TODO: Implement me
+        return self
 
     def get_overlap(self, detector_section):
-        # TODO: deal with binning
         return self.detector_section.overlap(detector_section)
 
     def get_data_section(self, region):
         """Given a detector region, figure out the corresponding array slice
-        datasec must be 1:N"""
-        x_start = (region.x_start - 1 + self.detector_section.x_start - 1) // self.binning[0] + 1 + self._data_section.x_start - 1
-        x_stop = (region.x_stop - 1 - self.detector_section.x_start + 1) // self.binning[0] + 1 + self._data_section.x_start - 1
-        y_start = (region.y_start - 1 + self.detector_section.y_start - 1) // self.binning[1] + 1 + self._data_section.y_start - 1
-        y_stop = (region.y_stop - 1 - self.detector_section.y_start + 1) // self.binning[1] + 1 + self._data_section.y_start - 1
+        datasec must be increasing
+        Note the + and - 1 factors cancel
+        """
+        x_start = (region.x_start + self.detector_section.x_start - 2) // self.binning[0] + self._data_section.x_start
+        x_stop = (region.x_stop - self.detector_section.x_start) // self.binning[0] + self._data_section.x_start
+        y_start = (region.y_start + self.detector_section.y_start - 2) // self.binning[1] + self._data_section.y_start
+        y_stop = (region.y_stop - self.detector_section.y_start) // self.binning[1] + self._data_section.y_start
 
         return Section(x_start, x_stop, y_start, y_stop)
 
@@ -290,16 +291,11 @@ class Table(Data):
 
 
 class ObservationFrame(metaclass=abc.ABCMeta):
-    def __init__(self, hdu_list: list, file_path: str, runtime_context):
+    def __init__(self, hdu_list: list, file_path: str):
         self._hdus = hdu_list
         self._file_path = file_path
-        self.instrument = self._get_instrument(runtime_context)
         self.epoch = self.primary_hdu.meta.get('DAY-OBS')
-
-    @classmethod
-    @abc.abstractmethod
-    def open(cls, filename: str, runtime_context):
-        pass
+        self.instrument = None
 
     @property
     def primary_hdu(self):
@@ -344,8 +340,9 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def dateobs(self):
         pass
 
+    @property
     @abc.abstractmethod
-    def _get_instrument(self, context):
+    def datecreated(self):
         pass
 
     def write(self, runtime_context):
@@ -354,7 +351,6 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         # TODO: Add option to write to AWS
         with open(output_filename, 'wb') as f:
             self.to_fits(fpack=runtime_context.fpack).writeto(f, overwrite=True)
-        # TODO: make sure we save the DB info if we need to.
 
     def to_fits(self, fpack=False):
         hdu_list_to_write = fits.HDUList([])
@@ -373,10 +369,34 @@ class ObservationFrame(metaclass=abc.ABCMeta):
             x_binning, y_binning = hdu.binning
             x_binnings.append(x_binning)
             y_binnings.append(y_binning)
-        return min(x_binnings), min(y_binnings)
+        return [min(x_binnings), min(y_binnings)]
 
 
-class LCOObservationFrame(ObservationFrame, metaclass=abc.ABCMeta):
+class CalibrationFrame(ObservationFrame, metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def get_output_filename(self, runtime_context) -> str:
+        pass
+
+    def __init__(self, hdu_list: list, context):
+        super().__init__(hdu_list, context)
+        self.is_bad = False
+        self.grouping_criteria = []
+
+    @property
+    def is_master(self):
+        return self.meta.get('ISMASTER', False)
+
+    @is_master.setter
+    def is_master(self, value):
+        self.meta['ISMASTER'] = value
+
+    def write(self, runtime_context):
+        super().write(runtime_context)
+        # TODO: make sure we save the DB info if we need to.
+        dbs.save_calibration_info(self.get_output_filename(runtime_context), self, runtime_context.db_address)
+
+
+class LCOObservationFrame(ObservationFrame):
     # TODO: Set all status check keywords to bad if they are not already set
     # TODO: Add gain validation
     def get_output_filename(self, runtime_context):
@@ -389,42 +409,24 @@ class LCOObservationFrame(ObservationFrame, metaclass=abc.ABCMeta):
             output_filename += '.fz'
         return output_filename
 
-    def get_instrument(self):
-        pass
-
-    @classmethod
-    @abc.abstractmethod
-    def open(cls, filename: str, runtime_context):
-        pass
-
     @property
     def obstype(self):
         return self.primary_hdu.meta.get('OBSTYPE')
 
-    def _get_instrument(self, runtime_context):
-        site = self.meta.get('SITEID')
-        camera = self.meta.get('INSTRUME')
-        enclosure = self.meta.get('ENCID')
-        telescope = self.meta.get('TELID')
-        instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera,
-                                              enclosure=enclosure, telescope=telescope)
-        name = camera
-        if instrument is None:
-            # if instrument is missing, assume it is an NRES frame and check for the instrument again.
-            name = self.meta.get('TELESCOP')
-            instrument = dbs.query_for_instrument(runtime_context.db_address, site, camera,
-                                                  name=name, enclosure=None, telescope=None)
-        if instrument is None:
-            msg = 'Instrument is not in the database, Please add it before reducing this data.'
-            tags = {'site': site, 'enclosure': enclosure,
-                    'telescope': telescope, 'camera': camera, 'telescop': name}
-            logger.error(msg, extra_tags=tags)
-            raise ValueError('Instrument is missing from the database.')
-        return instrument
-
     @property
     def dateobs(self):
         return Time(self.primary_hdu.meta.get('DATE-OBS'), scale='utc').datetime
+
+    @property
+    def datecreated(self):
+        return Time(self.primary_hdu.meta.get('DATE'), scale='utc').datetime
+
+    @property
+    def configuration_mode(self):
+        mode = self.meta.get('CONFMODE', 'default')
+        if str(mode).lower() in ['n/a', '0', 'normal']:
+            mode = 'default'
+        return mode
 
     def get_mosaic_size(self):
         x_detector_sections = []
@@ -444,13 +446,44 @@ class LCOObservationFrame(ObservationFrame, metaclass=abc.ABCMeta):
         return nx, ny
 
 
-class LCOImagingFrame(LCOObservationFrame):
+class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
+    pass
+
+
+class LCOImageFactory:
     @classmethod
-    def open(cls, runtime_context, filename):
-        fits_hdu_list = fits_utils.open_fits_file(filename)
+    def open(cls, path, runtime_context):
+        fits_hdu_list = fits_utils.open_fits_file(path)
         hdu_list = [CCDData(data=hdu.data.astype(np.float32), meta=hdu.header, name=hdu.header.get('EXTNAME'))
                     if hdu.data is not None else HeaderOnly(meta=hdu.header) for hdu in fits_hdu_list]
-        return cls(hdu_list, os.path.basename(filename), runtime_context)
+        if hdu_list[0].meta.get('OBSTYPE') in runtime_context.CALIBRATION_IMAGE_TYPES:
+            image = LCOCalibrationFrame(hdu_list, os.path.basename(path))
+            image.grouping_criteria = runtime_context.CALIBRATION_SET_CRITERIA.get(image.obstype, [])
+        else:
+            image = LCOObservationFrame(hdu_list, os.path.basename(path))
+        image.instrument = cls._get_instrument(image, runtime_context.db_address)
+        return image
+
+    @classmethod
+    def _get_instrument(cls, image, db_address):
+        site = image.meta.get('SITEID')
+        camera = image.meta.get('INSTRUME')
+        enclosure = image.meta.get('ENCID')
+        telescope = image.meta.get('TELID')
+        instrument = dbs.query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+        name = camera
+        if instrument is None:
+            # if instrument is missing, assume it is an NRES frame and check for the instrument again.
+            name = image.meta.get('TELESCOP')
+            instrument = dbs.query_for_instrument(db_address, site, camera, name=name, enclosure=None, telescope=None)
+        if instrument is None:
+            msg = 'Instrument is not in the database, Please add it before reducing this data.'
+            tags = {'site': site, 'enclosure': enclosure,
+                    'telescope': telescope, 'camera': camera, 'telescop': name}
+            logger.error(msg, extra_tags=tags)
+            raise ValueError('Instrument is missing from the database.')
+        return instrument
+
 
 class DataTable:
     pass

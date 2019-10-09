@@ -17,7 +17,7 @@ from types import ModuleType
 
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
-from banzai.utils import image_utils, date_utils, fits_utils, stage_utils
+from banzai.utils import image_utils, date_utils, fits_utils, stage_utils, import_utils
 from banzai.celery import process_image, app
 from celery.schedules import crontab
 import celery
@@ -49,6 +49,13 @@ class RealtimeModeListener(ConsumerMixin):
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
+def add_settings_to_context(args, settings):
+    # Get all of the settings that are not builtins and store them in the context object
+    for setting in dir(settings):
+        if '__' != setting[:2] and not isinstance(getattr(settings, setting), ModuleType):
+            setattr(args, setting, getattr(settings, setting))
+
+
 def parse_args(extra_console_arguments=None, parser_description='Process LCO data.'):
     """Parse arguments, including default command line argument, and set the overall log level"""
 
@@ -64,6 +71,8 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
                         default=False)
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
+    parser.add_argument('--override-missing-calibrations', dest='override_missing', action='store_true', default=False,
+                        help='Continue processing a file even if a master calibration does not exist?')
     parser.add_argument('--rlevel', dest='reduction_level', default=91, type=int, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
@@ -76,9 +85,6 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
                         help='Elasticsearch document type for QC records')
     parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
                         help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
-    parser.add_argument('--ignore-schedulability', dest='ignore_schedulability',
-                        default=False, action='store_true',
-                        help='Relax requirement that the instrument be schedulable')
     parser.add_argument('--use-only-older-calibrations', dest='use_only_older_calibrations', default=False,
                         action='store_true', help='Only use calibrations that were created before the start of the block')
     parser.add_argument('--preview-mode', dest='preview_mode', default=False, action='store_true',
@@ -96,11 +102,7 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
 
     logs.set_log_level(args.log_level)
 
-    # Get all of the settings that are not builtins and store them in the context object
-    for setting in dir(settings):
-        if '__' != setting[:2] and not isinstance(getattr(settings, setting), ModuleType):
-            setattr(args, setting, getattr(settings, setting))
-
+    add_settings_to_context(args, settings)
     return Context(args)
 
 
@@ -176,12 +178,6 @@ def run_realtime_pipeline():
     # Need to keep the amqp logger level at least as high as INFO,
     # or else it send heartbeat check messages every second
     logging.getLogger('amqp').setLevel(max(logger.level, getattr(logging, 'INFO')))
-
-    try:
-        dbs.populate_instrument_tables(db_address=runtime_context.db_address)
-    except Exception:
-        logger.error('Could not connect to the configdb: {error}'.format(error=logs.format_exception()))
-
     logger.info('Starting pipeline listener')
 
     fits_exchange = Exchange('fits_files', type='fanout')
@@ -239,8 +235,7 @@ def add_instrument():
                   'type': args.camera_type,
                   'schedulable': args.schedulable,
                   'name': args.name}
-    with dbs.get_session(db_address=args.db_address) as db_session:
-        dbs.add_instrument(instrument, db_session)
+    dbs.add_instrument(instrument, args.db_address)
 
 
 def mark_frame_as_good():
@@ -257,6 +252,9 @@ def update_db():
 
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
+    parser.add_argument('--configdb-address', dest='configdb_address',
+                        default='http://configdb.lco.gtn/sites/',
+                        help='URL of the configdb with instrument information')
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
@@ -264,6 +262,44 @@ def update_db():
     logs.set_log_level(args.log_level)
 
     try:
-        dbs.populate_instrument_tables(db_address=args.db_address)
+        dbs.populate_instrument_tables(db_address=args.db_address, configdb_address=args.configdb_address)
     except Exception:
         logger.error('Could not populate instruments table: {error}'.format(error=logs.format_exception()))
+
+
+def add_bpm():
+    parser = argparse.ArgumentParser(description="Query the configdb to ensure that the instruments table"
+                                                 "has the most up-to-date information")
+    parser.add_argument('--filename', help='Full path to Bad Pixel Mask file')
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
+    parser.add_argument('--db-address', dest='db_address',
+                        default='mysql://cmccully:password@localhost/test',
+                        help='Database address: Should be in SQLAlchemy form')
+    args = parser.parse_args()
+    add_settings_to_context(args, settings)
+    logs.set_log_level(args.log_level)
+    frame_factory = import_utils.import_attribute(settings.FRAME_FACTORY)
+    bpm_image = frame_factory.open(args.filename, args)
+    bpm_image.is_master = True
+    dbs.save_calibration_info(args.filename, bpm_image, args.db_address)
+
+
+def create_db():
+    """
+    Create the database structure.
+
+    This only needs to be run once on initialization of the database.
+    """
+    parser = argparse.ArgumentParser("Create the database.\n\n"
+                                     "This only needs to be run once on initialization of the database.")
+
+    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
+                                                                 'critical', 'fatal', 'error'])
+    parser.add_argument('--db-address', dest='db_address',
+                        default='sqlite3:///test.db',
+                        help='Database address: Should be in SQLAlchemy form')
+    args = parser.parse_args()
+    logs.set_log_level(args.log_level)
+
+    dbs.create_db(args.db_address)

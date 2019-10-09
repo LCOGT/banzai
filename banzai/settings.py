@@ -10,7 +10,7 @@ import os
 
 FRAME_SELECTION_CRITERIA = [('type', 'not contains', 'FLOYDS'), ('type', 'not contains', 'NRES')]
 
-FRAME_CLASS = 'banzai.images.LCOImagingFrame'
+FRAME_FACTORY = 'banzai.images.LCOImageFactory'
 
 # ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
 #                   #'banzai.bpm.SaturatedPixelFlagger',
@@ -29,7 +29,7 @@ FRAME_CLASS = 'banzai.images.LCOImagingFrame'
 #                   #'banzai.photometry.SourceDetector',
 #                   #'banzai.astrometry.WCSSolver',
 #                   #'banzai.qc.pointing.PointingTest']
-ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader'
+ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   'banzai.bias.OverscanSubtractor',
                   'banzai.gain.GainNormalizer',
                   'banzai.mosaic.MosaicCreator',
@@ -40,9 +40,10 @@ CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,
                           'SKYFLAT': 5}
 
-CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'ccdsum'],
-                            'DARK': ['configuration_mode', 'ccdsum'],
-                            'SKYFLAT': ['configuration_mode', 'ccdsum', 'filter']}
+CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'binning'],
+                            'DARK': ['configuration_mode', 'binning'],
+                            'SKYFLAT': ['configuration_mode', 'binning', 'filter'],
+                            'BPM': ['configuration_mode', 'binning']}
 
 LAST_STAGE = {'BIAS': None, #'banzai.trim.Trimmer',
               'DARK': 'banzai.bias.BiasSubtractor', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
@@ -58,7 +59,7 @@ CALIBRATION_STACKER_STAGES = {'BIAS': ['banzai.bias.BiasMaker'],
                               'DARK': ['banzai.dark.DarkMaker'],
                               'SKYFLAT': ['banzai.flats.FlatMaker']}
 
-CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT']
+CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'BPM']
 
 # Stack delays are expressed in seconds--namely, each is five minutes
 CALIBRATION_STACK_DELAYS = {'BIAS': 300,

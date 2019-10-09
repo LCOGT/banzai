@@ -2,6 +2,7 @@ import os
 
 import mock
 
+import banzai.main
 from banzai import dbs
 from banzai.tests.utils import FakeResponse
 from astropy.utils.data import get_pkg_data_filename
@@ -10,7 +11,7 @@ from astropy.utils.data import get_pkg_data_filename
 @mock.patch('banzai.dbs.requests.get', return_value=FakeResponse(get_pkg_data_filename('data/configdb_example.json',
                                                                                        'banzai.tests')))
 def setup_module(mockrequests):
-    dbs.create_db('.', db_address='sqlite:///test.db')
+    banzai.main.create_db('.', db_address='sqlite:///test.db')
 
 
 def teardown_module():
