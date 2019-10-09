@@ -57,20 +57,6 @@ def test_get_output_filename():
     assert filename == '/tmp/cpt/fa16/20160101/processed/test_image_91.fits.fz'
 
 
-def test_get_mosaic_size():
-    detsecs = [['[1:100,1:100]', '[1:100,200:101]', '[200:101,1:100]', '[200:101,200:101]'],
-               ['[1:200,400:201]', '[1:200,1:200]', '[400:201,400:201]', '[400:201,1:200]'],
-               ['[600:301,600:301]', '[600:301,1:300]', '[1:300,1:300]', '[1:300,600:301]'],
-               ['[800:401,1:400]', '[800:401,800:401]', '[1:400,800:401]', '[1:400,1:400]'],
-               ['[800:401,1:400]', None, '[1:400,800:401]', '[1:400,1:400]']]
-    expected_mosaic_sizes = [(200, 200), (400, 400), (600, 600), (800, 800), (800, 800)]
-
-    for idx, detsec in enumerate(detsecs):
-        test_data = [FakeCCDData(meta={'CCDSUM': '1 1', 'DETSEC': detsec[amp]}) for amp in range(0, len(detsec))]
-        test_frame = FakeLCOObservationFrame(hdu_list=test_data)
-        assert test_frame.get_mosaic_size() == expected_mosaic_sizes[idx]
-
-
 def test_get_data_section():
     nx = 1024
     ny = 1024
