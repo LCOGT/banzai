@@ -217,8 +217,35 @@ class Section:
         self.y_start = y_start
         self.y_stop = y_stop
 
+
     def to_slice(self):
-        pass
+        """
+        Return a numpy-compatible pixel section
+        """
+        if None in [self.x_start, self.x_stop, self.y_start, self.y_stop]:
+            return None
+        else:
+            y_slice = self._split_section(self.y_start, self.y_stop)
+            x_slice = self._split_section(self.x_start, self.x_stop)
+
+        return (y_slice, x_slice)
+        
+    
+    def _split_section(self, start, stop):
+        """
+        Given a start and stop pixel in IRAF coordinates, convert to a 
+        numpy-compatible slice.
+        """
+        if stop > start:
+            pixel_slice = slice(start - 1, stop, 1)
+        else:
+            if stop == 1:
+                pixel_slice = slice(start - 1, None, -1)
+            else:
+                pixel_slice = slice(start - 1, stop - 2, -1)
+        
+        return pixel_slice
+
 
     def overlap(self, section):
         return Section(max(min(section.x_start, section.x_stop), min(self.detector_section.x_start, self.detector_section.x_stop)),
@@ -228,19 +255,21 @@ class Section:
                        min(max(section.y_start, section.y_stop),
                            max(self.detector_section.y_start, self.detector_section.y_stop)))
 
+
+
     @classmethod
     def parse_region_keyword(cls, keyword_value):
         """
-        Convert a header keyword of the form [x1:x2],[y1:y2] into index slices
+        Convert a header keyword of the form [x1:x2],[y1:y2] into a Section object
         :param keyword_value: Header keyword string
         :return: x, y index slices
         """
         if not keyword_value:
-            pixel_slices = None
+            return cls(None, None, None, None)
         elif keyword_value.lower() == 'unknown':
-            pixel_slices = None
+            return cls(None, None, None, None)
         elif keyword_value.lower() == 'n/a':
-            pixel_slices = None
+            return cls(None, None, None, None)
         else:
             # Strip off the brackets and split the coordinates
             pixel_sections = keyword_value[1:-1].split(',')
@@ -248,8 +277,10 @@ class Section:
             y_start, y_stop = pixel_sections[1].split(':')
         return cls(int(x_start), int(x_stop), int(y_start), int(y_stop))
 
+
     def to_region_keyword(self):
         return f'[{self.x_start}:{self.x_stop},{self.y_start}:{self.y_stop}]'
+
 
 
 class Image(CCDData):
@@ -401,7 +432,7 @@ class LCOObservationFrame(ObservationFrame):
         x_detector_sections = []
         y_detector_sections = []
         for hdu in self.ccd_hdus:
-            detector_section = Section.parse_region_keyword(hdu.meta.get('DETSEC', 'N/A'))
+            detector_section = Section.parse_region_keyword(hdu.meta.get('DETSEC', 'N/A')).to_slice()
             if detector_section is not None:
                 for section, sections in zip(detector_section, [y_detector_sections, x_detector_sections]):
                     sorted_section = sort_slice(section)
