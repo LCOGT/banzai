@@ -46,7 +46,8 @@ class OverscanSubtractor(Stage):
         for data in image.ccd_hdus:
             overscan_section = data.get_overscan_region()
             if overscan_section is not None:
-                data.subtract(stats.robust_standard_deviation(data.data[overscan_section], 3), kind='overscan')
+                data.subtract(stats.sigma_clipped_mean(data.data[overscan_section.to_slice()], 3),
+                              kind='overscan')
         return image
 
 

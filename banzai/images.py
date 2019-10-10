@@ -4,7 +4,6 @@ import logging
 from banzai import dbs
 #from banzai.utils import date_utils, file_utils, fits_utils
 from banzai.utils import fits_utils
-from banzai.utils.array_utils import sort_slice
 #from banzai import munge, settings
 import numpy as np
 from astropy.io import fits
@@ -98,6 +97,12 @@ class CCDData(Data):
         """
         pass
 
+    def __imul__(self, value):
+        self.data *= value
+        self.meta['SATURATE'] *= value
+        self.meta['GAIN'] *= value
+        self.meta['MAXLIN'] *= value
+
     def to_fits(self):
         data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta))
         extension_name = self.meta.get('EXTNAME').replace('SCI', '')
@@ -117,7 +122,7 @@ class CCDData(Data):
         if uncertainty is not None:
             self.uncertainty = np.sqrt(uncertainty * uncertainty + self.uncertainty * self.uncertainty)
         if kind is not None:
-            for keyword, (status_value, comment) in self.STATUS_KEYWORDS.items():
+            for keyword, (status_value, comment) in self.STATUS_KEYWORDS[kind].items():
                 self.meta[keyword] = eval(status_value), comment
 
     def get_overscan_region(self):
@@ -126,8 +131,9 @@ class CCDData(Data):
     def trim(self, trim_section=None):
         if trim_section is None:
             trim_section = Section.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
-        trimmed_image = CCDData(self.data[trim_section], self.meta, self.mask[trim_section], self.name,
-                                uncertainty=self.uncertainty[trim_section])
+        trimmed_image = CCDData(self.data[trim_section.to_slice()], self.meta,
+                                self.mask[trim_section.to_slice()], self.name,
+                                uncertainty=self.uncertainty[trim_section.to_slice()])
         # TODO: update all section keywords, DATASEC, DETSEC, CCDSEC
         return trimmed_image
 
@@ -192,12 +198,15 @@ class CCDData(Data):
         :return:
         """
         overlap_section = self.get_overlap(data.detector_section)
+        logger.error(f'{overlap_section.to_region_keyword()}')
         data_to_copy = data.trim(data.get_data_section(overlap_section))
+        logger.error(f'{data.get_data_section(overlap_section).to_region_keyword()}')
         data_to_copy = data_to_copy.rebin(self.binning)
-
+        logger.error(f'{data_to_copy.data.shape}')
         for array_name_to_copy in ['data', 'mask', 'uncertainty']:
             array_to_copy = getattr(data_to_copy, array_name_to_copy)
-            getattr(self, array_to_copy)[self.get_data_section(overlap_section)].ravel()[:] = array_to_copy.ravel()[:]
+            my_overlap = self.get_data_section(overlap_section).to_slice()
+            getattr(self, array_name_to_copy)[my_overlap].ravel()[:] = array_to_copy.ravel()[:]
 
     def init_poisson_uncertainties(self):
         self.uncertainty += np.sqrt(np.abs(self.data))
@@ -217,21 +226,23 @@ class Section:
         self.y_start = y_start
         self.y_stop = y_stop
 
-
     def to_slice(self):
         """
         Return a numpy-compatible pixel section
         """
         if None in [self.x_start, self.x_stop, self.y_start, self.y_stop]:
             return None
-        else:
-            y_slice = self._split_section(self.y_start, self.y_stop)
-            x_slice = self._split_section(self.x_start, self.x_stop)
 
-        return (y_slice, x_slice)
-        
-    
-    def _split_section(self, start, stop):
+        y_slice = self._section_to_slice(self.y_start, self.y_stop)
+        x_slice = self._section_to_slice(self.x_start, self.x_stop)
+
+        return y_slice, x_slice
+
+    @property
+    def shape(self):
+        return np.abs(self.y_stop - self.y_start) + 1, np.abs(self.x_stop - self.x_start) + 1
+
+    def _section_to_slice(self, start, stop):
         """
         Given a start and stop pixel in IRAF coordinates, convert to a 
         numpy-compatible slice.
@@ -246,16 +257,11 @@ class Section:
         
         return pixel_slice
 
-
     def overlap(self, section):
-        return Section(max(min(section.x_start, section.x_stop), min(self.detector_section.x_start, self.detector_section.x_stop)),
-                       min(max(section.x_start, section.x_stop), max(self.detector_section.x_start, self.detector_section.x_stop)),
-                       max(min(section.y_start, section.y_stop),
-                           min(self.detector_section.y_start, self.detector_section.y_stop)),
-                       min(max(section.y_start, section.y_stop),
-                           max(self.detector_section.y_start, self.detector_section.y_stop)))
-
-
+        return Section(max(min(section.x_start, section.x_stop), min(self.x_start, self.x_stop)),
+                       min(max(section.x_start, section.x_stop), max(self.x_start, self.x_stop)),
+                       max(min(section.y_start, section.y_stop), min(self.y_start, self.y_stop)),
+                       min(max(section.y_start, section.y_stop), max(self.y_start, self.y_stop)))
 
     @classmethod
     def parse_region_keyword(cls, keyword_value):
@@ -276,7 +282,6 @@ class Section:
             x_start, x_stop = pixel_sections[0].split(':')
             y_start, y_stop = pixel_sections[1].split(':')
         return cls(int(x_start), int(x_stop), int(y_start), int(y_stop))
-
 
     def to_region_keyword(self):
         return f'[{self.x_start}:{self.x_stop},{self.y_start}:{self.y_stop}]'
@@ -344,6 +349,16 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def datecreated(self):
         pass
+
+    @property
+    def data_type(self):
+        # Convert bytes to bits
+        size = 8 * min([hdu.data.itemsize for hdu in self.ccd_hdus])
+        if 'f' in [hdu.data.dtype.kind for hdu in self.ccd_hdus]:
+            float_or_int = 'float'
+        else:
+            float_or_int = 'int'
+        return getattr(np, f'{float_or_int}{size}')
 
     def write(self, runtime_context):
         output_filename = self.get_output_filename(runtime_context)
@@ -428,22 +443,15 @@ class LCOObservationFrame(ObservationFrame):
             mode = 'default'
         return mode
 
-    def get_mosaic_size(self):
+    def get_mosaic_detector_region(self):
         x_detector_sections = []
         y_detector_sections = []
         for hdu in self.ccd_hdus:
-            detector_section = Section.parse_region_keyword(hdu.meta.get('DETSEC', 'N/A')).to_slice()
-            if detector_section is not None:
-                for section, sections in zip(detector_section, [y_detector_sections, x_detector_sections]):
-                    sorted_section = sort_slice(section)
-                    sections += [sorted_section.start, sorted_section.stop]
-
-        x_binning, y_binning = self.binning
-        if len(x_detector_sections) == 0 or len(y_detector_sections) == 0:
-            raise ValueError('No Valid Detector Sections')
-        nx = int(np.ceil((max(x_detector_sections) - min(x_detector_sections)) / float(x_binning)))
-        ny = int(np.ceil((max(y_detector_sections) - min(y_detector_sections)) / float(y_binning)))
-        return nx, ny
+            detector_section = Section.parse_region_keyword(hdu.meta.get('DETSEC', 'N/A'))
+            x_detector_sections += [detector_section.x_start, detector_section.x_stop]
+            y_detector_sections += [detector_section.y_start, detector_section.y_stop]
+        return Section(min(x_detector_sections), max(x_detector_sections),
+                       min(y_detector_sections), max(y_detector_sections))
 
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
@@ -452,7 +460,7 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
 
 class LCOImageFactory:
     @classmethod
-    def open(cls, path, runtime_context):
+    def open(cls, path, runtime_context) -> ObservationFrame:
         fits_hdu_list = fits_utils.open_fits_file(path)
         hdu_list = [CCDData(data=hdu.data.astype(np.float32), meta=hdu.header, name=hdu.header.get('EXTNAME'))
                     if hdu.data is not None else HeaderOnly(meta=hdu.header) for hdu in fits_hdu_list]
@@ -462,6 +470,12 @@ class LCOImageFactory:
         else:
             image = LCOObservationFrame(hdu_list, os.path.basename(path))
         image.instrument = cls._get_instrument(image, runtime_context.db_address)
+
+        # TODO: Put all munge code here
+        for hdu in image.ccd_hdus:
+            for keyword in ['SATURATE', 'MAXLIN']:
+                hdu.meta[keyword] = hdu.meta.get(keyword, image.primary_hdu.meta[keyword])
+
         return image
 
     @classmethod

@@ -12,10 +12,13 @@ class MosaicCreator(Stage):
 
     def do_stage(self, image):
         logger.info('Mosaicing image', image=image)
-        nx, ny = image.get_mosaic_size()
-        mosaiced_data = CCDData(data=np.zeros(ny, nx), meta=image.primary_hdu.meta)
+        mosaiced_detector_region = image.get_mosaic_detector_region()
+        binned_shape = [length // binning for length, binning in zip(mosaiced_detector_region.shape, image.binning)]
+        mosaiced_data = CCDData(data=np.zeros(binned_shape, dtype=image.data_type),
+                                meta=image.primary_hdu.meta)
         mosaiced_data.binning = image.binning
-        for data in image.image_extensions:
+        mosaiced_data.detector_section = mosaiced_detector_region
+        for data in image.ccd_hdus:
             mosaiced_data.copy_in(data)
             image.remove(data)
         image.primary_hdu = mosaiced_data
