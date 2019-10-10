@@ -10,7 +10,7 @@ class Trimmer(Stage):
 
     def do_stage(self, image):
         logger.info('Trimming image', image=image)
-        for i, data in enumerate(image.ccd_hdus()):
+        for i, data in enumerate(image.ccd_hdus):
             trimmed_data = data.trim()
             image.insert(i, trimmed_data)
             image.remove(data)

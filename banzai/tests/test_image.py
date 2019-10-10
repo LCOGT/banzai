@@ -193,6 +193,24 @@ def test_get_data_section_2k_binned():
         detector_section = Section.parse_region_keyword(header['DETSEC'])
         assert test_data.get_data_section(detector_section).to_region_keyword() == header['DATASEC']
 
+
+def test_get_data_section_full():
+    cases = [{'DATASEC': '1:1024', 'DETSEC': '1:1024', 'request': '51:100', 'result': '51:100'},
+             {'DATASEC': '1:1024', 'DETSEC': '1:1024', 'request': '100:51', 'result': '100:51'},
+             {'DATASEC': '1024:1', 'DETSEC': '1024:1', 'request': '51:100', 'result': '51:100'},
+             {'DATASEC': '1024:1', 'DETSEC': '1024:1', 'request': '100:51', 'result': '100:51'},
+             {'DATASEC': '1:1024', 'DETSEC': '1024:1', 'request': '51:100', 'result': '974:925'},
+             {'DATASEC': '1:1024', 'DETSEC': '1024:1', 'request': '100:51', 'result': '925:974'},
+             {'DATASEC': '1024:1', 'DETSEC': '1:1024', 'request': '51:100', 'result': '974:925'},
+             {'DATASEC': '1024:1', 'DETSEC': '1:1024', 'request': '100:51', 'result': '925:974'}]
+    for y_case in cases:
+        for x_case in cases:
+            test_data = CCDData(np.zeros((1024, 1024)), meta={'DATASEC': f'[{x_case["DATASEC"]},{y_case["DATASEC"]}]',
+                                                              'DETSEC': f'[{x_case["DETSEC"]},{y_case["DETSEC"]}]',
+                                                              'CCDSUM': '1 1'})
+            requested_section = Section.parse_region_keyword(f'[{x_case["request"]},{ y_case["request"]}]')
+            assert test_data.get_data_section(requested_section).to_region_keyword() == f'[{x_case["result"]},{y_case["result"]}]'
+
 # def test_3d_is_3d():
 #     test_image = FakeImage(n_amps=4)
 #     assert test_image.data_is_3d()

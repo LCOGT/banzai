@@ -174,14 +174,30 @@ class CCDData(Data):
         return self.detector_section.overlap(detector_section)
 
     def get_data_section(self, region):
-        """Given a detector region, figure out the corresponding array slice
-        datasec must be increasing
+        """Given a detector region, figure out the corresponding data region
         Note the + and - 1 factors cancel
+        Really this is just doing the same thing as a CD matrix calculation
+        r_data - data_0 = M (r_det - det_0) where M is a transformation matrix and everything else is a 2d vector
+        M is either the 1/binning * identity or the 1/binning * negative Identity depending on if datasec and detsec
+        are in the same ordering (both increasing or both decreasing gives positive)
+        Note if you want to add a rotation, M can contain that as well.
         """
-        x_start = (region.x_start + self.detector_section.x_start - 2) // self.binning[0] + self._data_section.x_start
-        x_stop = (region.x_stop - self.detector_section.x_start) // self.binning[0] + self._data_section.x_start
-        y_start = (region.y_start + self.detector_section.y_start - 2) // self.binning[1] + self._data_section.y_start
-        y_stop = (region.y_stop - self.detector_section.y_start) // self.binning[1] + self._data_section.y_start
+        def get_data_section_oned(axis):
+            binning_indices = {'x': 0, 'y': 1}
+            detector_section = self.detector_section
+            data_section = self._data_section
+            sign = np.sign(getattr(detector_section, f'{axis}_stop') - getattr(detector_section, f'{axis}_start'))
+            sign *= np.sign(getattr(data_section, f'{axis}_stop') - getattr(data_section, f'{axis}_start'))
+            start = sign * (getattr(region, f'{axis}_start') - getattr(detector_section, f'{axis}_start'))
+            start //= self.binning[binning_indices[axis]]
+            start += getattr(data_section, f'{axis}_start')
+            stop = sign * (getattr(region, f'{axis}_stop') - getattr(self.detector_section, f'{axis}_start'))
+            stop //= self.binning[binning_indices[axis]]
+            stop += getattr(data_section, f'{axis}_start')
+            return start, stop
+
+        x_start, x_stop = get_data_section_oned('x')
+        y_start, y_stop = get_data_section_oned('y')
 
         return Section(x_start, x_stop, y_start, y_stop)
 
@@ -198,11 +214,8 @@ class CCDData(Data):
         :return:
         """
         overlap_section = self.get_overlap(data.detector_section)
-        logger.error(f'{overlap_section.to_region_keyword()}')
         data_to_copy = data.trim(data.get_data_section(overlap_section))
-        logger.error(f'{data.get_data_section(overlap_section).to_region_keyword()}')
         data_to_copy = data_to_copy.rebin(self.binning)
-        logger.error(f'{data_to_copy.data.shape}')
         for array_name_to_copy in ['data', 'mask', 'uncertainty']:
             array_to_copy = getattr(data_to_copy, array_name_to_copy)
             my_overlap = self.get_data_section(overlap_section).to_slice()
@@ -238,10 +251,6 @@ class Section:
 
         return y_slice, x_slice
 
-    @property
-    def shape(self):
-        return np.abs(self.y_stop - self.y_start) + 1, np.abs(self.x_stop - self.x_start) + 1
-
     def _section_to_slice(self, start, stop):
         """
         Given a start and stop pixel in IRAF coordinates, convert to a 
@@ -256,6 +265,10 @@ class Section:
                 pixel_slice = slice(start - 1, stop - 2, -1)
         
         return pixel_slice
+
+    @property
+    def shape(self):
+        return np.abs(self.y_stop - self.y_start) + 1, np.abs(self.x_stop - self.x_start) + 1
 
     def overlap(self, section):
         return Section(max(min(section.x_start, section.x_stop), min(self.x_start, self.x_stop)),
@@ -311,6 +324,14 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         self._hdus.insert(0, hdu)
 
     @property
+    def data(self):
+        return self.primary_hdu.data
+
+    @property
+    def meta(self):
+        return self.primary_hdu.meta
+
+    @property
     def ccd_hdus(self):
         return [hdu for hdu in self._hdus if isinstance(hdu, CCDData)]
 
@@ -326,10 +347,6 @@ class ObservationFrame(metaclass=abc.ABCMeta):
 
     def insert(self, index, hdu):
         self._hdus.insert(index, hdu)
-
-    @property
-    def meta(self):
-        return self.primary_hdu.meta
 
     @abc.abstractmethod
     def get_output_filename(self, runtime_context) -> str:
