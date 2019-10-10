@@ -181,6 +181,18 @@ def test_get_data_section_with_binning_small_3_flipped():
 
     requested_detsec = Section.parse_region_keyword(requested_detsec)
     assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+
+
+def test_get_data_section_2k_binned():
+    headers = [{'DATASEC': '[1:512,1:512]', 'DETSEC': '[1025:2048,3072:2049]', 'CCDSUM': '2 2'},
+               {'DATASEC': '[1:512,1:512]', 'DETSEC': '[1025:2048,1025:2048]', 'CCDSUM': '2 2'},
+               {'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,1025:2048]', 'CCDSUM': '2 2'},
+               {'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,3072:2049]', 'CCDSUM': '2 2'}]
+    for header in headers:
+        test_data = CCDData(np.zeros((512, 512)), meta=header)
+        detector_section = Section.parse_region_keyword(header['DETSEC'])
+        assert test_data.get_data_section(detector_section).to_region_keyword() == header['DATASEC']
+
 # def test_3d_is_3d():
 #     test_image = FakeImage(n_amps=4)
 #     assert test_image.data_is_3d()
