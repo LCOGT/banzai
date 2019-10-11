@@ -56,7 +56,7 @@ class BiasMasterLevelSubtractor(Stage):
         super(BiasMasterLevelSubtractor, self).__init__(runtime_context)
 
     def do_stage(self, image):
-        image.subtract(stats.sigma_clipped_mean(image.data, 3.5, mask=image.bpm), kind='bias_level')
+        image.subtract(stats.sigma_clipped_mean(image.data, 3.5, mask=image.mask), kind='bias_level')
         return image
 
 

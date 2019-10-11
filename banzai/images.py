@@ -58,6 +58,14 @@ class Data(metaclass=abc.ABCMeta):
         del self.data
         del self.mask
 
+    @property
+    def extension_name(self):
+        return self.meta.get('EXTNAME').replace('SCI', '')
+
+    @extension_name.setter
+    def extension_name(self, value):
+        self.meta['EXTNAME'] = value
+
     @classmethod
     def from_fits(cls, hdu: Union[fits.ImageHDU, fits.TableHDU, fits.BinTableHDU]):
         return cls(hdu.data, hdu.header, name=hdu.header.get('EXTNAME'))
@@ -105,10 +113,9 @@ class CCDData(Data):
 
     def to_fits(self):
         data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta))
-        extension_name = self.meta.get('EXTNAME').replace('SCI', '')
-        bpm_extname = extension_name + 'BPM'
+        bpm_extname = self.extension_name + 'BPM'
         mask_hdu = fits.ImageHDU(data=self.mask, header=fits.Header({'EXTNAME': bpm_extname}))
-        uncertainty_extname = extension_name + 'ERR'
+        uncertainty_extname = self.extension_name + 'ERR'
         uncertainty_hdu = fits.ImageHDU(data=self.uncertainty, header=fits.Header({'EXTNAME': uncertainty_extname}))
         return fits.HDUList([data_hdu, mask_hdu, uncertainty_hdu])
 
@@ -321,11 +328,17 @@ class ObservationFrame(metaclass=abc.ABCMeta):
 
     @primary_hdu.setter
     def primary_hdu(self, hdu):
+        if len(self._hdus) > 0:
+            self._hdus.remove(self.primary_hdu)
         self._hdus.insert(0, hdu)
 
     @property
     def data(self):
         return self.primary_hdu.data
+
+    @property
+    def mask(self):
+        return self.primary_hdu.mask
 
     @property
     def meta(self):
@@ -347,6 +360,9 @@ class ObservationFrame(metaclass=abc.ABCMeta):
 
     def insert(self, index, hdu):
         self._hdus.insert(index, hdu)
+
+    def subtract(self, value, kind=None):
+        self.primary_hdu.subtract(value, kind=None)
 
     @abc.abstractmethod
     def get_output_filename(self, runtime_context) -> str:
@@ -459,16 +475,6 @@ class LCOObservationFrame(ObservationFrame):
         if str(mode).lower() in ['n/a', '0', 'normal']:
             mode = 'default'
         return mode
-
-    def get_mosaic_detector_region(self):
-        x_detector_sections = []
-        y_detector_sections = []
-        for hdu in self.ccd_hdus:
-            detector_section = Section.parse_region_keyword(hdu.meta.get('DETSEC', 'N/A'))
-            x_detector_sections += [detector_section.x_start, detector_section.x_stop]
-            y_detector_sections += [detector_section.y_start, detector_section.y_stop]
-        return Section(min(x_detector_sections), max(x_detector_sections),
-                       min(y_detector_sections), max(y_detector_sections))
 
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
