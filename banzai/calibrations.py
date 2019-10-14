@@ -7,6 +7,7 @@ import numpy as np
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs
 from banzai.utils import stats, qc, import_utils, stage_utils
+from banzai.images import CCDData
 
 logger = logging.getLogger('banzai')
 
@@ -48,17 +49,61 @@ class CalibrationStacker(CalibrationMaker):
         super(CalibrationStacker, self).__init__(runtime_context)
 
     def make_master_calibration_frame(self, images):
-        stacked_data = np.memmap(NamedTemporaryFile(), (images[0].ny, images[0].nx), dtype=np.float32)
-        for section in sections:
-            data_stack = np.zeros((i*section.shape, len(images)), dtype=np.float32)
-            stack_mask = np.zeros((i*section.shape, len(images)), dtype=np.uint8)
-            for i, image in enumerate(images):
-                data_stack[section, i] = image.data[section]
-                stack_mask[section, i] = image.bpm[section]
+        # TODO: Maybe this could get called in the initializer for a master calibration class
+        def create_master_calibration_header(old_header, images):
+            header = fits.Header()
+            for key in old_header.keys():
+                try:
+                    # Dump empty header keywords and ignore old histories.
+                    if len(key) > 0 and key != 'HISTORY':
+                        for i in range(old_header.count(key)):
+                            header[key] = (old_header[(key, i)], old_header.comments[(key, i)])
+                except ValueError as e:
+                    logger.error('Could not add keyword {key}: {error}'.format(key=key, error=e))
+                    continue
+            header = fits_utils.sanitizeheader(header)
+            observation_dates = [image.dateobs for image in images]
+            mean_dateobs = date_utils.mean_date(observation_dates)
 
-            stacked_data[section] = stats.sigma_clipped_mean(data_stack, 3.0, axis=2, mask=stack_mask, inplace=True)
+            header['DATE-OBS'] = (date_utils.date_obs_to_string(mean_dateobs), '[UTC] Mean observation start time')
+            header['ISMASTER'] = (True, 'Is this a master calibration frame')
 
-        master_image = MasterCalibrationImage(stacked_data, images)
+            header.add_history("Images combined to create master calibration image:")
+            for image in images:
+                header.add_history(image.filename)
+            return header
+
+        master_data = CCDData(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
+                              meta=create_master_calibration_header(images))
+         #TODO: decide if the is_master necesistates a new class
+        master_image = CalibrationImage([master_data])
+        master_image.is_bad = False
+        master_image.is_master = True
+        # Split the image into N sections where N is the number of images
+        # This is just for convenience. Technically N can be anything you want.
+        # I assume that you can read a couple of images into memory so order N sections is good for memory management.
+        N = len(images)
+        detector_section = images[0].primary_hdu.detector_section
+
+        # Split along the y-direction for faster indexing
+        # detector section (y_stop - y_start) // binning(y) // N, abs(x_stop - x_start) // binning(x)
+        y_step = (detector_section.y_stop - detector_section.y_start) // images[0].binning['y'] // N * images[0].binning['y']
+
+        for i in range(N + 1):
+            y_start = detector_section.y_start + i * y_step
+
+            if i == N:
+                # Don't forget to do the last %mod sized section
+                y_stop = detector_section.y_stop
+            else:
+                y_stop = detector_section.y_start + (i + 1) * y_step
+            section_to_stack = Section(x_start=detector_section.x_start, x_stop=detector_section.x_stop,
+                                       y_start=y_start, y_stop=y_stop)
+            # TODO: make slice of a ccddata return a new ccddata object with the correct section keywords set
+            data_to_stack = [image.primary_hdu[section_to_stack] for image in images]
+
+            # TODO: fix stats module to take a data object or an array
+            master_data.copy_in(stats.sigma_clipped_mean(data_to_stack, 3.0))
 
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})

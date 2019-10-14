@@ -123,11 +123,13 @@ class CCDData(Data):
         super().__del__()
         del self.uncertainty
 
-    def subtract(self, value, uncertainty=None, kind=None):
-        self.data -= value
-        # Add uncertainties in quadrature
-        if uncertainty is not None:
-            self.uncertainty = np.sqrt(uncertainty * uncertainty + self.uncertainty * self.uncertainty)
+    def subtract(self, value, kind=None):
+        if isinstance(value, CCDData):
+            self.data -= value.data
+            self.uncertainty = np.sqrt(value.uncertainty * value.uncertainty + self.uncertainty * self.uncertainty)
+            self.mask |= value.mask
+        else:
+            self.data -= value
         if kind is not None:
             for keyword, (status_value, comment) in self.STATUS_KEYWORDS[kind].items():
                 self.meta[keyword] = eval(status_value), comment
@@ -143,6 +145,14 @@ class CCDData(Data):
                                 uncertainty=self.uncertainty[trim_section.to_slice()])
         # TODO: update all section keywords, DATASEC, DETSEC, CCDSEC
         return trimmed_image
+
+    @property
+    def dtype(self):
+        return self.data.dtype
+
+    @property
+    def shape(self):
+        return self.data.shape
 
     @property
     def gain(self):
