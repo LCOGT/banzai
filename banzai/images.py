@@ -500,8 +500,20 @@ class LCOImageFactory:
     @classmethod
     def open(cls, path, runtime_context) -> ObservationFrame:
         fits_hdu_list = fits_utils.open_fits_file(path)
-        hdu_list = [CCDData(data=hdu.data.astype(np.float32), meta=hdu.header, name=hdu.header.get('EXTNAME'))
-                    if hdu.data is not None else HeaderOnly(meta=hdu.header) for hdu in fits_hdu_list]
+        extension_names = [hdu.header.get('EXTNAME', 'N/A') for hdu in fits_hdu_list]
+        #If we're reading in a processed image, load BPM and ERR into single CCDData
+        if all(x in extension_names for x in ['BPM', 'ERR']):
+            logger.error(f'fits_hdu_list: {fits_hdu_list}')
+            primary_hdu = fits_hdu_list[0]
+            #TODO: Write helper to get HDUs by EXTNAME
+            hdu_list = [CCDData(data=primary_hdu.data.astype(np.float32), 
+                                meta=primary_hdu.header,
+                                mask=fits_hdu_list[1].data,
+                                uncertainty=fits_hdu_list[2].data) if primary_hdu.data is not None else HeaderOnly(meta=primary_hdu.header)]
+        #If reading in a raw image, create CCDData for each extension
+        else:
+            hdu_list = [CCDData(data=hdu.data.astype(np.float32), meta=hdu.header, name=hdu.header.get('EXTNAME'))
+                        if hdu.data is not None else HeaderOnly(meta=hdu.header) for hdu in fits_hdu_list]
         if hdu_list[0].meta.get('OBSTYPE') in runtime_context.CALIBRATION_IMAGE_TYPES:
             image = LCOCalibrationFrame(hdu_list, os.path.basename(path))
             image.grouping_criteria = runtime_context.CALIBRATION_SET_CRITERIA.get(image.obstype, [])
@@ -515,7 +527,7 @@ class LCOImageFactory:
             if hdu.meta.get('DETSEC', 'UNKNOWN') in ['UNKNOWN', 'N/A']:
                 # DETSEC missing?
                 binning = hdu.meta.get('CCDSUM', image.primary_hdu.meta.get('CCDSUM', '1 1'))
-                data_section = Section.parse_region_keyword(image.primary_hdu.meta['DATASEC'])
+                data_section = Section.parse_region_keyword(hdu.meta['DATASEC'])
                 detector_section = Section(1,
                                            max(data_section.x_start, data_section.x_stop) * int(binning[0]),
                                            1,
