@@ -503,7 +503,6 @@ class LCOImageFactory:
         extension_names = [hdu.header.get('EXTNAME', 'N/A') for hdu in fits_hdu_list]
         #If we're reading in a processed image, load BPM and ERR into single CCDData
         if all(x in extension_names for x in ['BPM', 'ERR']):
-            logger.error(f'fits_hdu_list: {fits_hdu_list}')
             primary_hdu = fits_hdu_list[0]
             #TODO: Write helper to get HDUs by EXTNAME
             hdu_list = [CCDData(data=primary_hdu.data.astype(np.float32), 
