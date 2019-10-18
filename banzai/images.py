@@ -505,10 +505,41 @@ class LCOImageFactory:
         image.instrument = cls._get_instrument(image, runtime_context.db_address)
 
         # TODO: Put all munge code here
-        for hdu in image.ccd_hdus:
-            for keyword in ['SATURATE', 'MAXLIN']:
-                hdu.meta[keyword] = hdu.meta.get(keyword, image.primary_hdu.meta[keyword])
 
+        for hdu in image.ccd_hdus:
+            if hdu.meta.get('DETSEC', 'UNKNOWN') in ['UNKNOWN', 'N/A']:
+                # DETSEC missing?
+                binning = hdu.meta.get('CCDSUM', image.primary_hdu.meta.get('CCDSUM', '1 1'))
+                data_section = Section.parse_region_keyword(hdu.meta['DATASEC'])
+                detector_section = Section(1,
+                                           max(data_section.x_start, data_section.x_stop) * int(binning[0]),
+                                           1,
+                                           max(data_section.y_start, data_section.y_stop) * int(binning[2]))
+                hdu.meta['DETSEC'] = detector_section.to_region_keyword()
+
+            # SATURATE Missing?
+            def update_saturate(image, hdu, default):
+                if hdu.meta.get('SATURATE', 0.0) == 0.0:
+                    hdu.meta['SATURATE'] = image.meta.get('SATURATE', 0.0)
+                    hdu.meta['MAXLIN'] = image.meta.get('MAXLIN', 0.0)
+                if hdu.meta.get('SATURATE', 0.0) == 0.0:
+                    hdu.meta['SATURATE'] = (default, '[ADU] Saturation level used')
+                    hdu.meta['MAXLIN'] = (default, '[ADU] Non-linearity level')
+            if 'sinistro' in image.instrument.type.lower():
+                update_saturate(image, hdu, 47500.0)
+
+            elif '1m0' in image.instrument.type:
+                # Saturation level from ORAC Pipeline
+                update_saturate(image, hdu, 46000.0)
+            elif '0m4' in image.instrument.type or '0m8' in image.instrument.type:
+                # Measured by Daniel Harbeck
+                update_saturate(image, hdu, 64000.0)
+
+            elif 'spectral' in image.instrument.type.lower():
+                # These values were given by Joe Tufts on 2016-06-07
+                binning = hdu.meta.get('CCDSUM', '1 1')
+                n_binned_pixels = int(binning[0]) * int(binning[2])
+                update_saturate(image, hdu, 125000.0 * n_binned_pixels / float(hdu.meta['GAIN']))
         return image
 
     @classmethod
