@@ -34,10 +34,10 @@ def instantly_public(proposal_id):
 
 
 def ccdsum_to_filename(image):
-    if image.ccdsum is None:
+    if image.binning is None:
         ccdsum_str = ''
     else:
-        ccdsum_str = 'bin{ccdsum}'.format(ccdsum=image.ccdsum.replace(' ', 'x'))
+        ccdsum_str = 'bin{ccdsum}'.format(ccdsum=str(image.binning[0]) + 'x' + str(image.binning[1]))
     return ccdsum_str
 
 
@@ -54,14 +54,14 @@ def config_to_filename(image):
 
 
 def telescope_to_filename(image):
-    return image.header.get('TELESCOP', '').replace('-', '')
+    return image.meta.get('TELESCOP', '').replace('-', '')
 
 
 def make_calibration_filename_function(calibration_type, context):
     def get_calibration_filename(image):
         telescope_filename_function = import_utils.import_attribute(context.TELESCOPE_FILENAME_FUNCTION)
-        name_components = {'site': image.site, 'telescop': telescope_filename_function(image),
-                           'camera': image.header.get('INSTRUME', ''), 'epoch': image.epoch,
+        name_components = {'site': image.instrument.site, 'telescop': telescope_filename_function(image),
+                           'camera': image.meta.get('INSTRUME', ''), 'epoch': image.epoch,
                            'cal_type': calibration_type.lower()}
         cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
         for function_name in context.CALIBRATION_FILENAME_FUNCTIONS[calibration_type]:

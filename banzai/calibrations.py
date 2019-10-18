@@ -3,11 +3,12 @@ import abc
 import os
 
 import numpy as np
+import astropy.io.fits as fits
 
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs
-from banzai.utils import stats, qc, import_utils, stage_utils
-from banzai.images import CCDData
+from banzai.utils import stats, qc, import_utils, stage_utils, fits_utils, date_utils, file_utils
+from banzai.images import CCDData, LCOCalibrationFrame, Section
 
 logger = logging.getLogger('banzai')
 
@@ -74,11 +75,16 @@ class CalibrationStacker(CalibrationMaker):
             return header
 
         master_data = CCDData(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
-                              meta=create_master_calibration_header(images))
+                              meta=create_master_calibration_header(images[0].meta, images))
          #TODO: decide if the is_master necesistates a new class
-        master_image = CalibrationImage([master_data])
+
+        make_calibration_name = file_utils.make_calibration_filename_function(self.calibration_type,
+                                                                              self.runtime_context)
+
+        master_calibration_filename = make_calibration_name(images[0])
+
+        master_image = LCOCalibrationFrame([master_data], master_calibration_filename)
         master_image.is_bad = False
-        master_image.is_master = True
         # Split the image into N sections where N is the number of images
         # This is just for convenience. Technically N can be anything you want.
         # I assume that you can read a couple of images into memory so order N sections is good for memory management.
@@ -87,7 +93,7 @@ class CalibrationStacker(CalibrationMaker):
 
         # Split along the y-direction for faster indexing
         # detector section (y_stop - y_start) // binning(y) // N, abs(x_stop - x_start) // binning(x)
-        y_step = (detector_section.y_stop - detector_section.y_start) // images[0].binning['y'] // N * images[0].binning['y']
+        y_step = (detector_section.y_stop - detector_section.y_start) // images[0].binning[1] // N * images[0].binning[1]
 
         for i in range(N + 1):
             y_start = detector_section.y_start + i * y_step
@@ -97,13 +103,18 @@ class CalibrationStacker(CalibrationMaker):
                 y_stop = detector_section.y_stop
             else:
                 y_stop = detector_section.y_start + (i + 1) * y_step
+
             section_to_stack = Section(x_start=detector_section.x_start, x_stop=detector_section.x_stop,
-                                       y_start=y_start, y_stop=y_stop)
+                                       y_start=y_start, y_stop=y_stop).to_slice()
+
             # TODO: make slice of a ccddata return a new ccddata object with the correct section keywords set
-            data_to_stack = [image.primary_hdu[section_to_stack] for image in images]
+            data_to_stack = [image.data[section_to_stack] for image in images]
+
+            stacked_section = , axis=2)
 
             # TODO: fix stats module to take a data object or an array
-            master_data.copy_in(stats.sigma_clipped_mean(data_to_stack, 3.0))
+            master_data.copy_in(CCDData(data=stats.sigma_clipped_mean(data_to_stack, 3.0),
+                                        meta=master_image.meta))
 
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})

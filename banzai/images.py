@@ -222,7 +222,7 @@ class CCDData(Data):
         """Given a data region, get the detector section that this covers.
         This is the inverse of get_data section"""
         pass
-
+        
     def copy_in(self, data):
         """
         Copy in the data from another CCDData object based on the detector sections
@@ -472,6 +472,10 @@ class LCOObservationFrame(ObservationFrame):
         return self.primary_hdu.meta.get('OBSTYPE')
 
     @property
+    def filter(self):
+        return self.primary_hdu.meta.get('FILTER')
+
+    @property
     def dateobs(self):
         return Time(self.primary_hdu.meta.get('DATE-OBS'), scale='utc').datetime
 
@@ -488,7 +492,8 @@ class LCOObservationFrame(ObservationFrame):
 
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
-    pass
+    def __init__(self, hdu_list: list, file_path: str):
+        super().__init__(hdu_list, file_path)
 
 
 class LCOImageFactory:
@@ -510,7 +515,7 @@ class LCOImageFactory:
             if hdu.meta.get('DETSEC', 'UNKNOWN') in ['UNKNOWN', 'N/A']:
                 # DETSEC missing?
                 binning = hdu.meta.get('CCDSUM', image.primary_hdu.meta.get('CCDSUM', '1 1'))
-                data_section = Section.parse_region_keyword(hdu.meta['DATASEC'])
+                data_section = Section.parse_region_keyword(image.primary_hdu.meta['DATASEC'])
                 detector_section = Section(1,
                                            max(data_section.x_start, data_section.x_stop) * int(binning[0]),
                                            1,
