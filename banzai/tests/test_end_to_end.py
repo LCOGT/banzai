@@ -29,6 +29,8 @@ app.conf.update(CELERY_TASK_ALWAYS_EAGER=True)
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
 os.remove('/archive/engineering/ogg/fs02/20180630/raw/ogg2m001-fs02-20180630-0001-b00.fits.fz')
 os.remove('/archive/engineering/ogg/fs02/20180630/raw/ogg2m001-fs02-20180630-0002-b00.fits.fz')
+os.remove('/archive/engineering/ogg/fs02/20180630/raw/ogg2m001-fs02-20180630-0181-b00.fits.fz')
+os.remove('/archive/engineering/ogg/fs02/20180630/raw/ogg2m001-fs02-20180630-0182-b00.fits.fz')
 SITES = [os.path.basename(site_path) for site_path in glob(os.path.join(DATA_ROOT, '???'))]
 INSTRUMENTS = [os.path.join(site, os.path.basename(instrument_path)) for site in SITES
                for instrument_path in glob(os.path.join(os.path.join(DATA_ROOT, site, '*')))]
