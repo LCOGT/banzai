@@ -88,7 +88,7 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
     expected_image_count = 0
     for observation in observations:
         for configuration in observation['request']['configurations']:
-            if runtime_context.frame_type.upper() == configuration['type']:
+            if frame_type.upper() == configuration['type']:
                 for instrument_config in configuration['instrument_configs']:
                     expected_image_count += instrument_config['exposure_count']
     logger.info('expected image count: {0}'.format(str(expected_image_count)))
