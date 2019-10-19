@@ -143,9 +143,10 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
 
 def lake_side_effect(*args, **kwargs):
     site = kwargs['params']['site']
-    start = datetime.strftime(kwargs['params']['start_after'].date(), '%Y%m%d')
+    start = datetime.strftime(parse(kwargs['params']['start_after']).replace(tzinfo=None).date(), '%Y%m%d')
     filename = 'test_lake_response_{site}_{start}.json'.format(site=site, start=start)
-    return FakeResponse('data/{filename}'.format(filename=filename))
+    filename = get_pkg_data_filename('data/{filename}'.format(filename=filename), TEST_PACKAGE)
+    return FakeResponse(filename)
 
 
 @pytest.mark.e2e
