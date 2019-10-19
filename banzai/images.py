@@ -3,7 +3,7 @@ import logging
 
 from banzai import dbs
 #from banzai.utils import date_utils, file_utils, fits_utils
-from banzai.utils import fits_utils
+from banzai.utils import fits_utils, stats
 #from banzai import munge, settings
 import numpy as np
 from astropy.io import fits
@@ -103,7 +103,8 @@ class CCDData(Data):
         :param section:
         :return:
         """
-        pass
+        type(self)(data=self.data[section.to_slice()], meta=self.meta,
+                   uncertainty=self.uncertainty[section.to_slice], mask=self.mask[section.to_slice()])
 
     def __imul__(self, value):
         self.data *= value
@@ -577,6 +578,53 @@ class LCOImageFactory:
             logger.error(msg, extra_tags=tags)
             raise ValueError('Instrument is missing from the database.')
         return instrument
+
+
+def stack(data_to_stack, nsigma_reject) -> CCDData:
+    """
+    """
+    a = np.zeros((len(data_to_stack), *data_to_stack[0].data.shape), dtype=data_to_stack[0].data.dtype)
+    uncertainties = np.zeros((len(data_to_stack), *data_to_stack[0].data.shape), dtype=data_to_stack[0].data.dtype)
+    mask = np.zeros((len(data_to_stack), *data_to_stack[0].data.shape), dtype=np.uint8)
+
+    for i, data in enumerate(data_to_stack):
+        a[i, :, :] = data.data[:, :]
+        mask[i, :, :] = data.mask[:, :]
+        uncertainties[i, :, :] = data.uncertainty[:, :]
+
+    abs_deviation = stats.absolute_deviation(a, axis=0, mask=mask)
+
+    robust_std = stats.robust_standard_deviation(a, axis=0, abs_deviation=abs_deviation, mask=mask)
+
+    robust_std = np.expand_dims(robust_std, axis=0)
+
+    # Mask values that are N sigma from the median
+    sigma_mask = abs_deviation > (nsigma_reject * robust_std)
+
+    mask3d = np.logical_or(sigma_mask, mask > 0)
+    n_good_pixels = np.logical_not(mask3d).sum(axis=0)
+
+    stacked_mask = np.zeros(n_good_pixels.shape, dtype=np.uint8)
+
+    # If a pixel is bad in all images, make sure we don't divide by zero
+    bad_pixels = n_good_pixels == 0
+
+    # If pixel is bad in all of the images, we take the logical or of all of the bits to go in the final mask
+    stacked_mask[bad_pixels] = np.bitwise_or.reduce(mask, axis=0)[bad_pixels]
+
+    # If a pixel is bad in all images, fill that pixel with the mean from the images
+    n_good_pixels[bad_pixels] = len(data_to_stack)
+    mask3d[:, bad_pixels] = False
+
+    a[mask3d] = 0.0
+    stacked_data = a.sum(axis=0) / n_good_pixels
+
+    # Again if a pixel is bad in all images, fill the uncertainties with the quadrature sum / N images
+    uncertainties[mask3d] = 0.0
+    uncertainties *= uncertainties
+    stacked_uncertainty = np.sqrt(uncertainties.sum(axis=0))
+
+    return CCDData(data=stacked_data, meta=data_to_stack[0].meta, uncertainty=stacked_uncertainty, mask=stacked_mask)
 
 
 class DataTable:

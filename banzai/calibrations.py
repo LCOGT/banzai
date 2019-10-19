@@ -110,9 +110,7 @@ class CalibrationStacker(CalibrationMaker):
             # TODO: make slice of a ccddata return a new ccddata object with the correct section keywords set
             data_to_stack = [image.data[section_to_stack] for image in images]
 
-            # TODO: fix stats module to take a data object or an array
-            master_data.copy_in(CCDData(data=stats.sigma_clipped_mean(data_to_stack, 3.0),
-                                        meta=master_image.meta))
+            master_data.copy_in(images.stack(data_to_stack, 3.0))
 
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})
