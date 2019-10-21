@@ -431,6 +431,6 @@ def populate_instrument_tables(db_address, configdb_address):
         # Set all instruments in the table to be schedulable and turn them back on below as needed.
         all_instruments = db_session.query(Instrument).all()
         for instrument in all_instruments:
-            if instrument not in added_instruments:
+            if instrument.name not in [added_instrument.name for added_instrument in added_instruments]:
                 instrument.schedulable = False
         db_session.commit()
