@@ -19,7 +19,8 @@ class BiasMaker(CalibrationStacker):
 
     def make_master_calibration_frame(self, images):
         master_image = super(BiasMaker, self).make_master_calibration_frame(images)
-        master_image.bias_level = np.mean([image.bias_level for image in images])
+        master_image.bias_level = np.mean([image.bias_level for image in images if image.bias_level is not None])
+
         return master_image
 
 

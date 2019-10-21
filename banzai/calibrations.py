@@ -85,6 +85,7 @@ class CalibrationStacker(CalibrationMaker):
 
         master_image = LCOCalibrationFrame([master_data], master_calibration_filename)
         master_image.is_bad = False
+        master_image.instrument = images[0].instrument
         # Split the image into N sections where N is the number of images
         # This is just for convenience. Technically N can be anything you want.
         # I assume that you can read a couple of images into memory so order N sections is good for memory management.

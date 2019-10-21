@@ -87,7 +87,7 @@ def stack_calibrations(frame_type):
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
         min_date, max_date = get_min_and_max_dates(timezone, dayobs=dayobs)
         runtime_context = dict(processed_path=DATA_ROOT, log_level='debug', post_to_archive=False,
-                               post_to_elasticsearch=False, fpack=True, rlevel=91,
+                               post_to_elasticsearch=False, fpack=True, reduction_level=91,
                                db_address=os.environ['DB_ADDRESS'], elasticsearch_qc_index='banzai_qc',
                                elasticsearch_url='http://elasticsearch.lco.gtn:9200', elasticsearch_doc_type='qc',
                                no_bpm=False, ignore_schedulability=True, use_only_older_calibrations=False,

@@ -140,10 +140,14 @@ class CCDData(Data):
     def trim(self, trim_section=None):
         if trim_section is None:
             trim_section = Section.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
-        trimmed_image = type(self)(self.data[trim_section.to_slice()], self.meta,
-                                   self.mask[trim_section.to_slice()], self.name,
-                                   uncertainty=self.uncertainty[trim_section.to_slice()])
-        # TODO: update all section keywords, DATASEC, DETSEC, CCDSEC
+        trim_data_section = self.get_data_section(trim_section)
+        trimmed_image = type(self)(self.data[trim_data_section.to_slice()], self.meta,
+                                   self.mask[trim_data_section.to_slice()], self.name,
+                                   uncertainty=self.uncertainty[trim_data_section.to_slice()])
+        trimmed_image.detector_section = trim_section
+        trimmed_image._data_section = Section(x_start=1, y_start=1,
+                                              x_stop=trimmed_image.data.shape[1],
+                                              y_stop=trimmed_image.data.shape[0])
         return trimmed_image
 
     @property
@@ -231,7 +235,7 @@ class CCDData(Data):
         :return:
         """
         overlap_section = self.get_overlap(data.detector_section)
-        data_to_copy = data.trim(data.get_data_section(overlap_section))
+        data_to_copy = data.trim(trim_section=overlap_section)
         data_to_copy = data_to_copy.rebin(self.binning)
         for array_name_to_copy in ['data', 'mask', 'uncertainty']:
             array_to_copy = getattr(data_to_copy, array_name_to_copy)
@@ -362,6 +366,16 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def filename(self):
         return os.path.basename(self._file_path)
 
+    @property
+    @abc.abstractmethod
+    def bias_level(self):
+        pass
+
+    @bias_level.setter
+    @abc.abstractmethod
+    def bias_level(self, value):
+        pass
+
     def append(self, hdu):
         self._hdus.append(hdu)
 
@@ -372,7 +386,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         self._hdus.insert(index, hdu)
 
     def subtract(self, value, kind=None):
-        self.primary_hdu.subtract(value, kind=None)
+        self.primary_hdu.subtract(value, kind=kind)
 
     @abc.abstractmethod
     def get_output_filename(self, runtime_context) -> str:
@@ -489,6 +503,14 @@ class LCOObservationFrame(ObservationFrame):
         if str(mode).lower() in ['n/a', '0', 'normal']:
             mode = 'default'
         return mode
+
+    @property
+    def bias_level(self):
+        return self.primary_hdu.meta.get('BIASLVL')
+
+    @bias_level.setter
+    def bias_level(self, value):
+        self.primary_hdu.meta['BIASLVL'] = value
 
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
