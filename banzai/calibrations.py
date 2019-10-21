@@ -8,7 +8,7 @@ import astropy.io.fits as fits
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs
 from banzai.utils import stats, qc, import_utils, stage_utils, fits_utils, date_utils, file_utils
-from banzai.images import CCDData, LCOCalibrationFrame, Section
+from banzai.images import CCDData, LCOCalibrationFrame, Section, stack
 
 logger = logging.getLogger('banzai')
 
@@ -105,12 +105,10 @@ class CalibrationStacker(CalibrationMaker):
                 y_stop = detector_section.y_start + (i + 1) * y_step
 
             section_to_stack = Section(x_start=detector_section.x_start, x_stop=detector_section.x_stop,
-                                       y_start=y_start, y_stop=y_stop).to_slice()
+                                       y_start=y_start, y_stop=y_stop)
 
-            # TODO: make slice of a ccddata return a new ccddata object with the correct section keywords set
-            data_to_stack = [image.data[section_to_stack] for image in images]
-
-            master_data.copy_in(images.stack(data_to_stack, 3.0))
+            data_to_stack = [image.primary_hdu[section_to_stack] for image in images]
+            master_data.copy_in(stack(data_to_stack, 3.0))
 
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})

@@ -43,8 +43,9 @@ def run_pipeline_stages(image_paths, runtime_context):
     frame_factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)
     if isinstance(image_paths, list):
         images = [frame_factory.open(image_path, runtime_context) for image_path in image_paths]
+        if len(images) == 0:
+            return
         stages_to_do = runtime_context.CALIBRATION_STACKER_STAGES[images[0].obstype.upper()]
-
     else:
         images = frame_factory.open(image_paths, runtime_context)
         stages_to_do = get_stages_for_individual_frame(runtime_context.ORDERED_STAGES,

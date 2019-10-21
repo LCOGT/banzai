@@ -103,8 +103,7 @@ class CCDData(Data):
         :param section:
         :return:
         """
-        type(self)(data=self.data[section.to_slice()], meta=self.meta,
-                   uncertainty=self.uncertainty[section.to_slice], mask=self.mask[section.to_slice()])
+        return self.trim(trim_section=section)
 
     def __imul__(self, value):
         self.data *= value
@@ -141,9 +140,9 @@ class CCDData(Data):
     def trim(self, trim_section=None):
         if trim_section is None:
             trim_section = Section.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
-        trimmed_image = CCDData(self.data[trim_section.to_slice()], self.meta,
-                                self.mask[trim_section.to_slice()], self.name,
-                                uncertainty=self.uncertainty[trim_section.to_slice()])
+        trimmed_image = type(self)(self.data[trim_section.to_slice()], self.meta,
+                                   self.mask[trim_section.to_slice()], self.name,
+                                   uncertainty=self.uncertainty[trim_section.to_slice()])
         # TODO: update all section keywords, DATASEC, DETSEC, CCDSEC
         return trimmed_image
 
@@ -583,9 +582,10 @@ class LCOImageFactory:
 def stack(data_to_stack, nsigma_reject) -> CCDData:
     """
     """
-    a = np.zeros((len(data_to_stack), *data_to_stack[0].data.shape), dtype=data_to_stack[0].data.dtype)
-    uncertainties = np.zeros((len(data_to_stack), *data_to_stack[0].data.shape), dtype=data_to_stack[0].data.dtype)
-    mask = np.zeros((len(data_to_stack), *data_to_stack[0].data.shape), dtype=np.uint8)
+    shape3d = [len(data_to_stack)] + list(data_to_stack[0].shape)
+    a = np.zeros(shape3d, dtype=data_to_stack[0].dtype)
+    uncertainties = np.zeros(shape3d, dtype=data_to_stack[0].dtype)
+    mask = np.zeros(shape3d, dtype=np.uint8)
 
     for i, data in enumerate(data_to_stack):
         a[i, :, :] = data.data[:, :]
