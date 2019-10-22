@@ -34,8 +34,7 @@ class BiasSubtractor(CalibrationUser):
 
     def apply_master_calibration(self, image, master_calibration_image):
         logger.info('Subtracting master bias', image=image)
-        image.subtract(master_calibration_image.bias_level, caltype='bias_level')
-        image.subtract(master_calibration_image, caltype=self.calibration_type)
+        image.subtract(master_calibration_image.bias_level, kind='bias_level')
         return image
 
 
