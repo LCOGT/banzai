@@ -591,7 +591,6 @@ class LCOMasterCalibrationFrame(LCOCalibrationFrame):
         return header
 
 
-
 class LCOImageFactory:
     @classmethod
     def open(cls, path, runtime_context) -> ObservationFrame:
