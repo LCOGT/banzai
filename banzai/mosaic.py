@@ -18,15 +18,18 @@ class MosaicCreator(Stage):
                                 meta=image.primary_hdu.meta)
         mosaiced_data.binning = image.binning
         mosaiced_data.detector_section = mosaiced_detector_region
+        mosaiced_data._data_section = Section(x_start=1, y_start=1, x_stop=binned_shape[1], y_stop=binned_shape[0])
         mosaiced_data.extension_name = 'SCI'
 
         for data in image.ccd_hdus:
             mosaiced_data.copy_in(data)
             image.remove(data)
+
         image.primary_hdu = mosaiced_data
         return image
 
-    def get_mosaic_detector_region(self, image):
+    @staticmethod
+    def get_mosaic_detector_region(image):
         x_detector_sections = []
         y_detector_sections = []
         for hdu in image.ccd_hdus:

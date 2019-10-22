@@ -94,18 +94,18 @@ class CalibrationStacker(CalibrationMaker):
 
         # Split along the y-direction for faster indexing
         # detector section (y_stop - y_start) // binning(y) // N, abs(x_stop - x_start) // binning(x)
-        y_step = (detector_section.y_stop - detector_section.y_start) // images[0].binning[1] // N * images[0].binning[1]
+        y_step = images[0].shape[0] // N
 
         for i in range(N + 1):
-            y_start = detector_section.y_start + i * y_step
+            y_start = 1 + i * y_step
 
             if i == N:
                 # Don't forget to do the last %mod sized section
-                y_stop = detector_section.y_stop
+                y_stop = images[0].shape[0]
             else:
-                y_stop = detector_section.y_start + (i + 1) * y_step
+                y_stop = (i + 1) * y_step
 
-            section_to_stack = Section(x_start=detector_section.x_start, x_stop=detector_section.x_stop,
+            section_to_stack = Section(x_start=1, x_stop=images[0].shape[1],
                                        y_start=y_start, y_stop=y_stop)
 
             data_to_stack = [image.primary_hdu[section_to_stack] for image in images]

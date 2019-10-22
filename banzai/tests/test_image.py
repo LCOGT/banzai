@@ -70,7 +70,7 @@ def test_get_data_section():
     expected_datasec = '[1:1024,1:1024]'
 
     requested_detsec = Section.parse_region_keyword(requested_detsec)
-    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+    assert expected_datasec == test_image.detector_to_data_section(requested_detsec).to_region_keyword()
 
 
 def test_get_data_section_with_binning():
@@ -86,7 +86,7 @@ def test_get_data_section_with_binning():
     expected_datasec = '[1:1024,1:1024]'
 
     requested_detsec = Section.parse_region_keyword(requested_detsec)
-    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+    assert expected_datasec == test_image.detector_to_data_section(requested_detsec).to_region_keyword()
 
 
 def test_get_data_section_with_binning_small_2():
@@ -102,7 +102,7 @@ def test_get_data_section_with_binning_small_2():
     expected_datasec = '[3:7,1:1024]'
 
     requested_detsec = Section.parse_region_keyword(requested_detsec)
-    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+    assert expected_datasec == test_image.detector_to_data_section(requested_detsec).to_region_keyword()
 
 
 def test_get_data_section_with_binning_small_3():
@@ -118,7 +118,7 @@ def test_get_data_section_with_binning_small_3():
     expected_datasec = '[3:4,1:1024]'
 
     requested_detsec = Section.parse_region_keyword(requested_detsec)
-    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+    assert expected_datasec == test_image.detector_to_data_section(requested_detsec).to_region_keyword()
 
 
 def test_get_data_section_offset_datasec():
@@ -134,7 +134,7 @@ def test_get_data_section_offset_datasec():
     expected_datasec = '[25:1048,25:1048]'
 
     requested_detsec = Section.parse_region_keyword(requested_detsec)
-    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+    assert expected_datasec == test_image.detector_to_data_section(requested_detsec).to_region_keyword()
 
 
 def test_get_data_section_offset_datasec_with_binning():
@@ -150,7 +150,7 @@ def test_get_data_section_offset_datasec_with_binning():
     expected_datasec = '[25:1048,25:1048]'
 
     requested_detsec = Section.parse_region_keyword(requested_detsec)
-    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+    assert expected_datasec == test_image.detector_to_data_section(requested_detsec).to_region_keyword()
 
 def test_get_data_section_flipped():
     nx = 1024
@@ -165,7 +165,7 @@ def test_get_data_section_flipped():
     expected_datasec = '[1024:1,1024:1]'
 
     requested_detsec = Section.parse_region_keyword(requested_detsec)
-    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+    assert expected_datasec == test_image.detector_to_data_section(requested_detsec).to_region_keyword()
 
 def test_get_data_section_with_binning_small_3_flipped():
     nx = 1024
@@ -180,7 +180,7 @@ def test_get_data_section_with_binning_small_3_flipped():
     expected_datasec = '[4:3,1:1024]'
 
     requested_detsec = Section.parse_region_keyword(requested_detsec)
-    assert expected_datasec == test_image.get_data_section(requested_detsec).to_region_keyword()
+    assert expected_datasec == test_image.detector_to_data_section(requested_detsec).to_region_keyword()
 
 
 def test_get_data_section_2k_binned():
@@ -191,7 +191,7 @@ def test_get_data_section_2k_binned():
     for header in headers:
         test_data = CCDData(np.zeros((512, 512)), meta=header)
         detector_section = Section.parse_region_keyword(header['DETSEC'])
-        assert test_data.get_data_section(detector_section).to_region_keyword() == header['DATASEC']
+        assert test_data.detector_to_data_section(detector_section).to_region_keyword() == header['DATASEC']
 
 
 def test_get_data_section_full():
@@ -209,7 +209,7 @@ def test_get_data_section_full():
                                                               'DETSEC': f'[{x_case["DETSEC"]},{y_case["DETSEC"]}]',
                                                               'CCDSUM': '1 1'})
             requested_section = Section.parse_region_keyword(f'[{x_case["request"]},{ y_case["request"]}]')
-            assert test_data.get_data_section(requested_section).to_region_keyword() == f'[{x_case["result"]},{y_case["result"]}]'
+            assert test_data.detector_to_data_section(requested_section).to_region_keyword() == f'[{x_case["result"]},{y_case["result"]}]'
 
 # def test_3d_is_3d():
 #     test_image = FakeImage(n_amps=4)

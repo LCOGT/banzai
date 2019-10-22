@@ -100,7 +100,7 @@ class CCDData(Data):
     def __getitem__(self, section):
         """
         Return a new CCDData object with the given section of data
-        :param section:
+        :param section: needs to be  in data coords
         :return:
         """
         return self.trim(trim_section=section)
@@ -117,7 +117,8 @@ class CCDData(Data):
         mask_hdu = fits.ImageHDU(data=self.mask, header=fits.Header({'EXTNAME': bpm_extname}))
         uncertainty_extname = self.extension_name + 'ERR'
         uncertainty_hdu = fits.ImageHDU(data=self.uncertainty, header=fits.Header({'EXTNAME': uncertainty_extname}))
-        return fits.HDUList([data_hdu, mask_hdu, uncertainty_hdu])
+        hdulist = fits.HDUList([data_hdu, mask_hdu, uncertainty_hdu])
+        return hdulist
 
     def __del__(self):
         super().__del__()
@@ -138,13 +139,18 @@ class CCDData(Data):
         return Section.parse_region_keyword(self.meta.get('BIASSEC', 'N/A'))
 
     def trim(self, trim_section=None):
+        """
+
+        :param trim_section: Always in data coords
+        :return:
+        """
         if trim_section is None:
             trim_section = Section.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
-        trim_data_section = self.get_data_section(trim_section)
-        trimmed_image = type(self)(self.data[trim_data_section.to_slice()], self.meta,
-                                   self.mask[trim_data_section.to_slice()], self.name,
-                                   uncertainty=self.uncertainty[trim_data_section.to_slice()])
-        trimmed_image.detector_section = trim_section
+
+        trimmed_image = type(self)(data=self.data[trim_section.to_slice()], meta=self.meta,
+                                   mask=self.mask[trim_section.to_slice()], name=self.name,
+                                   uncertainty=self.uncertainty[trim_section.to_slice()])
+        trimmed_image.detector_section = self.data_to_detector_section(trim_section)
         trimmed_image._data_section = Section(x_start=1, y_start=1,
                                               x_stop=trimmed_image.data.shape[1],
                                               y_stop=trimmed_image.data.shape[0])
@@ -194,7 +200,7 @@ class CCDData(Data):
     def get_overlap(self, detector_section):
         return self.detector_section.overlap(detector_section)
 
-    def get_data_section(self, region):
+    def detector_to_data_section(self, section):
         """Given a detector region, figure out the corresponding data region
         Note the + and - 1 factors cancel
         Really this is just doing the same thing as a CD matrix calculation
@@ -209,10 +215,10 @@ class CCDData(Data):
             data_section = self._data_section
             sign = np.sign(getattr(detector_section, f'{axis}_stop') - getattr(detector_section, f'{axis}_start'))
             sign *= np.sign(getattr(data_section, f'{axis}_stop') - getattr(data_section, f'{axis}_start'))
-            start = sign * (getattr(region, f'{axis}_start') - getattr(detector_section, f'{axis}_start'))
+            start = sign * (getattr(section, f'{axis}_start') - getattr(detector_section, f'{axis}_start'))
             start //= self.binning[binning_indices[axis]]
             start += getattr(data_section, f'{axis}_start')
-            stop = sign * (getattr(region, f'{axis}_stop') - getattr(self.detector_section, f'{axis}_start'))
+            stop = sign * (getattr(section, f'{axis}_stop') - getattr(self.detector_section, f'{axis}_start'))
             stop //= self.binning[binning_indices[axis]]
             stop += getattr(data_section, f'{axis}_start')
             return start, stop
@@ -222,10 +228,30 @@ class CCDData(Data):
 
         return Section(x_start, x_stop, y_start, y_stop)
 
-    def get_detector_region(self, section):
+    def data_to_detector_section(self, section):
         """Given a data region, get the detector section that this covers.
         This is the inverse of get_data section"""
-        pass
+
+        def get_detector_section_oned(axis):
+            binning_indices = {'x': 0, 'y': 1}
+            detector_section = self.detector_section
+            data_section = self._data_section
+            sign = np.sign(getattr(detector_section, f'{axis}_stop') - getattr(detector_section, f'{axis}_start'))
+            sign *= np.sign(getattr(data_section, f'{axis}_stop') - getattr(data_section, f'{axis}_start'))
+
+            start = sign * (getattr(section, f'{axis}_start') - getattr(data_section, f'{axis}_start'))
+            start *= self.binning[binning_indices[axis]]
+            start += getattr(detector_section, f'{axis}_start')
+
+            stop = sign * (getattr(section, f'{axis}_stop') - getattr(self._data_section, f'{axis}_start'))
+            stop *= self.binning[binning_indices[axis]]
+            stop += getattr(detector_section, f'{axis}_start')
+            return start, stop
+
+        x_start, x_stop = get_detector_section_oned('x')
+        y_start, y_stop = get_detector_section_oned('y')
+
+        return Section(x_start, x_stop, y_start, y_stop)
         
     def copy_in(self, data):
         """
@@ -235,12 +261,12 @@ class CCDData(Data):
         :return:
         """
         overlap_section = self.get_overlap(data.detector_section)
-        data_to_copy = data.trim(trim_section=overlap_section)
+        data_to_copy = data.trim(trim_section=data.detector_to_data_section(overlap_section))
         data_to_copy = data_to_copy.rebin(self.binning)
         for array_name_to_copy in ['data', 'mask', 'uncertainty']:
             array_to_copy = getattr(data_to_copy, array_name_to_copy)
-            my_overlap = self.get_data_section(overlap_section).to_slice()
-            getattr(self, array_name_to_copy)[my_overlap].ravel()[:] = array_to_copy.ravel()[:]
+            my_overlap = self.detector_to_data_section(overlap_section).to_slice()
+            getattr(self, array_name_to_copy)[my_overlap][:] = array_to_copy[:]
 
     def init_poisson_uncertainties(self):
         self.uncertainty += np.sqrt(np.abs(self.data))
@@ -345,6 +371,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         if len(self._hdus) > 0:
             self._hdus.remove(self.primary_hdu)
         self._hdus.insert(0, hdu)
+
+    @property
+    def shape(self):
+        return self.primary_hdu.data.shape
 
     @property
     def data(self):
