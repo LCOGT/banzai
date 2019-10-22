@@ -3,7 +3,7 @@ import logging
 
 from banzai import dbs
 #from banzai.utils import date_utils, file_utils, fits_utils
-from banzai.utils import fits_utils, stats
+from banzai.utils import fits_utils, stats, date_utils
 #from banzai import munge, settings
 import numpy as np
 from astropy.io import fits
@@ -546,6 +546,39 @@ class LCOObservationFrame(ObservationFrame):
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
     def __init__(self, hdu_list: list, file_path: str):
         super().__init__(hdu_list, file_path)
+
+
+class LCOMasterCalibrationFrame(LCOCalibrationFrame):
+     def __init__(self, images: list, file_path: str):
+         super().__init__(images, file_path)
+         self._hdus = [CCDData(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
+                               meta=self._create_master_calibration_header(images[0].meta, images))]
+         self.is_master = True
+         self.instrument = images[0].instrument
+
+     def _create_master_calibration_header(self, old_header, images):
+        header = fits.Header()
+        for key in old_header.keys():
+            try:
+                # Dump empty header keywords and ignore old histories.
+                if len(key) > 0 and key != 'HISTORY':
+                    for i in range(old_header.count(key)):
+                        header[key] = (old_header[(key, i)], old_header.comments[(key, i)])
+            except ValueError as e:
+                logger.error('Could not add keyword {key}: {error}'.format(key=key, error=e))
+                continue
+        header = fits_utils.sanitizeheader(header)
+        observation_dates = [image.dateobs for image in images]
+        mean_dateobs = date_utils.mean_date(observation_dates)
+
+        header['DATE-OBS'] = (date_utils.date_obs_to_string(mean_dateobs), '[UTC] Mean observation start time')
+        header['ISMASTER'] = (True, 'Is this a master calibration frame')
+
+        header.add_history("Images combined to create master calibration image:")
+        for image in images:
+            header.add_history(image.filename)
+        return header
+
 
 
 class LCOImageFactory:
