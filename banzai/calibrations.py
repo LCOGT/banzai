@@ -3,12 +3,11 @@ import abc
 import os
 
 import numpy as np
-import astropy.io.fits as fits
 
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs
-from banzai.utils import stats, qc, import_utils, stage_utils, fits_utils, date_utils, file_utils
-from banzai.images import CCDData, LCOMasterCalibrationFrame, Section, stack
+from banzai.utils import qc, import_utils, stage_utils, fits_utils, date_utils, file_utils
+from banzai.images import LCOMasterCalibrationFrame, Section, stack
 
 logger = logging.getLogger('banzai')
 
@@ -142,11 +141,10 @@ class CalibrationComparer(CalibrationUser):
 
     def is_frame_bad(self, image, master_calibration_image):
         # We assume the image has already been normalized before this stage is run.
-        bad_pixel_fraction = np.abs(image.data - master_calibration_image.data)
-        # Estimate the noise of the image
-        bad_pixel_fraction /= image.noise.add(master_calibration_image.noise)
-        bad_pixel_fraction = bad_pixel_fraction >= self.SIGNAL_TO_NOISE_THRESHOLD
-        bad_pixel_fraction = bad_pixel_fraction.sum() / float(bad_pixel_fraction.size)
+        difference_image = image - master_calibration_image
+
+        outliers = difference_image.signal_to_noise() >= self.SIGNAL_TO_NOISE_THRESHOLD
+        bad_pixel_fraction = outliers.sum() / float(outliers.size)
         frame_is_bad = bad_pixel_fraction > self.ACCEPTABLE_PIXEL_FRACTION
 
         qc_results = {"master_comparison.fraction": bad_pixel_fraction,
