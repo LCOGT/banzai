@@ -1,5 +1,4 @@
 import logging
-
 from banzai import dbs
 from banzai.utils import fits_utils, stats, date_utils
 import numpy as np
@@ -223,9 +222,11 @@ class CCDData(Data):
             data_section = self._data_section
             sign = np.sign(getattr(detector_section, f'{axis}_stop') - getattr(detector_section, f'{axis}_start'))
             sign *= np.sign(getattr(data_section, f'{axis}_stop') - getattr(data_section, f'{axis}_start'))
+
             start = sign * (getattr(section, f'{axis}_start') - getattr(detector_section, f'{axis}_start'))
             start //= self.binning[binning_indices[axis]]
             start += getattr(data_section, f'{axis}_start')
+
             stop = sign * (getattr(section, f'{axis}_stop') - getattr(self.detector_section, f'{axis}_start'))
             stop //= self.binning[binning_indices[axis]]
             stop += getattr(data_section, f'{axis}_start')
@@ -254,6 +255,11 @@ class CCDData(Data):
             stop = sign * (getattr(section, f'{axis}_stop') - getattr(self._data_section, f'{axis}_start'))
             stop *= self.binning[binning_indices[axis]]
             stop += getattr(detector_section, f'{axis}_start')
+            
+            # when converting from binned to unbinned coordinates, we need to adjust our stopping pixel
+            # by (binning - 1) 
+            stop += np.sign(stop - start) * (self.binning[binning_indices[axis]] - 1)
+
             return start, stop
 
         x_start, x_stop = get_detector_section_oned('x')
@@ -597,6 +603,8 @@ class LCOImageFactory:
         fits_hdu_list = fits_utils.open_fits_file(path)
         extension_names = [hdu.header.get('EXTNAME', 'N/A') for hdu in fits_hdu_list]
         #If we're reading in a processed image, load BPM and ERR into single CCDData
+        #TODO: Make this work for multi-extension processed images - e.g. ERR0, ERR1, ERR2
+        #EXTNAME and EXTVER will give this info
         if all(ext_name in extension_names for ext_name in ['BPM', 'ERR']):
             primary_hdu = fits_hdu_list[0]
             #TODO: Write helper to get HDUs by EXTNAME
