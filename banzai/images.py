@@ -80,11 +80,6 @@ class HeaderOnly(Data):
 
 
 class CCDData(Data):
-    STATUS_KEYWORDS = {'overscan': {'L1STATOV': ('1', 'Status flag for overscan correction'),
-                                    'OVERSCAN': ('value', 'Overscan value that was subtracted')},
-                       'bias_level': {'BIASLVL': ('value', 'Bias level that was removed after overscan')}
-                       }
-
     def __init__(self, data: Union[np.array, Table], meta: Union[dict, fits.Header],
                  mask: np.array = None, name: str = '', uncertainty: np.array = None):
         super().__init__(data=data, meta=meta, mask=mask, name=name)
@@ -105,6 +100,11 @@ class CCDData(Data):
         self.meta['SATURATE'] *= value
         self.meta['GAIN'] *= value
         self.meta['MAXLIN'] *= value
+        return self
+
+    def __idiv__(self, other):
+        self.__imul__(1.0 / other)
+        return self
 
     def to_fits(self):
         data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta))
@@ -119,16 +119,14 @@ class CCDData(Data):
         super().__del__()
         del self.uncertainty
 
-    def subtract(self, value, kind=None):
+    def __isub__(self, value):
         if isinstance(value, CCDData):
             self.data -= value.data
             self.uncertainty = np.sqrt(value.uncertainty * value.uncertainty + self.uncertainty * self.uncertainty)
             self.mask |= value.mask
         else:
             self.data -= value
-        if kind is not None:
-            for keyword, (status_value, comment) in self.STATUS_KEYWORDS[kind].items():
-                self.meta[keyword] = eval(status_value), comment
+        return self
 
     def __sub__(self, other):
         uncertainty = np.sqrt(self.uncertainty * self.uncertainty + other.uncertainty * other.uncertainty)
@@ -376,6 +374,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         self.epoch = self.primary_hdu.meta.get('DAY-OBS')
         self.instrument = None
 
+    def __idiv__(self, other):
+        self.primary_hdu /= other
+        return self
+
     @property
     def primary_hdu(self):
         return self._hdus[0]
@@ -452,6 +454,11 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         pass
 
     @property
+    @abc.abstractmethod
+    def exptime(self):
+        pass
+
+    @property
     def data_type(self):
         # Convert bytes to bits
         size = 8 * min([hdu.data.itemsize for hdu in self.ccd_hdus])
@@ -490,28 +497,33 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def __sub__(self, other):
         return self.primary_hdu - other.primary_hdu
 
+    def __isub__(self, other):
+        self.primary_hdu.__isub__(other)
+        return self
 
-class CalibrationFrame(ObservationFrame, metaclass=abc.ABCMeta):
+
+class CalibrationFrame(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def get_output_filename(self, runtime_context) -> str:
         pass
 
-    def __init__(self, hdu_list: list, context):
-        super().__init__(hdu_list, context)
+    def __init__(self, grouping_criteria: list = None):
         self.is_bad = False
-        self.grouping_criteria = []
+        if grouping_criteria is None:
+            grouping_criteria = []
+        self.grouping_criteria = grouping_criteria
 
     @property
+    @abc.abstractmethod
     def is_master(self):
-        return self.meta.get('ISMASTER', False)
+        pass
 
     @is_master.setter
+    @abc.abstractmethod
     def is_master(self, value):
-        self.meta['ISMASTER'] = value
+        pass
 
     def write(self, runtime_context):
-        super().write(runtime_context)
-        # TODO: make sure we save the DB info if we need to.
         dbs.save_calibration_info(self.get_output_filename(runtime_context), self, runtime_context.db_address)
 
 
@@ -559,15 +571,32 @@ class LCOObservationFrame(ObservationFrame):
     def bias_level(self, value):
         self.primary_hdu.meta['BIASLVL'] = value
 
+    @property
+    def exptime(self):
+        return self.primary_hdu.meta.get('EXPTIME', 0.0)
+
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
-    def __init__(self, hdu_list: list, file_path: str):
-        super().__init__(hdu_list, file_path)
+    def __init__(self, hdu_list: list, file_path: str, grouping_criteria: list = None):
+        CalibrationFrame.__init__(self, grouping_criteria=grouping_criteria)
+        LCOObservationFrame.__init__(self, hdu_list, file_path)
+
+    @property
+    def is_master(self):
+        return self.meta.get('ISMASTER', False)
+
+    @is_master.setter
+    def is_master(self, value):
+        self.meta['ISMASTER'] = value
+
+    def write(self, runtime_context):
+        LCOObservationFrame.write(self, runtime_context)
+        CalibrationFrame.write(self, runtime_context)
 
 
 class LCOMasterCalibrationFrame(LCOCalibrationFrame):
-     def __init__(self, images: list, file_path: str):
-         super().__init__(images, file_path)
+     def __init__(self, images: list, file_path: str, grouping_criteria: list = None):
+         super().__init__(images, file_path, grouping_criteria=grouping_criteria)
          self._hdus = [CCDData(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
                                meta=self._create_master_calibration_header(images[0].meta, images))]
          self.is_master = True
@@ -617,8 +646,8 @@ class LCOImageFactory:
             hdu_list = [CCDData(data=hdu.data.astype(np.float32), meta=hdu.header, name=hdu.header.get('EXTNAME'))
                         if hdu.data is not None else HeaderOnly(meta=hdu.header) for hdu in fits_hdu_list]
         if hdu_list[0].meta.get('OBSTYPE') in runtime_context.CALIBRATION_IMAGE_TYPES:
-            image = LCOCalibrationFrame(hdu_list, os.path.basename(path))
-            image.grouping_criteria = runtime_context.CALIBRATION_SET_CRITERIA.get(image.obstype, [])
+            grouping = runtime_context.CALIBRATION_SET_CRITERIA.get(hdu_list[0].meta.get('OBSTYPE'), [])
+            image = LCOCalibrationFrame(hdu_list, os.path.basename(path), grouping_criteria=grouping)
         else:
             image = LCOObservationFrame(hdu_list, os.path.basename(path))
         image.instrument = cls._get_instrument(image, runtime_context.db_address)

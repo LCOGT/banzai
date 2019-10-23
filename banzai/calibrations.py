@@ -2,8 +2,6 @@ import logging
 import abc
 import os
 
-import numpy as np
-
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs
 from banzai.utils import qc, import_utils, stage_utils, fits_utils, date_utils, file_utils
@@ -54,7 +52,9 @@ class CalibrationStacker(CalibrationMaker):
 
         master_calibration_filename = make_calibration_name(images[0])
 
-        master_image = LCOMasterCalibrationFrame(images, master_calibration_filename)
+        grouping =  self.runtime_context.CALIBRATION_SET_CRITERIA.get(images[0].obstype, [])
+        master_image = LCOMasterCalibrationFrame(images, master_calibration_filename, grouping_criteria= grouping)
+
         # Split the image into N sections where N is the number of images
         # This is just for convenience. Technically N can be anything you want.
         # I assume that you can read a couple of images into memory so order N sections is good for memory management.
