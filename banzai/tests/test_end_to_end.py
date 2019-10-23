@@ -27,7 +27,6 @@ logger = logging.getLogger('banzai')
 app.conf.update(CELERY_TASK_ALWAYS_EAGER=True)
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
-
 SITES = [os.path.basename(site_path) for site_path in glob(os.path.join(DATA_ROOT, '???'))]
 INSTRUMENTS = [os.path.join(site, os.path.basename(instrument_path)) for site in SITES
                for instrument_path in glob(os.path.join(os.path.join(DATA_ROOT, site, '*')))]
