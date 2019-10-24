@@ -19,7 +19,7 @@ class Data(metaclass=abc.ABCMeta):
     def __init__(self, data: Union[np.array, Table], meta: Union[dict, fits.Header],
                  mask: np.array = None, name: str = ''):
         self.data = self._init_array(data)
-        self.meta = meta
+        self.meta = meta.copy()
         self._validate_mask(mask)
         self.mask = self._init_array(mask, dtype=np.uint8)
         self.name = name
@@ -97,12 +97,13 @@ class CCDData(Data):
 
     def __imul__(self, value):
         self.data *= value
+        self.uncertainty *= value
         self.meta['SATURATE'] *= value
         self.meta['GAIN'] *= value
         self.meta['MAXLIN'] *= value
         return self
 
-    def __idiv__(self, other):
+    def __itruediv__(self, other):
         self.__imul__(1.0 / other)
         return self
 
@@ -169,6 +170,26 @@ class CCDData(Data):
     def gain(self):
         return self.meta.get('GAIN', 1.0)
 
+    @gain.setter
+    def gain(self, value):
+        self.meta['GAIN'] = value
+
+    @property
+    def saturate(self):
+        return self.meta.get('SATURATE')
+
+    @saturate.setter
+    def saturate(self, value):
+        self.meta['SATURATE'] = value
+
+    @property
+    def max_linearity(self):
+        return self.meta.get('MAXLIN')
+
+    @max_linearity.setter
+    def max_linearity(self, value):
+        self.meta['MAXLIN'] = value
+
     @property
     def read_noise(self):
         return self.meta.get('RDNOISE', 0.0)
@@ -205,6 +226,20 @@ class CCDData(Data):
     def get_overlap(self, detector_section):
         return self.detector_section.overlap(detector_section)
 
+    def detector_to_data_section_oned(self, axis, section):
+        binning_indices = {'x': 0, 'y': 1}
+        sign = np.sign(getattr(self.detector_section, f'{axis}_stop') - getattr(self.detector_section, f'{axis}_start'))
+        sign *= np.sign(getattr(self._data_section, f'{axis}_stop') - getattr(self._data_section, f'{axis}_start'))
+
+        start = sign * (getattr(section, f'{axis}_start') - getattr(self.detector_section, f'{axis}_start'))
+        start //= self.binning[binning_indices[axis]]
+        start += getattr(self._data_section, f'{axis}_start')
+
+        stop = sign * (getattr(section, f'{axis}_stop') - getattr(self.detector_section, f'{axis}_start'))
+        stop //= self.binning[binning_indices[axis]]
+        stop += getattr(self._data_section, f'{axis}_start')
+        return start, stop
+
     def detector_to_data_section(self, section):
         """Given a detector region, figure out the corresponding data region
         Note the + and - 1 factors cancel
@@ -214,57 +249,38 @@ class CCDData(Data):
         are in the same ordering (both increasing or both decreasing gives positive)
         Note if you want to add a rotation, M can contain that as well.
         """
-        def get_data_section_oned(axis):
-            binning_indices = {'x': 0, 'y': 1}
-            detector_section = self.detector_section
-            data_section = self._data_section
-            sign = np.sign(getattr(detector_section, f'{axis}_stop') - getattr(detector_section, f'{axis}_start'))
-            sign *= np.sign(getattr(data_section, f'{axis}_stop') - getattr(data_section, f'{axis}_start'))
-
-            start = sign * (getattr(section, f'{axis}_start') - getattr(detector_section, f'{axis}_start'))
-            start //= self.binning[binning_indices[axis]]
-            start += getattr(data_section, f'{axis}_start')
-
-            stop = sign * (getattr(section, f'{axis}_stop') - getattr(self.detector_section, f'{axis}_start'))
-            stop //= self.binning[binning_indices[axis]]
-            stop += getattr(data_section, f'{axis}_start')
-            return start, stop
-
-        x_start, x_stop = get_data_section_oned('x')
-        y_start, y_stop = get_data_section_oned('y')
+        x_start, x_stop = self.detector_to_data_section_oned('x', section)
+        y_start, y_stop = self.detector_to_data_section_oned('y', section)
 
         return Section(x_start, x_stop, y_start, y_stop)
 
     def data_to_detector_section(self, section):
         """Given a data region, get the detector section that this covers.
         This is the inverse of get_data section"""
-
-        def get_detector_section_oned(axis):
-            binning_indices = {'x': 0, 'y': 1}
-            detector_section = self.detector_section
-            data_section = self._data_section
-            sign = np.sign(getattr(detector_section, f'{axis}_stop') - getattr(detector_section, f'{axis}_start'))
-            sign *= np.sign(getattr(data_section, f'{axis}_stop') - getattr(data_section, f'{axis}_start'))
-
-            start = sign * (getattr(section, f'{axis}_start') - getattr(data_section, f'{axis}_start'))
-            start *= self.binning[binning_indices[axis]]
-            start += getattr(detector_section, f'{axis}_start')
-
-            stop = sign * (getattr(section, f'{axis}_stop') - getattr(self._data_section, f'{axis}_start'))
-            stop *= self.binning[binning_indices[axis]]
-            stop += getattr(detector_section, f'{axis}_start')
-            
-            # when converting from binned to unbinned coordinates, we need to adjust our stopping pixel
-            # by (binning - 1) 
-            stop += np.sign(stop - start) * (self.binning[binning_indices[axis]] - 1)
-
-            return start, stop
-
-        x_start, x_stop = get_detector_section_oned('x')
-        y_start, y_stop = get_detector_section_oned('y')
+        x_start, x_stop = self.data_to_detector_section_oned('x', section)
+        y_start, y_stop = self.data_to_detector_section_oned('y', section)
 
         return Section(x_start, x_stop, y_start, y_stop)
-        
+
+    def data_to_detector_section_oned(self, axis, section):
+        binning_indices = {'x': 0, 'y': 1}
+        sign = np.sign(getattr(self.detector_section, f'{axis}_stop') - getattr(self.detector_section, f'{axis}_start'))
+        sign *= np.sign(getattr(self._data_section, f'{axis}_stop') - getattr(self._data_section, f'{axis}_start'))
+
+        start = sign * (getattr(section, f'{axis}_start') - getattr(self._data_section, f'{axis}_start'))
+        start *= self.binning[binning_indices[axis]]
+        start += getattr(self.detector_section, f'{axis}_start')
+
+        stop = sign * (getattr(section, f'{axis}_stop') - getattr(self._data_section, f'{axis}_start'))
+        stop *= self.binning[binning_indices[axis]]
+        stop += getattr(self.detector_section, f'{axis}_start')
+
+        # when converting from binned to unbinned coordinates, we need to adjust our stopping pixel
+        # by (binning - 1)
+        stop += np.sign(stop - start) * (self.binning[binning_indices[axis]] - 1)
+
+        return start, stop
+
     def copy_in(self, data):
         """
         Copy in the data from another CCDData object based on the detector sections
@@ -374,7 +390,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         self.epoch = self.primary_hdu.meta.get('DAY-OBS')
         self.instrument = None
 
-    def __idiv__(self, other):
+    def __itruediv__(self, other):
         self.primary_hdu /= other
         return self
 
@@ -430,9 +446,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
 
     def insert(self, index, hdu):
         self._hdus.insert(index, hdu)
-
-    def subtract(self, value, kind=None):
-        self.primary_hdu.subtract(value, kind=kind)
+        self._hdus.insert(index, hdu)
 
     @abc.abstractmethod
     def get_output_filename(self, runtime_context) -> str:
@@ -498,7 +512,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         return self.primary_hdu - other.primary_hdu
 
     def __isub__(self, other):
-        self.primary_hdu.__isub__(other)
+        if isinstance(other, ObservationFrame):
+            self.primary_hdu.__isub__(other.primary_hdu)
+        else:
+            self.primary_hdu.__isub__(other)
         return self
 
 

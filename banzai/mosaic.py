@@ -21,6 +21,10 @@ class MosaicCreator(Stage):
         mosaiced_data._data_section = Section(x_start=1, y_start=1, x_stop=binned_shape[1], y_stop=binned_shape[0])
         mosaiced_data.extension_name = 'SCI'
 
+        mosaiced_data.gain = np.mean([data.meta.get('GAIN') for data in image.ccd_hdus])
+        mosaiced_data.saturate = np.min([data.saturate for data in image.ccd_hdus])
+        mosaiced_data.max_linearity = np.min([data.max_linearity for data in image.ccd_hdus])
+
         for data in image.ccd_hdus:
             mosaiced_data.copy_in(data)
             image.remove(data)
