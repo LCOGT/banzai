@@ -78,8 +78,8 @@ spec:
           value: debug
         - name: CALIBRATE_PROPOSAL_ID
           value: "calibrate"
-        - name: LAKE_URL
-          value: "http://lake-old.lco.gtn/blocks/"
+        - name: OBSERVATION_PORTAL_URL
+          value: "http://internal-observation-portal.lco.gtn/api/observations/"
       command:
         - celery
         - -A
@@ -139,8 +139,8 @@ spec:
           value: "redis://localhost:6379/0"
         - name: CALIBRATE_PROPOSAL_ID
           value: "calibrate"
-        - name: LAKE_URL
-          value: "http://lake-old.lco.gtn/blocks/"
+        - name: OBSERVATION_PORTAL_URL
+          value: "http://internal-observation-portal.lco.gtn/api/observations/"
       command:
         - banzai_run_realtime_pipeline
         - "--db-address=sqlite:////archive/engineering/test.db"

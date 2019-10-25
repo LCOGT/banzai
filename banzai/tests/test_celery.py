@@ -182,8 +182,8 @@ class TestMain():
 
     @mock.patch('banzai.celery.stack_calibrations.apply_async')
     @mock.patch('banzai.celery.dbs.get_instruments_at_site')
-    @mock.patch('banzai.utils.lake_utils.get_calibration_blocks_for_time_range')
-    @mock.patch('banzai.utils.lake_utils.filter_calibration_blocks_for_type')
+    @mock.patch('banzai.utils.observation_utils.get_calibration_blocks_for_time_range')
+    @mock.patch('banzai.utils.observation_utils.filter_calibration_blocks_for_type')
     def test_submit_stacking_tasks_to_queue_no_delay(self, mock_filter_blocks, mock_get_blocks, mock_get_instruments,
                                                      mock_stack_calibrations, setup):
         mock_get_instruments.return_value = [self.fake_inst]
@@ -197,8 +197,8 @@ class TestMain():
 
     @mock.patch('banzai.celery.stack_calibrations.apply_async')
     @mock.patch('banzai.celery.dbs.get_instruments_at_site')
-    @mock.patch('banzai.utils.lake_utils.get_calibration_blocks_for_time_range')
-    @mock.patch('banzai.utils.lake_utils.filter_calibration_blocks_for_type')
+    @mock.patch('banzai.utils.observation_utils.get_calibration_blocks_for_time_range')
+    @mock.patch('banzai.utils.observation_utils.filter_calibration_blocks_for_type')
     def test_submit_stacking_tasks_to_queue_with_delay(self, mock_filter_blocks, mock_get_blocks, mock_get_instruments,
                                                        mock_stack_calibrations, setup):
         mock_get_instruments.return_value = [self.fake_inst]

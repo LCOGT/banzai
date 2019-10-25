@@ -141,10 +141,10 @@ def run_check_if_stacked_calibrations_are_in_db(raw_filenames, calibration_type)
     assert len(calibrations_in_db) == number_of_stacks_that_should_have_been_created
 
 
-def lake_side_effect(*args, **kwargs):
+def observation_portal_side_effect(*args, **kwargs):
     site = kwargs['params']['site']
     start = datetime.strftime(parse(kwargs['params']['start_after']).replace(tzinfo=None).date(), '%Y%m%d')
-    filename = 'test_lake_response_{site}_{start}.json'.format(site=site, start=start)
+    filename = 'test_obs_portal_response_{site}_{start}.json'.format(site=site, start=start)
     filename = get_pkg_data_filename('data/{filename}'.format(filename=filename), TEST_PACKAGE)
     return FakeResponse(filename)
 
@@ -163,8 +163,8 @@ def init(configdb):
 @pytest.mark.master_bias
 class TestMasterBiasCreation:
     @pytest.fixture(autouse=True)
-    @mock.patch('banzai.utils.lake_utils.requests.get', side_effect=lake_side_effect)
-    def stack_bias_frames(self, mock_lake, init):
+    @mock.patch('banzai.utils.observation_utils.requests.get', side_effect=observation_portal_side_effect)
+    def stack_bias_frames(self, mock_observation_portal, init):
         run_reduce_individual_frames('*b00.fits*')
         mark_frames_as_good('*b91.fits*')
         stack_calibrations('bias')
@@ -178,8 +178,8 @@ class TestMasterBiasCreation:
 @pytest.mark.master_dark
 class TestMasterDarkCreation:
     @pytest.fixture(autouse=True)
-    @mock.patch('banzai.utils.lake_utils.requests.get', side_effect=lake_side_effect)
-    def stack_dark_frames(self, mock_lake):
+    @mock.patch('banzai.utils.observation_utils.requests.get', side_effect=observation_portal_side_effect)
+    def stack_dark_frames(self, mock_observation_portal):
         run_reduce_individual_frames('*d00.fits*')
         mark_frames_as_good('*d91.fits*')
         stack_calibrations('dark')
@@ -193,8 +193,8 @@ class TestMasterDarkCreation:
 @pytest.mark.master_flat
 class TestMasterFlatCreation:
     @pytest.fixture(autouse=True)
-    @mock.patch('banzai.utils.lake_utils.requests.get', side_effect=lake_side_effect)
-    def stack_flat_frames(self, mock_lake):
+    @mock.patch('banzai.utils.observation_utils.requests.get', side_effect=observation_portal_side_effect)
+    def stack_flat_frames(self, mock_observation_portal):
         run_reduce_individual_frames('*f00.fits*')
         mark_frames_as_good('*f91.fits*')
         stack_calibrations('skyflat')
@@ -208,8 +208,8 @@ class TestMasterFlatCreation:
 @pytest.mark.science_files
 class TestScienceFileCreation:
     @pytest.fixture(autouse=True)
-    @mock.patch('banzai.utils.lake_utils.requests.get', side_effect=lake_side_effect)
-    def reduce_science_frames(self, mock_lake):
+    @mock.patch('banzai.utils.observation_utils.requests.get', side_effect=observation_portal_side_effect)
+    def reduce_science_frames(self, mock_observation_portal):
         run_reduce_individual_frames('*e00.fits*')
 
     def test_if_science_frames_were_created(self):

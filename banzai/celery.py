@@ -6,7 +6,7 @@ from dateutil.parser import parse
 from celery import Celery
 
 from banzai import dbs, calibrations, logs
-from banzai.utils import date_utils, realtime_utils, lake_utils
+from banzai.utils import date_utils, realtime_utils, observation_utils
 from banzai.utils.stage_utils import run
 from celery.signals import setup_logging
 from banzai.context import Context
@@ -32,7 +32,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
         timezone_for_site = dbs.get_timezone(site, db_address=runtime_context.db_address)
         min_date, max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(timezone_for_site)
 
-    calibration_blocks = lake_utils.get_calibration_blocks_for_time_range(site, max_date, min_date)
+    calibration_blocks = observation_utils.get_calibration_blocks_for_time_range(site, max_date, min_date)
 
     if frame_types is None:
         frame_types = runtime_context.CALIBRATION_IMAGE_TYPES
@@ -47,7 +47,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                                                                                  'max_date': max_date,
                                                                                  'instrument': instrument.camera,
                                                                                  'frame_type': frame_type})
-            blocks_for_calibration = lake_utils.filter_calibration_blocks_for_type(instrument, frame_type,
+            blocks_for_calibration = observation_utils.filter_calibration_blocks_for_type(instrument, frame_type,
                                                                                    calibration_blocks)
             if len(blocks_for_calibration) > 0:
                 # block_end should be the latest block end time
