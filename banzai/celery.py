@@ -91,8 +91,7 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
             if frame_type.upper() == configuration['type']:
                 for instrument_config in configuration['instrument_configs']:
                     expected_image_count += instrument_config['exposure_count']
-    logger.info('expected image count: {0}'.format(str(expected_image_count)))
-    logger.info('completed image count: {0}'.format(str(completed_image_count)))
+    logger.info('expected image count: {0}, completed image count: {1}'.format(str(expected_image_count), str(completed_image_count)))
     if completed_image_count < expected_image_count and self.request.retries < 3:
         logger.info('Number of processed images less than expected. '
                     'Expected: {}, Completed: {}'.format(expected_image_count, completed_image_count),
