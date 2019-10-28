@@ -174,7 +174,10 @@ def run_realtime_pipeline():
                                            'help': 'Name of the queue to listen to from the fits exchange.'}}]
 
     runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
+    start_listener(runtime_context)
 
+
+def start_listener(runtime_context):
     # Need to keep the amqp logger level at least as high as INFO,
     # or else it send heartbeat check messages every second
     logging.getLogger('amqp').setLevel(max(logger.level, getattr(logging, 'INFO')))
