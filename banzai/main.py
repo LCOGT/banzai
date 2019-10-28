@@ -56,7 +56,7 @@ def add_settings_to_context(args, settings):
             setattr(args, setting, getattr(settings, setting))
 
 
-def parse_args(extra_console_arguments=None, parser_description='Process LCO data.'):
+def parse_args(settings, extra_console_arguments=None, parser_description='Process LCO data.'):
     """Parse arguments, including default command line argument, and set the overall log level"""
 
     parser = argparse.ArgumentParser(description=parser_description)
@@ -109,7 +109,7 @@ def parse_args(extra_console_arguments=None, parser_description='Process LCO dat
 def reduce_single_frame():
     extra_console_arguments = [{'args': ['--filepath'],
                                 'kwargs': {'dest': 'path', 'help': 'Full path to the file to process'}}]
-    runtime_context = parse_args(extra_console_arguments=extra_console_arguments)
+    runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
     # Short circuit
     if not image_utils.image_can_be_processed(fits_utils.get_primary_header(runtime_context.path),
                                               runtime_context, runtime_context.path):
@@ -144,7 +144,7 @@ def make_master_calibrations():
                                            'help': 'Latest observation time of the individual calibration frames. '
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
-    runtime_context = parse_args(extra_console_arguments=extra_console_arguments)
+    runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
     instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera,
                                           enclosure=runtime_context.enclosure, telescope=runtime_context.telescope)
     calibrations.make_master_calibrations(instrument,  runtime_context.frame_type.upper(),
@@ -153,7 +153,7 @@ def make_master_calibrations():
 
 def start_stacking_scheduler():
     logger.info('Started scheduling master calibrations')
-    runtime_context = parse_args()
+    runtime_context = parse_args(settings)
     beat_schedule = {site + 'beat': {'task': 'banzai.celery.schedule_calibration_stacking',
                                      'schedule': crontab(minute=entry['minute'], hour=entry['hour']),
                                      'args': (site, vars(runtime_context))}
@@ -173,7 +173,7 @@ def run_realtime_pipeline():
                                 'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
                                            'help': 'Name of the queue to listen to from the fits exchange.'}}]
 
-    runtime_context = parse_args(extra_console_arguments=extra_console_arguments)
+    runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
 
     # Need to keep the amqp logger level at least as high as INFO,
     # or else it send heartbeat check messages every second
