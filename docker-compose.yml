@@ -50,7 +50,7 @@ services:
     environment:
       RETRY_DELAY: "0"
       REDIS_HOST: "redis://redis:6379/0"
-      LAKE_URL: "http://lake-old.lco.gtn/blocks/"
+      OBSERVATION_PORTAL_URL: "http://internal-observation-portal.lco.gtn/api/observations/"
     labels:
       io.rancher.container.pull_image: always
       io.rancher.sidekicks: banzai-e2e
@@ -101,7 +101,7 @@ services:
       DB_ADDRESS: sqlite:////archive/engineering/test.db
       REDIS_HOST: "redis://redis:6379/0"
       FITS_BROKER_URL: "broker"
-      LAKE_URL: "http://lake-old.lco.gtn/blocks/"
+      OBSERVATION_PORTAL_URL:  "http://internal-observation-portal.lco.gtn/api/observations/"
     volumes_from:
     - banzai-e2e
     labels:

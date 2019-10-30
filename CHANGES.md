@@ -1,3 +1,7 @@
+0.27.1 (2019-10-30)
+-------------------
+- Update scheduling of calibration stacking to use observation portal, as lake is being retired.
+
 0.27.0 (2019-07-25)
 -------------------
 - Refactored configuration management to make it possible to override by BANZAI-NRES

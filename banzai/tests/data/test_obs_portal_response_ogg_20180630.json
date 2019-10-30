@@ -1,0 +1,2141 @@
+{
+    "count": 12,
+    "next": null,
+    "previous": null,
+    "results": [
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "2m0a",
+            "start": "2018-07-01T16:38:15",
+            "end": "2018-07-01T18:11:06",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "COMPLETED",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 2,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 15,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "DARK",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 900.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    }
+                ]
+            }
+        },
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "0m4c",
+            "start": "2018-07-01T16:19:29",
+            "end": "2018-07-01T16:58:05",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "COMPLETED",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 2,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 15,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "DARK",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 300.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    }
+                ]
+            }
+        },
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "0m4b",
+            "start": "2018-07-01T16:19:29",
+            "end": "2018-07-01T16:58:05",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "COMPLETED",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 2,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 15,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "DARK",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 300.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    }
+                ]
+            }
+        },
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "0m4c",
+            "start": "2018-07-01T15:18:12",
+            "end": "2018-07-01T15:59:51",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "COMPLETED",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "w"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "gp"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "rp"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 4,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "up"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    }
+                ]
+            }
+        },
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "0m4b",
+            "start": "2018-07-01T15:18:12",
+            "end": "2018-07-01T15:59:51",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "COMPLETED",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "w"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "rp"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "V"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 4,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "ip"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    }
+                ]
+            }
+        },
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "2m0a",
+            "start": "2018-07-01T15:18:12",
+            "end": "2018-07-01T15:59:51",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "COMPLETED",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "R"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "V"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "ip"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 4,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "I"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 5,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "B"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 6,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "zs"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    }
+                ]
+            }
+        },
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "0m4c",
+            "start": "2018-07-01T04:57:56",
+            "end": "2018-07-01T05:39:36",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "COMPLETED",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "up"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "rp"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "gp"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 4,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "w"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    }
+                ]
+            }
+        },
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "0m4b",
+            "start": "2018-07-01T04:57:56",
+            "end": "2018-07-01T05:39:36",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "COMPLETED",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "ip"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "V"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "rp"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 4,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {
+                                    "filter": "w"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    }
+                ]
+            }
+        },
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "2m0a",
+            "start": "2018-07-01T04:57:56",
+            "end": "2018-07-01T05:39:36",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "PENDING",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "zs"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "PENDING"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "B"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "PENDING"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "I"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "PENDING"
+                    },
+                    {
+                        "priority": 4,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "ip"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "PENDING"
+                    },
+                    {
+                        "priority": 5,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "V"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "PENDING"
+                    },
+                    {
+                        "priority": 6,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "SKY_FLAT",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {
+                                    "filter": "R"
+                                },
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "PENDING"
+                    }
+                ]
+            }
+        },
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "0m4c",
+            "start": "2018-07-01T03:59:43",
+            "end": "2018-07-01T04:43:19",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "COMPLETED",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 2,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 15,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb82",
+                        "type": "DARK",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 300.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    }
+                ]
+            }
+        },
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "0m4b",
+            "start": "2018-07-01T03:59:43",
+            "end": "2018-07-01T04:43:19",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "COMPLETED",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 2,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 15,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "0M4-SCICAM-SBIG",
+                        "instrument_name": "kb27",
+                        "type": "DARK",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 300.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    }
+                ]
+            }
+        },
+        {
+            "site": "ogg",
+            "enclosure": "clma",
+            "telescope": "2m0a",
+            "start": "2018-07-01T02:46:42",
+            "end": "2018-07-01T04:24:33",
+            "name": "LCOGT",
+            "proposal": "calibrate",
+            "priority": 10,
+            "submitter": "OGGOps",
+            "state": "COMPLETED",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 1,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 2,
+                                "bin_x": 1,
+                                "bin_y": 1,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 2,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "BIAS",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 15,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 0.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    },
+                    {
+                        "priority": 3,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_name": "fs02",
+                        "type": "DARK",
+                        "instrument_configs": [
+                            {
+                                "mode": "",
+                                "rotator_mode": "",
+                                "exposure_count": 5,
+                                "bin_x": 2,
+                                "bin_y": 2,
+                                "optical_elements": {},
+                                "extra_params": {},
+                                "exposure_time": 900.0
+                            }
+                        ],
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "guiding_config": {
+                            "mode": "ON",
+                            "optional": true,
+                            "optical_elements": {},
+                            "extra_params": {},
+                            "exposure_time": 10.0
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "min_lunar_distance": 0,
+                            "extra_params": {}
+                        },
+                        "target": {
+                            "name": "my target",
+                            "type": "ICRS",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "state": "COMPLETED"
+                    }
+                ]
+            }
+        }
+    ]
+}
