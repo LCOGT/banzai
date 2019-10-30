@@ -7,8 +7,8 @@ October 2015
 """
 import datetime
 import argparse
-
 import numpy as np
+from dateutil.parser import parse
 
 
 TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S'
@@ -125,13 +125,14 @@ def get_dayobs(timezone):
 
 def validate_date(s):
     try:
-        return datetime.datetime.strptime(s, TIMESTAMP_FORMAT)
+        parse(s)
     except ValueError:
         msg = "Not a valid date: '{0}'.".format(s)
         raise argparse.ArgumentTypeError(msg)
+    return s
 
 
-def get_min_and_max_dates_for_calibration_scheduling(timezone, return_string=False):
+def get_min_and_max_dates_for_calibration_scheduling(timezone: int) -> (str, str):
     # Gets next midnight relative to date of observation
     current_date = get_dayobs(timezone)
     current_date = datetime.datetime.strptime(current_date, '%Y%m%d')
@@ -139,7 +140,4 @@ def get_min_and_max_dates_for_calibration_scheduling(timezone, return_string=Fal
     utc_noon_at_site = current_date - datetime.timedelta(hours=timezone)
     min_date = utc_noon_at_site - datetime.timedelta(days=0.5)
     max_date = utc_noon_at_site + datetime.timedelta(days=0.5)
-    if return_string:
-        min_date = min_date.strftime(TIMESTAMP_FORMAT)
-        max_date = max_date.strftime(TIMESTAMP_FORMAT)
-    return min_date, max_date
+    return min_date.strftime(TIMESTAMP_FORMAT), max_date.strftime(TIMESTAMP_FORMAT)

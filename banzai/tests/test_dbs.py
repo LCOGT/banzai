@@ -4,9 +4,11 @@ import mock
 
 from banzai import dbs
 from banzai.tests.utils import FakeResponse
+from astropy.utils.data import get_pkg_data_filename
 
 
-@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse('data/configdb_example.json'))
+@mock.patch('banzai.dbs.requests.get', return_value=FakeResponse(get_pkg_data_filename('data/configdb_example.json',
+                                                                                       'banzai.tests')))
 def setup_module(mockrequests):
     dbs.create_db('.', db_address='sqlite:///test.db')
 
@@ -84,3 +86,9 @@ def test_not_removing_singlets():
     assert len(culled_list) == 2
     assert culled_list[0]['name'] == 'nres01'
     assert culled_list[1]['name'] == 'cam01'
+
+
+def test_standby_marked_schedulable():
+    instrument = dbs.query_for_instrument(db_address='sqlite:///test.db', site='coj', camera='kb98')
+    assert instrument.name == 'kb98'
+    assert instrument.schedulable == True

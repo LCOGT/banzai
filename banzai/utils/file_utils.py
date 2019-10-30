@@ -3,6 +3,7 @@ import os
 import logging
 
 from kombu import Connection, Exchange
+from banzai.utils import import_utils
 
 logger = logging.getLogger('banzai')
 
@@ -64,3 +65,24 @@ def config_to_filename(image):
     filename = filename.replace('default', '')
     filename = filename.replace('central_2k_2x2', 'center')
     return filename
+
+
+def telescope_to_filename(image):
+    return image.header.get('TELESCOP', '').replace('-', '')
+
+
+def make_calibration_filename_function(calibration_type, context):
+    def get_calibration_filename(image):
+        telescope_filename_function = import_utils.import_attribute(context.TELESCOPE_FILENAME_FUNCTION)
+        name_components = {'site': image.site, 'telescop': telescope_filename_function(image),
+                           'camera': image.header.get('INSTRUME', ''), 'epoch': image.epoch,
+                           'cal_type': calibration_type.lower()}
+        cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
+        for function_name in context.CALIBRATION_FILENAME_FUNCTIONS[calibration_type]:
+            filename_function = import_utils.import_attribute(function_name)
+            filename_part = filename_function(image)
+            if len(filename_part) > 0:
+                cal_file += '-{}'.format(filename_part)
+        cal_file += '.fits'
+        return cal_file
+    return get_calibration_filename

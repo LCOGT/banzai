@@ -7,18 +7,8 @@ settings.py: Settings script for banzai.
 
 """
 import os
-import operator
 
-from banzai.utils.instrument_utils import InstrumentCriterion
-from banzai.utils.file_utils import config_to_filename, filter_to_filename, ccdsum_to_filename
-
-
-def telescope_to_filename(image):
-    return image.header.get('TELESCOP', '').replace('-', '')
-
-
-FRAME_SELECTION_CRITERIA = [InstrumentCriterion('type', operator.contains, 'FLOYDS', exclude=True),
-                            InstrumentCriterion('type', operator.contains, 'NRES', exclude=True)]
+FRAME_SELECTION_CRITERIA = [('type', 'not contains', 'FLOYDS'), ('type', 'not contains', 'NRES')]
 
 FRAME_CLASS = 'banzai.images.Image'
 
@@ -78,32 +68,15 @@ SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
 
 ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/catalog/')
 
+CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_filename',
+                                           'banzai.utils.file_utils.ccdsum_to_filename'),
+                                  'DARK': ('banzai.utils.file_utils.config_to_filename',
+                                           'banzai.utils.file_utils.ccdsum_to_filename'),
+                                  'SKYFLAT': ('banzai.utils.file_utils.config_to_filename',
+                                              'banzai.utils.file_utils.ccdsum_to_filename',
+                                              'banzai.utils.file_utils.filter_to_filename')}
 
-def make_calibration_filename_function(calibration_type, attribute_filename_functions, telescope_filename_function):
-    def get_calibration_filename(image):
-        name_components = {'site': image.site, 'telescop': telescope_filename_function(image),
-                           'camera': image.header.get('INSTRUME', ''), 'epoch': image.epoch,
-                           'cal_type': calibration_type.lower()}
-        cal_file = '{site}{telescop}-{camera}-{epoch}-{cal_type}'.format(**name_components)
-        for filename_function in attribute_filename_functions:
-            filename_part = filename_function(image)
-            if len(filename_part) > 0:
-                cal_file += '-{}'.format(filename_part)
-        cal_file += '.fits'
-        return cal_file
-    return get_calibration_filename
+TELESCOPE_FILENAME_FUNCTION = 'banzai.utils.file_utils.telescope_to_filename'
 
-
-CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': make_calibration_filename_function('BIAS', [config_to_filename,
-                                                                                      ccdsum_to_filename],
-                                                                             telescope_to_filename),
-                                  'DARK': make_calibration_filename_function('DARK', [config_to_filename,
-                                                                                      ccdsum_to_filename],
-                                                                             telescope_to_filename),
-                                  'SKYFLAT': make_calibration_filename_function('SKYFLAT', [config_to_filename,
-                                                                                            ccdsum_to_filename,
-                                                                                            filter_to_filename],
-                                                                                telescope_to_filename)}
-
-LAKE_URL = os.getenv('LAKE_URL', 'http://lake.lco.gtn/blocks/')
+OBSERVATION_PORTAL_URL = os.getenv('OBSERVATION_PORTAL_URL', 'http://internal-observation-portal.lco.gtn/api/observations/')
 CALIBRATE_PROPOSAL_ID = os.getenv('CALIBRATE_PROPOSAL_ID', 'calibrate')

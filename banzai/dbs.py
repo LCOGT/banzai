@@ -11,6 +11,7 @@ import os.path
 import logging
 from glob import glob
 import datetime
+from dateutil.parser import parse
 
 import numpy as np
 import requests
@@ -21,13 +22,15 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
 
-from banzai.utils import date_utils, fits_utils, image_utils
+from banzai.utils import date_utils, fits_utils
 
 # Define how to get to the database
 # Note that we need to encode the database password outside of the code base
 _DEFAULT_DB = 'mysql://cmccully:password@localhost/test'
 
 _CONFIGDB_ADDRESS = 'http://configdb.lco.gtn/sites/'
+
+INSTRUMENT_STATES_TO_REDUCE = ['SCHEDULABLE', 'STANDBY']
 
 Base = declarative_base()
 
@@ -174,7 +177,7 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
                                       'camera': sci_cam['code'],
                                       'name': ins.get('code'),
                                       'type': sci_cam['camera_type']['code'],
-                                      'schedulable': ins['state'] == 'SCHEDULABLE'}
+                                      'schedulable': ins['state'] in INSTRUMENT_STATES_TO_REDUCE}
                         # hotfix for configdb
                         if instrument['name'] is None:
                             instrument['name'] = instrument['camera']
@@ -299,7 +302,7 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
 
             header = hdu[0].header
             ccdsum = header.get('CCDSUM')
-            configuration_mode = image_utils.get_configuration_mode(header)
+            configuration_mode = fits_utils.get_configuration_mode(header)
 
             dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
 
@@ -440,6 +443,12 @@ def get_instruments_at_site(site, db_address=_DEFAULT_DB, ignore_schedulability=
     return instruments
 
 
+def get_instrument_by_id(id, db_address=_DEFAULT_DB):
+    with get_session(db_address=db_address) as db_session:
+        instrument = db_session.query(Instrument).filter(Instrument.id==id).first()
+    return instrument
+
+
 def get_master_calibration_image(image, calibration_type, master_selection_criteria,
                                  use_only_older_calibrations=False, db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
@@ -477,15 +486,13 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     return calibration_file
 
 
-def get_individual_calibration_images(instrument, calibration_type, min_date: datetime.datetime,
-                                      max_date: datetime.datetime, use_masters=False, include_bad_frames=False,
-                                      db_address=_DEFAULT_DB):
+def get_individual_calibration_images(instrument, calibration_type, min_date: str, max_date: str,
+                                      include_bad_frames=False, db_address=_DEFAULT_DB):
 
     calibration_criteria = CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
-    calibration_criteria &= CalibrationImage.is_master.is_(use_masters)
-    calibration_criteria &= CalibrationImage.dateobs >= min_date
-    calibration_criteria &= CalibrationImage.dateobs <= max_date
+    calibration_criteria &= CalibrationImage.dateobs >= parse(min_date).replace(tzinfo=None)
+    calibration_criteria &= CalibrationImage.dateobs <= parse(max_date).replace(tzinfo=None)
 
     if not include_bad_frames:
         calibration_criteria &= CalibrationImage.is_bad == False

@@ -1,3 +1,15 @@
+0.27.1 (2019-10-30)
+-------------------
+- Update scheduling of calibration stacking to use observation portal, as lake is being retired.
+
+0.27.0 (2019-07-25)
+-------------------
+- Refactored configuration management to make it possible to override by BANZAI-NRES
+
+0.26.8 (2019-08-06)
+-------------------
+- Add ability to automatically reduce data from instruments in STANDBY state.
+
 0.26.7 (2019-07-24)
 -------------------
 - Fixed a typo in the photometry stage
