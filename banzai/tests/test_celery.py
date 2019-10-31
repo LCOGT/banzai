@@ -16,56 +16,154 @@ from banzai.tests.bias_utils import FakeBiasImage
 # TODO: update tests to use same mock lake data as e2e tests
 
 fake_blocks_response_json = {
-                        "results": [
+    "results": [
+        {
+            "end": "2019-02-19T21:55:09",
+            "telescope": "2m0a",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 0,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_configs": [
                             {
-                                "id": 459503917,
-                                "molecules": [
-                                    {
-                                        "id": 974434567,
-                                        "prop_id": "calibrate",
-                                        "type": "BIAS",
-                                        "completed": 'false',
-                                        "exposure_count": 2
-                                    },
-                                    {
-                                        "id": 974434568,
-                                        "prop_id": "calibrate",
-                                        "type": "SKY_FLAT",
-                                        "completed": 'false',
-                                        "exposure_count": 2
-                                    },
-                                ],
-                                "start": "2019-02-19T20:27:49",
-                                "end": "2019-02-19T21:55:09",
-                                "site": "coj",
-                                "observatory": "clma",
-                                "telescope": "2m0a",
-                                "instrument_class": "2M0-SCICAM-SPECTRAL",
-                                "canceled": 'false',
-                                "aborted": 'false'
-                            },
-                            {
-                                "id": 459503917,
-                                "molecules": [
-                                    {
-                                        "id": 974434567,
-                                        "prop_id": "calibrate",
-                                        "type": "BIAS",
-                                        "completed": 'false',
-                                        "exposure_count": 2
-                                    },
-                                ],
-                                "start": "2019-02-20T08:27:49",
-                                "end": "2019-02-20T09:55:09",
-                                "site": "coj",
-                                "observatory": "clma",
-                                "telescope": "2m0a",
-                                "instrument_class": "2M0-SCICAM-SPECTRAL",
-                                "canceled": 'false',
-                                "aborted": 'false'
+                                "exposure_time": 0.01,
+                                "exposure_count": 2,
+                                "rotator_mode": "",
+                                "optical_elements": {},
+                                "mode": "",
+                                "extra_params": {},
+                                "bin_y": 1,
+                                "bin_x": 1
                             }
-                        ]
+                        ],
+                        "target": {
+                            "type": "ICRS",
+                            "name": "my target",
+                            "extra_params": {}
+                        },
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "type": "BIAS",
+                        "guiding_config": {
+                            "optical_elements": {},
+                            "exposure_time": 10,
+                            "optional": True,
+                            "mode": "ON",
+                            "extra_params": {}
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "extra_params": {},
+                            "min_lunar_distance": 0
+                        }
+                    },
+                    {
+                        "priority": 1,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_configs": [
+                            {
+                                "exposure_time": 0.01,
+                                "exposure_count": 2,
+                                "rotator_mode": "",
+                                "optical_elements": {},
+                                "mode": "",
+                                "extra_params": {},
+                                "bin_y": 1,
+                                "bin_x": 1
+                            }
+                        ],
+                        "target": {
+                            "type": "ICRS",
+                            "name": "my target",
+                            "extra_params": {}
+                        },
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "type": "SKY_FLAT",
+                        "guiding_config": {
+                            "optical_elements": {},
+                            "exposure_time": 10,
+                            "optional": True,
+                            "mode": "ON",
+                            "extra_params": {}
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "extra_params": {},
+                            "min_lunar_distance": 0
+                        }
                     }
+                ]
+            },
+            "site": "coj",
+            "start": "2019-02-19T20:27:49",
+            "state": "PENDING",
+            "proposal": "calibrate",
+            "enclosure": "clma",
+            "name": ""
+        },
+        {
+            "end": "2019-02-20T09:55:09",
+            "telescope": "2m0a",
+            "request": {
+                "configurations": [
+                    {
+                        "priority": 0,
+                        "instrument_type": "2M0-SCICAM-SPECTRAL",
+                        "instrument_configs": [
+                            {
+                                "exposure_time": 0.01,
+                                "exposure_count": 2,
+                                "rotator_mode": "",
+                                "optical_elements": {},
+                                "mode": "",
+                                "extra_params": {},
+                                "bin_y": 1,
+                                "bin_x": 1
+                            }
+                        ],
+                        "target": {
+                            "type": "ICRS",
+                            "name": "my target",
+                            "extra_params": {}
+                        },
+                        "acquisition_config": {
+                            "mode": "OFF",
+                            "extra_params": {}
+                        },
+                        "extra_params": {},
+                        "type": "BIAS",
+                        "guiding_config": {
+                            "optical_elements": {},
+                            "exposure_time": 10,
+                            "optional": True,
+                            "mode": "ON",
+                            "extra_params": {}
+                        },
+                        "constraints": {
+                            "max_airmass": 20,
+                            "extra_params": {},
+                            "min_lunar_distance": 0
+                        }
+                    }
+                ]
+            },
+            "site": "coj",
+            "start": "2019-02-20T08:27:49",
+            "state": "PENDING",
+            "proposal": "calibrate",
+            "enclosure": "clma",
+            "name": ""
+        }
+    ],
+}
 
 fake_instruments_response = FakeInstrument()
 
@@ -84,8 +182,8 @@ class TestMain():
 
     @mock.patch('banzai.celery.stack_calibrations.apply_async')
     @mock.patch('banzai.celery.dbs.get_instruments_at_site')
-    @mock.patch('banzai.utils.lake_utils.get_calibration_blocks_for_time_range')
-    @mock.patch('banzai.utils.lake_utils.filter_calibration_blocks_for_type')
+    @mock.patch('banzai.utils.observation_utils.get_calibration_blocks_for_time_range')
+    @mock.patch('banzai.utils.observation_utils.filter_calibration_blocks_for_type')
     def test_submit_stacking_tasks_to_queue_no_delay(self, mock_filter_blocks, mock_get_blocks, mock_get_instruments,
                                                      mock_stack_calibrations, setup):
         mock_get_instruments.return_value = [self.fake_inst]
@@ -99,8 +197,8 @@ class TestMain():
 
     @mock.patch('banzai.celery.stack_calibrations.apply_async')
     @mock.patch('banzai.celery.dbs.get_instruments_at_site')
-    @mock.patch('banzai.utils.lake_utils.get_calibration_blocks_for_time_range')
-    @mock.patch('banzai.utils.lake_utils.filter_calibration_blocks_for_type')
+    @mock.patch('banzai.utils.observation_utils.get_calibration_blocks_for_time_range')
+    @mock.patch('banzai.utils.observation_utils.filter_calibration_blocks_for_type')
     def test_submit_stacking_tasks_to_queue_with_delay(self, mock_filter_blocks, mock_get_blocks, mock_get_instruments,
                                                        mock_stack_calibrations, setup):
         mock_get_instruments.return_value = [self.fake_inst]

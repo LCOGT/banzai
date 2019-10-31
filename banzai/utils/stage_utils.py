@@ -1,4 +1,3 @@
-from banzai import settings
 from banzai.utils import import_utils
 from collections import Iterable
 import logging
@@ -49,8 +48,8 @@ def run_pipeline_stages(image_paths, runtime_context):
     else:
         images = frame_factory.open(image_paths, runtime_context)
         stages_to_do = get_stages_for_individual_frame(runtime_context.ORDERED_STAGES,
-                                                       last_stage=settings.LAST_STAGE[images.obstype.upper()],
-                                                       extra_stages=settings.EXTRA_STAGES[images.obstype.upper()])
+                                                       last_stage=runtime_context.LAST_STAGE[images.obstype.upper()],
+                                                       extra_stages=runtime_context.EXTRA_STAGES[images.obstype.upper()])
     if images is None:
         return
 
