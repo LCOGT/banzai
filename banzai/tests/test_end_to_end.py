@@ -77,7 +77,6 @@ def run_reduce_individual_frames(raw_filenames):
 
 def stack_calibrations(frame_type):
     logger.info('Stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
-    logger.info('Stacking calibrations for frame type: {frame_type}'.format(frame_type=frame_type))
     for day_obs in DAYS_OBS:
         site, camera, dayobs = day_obs.split('/')
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])

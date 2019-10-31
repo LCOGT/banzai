@@ -21,7 +21,7 @@ def get_calibration_blocks_for_time_range(site, start_before, start_after, conte
 def filter_calibration_blocks_for_type(instrument, calibration_type, observations):
     calibration_observations = []
     for observation in observations:
-        if instrument.site == observation['site'] and instrument.enclosure == observation['enclosure']:
+        if instrument.site == observation['site']:
             filtered_observation = copy.deepcopy(observation)
             filtered_observation['request']['configurations'] = []
             for configuration in observation['request']['configurations']:
