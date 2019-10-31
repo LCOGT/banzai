@@ -169,7 +169,6 @@ class CalibrationComparer(CalibrationUser):
 
 def make_master_calibrations(instrument, frame_type, min_date, max_date, runtime_context):
     extra_tags = {'type': instrument.type, 'site': instrument.site,
-                  'enclosure': instrument.enclosure, 'telescope': instrument.telescope,
                   'camera': instrument.camera, 'obstype': frame_type,
                   'min_date': min_date,
                   'max_date': max_date}

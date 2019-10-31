@@ -711,18 +711,15 @@ class LCOImageFactory:
     def _get_instrument(cls, image, db_address):
         site = image.meta.get('SITEID')
         camera = image.meta.get('INSTRUME')
-        enclosure = image.meta.get('ENCID')
-        telescope = image.meta.get('TELID')
-        instrument = dbs.query_for_instrument(db_address, site, camera, enclosure=enclosure, telescope=telescope)
+        instrument = dbs.query_for_instrument(db_address, site, camera)
         name = camera
         if instrument is None:
             # if instrument is missing, assume it is an NRES frame and check for the instrument again.
             name = image.meta.get('TELESCOP')
-            instrument = dbs.query_for_instrument(db_address, site, camera, name=name, enclosure=None, telescope=None)
+            instrument = dbs.query_for_instrument(db_address, site, camera, name=name)
         if instrument is None:
             msg = 'Instrument is not in the database, Please add it before reducing this data.'
-            tags = {'site': site, 'enclosure': enclosure,
-                    'telescope': telescope, 'camera': camera, 'telescop': name}
+            tags = {'site': site, 'camera': camera, 'telescop': name}
             logger.error(msg, extra_tags=tags)
             raise ValueError('Instrument is missing from the database.')
         return instrument

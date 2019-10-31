@@ -126,10 +126,6 @@ def reduce_single_frame():
 def make_master_calibrations():
     extra_console_arguments = [{'args': ['--site'],
                                 'kwargs': {'dest': 'site', 'help': 'Site code (e.g. ogg)', 'required': True}},
-                               {'args': ['--enclosure'],
-                                'kwargs': {'dest': 'enclosure', 'help': 'Enclosure code (e.g. clma)', 'required': True}},
-                               {'args': ['--telescope'],
-                                'kwargs': {'dest': 'telescope', 'help': 'Telescope code (e.g. 0m4a)', 'required': True}},
                                {'args': ['--camera'],
                                 'kwargs': {'dest': 'camera', 'help': 'Camera (e.g. kb95)', 'required': True}},
                                {'args': ['--frame-type'],
@@ -145,8 +141,7 @@ def make_master_calibrations():
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
     runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
-    instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera,
-                                          enclosure=runtime_context.enclosure, telescope=runtime_context.telescope)
+    instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera)
     calibrations.make_master_calibrations(instrument,  runtime_context.frame_type.upper(),
                                           runtime_context.min_date, runtime_context.max_date, runtime_context)
 
@@ -220,23 +215,16 @@ def mark_frame(mark_as):
 def add_instrument():
     parser = argparse.ArgumentParser(description="Add a new instrument to the database")
     parser.add_argument("--site", help='Site code (e.g. ogg)', required=True)
-    parser.add_argument('--enclosure', help='Enclosure code (e.g. clma)', required=True)
-    parser.add_argument('--telescope', help='Telescope code (e.g. 0m4a)', required=True)
     parser.add_argument("--camera", help='Camera (e.g. kb95)', required=True)
     parser.add_argument("--name", help='Instrument name (e.g kb05, nres03)', required=True)
     parser.add_argument("--camera-type", dest='camera_type',
                         help="Camera type (e.g. 1m0-SciCam-Sinistro)", required=True)
-    parser.add_argument("--schedulable", help="Mark the instrument as schedulable", action='store_true',
-                        dest='schedulable', default=False)
     parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
                         help='Database address: Should be in SQLAlchemy format')
     args = parser.parse_args()
     instrument = {'site': args.site,
-                  'enclosure': args.enclosure,
-                  'telescope': args.telescope,
                   'camera': args.camera,
                   'type': args.camera_type,
-                  'schedulable': args.schedulable,
                   'name': args.name}
     dbs.add_instrument(instrument, args.db_address)
 

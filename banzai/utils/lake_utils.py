@@ -22,7 +22,7 @@ def get_calibration_blocks_for_time_range(site, start_before, start_after):
 def filter_calibration_blocks_for_type(instrument, calibration_type, blocks):
     calibration_blocks = []
     for block in blocks:
-        if instrument.type.upper() == block['instrument_class'] and instrument.site == block['site'] and instrument.enclosure == block['observatory']:
+        if instrument.type.upper() == block['instrument_class'] and instrument.site == block['site']:
             filtered_block = copy.deepcopy(block)
             filtered_block['molecules'] = []
             for molecule in block['molecules']:

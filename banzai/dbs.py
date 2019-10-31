@@ -21,8 +21,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
 
-INSTRUMENT_STATES_TO_REDUCE = ['SCHEDULABLE', 'STANDBY']
-
 Base = declarative_base()
 
 logger = logging.getLogger('banzai')
@@ -85,13 +83,10 @@ class Instrument(Base):
     __tablename__ = 'instruments'
     id = Column(Integer, primary_key=True, autoincrement=True)
     site = Column(String(15), ForeignKey('sites.id'), index=True, nullable=False)
-    enclosure = Column(String(20), index=True, nullable=False)
-    telescope = Column(String(20), index=True, nullable=False)
     camera = Column(String(50), index=True, nullable=False)
     type = Column(String(100))
     name = Column(String(100), index=True, nullable=False)
-    schedulable = Column(Boolean, default=False)
-    __table_args__ = (UniqueConstraint('site', 'enclosure', 'telescope', 'camera', name='instrument_constraint'),)
+    __table_args__ = (UniqueConstraint('site', 'camera', 'name', name='instrument_constraint'),)
 
 
 class Site(Base):
@@ -145,44 +140,27 @@ def parse_configdb(configdb_address):
                     sci_cam = ins.get('science_camera')
                     if sci_cam is not None:
                         instrument = {'site': site['code'],
-                                      'enclosure': enc['code'],
-                                      'telescope': tel['code'],
                                       'camera': sci_cam['code'],
                                       'name': ins.get('code'),
-                                      'type': sci_cam['camera_type']['code'],
-                                      'schedulable': ins['state'] in INSTRUMENT_STATES_TO_REDUCE}
+                                      'type': sci_cam['camera_type']['code']}
                         # hotfix for configdb
                         if instrument['name'] is None:
                             instrument['name'] = instrument['camera']
                         if instrument['name'] in CAMERAS_FOR_INSTRUMENTS:
                             instrument['camera'] = CAMERAS_FOR_INSTRUMENTS[instrument['name']]
                         instruments.append(instrument)
-
-    instruments = remove_nres_duplicates(instruments)
     return sites, instruments
-
-
-def remove_nres_duplicates(instruments):
-    instruments.sort(reverse=True, key=lambda instrument: (instrument['name'], instrument['schedulable']))
-    instrument_dupe_attributes = [(instrument['name'], instrument['camera']) for instrument in instruments]
-    return [instrument for i, instrument in enumerate(instruments)
-            if (instrument['name'], instrument['camera']) not in instrument_dupe_attributes[:i]]
 
 
 def add_instrument(instrument, db_address):
     with get_session(db_address=db_address) as db_session:
         equivalence_criteria = {'site': instrument['site'],
-                                'enclosure': instrument['enclosure'],
-                                'telescope': instrument['telescope'],
                                 'camera': instrument['camera'],
                                 'name': instrument['name']}
         record_attributes = {'site': instrument['site'],
-                             'enclosure': instrument['enclosure'],
-                             'telescope': instrument['telescope'],
                              'camera': instrument['camera'],
                              'name': instrument['name'],
-                             'type': instrument['type'],
-                             'schedulable': instrument['schedulable']}
+                             'type': instrument['type']}
 
         instrument_record = add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
         db_session.commit()
@@ -234,21 +212,14 @@ class SiteMissingException(Exception):
     pass
 
 
-def query_for_instrument(db_address, site, camera, enclosure=None, telescope=None, name=None,
-                         must_be_schedulable=False):
+def query_for_instrument(db_address, site, camera, name=None):
     # Short circuit
     if None in [site, camera]:
         return None
     with get_session(db_address=db_address) as db_session:
         criteria = (Instrument.site == site) & (Instrument.camera == camera)
-        if enclosure is not None:
-            criteria &= Instrument.enclosure == enclosure
-        if telescope is not None:
-            criteria &= Instrument.telescope == telescope
         if name is not None:
             criteria &= Instrument.name == name
-        if must_be_schedulable:
-            criteria &= Instrument.schedulable.is_(True)
         instrument = db_session.query(Instrument).filter(criteria).order_by(Instrument.id.desc()).first()
     return instrument
 
@@ -299,11 +270,9 @@ def get_timezone(site, db_address):
     return site_list[0].timezone
 
 
-def get_instruments_at_site(site, db_address, ignore_schedulability=False):
+def get_instruments_at_site(site, db_address):
     with get_session(db_address=db_address) as db_session:
         query = (Instrument.site == site)
-        if not ignore_schedulability:
-            query &= Instrument.schedulable
         instruments = db_session.query(Instrument).filter(query).all()
     return instruments
 
@@ -419,18 +388,10 @@ def populate_instrument_tables(db_address, configdb_address):
     added to the network.
     """
     sites, instruments = parse_configdb(configdb_address=configdb_address)
-
     with get_session(db_address=db_address) as db_session:
         for site in sites:
             add_or_update_record(db_session, Site, {'id': site['code']},
                                  {'id': site['code'], 'timezone': site['timezone']})
-        db_session.commit()
 
-        added_instruments = [add_instrument(instrument, db_address) for instrument in instruments]
-
-        # Set all instruments in the table to be schedulable and turn them back on below as needed.
-        all_instruments = db_session.query(Instrument).all()
-        for instrument in all_instruments:
-            if instrument.name not in [added_instrument.name for added_instrument in added_instruments]:
-                instrument.schedulable = False
-        db_session.commit()
+    for instrument in instruments:
+        add_instrument(instrument, db_address)

@@ -79,7 +79,7 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
     instrument = dbs.get_instrument_by_id(instrument_id, db_address=runtime_context.db_address)
     logger.info('Checking if we are ready to stack',
                 extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
-                            'instrument': instrument.camera, 'frame_type': frame_type})
+                            'instrument': instrument.name, 'frame_type': frame_type})
 
     completed_image_count = len(dbs.get_individual_calibration_images(instrument, frame_type,
                                                                       min_date, max_date, include_bad_frames=True,
