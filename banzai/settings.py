@@ -51,7 +51,8 @@ LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
 
 EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
                 'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkComparer'],
-                'SKYFLAT': ['banzai.flats.FlatNormalizer', 'banzai.qc.PatternNoiseDetector', 'banzai.flats.FlatComparer'],
+                'SKYFLAT': ['banzai.flats.FlatNormalizer', 'banzai.qc.PatternNoiseDetector',
+                            'banzai.flats.FlatComparer'],
                 'STANDARD': None,
                 'EXPOSE': None}
 
@@ -87,7 +88,12 @@ CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_fi
 
 TELESCOPE_FILENAME_FUNCTION = 'banzai.utils.file_utils.telescope_to_filename'
 
-OBSERVATION_PORTAL_URL = os.getenv('OBSERVATION_PORTAL_URL', 'http://internal-observation-portal.lco.gtn/api/observations/')
+OBSERVATION_PORTAL_URL = os.getenv('OBSERVATION_PORTAL_URL',
+                                   'http://internal-observation-portal.lco.gtn/api/observations/')
 CALIBRATE_PROPOSAL_ID = os.getenv('CALIBRATE_PROPOSAL_ID', 'calibrate')
 
 CONFIGDB_URL = os.getenv('CONFIGDB_URL', 'http://configdb.lco.gtn/sites/')
+
+# The Observation Portal is not always consistent with OBSTYPE in the header so this maps any differences
+# If an observation type is not in this list, we assume it is the same in the portal and the header
+OBSERVATION_REQUEST_TYPES = {}

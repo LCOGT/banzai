@@ -47,8 +47,10 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                                                                                  'max_date': max_date,
                                                                                  'instrument': instrument.camera,
                                                                                  'frame_type': frame_type})
-            blocks_for_calibration = observation_utils.filter_calibration_blocks_for_type(instrument, frame_type,
-                                                                                   calibration_blocks)
+            blocks_for_calibration = observation_utils.filter_calibration_blocks_for_type(instrument,
+                                                                                          frame_type,
+                                                                                          calibration_blocks,
+                                                                                          runtime_context)
             if len(blocks_for_calibration) > 0:
                 # Set the delay to after the latest block end
                 calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)

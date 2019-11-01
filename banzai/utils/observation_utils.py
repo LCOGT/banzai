@@ -18,15 +18,23 @@ def get_calibration_blocks_for_time_range(site, start_before, start_after, conte
     return results
 
 
-def filter_calibration_blocks_for_type(instrument, calibration_type, observations):
+def filter_calibration_blocks_for_type(instrument, calibration_type, observations, runtime_context):
     calibration_observations = []
     for observation in observations:
         if instrument.site == observation['site']:
             filtered_observation = copy.deepcopy(observation)
             filtered_observation['request']['configurations'] = []
             for configuration in observation['request']['configurations']:
-                if calibration_type.upper() == configuration['type'] and instrument.type.upper() == configuration['instrument_type'] and instrument.camera == configuration['instrument_name']:
-                    filtered_observation['request']['configurations'].append(configuration)
+                request_type = runtime_context.OBSERVATION_REQUEST_TYPES.get(calibration_type.upper(),
+                                                                             calibration_type.upper())
+                # Move on if anything about the request doesn't match
+                if request_type != configuration['type']:
+                    continue
+                if instrument.type.upper() != configuration['instrument_type']:
+                    continue
+                if instrument.name != configuration['instrument_name']:
+                    continue
+                filtered_observation['request']['configurations'].append(configuration)
             if len(filtered_observation['request']['configurations']) != 0:
                 calibration_observations.append(filtered_observation)
     return calibration_observations
