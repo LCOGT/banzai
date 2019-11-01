@@ -19,7 +19,7 @@ from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils.stage_utils import run
 from banzai.utils import image_utils, date_utils, fits_utils
-from banzai.celery import process_image, app
+from banzai.celery import process_image, app, schedule_calibration_stacking
 from celery.schedules import crontab
 import celery
 import celery.bin.beat
@@ -161,12 +161,13 @@ def stack_calibrations():
 def start_stacking_scheduler():
     logger.info('Entered entrypoint to celery beat scheduling')
     runtime_context = parse_directory_args()
-    beat_schedule = {site + 'beat': {'task': 'banzai.celery.schedule_calibration_stacking',
-                                     'schedule': crontab(minute=entry['minute'], hour=entry['hour']),
-                                     'args': (site, vars(runtime_context))}
-                     for site, entry in runtime_context.SCHEDULE_STACKING_CRON_ENTRIES.items()}
+    for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
+        minute = entry['minute']
+        hour = entry['hour']
+        logger.info(f'Adding task for {site} at {hour}:{minute}')
+        app.add_periodic_task(crontab(minute=entry['minute'], hour=entry['hour']),
+                              schedule_calibration_stacking.s(site=site, runtime_context=vars(runtime_context)))
 
-    app.conf.update(beat_schedule=beat_schedule)
     beat = celery.bin.beat.beat(app=app)
     logger.info('Starting celery beat')
     beat.run()
