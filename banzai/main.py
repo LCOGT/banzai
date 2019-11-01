@@ -161,10 +161,7 @@ def stack_calibrations():
 def start_stacking_scheduler():
     logger.info('Entered entrypoint to celery beat scheduling')
     runtime_context = parse_directory_args()
-    for site, entry in settings.SCHEDULE_STACKING_CRON_ENTRIES.items():
-        minute = entry['minute']
-        hour = entry['hour']
-        logger.info(f'Adding task for {site} at {hour}:{minute}')
+    for site, entry in runtime_context.SCHEDULE_STACKING_CRON_ENTRIES.items():
         app.add_periodic_task(crontab(minute=entry['minute'], hour=entry['hour']),
                               schedule_calibration_stacking.s(site=site, runtime_context=vars(runtime_context)))
 
