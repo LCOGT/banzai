@@ -30,8 +30,6 @@ def filter_calibration_blocks_for_type(instrument, calibration_type, observation
                 # Move on if anything about the request doesn't match
                 if request_type != configuration['type']:
                     continue
-                if instrument.type.upper() != configuration['instrument_type']:
-                    continue
                 if instrument.name != configuration['instrument_name']:
                     continue
                 filtered_observation['request']['configurations'].append(configuration)
