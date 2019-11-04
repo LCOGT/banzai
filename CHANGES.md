@@ -1,4 +1,8 @@
-0.27.2 (2019-11-1)
+0.27.3 (2019-11-04)
+-------------------
+- Fix for retrieving correct number of calibration blocks from observation portal.
+
+0.27.2 (2019-11-01)
 -------------------
 - Fixes for celerybeat scheduling of calibration stacking checks
 
