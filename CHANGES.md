@@ -1,3 +1,7 @@
+0.27.2 (2019-11-1)
+-------------------
+- Fixes for celerybeat scheduling of calibration stacking checks
+
 0.27.1 (2019-10-30)
 -------------------
 - Update scheduling of calibration stacking to use observation portal, as lake is being retired.
