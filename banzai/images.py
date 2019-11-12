@@ -103,8 +103,16 @@ class CCDData(Data):
         self.meta['MAXLIN'] *= value
         return self
 
-    def __itruediv__(self, other):
-        self.__imul__(1.0 / other)
+    def __itruediv__(self, value):
+        if isinstance(value, CCDData):
+            self.data /= value.data
+            self.uncertainty /= value.uncertainty
+            # TODO: is this correct for flat normalization?
+            # self.meta['SATURATE'] /= value.meta['SATURATE']
+            # self.meta['GAIN'] /= value.meta['GAIN']
+            # self.meta['MAXLIN'] /= value.meta['MAXLIN']
+        else:
+            self.__imul__(1.0 / value)
         return self
 
     def to_fits(self):
@@ -140,9 +148,28 @@ class CCDData(Data):
     def get_overscan_region(self):
         return Section.parse_region_keyword(self.meta.get('BIASSEC', 'N/A'))
 
+    def get_inner_image_section(self, inner_edge_width=0.25):
+        """
+         Extract the inner section of the image with dimensions:
+         ny * inner_edge_width * 2.0 x nx * inner_edge_width * 2.0
+
+         Parameters
+         ----------
+
+         inner_edge_width: float
+                           Size of inner edge as fraction of total image size
+
+         Returns
+         -------
+         inner_section: array
+                        Inner section of image
+         """
+        inner_nx = round(self.data.shape[1] * inner_edge_width)
+        inner_ny = round(self.data.shape[0] * inner_edge_width)
+        return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
+
     def trim(self, trim_section=None):
         """
-
         :param trim_section: Always in data coords
         :return:
         """
@@ -390,10 +417,6 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         self.epoch = self.primary_hdu.meta.get('DAY-OBS')
         self.instrument = None
 
-    def __itruediv__(self, other):
-        self.primary_hdu /= other
-        return self
-
     @property
     def primary_hdu(self):
         return self._hdus[0]
@@ -415,6 +438,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @property
     def mask(self):
         return self.primary_hdu.mask
+
+    @mask.setter
+    def mask(self, mask):
+        self.primary_hdu.mask = mask
 
     @property
     def meta(self):
@@ -516,6 +543,20 @@ class ObservationFrame(metaclass=abc.ABCMeta):
             self.primary_hdu.__isub__(other.primary_hdu)
         else:
             self.primary_hdu.__isub__(other)
+        return self
+
+    def __imul__(self, other):
+        if isinstance(other, ObservationFrame):
+            self.primary_hdu.__imul__(other.primary_hdu)
+        else:
+            self.primary_hdu.__imul__(other)
+        return self
+
+    def __itruediv__(self, other):
+        if isinstance(other, ObservationFrame):
+            self.primary_hdu.__itruediv__(other.primary_hdu)
+        else:
+            self.primary_hdu.__itruediv__(other)
         return self
 
 
