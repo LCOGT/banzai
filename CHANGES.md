@@ -1,3 +1,7 @@
+0.27.4 (2019-11-13)
+-------------------
+- Fix for parsing instruments with empty string codes from ConfigDB
+
 0.27.3 (2019-11-04)
 -------------------
 - Fix for retrieving correct number of calibration blocks from observation portal.
