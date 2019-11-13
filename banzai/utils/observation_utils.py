@@ -8,7 +8,7 @@ logger = logging.getLogger('banzai')
 def get_calibration_blocks_for_time_range(site, start_before, start_after, context):
     payload = {'start_before': start_before, 'start_after': start_after, 'site': site,
                'proposal': context.CALIBRATE_PROPOSAL_ID, 'aborted': 'false', 'canceled': 'false', 'order': '-start',
-               'offset': ''}
+               'offset': '', 'limit': 1000}
     response = requests.get(context.OBSERVATION_PORTAL_URL, params=payload)
     response.raise_for_status()
     results = response.json()['results']

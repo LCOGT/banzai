@@ -147,14 +147,12 @@ def make_master_calibrations():
 
 
 def start_stacking_scheduler():
-    logger.info('Started scheduling master calibrations')
-    runtime_context = parse_args(settings)
-    beat_schedule = {site + 'beat': {'task': 'banzai.celery.schedule_calibration_stacking',
-                                     'schedule': crontab(minute=entry['minute'], hour=entry['hour']),
-                                     'args': (site, vars(runtime_context))}
-                     for site, entry in runtime_context.SCHEDULE_STACKING_CRON_ENTRIES.items()}
+    logger.info('Entered entrypoint to celery beat scheduling')
+    runtime_context = parse_directory_args()
+    for site, entry in runtime_context.SCHEDULE_STACKING_CRON_ENTRIES.items():
+        app.add_periodic_task(crontab(minute=entry['minute'], hour=entry['hour']),
+                              schedule_calibration_stacking.s(site=site, runtime_context=vars(runtime_context)))
 
-    app.conf.update(beat_schedule=beat_schedule)
     beat = celery.bin.beat.beat(app=app)
     logger.info('Starting celery beat')
     beat.run()

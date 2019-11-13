@@ -1,6 +1,14 @@
 0.28.0 (2019-11-21)
 -------------------
 - Refactored Image class. Cleaned up a lot of plumbing code
+  
+0.27.3 (2019-11-04)
+-------------------
+- Fix for retrieving correct number of calibration blocks from observation portal.
+
+0.27.2 (2019-11-01)
+-------------------
+- Fixes for celerybeat scheduling of calibration stacking checks
 
 0.27.1 (2019-10-30)
 -------------------
