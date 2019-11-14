@@ -179,7 +179,7 @@ def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
                                       'type': sci_cam['camera_type']['code'],
                                       'schedulable': ins['state'] in INSTRUMENT_STATES_TO_REDUCE}
                         # hotfix for configdb
-                        if instrument['name'] is None:
+                        if not instrument['name']:
                             instrument['name'] = instrument['camera']
                         if instrument['name'] in CAMERAS_FOR_INSTRUMENTS:
                             instrument['camera'] = CAMERAS_FOR_INSTRUMENTS[instrument['name']]
