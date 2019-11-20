@@ -144,7 +144,7 @@ def parse_configdb(configdb_address):
                                       'name': ins.get('code'),
                                       'type': sci_cam['camera_type']['code']}
                         # hotfix for configdb
-                        if instrument['name'] is None:
+                        if not instrument['name']:
                             instrument['name'] = instrument['camera']
                         if instrument['name'] in CAMERAS_FOR_INSTRUMENTS:
                             instrument['camera'] = CAMERAS_FOR_INSTRUMENTS[instrument['name']]
