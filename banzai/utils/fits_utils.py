@@ -110,62 +110,6 @@ def init_hdu():
     return fits.open(file_handle, memmap=True)
 
 
-def open_image(filename):
-    """
-    Load an image from a FITS file
-
-    Parameters
-    ----------
-    filename: str
-              Full path of the file to open
-
-    Returns
-    -------
-    data: numpy array
-          image data; will have 3 dimensions if the file was either multi-extension or
-          a datacube
-    header: astropy.io.fits.Header
-            Header from the primary extension
-    bpm: numpy array
-         Array of bad pixel mask values if the BPM extension exists. None otherwise.
-    extension_headers: list of astropy.io.fits.Header
-                       List of headers from other SCI extensions that are not the
-                       primary extension
-
-    Notes
-    -----
-    The file can be either compressed or not. If there are multiple extensions,
-    e.g. Sinistros, the extensions should be (SCI, 1), (SCI, 2), ...
-    Sinsitro frames that were taken as datacubes will be munged later so that the
-    output images are consistent
-    """
-    hdulist = open_fits_file(filename)
-
-    # Get the main header
-    header = hdulist[0].header
-
-    # Check for multi-extension fits
-    extension_headers = []
-    sci_extensions = get_extensions_by_name(hdulist, 'SCI')
-    if len(sci_extensions) > 1:
-        data = np.zeros((len(sci_extensions), sci_extensions[0].data.shape[0],
-                         sci_extensions[0].data.shape[1]), dtype=np.float32)
-        for i, hdu in enumerate(sci_extensions):
-            data[i, :, :] = hdu.data[:, :]
-            extension_headers.append(hdu.header)
-    elif len(sci_extensions) == 1:
-        data = sci_extensions[0].data.astype(np.float32)
-    else:
-        data = hdulist[0].data.astype(np.float32)
-
-    try:
-        bpm = hdulist['BPM'].data.astype(np.uint8)
-    except KeyError:
-        bpm = None
-
-    return data, header, bpm, extension_headers
-
-
 def open_fits_file(filename: str):
     # TODO: deal with a datacube and munging
     # TODO: detect if AWS frame and stream the file in rather than just opening the file,
@@ -214,8 +158,10 @@ def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
                 data = np.array(hdu.data, hdu.data.dtype)
             header = hdu.header
             hdulist.append(fits.ImageHDU(data=data, header=header))
+        elif isinstance(hdu, fits.BinTableHDU):
+            hdulist.append(fits.BinTableHDU(data=hdu.data, header=hdu.header))
         else:
-            hdulist.append(hdu)
+            hdulist.append(fits.ImageHDU(data=hdu.data, header=hdu.header))
     return fits.HDUList(hdulist)
 
 
@@ -239,22 +185,6 @@ def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
         else:
             hdulist.append(hdu)
     return fits.HDUList(hdulist)
-
-
-def _writeto(self, filepath, fpack=False):
-    logger.info('Writing file to {filepath}'.format(filepath=filepath), image=self)
-    hdu_list = self._get_hdu_list()
-    base_filename = os.path.basename(filepath).split('.fz')[0]
-    with tempfile.TemporaryDirectory() as temp_directory:
-        hdu_list.writeto(os.path.join(temp_directory, base_filename), overwrite=True, output_verify='fix+warn')
-        hdu_list.close()
-        if fpack:
-            if os.path.exists(filepath):
-                os.remove(filepath)
-            command = 'fpack -q 64 {temp_directory}/{basename}'
-            os.system(command.format(temp_directory=temp_directory, basename=base_filename))
-            base_filename += '.fz'
-        shutil.move(os.path.join(temp_directory, base_filename), filepath)
 
 
 def _get_hdu_list(self):

@@ -18,7 +18,7 @@ from types import ModuleType
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils import image_utils, date_utils, fits_utils, stage_utils, import_utils
-from banzai.celery import process_image, app
+from banzai.celery import process_image, app, schedule_calibration_stacking
 from celery.schedules import crontab
 import celery
 import celery.bin.beat
@@ -148,7 +148,7 @@ def make_master_calibrations():
 
 def start_stacking_scheduler():
     logger.info('Entered entrypoint to celery beat scheduling')
-    runtime_context = parse_directory_args()
+    runtime_context = parse_args(settings)
     for site, entry in runtime_context.SCHEDULE_STACKING_CRON_ENTRIES.items():
         app.add_periodic_task(crontab(minute=entry['minute'], hour=entry['hour']),
                               schedule_calibration_stacking.s(site=site, runtime_context=vars(runtime_context)))
