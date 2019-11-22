@@ -56,7 +56,7 @@ class Data(metaclass=abc.ABCMeta):
 
     @property
     def extension_name(self):
-        return self.meta.get('EXTNAME').replace('SCI', '')
+        return self.meta.get('EXTNAME')
 
     @extension_name.setter
     def extension_name(self, value):
@@ -67,7 +67,7 @@ class Data(metaclass=abc.ABCMeta):
         return cls(hdu.data, hdu.header, name=hdu.header.get('EXTNAME'))
 
     @abc.abstractmethod
-    def to_fits(self) -> Union[fits.HDUList, list]:
+    def to_fits(self, context) -> Union[fits.HDUList, list]:
         pass
 
 
@@ -75,7 +75,7 @@ class HeaderOnly(Data):
     def __init__(self, meta: Union[dict, fits.Header]):
         super().__init__(data=np.zeros(0), meta=meta)
 
-    def to_fits(self):
+    def to_fits(self, context):
         return fits.HDUList([fits.ImageHDU(data=None, header=self.meta)])
 
 
@@ -115,11 +115,15 @@ class CCDData(Data):
             self.__imul__(1.0 / value)
         return self
 
-    def to_fits(self):
+    def to_fits(self, context):
         data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta))
         bpm_extname = self.extension_name + 'BPM'
+        for extname in context.EXTENSION_NAMES_TO_CONDENSE:
+            bpm_extname = bpm_extname.replace(extname, '')
         mask_hdu = fits.ImageHDU(data=self.mask, header=fits.Header({'EXTNAME': bpm_extname}))
         uncertainty_extname = self.extension_name + 'ERR'
+        for extname in context.EXTENSION_NAMES_TO_CONDENSE:
+            uncertainty_extname = uncertainty_extname.replace(extname, '')
         uncertainty_hdu = fits.ImageHDU(data=self.uncertainty, header=fits.Header({'EXTNAME': uncertainty_extname}))
         hdulist = fits.HDUList([data_hdu, mask_hdu, uncertainty_hdu])
         return hdulist
@@ -514,13 +518,13 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         os.makedirs(os.path.dirname(output_filename), exist_ok=True)
         # TODO: Add option to write to AWS
         with open(output_filename, 'wb') as f:
-            self.to_fits(fpack=runtime_context.fpack).writeto(f, overwrite=True)
+            self.to_fits(runtime_context).writeto(f, overwrite=True)
 
-    def to_fits(self, fpack=False):
+    def to_fits(self, context):
         hdu_list_to_write = fits.HDUList([])
         for hdu in self._hdus:
-            hdu_list_to_write += hdu.to_fits()
-        if fpack:
+            hdu_list_to_write += hdu.to_fits(context)
+        if context.fpack:
             hdu_list_to_write = fits_utils.pack(hdu_list_to_write)
         return hdu_list_to_write
 

@@ -99,3 +99,6 @@ CONFIGDB_URL = os.getenv('CONFIGDB_URL', 'http://configdb.lco.gtn/sites/')
 # The Observation Portal is not always consistent with OBSTYPE in the header so this maps any differences
 # If an observation type is not in this list, we assume it is the same in the portal and the header
 OBSERVATION_REQUEST_TYPES = {}
+
+# For some extension names, we want to just have corresponding BPM or ERR extensions
+EXTENSION_NAMES_TO_CONDENSE = ['SCI']
