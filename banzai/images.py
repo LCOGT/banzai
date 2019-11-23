@@ -79,6 +79,23 @@ class HeaderOnly(Data):
         return fits.HDUList([fits.ImageHDU(data=None, header=self.meta)])
 
 
+
+class DataTable(Data):
+    def __init__(self, data, meta, name):
+        super().__init__(data, meta, name=name)
+
+    def to_fits(self, context) -> Union[fits.HDUList, list]:
+        return [fits.BinTableHDU(data=self.data, header=self.meta)]
+
+
+class ArrayData(Data):
+    def __init__(self, data, meta, name):
+        super().__init__(data, meta, name=name)
+
+    def to_fits(self, context) -> Union[fits.HDUList, list]:
+        return [fits.ImageHDU(data=self.data, header=self.meta)]
+
+
 class CCDData(Data):
     def __init__(self, data: Union[np.array, Table], meta: Union[dict, fits.Header],
                  mask: np.array = None, name: str = '', uncertainty: np.array = None):
@@ -475,9 +492,9 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def remove(self, hdu):
         self._hdus.remove(hdu)
 
-    def insert(self, index, hdu):
-        self._hdus.insert(index, hdu)
-        self._hdus.insert(index, hdu)
+    def replace(self, old_data, new_data):
+        self._hdus.insert(self._hdus.index(old_data), new_data)
+        self._hdus.remove(old_data)
 
     @abc.abstractmethod
     def get_output_filename(self, runtime_context) -> str:
@@ -688,30 +705,45 @@ class LCOMasterCalibrationFrame(LCOCalibrationFrame):
         return header
 
 
-class LCOImageFactory:
+class LCOFrameFactory:
+    observation_frame_class = LCOObservationFrame
+    calibration_frame_class = LCOCalibrationFrame
     @classmethod
     def open(cls, path, runtime_context) -> ObservationFrame:
         fits_hdu_list = fits_utils.open_fits_file(path)
-        extension_names = [hdu.header.get('EXTNAME', 'N/A') for hdu in fits_hdu_list]
-        #If we're reading in a processed image, load BPM and ERR into single CCDData
-        #TODO: Make this work for multi-extension processed images - e.g. ERR0, ERR1, ERR2
-        #EXTNAME and EXTVER will give this info
-        if all(ext_name in extension_names for ext_name in ['BPM', 'ERR']):
-            primary_hdu = fits_hdu_list[0]
-            #TODO: Write helper to get HDUs by EXTNAME
-            hdu_list = [CCDData(data=primary_hdu.data.astype(np.float32), 
-                                meta=primary_hdu.header,
-                                mask=fits_hdu_list[1].data,
-                                uncertainty=fits_hdu_list[2].data) if primary_hdu.data is not None else HeaderOnly(meta=primary_hdu.header)]
-        #If reading in a raw image, create CCDData for each extension
-        else:
-            hdu_list = [CCDData(data=hdu.data.astype(np.float32), meta=hdu.header, name=hdu.header.get('EXTNAME'))
-                        if hdu.data is not None else HeaderOnly(meta=hdu.header) for hdu in fits_hdu_list]
+        hdu_list = []
+        for hdu in fits_hdu_list:
+            # Move on from the BPM and ERROR arrays
+            if 'BPM' in hdu.header.get('EXTNAME', '') or 'ERR' in hdu.header.get('EXTNAME', ''):
+                continue
+            if hdu.data is None:
+                hdu_list.append(HeaderOnly(meta=hdu.header))
+            elif isinstance(hdu, fits.BinTableHDU):
+                hdu_list.append(DataTable(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
+            elif 'GAIN' in hdu.header:
+                condensed_name = hdu.header.get('EXTNAME', '')
+                for extension_name_to_condense in runtime_context.EXTENSION_NAMES_TO_CONDENSE:
+                    condensed_name = condensed_name.replace(extension_name_to_condense, '')
+                if (condensed_name + 'BPM', hdu.header.get('EXTVER')) in fits_hdu_list:
+                    bpm_array = fits_hdu_list[condensed_name + 'BPM', hdu.header.get('EXTVER')].data
+                else:
+                    bpm_array = None
+
+                if (condensed_name + 'ERR', hdu.header.get('EXTVER')) in fits_hdu_list:
+                    error_array = fits_hdu_list[condensed_name + 'ERR', hdu.header.get('EXTVER')].data
+                else:
+                    error_array = None
+                if hdu.data.dtype == np.uint16:
+                    hdu.data = hdu.data.astype(np.float32)
+                hdu_list.append(CCDData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME'),
+                                        mask=bpm_array, uncertainty=error_array))
+            else:
+                hdu_list.append(ArrayData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
         if hdu_list[0].meta.get('OBSTYPE') in runtime_context.CALIBRATION_IMAGE_TYPES:
             grouping = runtime_context.CALIBRATION_SET_CRITERIA.get(hdu_list[0].meta.get('OBSTYPE'), [])
-            image = LCOCalibrationFrame(hdu_list, os.path.basename(path), grouping_criteria=grouping)
+            image = cls.calibration_frame_class(hdu_list, os.path.basename(path), grouping_criteria=grouping)
         else:
-            image = LCOObservationFrame(hdu_list, os.path.basename(path))
+            image = cls.observation_frame_class(hdu_list, os.path.basename(path))
         image.instrument = cls._get_instrument(image, runtime_context.db_address)
 
         # TODO: Put all munge code here
@@ -817,9 +849,6 @@ def stack(data_to_stack, nsigma_reject) -> CCDData:
 
     return CCDData(data=stacked_data, meta=data_to_stack[0].meta, uncertainty=stacked_uncertainty, mask=stacked_mask)
 
-
-class DataTable:
-    pass
 
 def regenerate_data_table_from_fits_hdu_list():
     pass

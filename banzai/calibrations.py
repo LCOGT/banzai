@@ -52,8 +52,9 @@ class CalibrationStacker(CalibrationMaker):
 
         master_calibration_filename = make_calibration_name(images[0])
 
-        grouping =  self.runtime_context.CALIBRATION_SET_CRITERIA.get(images[0].obstype, [])
-        master_image = LCOMasterCalibrationFrame(images, master_calibration_filename, grouping_criteria= grouping)
+        grouping = self.runtime_context.CALIBRATION_SET_CRITERIA.get(images[0].obstype, [])
+        master_frame_class = import_utils.import_attribute(self.runtime_context.MASTER_CALIBRATION_FRAME_CLASS)
+        master_image = master_frame_class(images, master_calibration_filename, grouping_criteria=grouping)
 
         # Split the image into N sections where N is the number of images
         # This is just for convenience. Technically N can be anything you want.

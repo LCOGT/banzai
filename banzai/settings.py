@@ -10,7 +10,9 @@ import os
 
 FRAME_SELECTION_CRITERIA = [('type', 'not contains', 'FLOYDS'), ('type', 'not contains', 'NRES')]
 
-FRAME_FACTORY = 'banzai.images.LCOImageFactory'
+FRAME_FACTORY = 'banzai.images.LCOFrameFactory'
+
+MASTER_CALIBRATION_FRAME_CLASS = 'banzai.images.LCOMasterCalibrationFrame'
 
 # ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
 #                   #'banzai.bpm.SaturatedPixelFlagger',
