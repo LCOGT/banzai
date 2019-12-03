@@ -712,9 +712,12 @@ class LCOFrameFactory:
     def open(cls, path, runtime_context) -> ObservationFrame:
         fits_hdu_list = fits_utils.open_fits_file(path)
         hdu_list = []
-        if all('BPM' == hdu.header.get('EXTNAME', '') for hdu in fits_hdu_list):
+        if all('BPM' == hdu.header.get('EXTNAME', '') for hdu in fits_hdu_list if hdu.data is not None):
             for hdu in fits_hdu_list:
-                hdu_list.append(CCDData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
+                if hdu.data is None:
+                    hdu_list.append(HeaderOnly(meta=hdu.header))
+                else:
+                    hdu_list.append(CCDData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
 
         for hdu in fits_hdu_list:
             # Move on from the BPM and ERROR arrays

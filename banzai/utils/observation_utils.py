@@ -1,6 +1,8 @@
 import requests
 import logging
 import copy
+from datetime import datetime
+from dateutil.parser import parse
 
 logger = logging.getLogger('banzai')
 
@@ -18,10 +20,15 @@ def get_calibration_blocks_for_time_range(site, start_before, start_after, conte
     return results
 
 
-def filter_calibration_blocks_for_type(instrument, calibration_type, observations, runtime_context):
+def filter_calibration_blocks_for_type(instrument, calibration_type, observations, runtime_context,
+                                       min_date: str, max_date: str):
+    min_date = parse(min_date).replace(tzinfo=None)
+    max_date = parse(max_date).replace(tzinfo=None)
     calibration_observations = []
     for observation in observations:
-        if instrument.site == observation['site']:
+        observation_start = parse(observation['start']).replace(tzinfo=None)
+        observation_end = parse(observation['end']).replace(tzinfo=None)
+        if instrument.site == observation['site'] and observation_start > min_date and observation_end < max_date:
             filtered_observation = copy.deepcopy(observation)
             filtered_observation['request']['configurations'] = []
             for configuration in observation['request']['configurations']:
