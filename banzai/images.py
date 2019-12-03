@@ -714,7 +714,7 @@ class LCOFrameFactory:
         hdu_list = []
         if all('BPM' == hdu.header.get('EXTNAME', '') for hdu in fits_hdu_list):
             for hdu in fits_hdu_list:
-                hdu_list.append(ArrayData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
+                hdu_list.append(CCDData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
 
         for hdu in fits_hdu_list:
             # Move on from the BPM and ERROR arrays
