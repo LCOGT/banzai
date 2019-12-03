@@ -4,8 +4,9 @@ from datetime import datetime, timedelta
 import numpy as np
 from astropy.io.fits import Header
 
+from banzai import settings
 from banzai.stages import Stage
-from banzai.images import Image, CCDData, LCOObservationFrame
+from banzai.images import Image, CCDData, LCOObservationFrame, HeaderOnly, LCOCalibrationFrame
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
 logger = logging.getLogger('banzai')
@@ -117,6 +118,8 @@ class FakeContext(object):
         self.max_tries = 5
         self.fpack = fpack
         self.reduction_level = '91'
+        self.CALIBRATION_SET_CRITERIA = settings.CALIBRATION_SET_CRITERIA
+        self.FRAME_FACTORY = settings.FRAME_FACTORY
 
     def image_can_be_processed(self, header):
         return True
@@ -126,21 +129,19 @@ class FakeStage(Stage):
     def do_stage(self, images):
         return images
 
-
 def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_maker=False):
     logger.error(vars(context))
     stage = stagetype(context)
     kwargs = {keyword: value}
     if calibration_maker:
-        images = [FakeImage(**kwargs)]
-        images += [FakeImage() for x in range(6)]
+        images = [LCOCalibrationFrame(hdu_list=[HeaderOnly(meta=kwargs)])]
+        images += [LCOCalibrationFrame(hdu_list=[HeaderOnly()]) for x in range(6)]
         images = stage.do_stage(images)
         assert len(images) == 0
     else:
-        image = FakeImage(**kwargs)
+        image = LCOCalibrationFrame(hdu_list=[CCDData(data=np.zeros(0), meta=kwargs)], file_path='test.fits')
         image = stage.do_stage(image)
         assert image is None
-
 
 def gaussian2d(image_shape, x0, y0, brightness, fwhm):
     x = np.arange(image_shape[1])

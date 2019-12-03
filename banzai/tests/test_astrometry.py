@@ -1,8 +1,10 @@
 from astropy import units
 from astropy.coordinates import SkyCoord
+import pytest
 
 from banzai import astrometry
 
+pytestmark = pytest.mark.astrometry
 
 def test_ra_dec_string_conversion():
     ra = '20:14:06.0234'
