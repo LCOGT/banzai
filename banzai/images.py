@@ -535,12 +535,14 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         os.makedirs(os.path.dirname(output_filename), exist_ok=True)
         # TODO: Add option to write to AWS
         with open(output_filename, 'wb') as f:
-            self.to_fits(runtime_context).writeto(f, overwrite=True)
+            self.to_fits(runtime_context).writeto(f, overwrite=True, output_verify='silentfix')
 
     def to_fits(self, context):
         hdu_list_to_write = fits.HDUList([])
         for hdu in self._hdus:
             hdu_list_to_write += hdu.to_fits(context)
+        if not isinstance(hdu_list_to_write[0], fits.PrimaryHDU):
+            hdu_list_to_write[0] = fits.PrimaryHDU(hdu_list_to_write[0])
         if context.fpack:
             hdu_list_to_write = fits_utils.pack(hdu_list_to_write)
         return hdu_list_to_write
