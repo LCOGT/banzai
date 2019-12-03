@@ -6,9 +6,11 @@ from dateutil.parser import parse
 from celery import Celery
 
 from banzai import dbs, calibrations, logs
-from banzai.utils import date_utils, realtime_utils, observation_utils, stage_utils
+from banzai.utils import date_utils, realtime_utils, stage_utils
 from celery.signals import setup_logging
 from banzai.context import Context
+from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
+from banzai.utils.date_utils import get_stacking_date_range
 
 app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
@@ -27,30 +29,42 @@ def setup_loggers(*args, **kwargs):
 @app.task(name='celery.schedule_calibration_stacking')
 def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=None, max_date=None, frame_types=None):
     runtime_context = Context(runtime_context)
+
     if min_date is None or max_date is None:
         timezone_for_site = dbs.get_timezone(site, db_address=runtime_context.db_address)
-        min_date, max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(timezone_for_site)
+        max_lookback = max(runtime_context.CALIBRATION_LOOKBACK.values())
+        block_min_date, block_max_date = date_utils.get_stacking_date_range(timezone_for_site,
+                                                                            lookback_days=max_lookback)
+    else:
+        block_min_date = min_date
+        block_max_date = max_date
 
-    calibration_blocks = observation_utils.get_calibration_blocks_for_time_range(site, max_date, min_date,
-                                                                                 runtime_context)
+    calibration_blocks = get_calibration_blocks_for_time_range(site, block_max_date, block_min_date, runtime_context)
 
     if frame_types is None:
         frame_types = runtime_context.CALIBRATION_IMAGE_TYPES
 
     for frame_type in frame_types:
-        logger.info('Scheduling stacking', extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,
-                                                       'frame_type': frame_type})
+        if min_date is None or max_date is None:
+            lookback = runtime_context.CALIBRATION_LOOKBACK[frame_type]
+            stacking_min_date, stacking_max_date = get_stacking_date_range(timezone_for_site,
+                                                                           lookback_days=lookback)
+        else:
+            stacking_min_date = min_date
+            stacking_max_date = max_date
+        logger.info('Scheduling stacking', extra_tags={'site': site, 'min_date': stacking_min_date,
+                                                       'max_date': stacking_max_date, 'frame_type': frame_type})
 
         instruments = dbs.get_instruments_at_site(site=site, db_address=runtime_context.db_address)
         for instrument in instruments:
-            logger.info('Checking for scheduled calibration blocks', extra_tags={'site': site, 'min_date': min_date,
-                                                                                 'max_date': max_date,
+            logger.info('Checking for scheduled calibration blocks', extra_tags={'site': site,
+                                                                                 'min_date': stacking_min_date,
+                                                                                 'max_date': stacking_max_date,
                                                                                  'instrument': instrument.camera,
                                                                                  'frame_type': frame_type})
-            blocks_for_calibration = observation_utils.filter_calibration_blocks_for_type(instrument,
-                                                                                          frame_type,
-                                                                                          calibration_blocks,
-                                                                                          runtime_context)
+            blocks_for_calibration = filter_calibration_blocks_for_type(instrument, frame_type,
+                                                                        calibration_blocks, runtime_context,
+                                                                        stacking_min_date, stacking_max_date)
             if len(blocks_for_calibration) > 0:
                 # Set the delay to after the latest block end
                 calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)
@@ -64,9 +78,9 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
 
                 schedule_time = now + timedelta(seconds=message_delay_in_seconds)
                 logger.info('Scheduling stacking at {}'.format(schedule_time.strftime(date_utils.TIMESTAMP_FORMAT)),
-                            extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,
+                            extra_tags={'site': site, 'min_date': stacking_min_date, 'max_date': stacking_max_date,
                                         'instrument': instrument.camera, 'frame_type': frame_type})
-                stack_calibrations.apply_async(args=(min_date, max_date, instrument.id, frame_type,
+                stack_calibrations.apply_async(args=(stacking_min_date, stacking_max_date, instrument.id, frame_type,
                                                      vars(runtime_context), blocks_for_calibration),
                                                countdown=message_delay_in_seconds)
             else:

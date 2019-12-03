@@ -321,7 +321,7 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
 
 
 def get_individual_calibration_images(instrument, calibration_type, min_date: str, max_date: str, db_address: str,
-                                      include_bad_frames: Boolean = False):
+                                      include_bad_frames: bool = False):
 
     calibration_criteria = CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
