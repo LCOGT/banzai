@@ -71,6 +71,8 @@ class CalibrationImage(Base):
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
     is_master = Column(Boolean)
     is_bad = Column(Boolean)
+    good_until = Column(DateTime, default=datetime.datetime(3000, 1, 1))
+    good_after = Column(DateTime, default=datetime.datetime(1000, 1, 1))
     attributes = Column(JSON)
 
 
@@ -300,6 +302,9 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     if use_only_older_calibrations and image.block_start is not None:
         calibration_criteria &= CalibrationImage.datecreated < image.block_start
 
+    calibration_criteria &= CalibrationImage.good_after <= image.dateobs
+    calibration_criteria &= CalibrationImage.good_until >= image.dateobs
+
     with get_session(db_address=db_address) as db_session:
         calibration_images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
 
@@ -311,11 +316,6 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     date_deltas = np.abs(np.array([i.dateobs - image.dateobs for i in calibration_images]))
     closest_calibration_image = calibration_images[np.argmin(date_deltas)]
     calibration_file = os.path.join(closest_calibration_image.filepath, closest_calibration_image.filename)
-
-    if abs(min(date_deltas)) > datetime.timedelta(days=30):
-        msg = "The closest calibration file in the database was created more than 30 days before or after " \
-              "the image being reduced."
-        logger.warning(msg, image=image, extra_tags={'master_calibration': os.path.basename(calibration_file)})
 
     return calibration_file
 
