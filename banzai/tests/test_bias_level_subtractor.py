@@ -4,6 +4,7 @@ from astropy.io.fits import Header
 
 from banzai.bias import BiasMasterLevelSubtractor
 from banzai.images import LCOCalibrationFrame, CCDData
+from banzai.tests.utils import FakeLCOObservationFrame, FakeCCDData
 
 pytestmark = pytest.mark.bias_level_subtractor
 
@@ -21,24 +22,21 @@ def test_null_input_image():
 
 def test_header_has_biaslevel():
     subtractor = BiasMasterLevelSubtractor(None)
-    image = LCOCalibrationFrame(hdu_list=[CCDData(data=np.zeros(0), meta=Header())],
-                                file_path='test.fits')
+    image = FakeLCOObservationFrame()
     image = subtractor.do_stage(image)
     assert 'BIASLVL' in image.meta
 
 
 def test_header_biaslevel_is_1():
     subtractor = BiasMasterLevelSubtractor(None)
-    image = LCOCalibrationFrame(hdu_list=[CCDData(data=np.ones((100,100)), meta=Header())],
-                                file_path='test.fits')
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.ones((100,100)))])
     image = subtractor.do_stage(image)
     assert image.meta.get('BIASLVL') == 1
 
 
 def test_header_biaslevel_is_2():
     subtractor = BiasMasterLevelSubtractor(None)
-    image = LCOCalibrationFrame(hdu_list=[CCDData(data=2*np.ones((100,100)), meta=Header())],
-                                file_path='test.fits')
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=2*np.ones((100,100)))])
     image = subtractor.do_stage(image)
     assert image.meta.get('BIASLVL') == 2.0
 
@@ -48,9 +46,7 @@ def test_bias_master_level_subtraction_is_reasonable(set_random_seed):
     read_noise = 15.0
 
     subtractor = BiasMasterLevelSubtractor(None)
-    image = LCOCalibrationFrame(hdu_list=[CCDData(data=np.random.normal(input_bias, read_noise, size=(100, 100)),
-                                                  meta=Header())],
-                                file_path='test.fits')
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(input_bias, read_noise, size=(100, 100)))])
     image = subtractor.do_stage(image)
 
     np.testing.assert_allclose(np.zeros(image.data.shape), image.data, atol=8 * read_noise)

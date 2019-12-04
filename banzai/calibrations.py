@@ -38,6 +38,7 @@ class CalibrationMaker(MultiFrameStage):
             # Do nothing
             msg = 'Number of images less than minimum requirement of {min_images}, not combining'
             logger.warning(msg.format(min_images=min_images))
+            return []
 
         return [self.make_master_calibration_frame(images)]
 
