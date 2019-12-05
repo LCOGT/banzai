@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta
+from types import ModuleType
 
 import numpy as np
 from astropy.io.fits import Header
@@ -9,39 +10,39 @@ from banzai.stages import Stage
 from banzai.images import Image, CCDData, LCOObservationFrame, HeaderOnly, LCOCalibrationFrame
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
+
 logger = logging.getLogger('banzai')
 
-
 class FakeCCDData(CCDData):
-    def __init__(self, image_multiplier=1.0, nx=101, ny=103, n_amps=1, data=None, meta=None, mask=None, name='test_image',
-                 uncertainty=None, **kwargs):
+    def __init__(self, image_multiplier=1.0, nx=101, ny=103, n_amps=1, name='test_image', read_noise = 11.0,
+                 bias_level=0, meta=Header(), data=None, mask=None, uncertainty=None, **kwargs):
+        self.name = name
+        self.meta = meta
+        self.meta['RDNOISE'] = read_noise
+        self.meta['BIASLVL'] = bias_level
+
         if data is None:
             self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
         else:
             self.data = data
         if mask is None:
-            self.mask = np.zeros((ny, nx), dtype=np.uint8)
+            self.mask = np.zeros(self.data.shape, dtype=np.uint8)
         else:
             self.mask = mask
-        if meta is None:
-            self.meta={'TELESCOP': '1m0-10'}
-        else:
-            self.meta = meta
-        if n_amps > 1:
-            self.data = np.stack(n_amps*[self.data])
-        self.readnoise = 11.0
-        self.name = name
         if uncertainty is None:
-            self.uncertainty = self.readnoise * np.ones(self.data.shape, dtype=self.data.dtype)
+            self.uncertainty = self.read_noise * np.ones(self.data.shape, dtype=self.data.dtype)
         else:
             self.uncertainty = uncertainty
+        if n_amps > 1:
+            self.data = np.stack(n_amps * [self.data])
 
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
 
 
 class FakeLCOObservationFrame(LCOObservationFrame):
-    def __init__(self, hdu_list=None, file_path='/tmp/test_image.fits', instrument=None, epoch='20160101'):
+    def __init__(self, hdu_list=None, file_path='/tmp/test_image.fits', instrument=None, epoch='20160101',
+                 **kwargs):
         if hdu_list is None:
             self._hdus = [FakeCCDData()]
         else:
@@ -52,7 +53,11 @@ class FakeLCOObservationFrame(LCOObservationFrame):
             self.instrument = instrument
         self.epoch = epoch
         self._file_path = file_path
-        
+        self.is_bad = False
+
+        for keyword in kwargs:
+            setattr(self, keyword, kwargs[keyword])
+
 
 class FakeImage(Image):
     def __init__(self, runtime_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',
@@ -69,7 +74,7 @@ class FakeImage(Image):
         else:
             self.data = data
         if n_amps > 1:
-            self.data = np.stack(n_amps*[self.data])
+            self.data = np.stack(n_amps * [self.data])
         self.filename = 'test.fits'
         self.filter = filter
         self.dateobs = datetime(2016, 1, 1)
@@ -118,8 +123,10 @@ class FakeContext(object):
         self.max_tries = 5
         self.fpack = fpack
         self.reduction_level = '91'
-        self.CALIBRATION_SET_CRITERIA = settings.CALIBRATION_SET_CRITERIA
-        self.FRAME_FACTORY = settings.FRAME_FACTORY
+        # Get all of the settings that are not builtins and store them in the context object
+        for setting in dir(settings):
+            if '__' != setting[:2] and not isinstance(getattr(settings, setting), ModuleType):
+                setattr(self, setting, getattr(settings, setting))
 
     def image_can_be_processed(self, header):
         return True
@@ -128,6 +135,7 @@ class FakeContext(object):
 class FakeStage(Stage):
     def do_stage(self, images):
         return images
+
 
 def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_maker=False):
     logger.error(vars(context))
@@ -142,6 +150,7 @@ def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_ma
         image = LCOCalibrationFrame(hdu_list=[CCDData(data=np.zeros(0), meta=kwargs)], file_path='test.fits')
         image = stage.do_stage(image)
         assert image is None
+
 
 def gaussian2d(image_shape, x0, y0, brightness, fwhm):
     x = np.arange(image_shape[1])
@@ -159,7 +168,7 @@ def gaussian2d(image_shape, x0, y0, brightness, fwhm):
 
 def get_min_and_max_dates(timezone, dayobs):
     # Gets next midnight relative to date of observation
-    midnight_at_site = datetime.strptime(dayobs, '%Y%m%d') + timedelta(hours=24-timezone)
+    midnight_at_site = datetime.strptime(dayobs, '%Y%m%d') + timedelta(hours=24 - timezone)
     min_date = midnight_at_site - timedelta(days=0.5)
     max_date = midnight_at_site + timedelta(days=0.5)
     return min_date.strftime(TIMESTAMP_FORMAT), max_date.strftime(TIMESTAMP_FORMAT)
