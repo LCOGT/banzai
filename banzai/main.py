@@ -110,13 +110,6 @@ def reduce_single_frame():
     extra_console_arguments = [{'args': ['--filepath'],
                                 'kwargs': {'dest': 'path', 'help': 'Full path to the file to process'}}]
     runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
-    # Short circuit
-    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(runtime_context.path),
-                                              runtime_context, runtime_context.path):
-        logger.error('Image cannot be processed. Check to make sure the instrument '
-                     'is in the database and that the OBSTYPE is recognized by BANZAI',
-                     extra_tags={'filename': runtime_context.path})
-        return
     try:
         stage_utils.run_pipeline_stages(runtime_context.path, runtime_context)
     except Exception:

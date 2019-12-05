@@ -20,6 +20,7 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, C
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
+from banzai.utils import file_utils
 
 Base = declarative_base()
 
@@ -264,6 +265,14 @@ def commit_processed_image(processed_image, db_address):
         db_session.commit()
 
 
+def save_processed_image(path, db_address):
+    filename = os.path.basename(path)
+    output_record = get_processed_image(filename, db_address)
+    output_record.success = True
+    output_record.checksum = file_utils.get_md5(path)
+    commit_processed_image(output_record, db_address)
+
+
 def get_timezone(site, db_address):
     with get_session(db_address=db_address) as db_session:
         site_list = db_session.query(Site).filter(Site.id == site).all()
@@ -327,6 +336,8 @@ def get_individual_calibration_images(instrument, calibration_type, min_date: st
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.dateobs >= parse(min_date).replace(tzinfo=None)
     calibration_criteria &= CalibrationImage.dateobs <= parse(max_date).replace(tzinfo=None)
+
+    calibration_criteria &= CalibrationImage.is_master == False
 
     if not include_bad_frames:
         calibration_criteria &= CalibrationImage.is_bad == False

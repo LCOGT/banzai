@@ -1,11 +1,8 @@
 import hashlib
-import os
 import logging
 
 from kombu import Connection, Exchange
-import datetime
-from banzai.utils import import_utils, date_utils
-import banzai
+from banzai.utils import import_utils
 
 logger = logging.getLogger('banzai')
 
@@ -22,15 +19,6 @@ def get_md5(filepath):
     with open(filepath, 'rb') as file:
         md5 = hashlib.md5(file.read()).hexdigest()
     return md5
-
-
-def instantly_public(proposal_id):
-    public_now = False
-    if proposal_id in ['calibrate', 'standard', 'pointing']:
-        public_now = True
-    if 'epo' in proposal_id.lower():
-        public_now = True
-    return public_now
 
 
 def ccdsum_to_filename(image):
@@ -72,19 +60,3 @@ def make_calibration_filename_function(calibration_type, context):
         cal_file += '.fits'
         return cal_file
     return get_calibration_filename
-
-
-def save_pipeline_metadata(header, reduction_level):
-    datecreated = datetime.datetime.utcnow()
-    header['DATE'] = (date_utils.date_obs_to_string(datecreated), '[UTC] Date this FITS file was written')
-    header['RLEVEL'] = (reduction_level, 'Reduction level')
-
-    header['PIPEVER'] = (banzai.__version__, 'Pipeline version')
-
-    if instantly_public(header['PROPID']):
-        header['L1PUBDAT'] = (header['DATE-OBS'], '[UTC] Date the frame becomes public')
-    else:
-        # Wait a year
-        date_observed = date_utils.parse_date_obs(header['DATE-OBS'])
-        next_year = date_observed + datetime.timedelta(days=365)
-        header['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year), '[UTC] Date the frame becomes public')

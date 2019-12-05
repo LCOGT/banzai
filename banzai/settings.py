@@ -7,6 +7,7 @@ settings.py: Settings script for banzai.
 
 """
 import os
+import banzai
 
 FRAME_SELECTION_CRITERIA = [('type', 'not contains', 'FLOYDS'), ('type', 'not contains', 'NRES')]
 
@@ -106,3 +107,11 @@ OBSERVATION_REQUEST_TYPES = {}
 EXTENSION_NAMES_TO_CONDENSE = ['SCI']
 
 CALIBRATION_LOOKBACK = {'BIAS': 0.5, 'DARK': 0.5, 'SKYFLAT': 0.5}
+
+PIPELINE_VERSION = banzai.__version__
+
+# Number of days before proprietary data should become public:
+DATA_RELEASE_DELAY = 365
+
+# Proposal ids for data that should be public instantly. Should all be lowercase
+PUBLIC_PROPOSALS = ['calibrate', 'standard', '*epo*', 'pointing']

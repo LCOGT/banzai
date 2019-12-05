@@ -1,6 +1,6 @@
 import logging
 from banzai import dbs
-from banzai.utils import fits_utils, stats, date_utils
+from banzai.utils import fits_utils, stats, date_utils, image_utils
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table
@@ -9,6 +9,9 @@ from typing import Union, Type
 import tempfile
 import abc
 import os
+from typing import Optional
+from fnmatch import fnmatch
+import datetime
 
 logger = logging.getLogger('banzai')
 
@@ -77,7 +80,6 @@ class HeaderOnly(Data):
 
     def to_fits(self, context):
         return fits.HDUList([fits.ImageHDU(data=None, header=self.meta)])
-
 
 
 class DataTable(Data):
@@ -423,9 +425,9 @@ class Section:
         return f'[{self.x_start}:{self.x_stop},{self.y_start}:{self.y_stop}]'
 
 
-
 class Image(CCDData):
     pass
+
 
 class Table(Data):
     pass
@@ -475,6 +477,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @property
     def filename(self):
         return os.path.basename(self._file_path)
+
+    @abc.abstractmethod
+    def save_processing_metadata(self, context):
+        pass
 
     @property
     @abc.abstractmethod
@@ -532,10 +538,12 @@ class ObservationFrame(metaclass=abc.ABCMeta):
 
     def write(self, runtime_context):
         output_filename = self.get_output_filename(runtime_context)
+        self.save_processing_metadata(runtime_context)
         os.makedirs(os.path.dirname(output_filename), exist_ok=True)
         # TODO: Add option to write to AWS
         with open(output_filename, 'wb') as f:
             self.to_fits(runtime_context).writeto(f, overwrite=True, output_verify='silentfix')
+        dbs.save_processed_image(output_filename, db_address=runtime_context.db_address)
 
     def to_fits(self, context):
         hdu_list_to_write = fits.HDUList([])
@@ -656,6 +664,21 @@ class LCOObservationFrame(ObservationFrame):
     def exptime(self):
         return self.primary_hdu.meta.get('EXPTIME', 0.0)
 
+    def save_processing_metadata(self, context):
+        datecreated = datetime.datetime.utcnow()
+        self.meta['DATE'] = (date_utils.date_obs_to_string(datecreated), '[UTC] Date this FITS file was written')
+        self.meta['RLEVEL'] = (context.reduction_level, 'Reduction level')
+
+        self.meta['PIPEVER'] = (context.PIPELINE_VERSION, 'Pipeline version')
+
+        if any(fnmatch(self.meta['PROPID'].lower(), public_proposal) for public_proposal in context.PUBLIC_PROPOSALS):
+            self.meta['L1PUBDAT'] = (self.meta['DATE-OBS'], '[UTC] Date the frame becomes public')
+        else:
+            # Wait to make public
+            date_observed = date_utils.parse_date_obs(self.meta['DATE-OBS'])
+            next_year = date_observed + datetime.timedelta(days=context.DATA_RELEASE_DELAY)
+            self.meta['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year), '[UTC] Date the frame becomes public')
+
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
     def __init__(self, hdu_list: list, file_path: str, grouping_criteria: list = None):
@@ -711,7 +734,7 @@ class LCOFrameFactory:
     observation_frame_class = LCOObservationFrame
     calibration_frame_class = LCOCalibrationFrame
     @classmethod
-    def open(cls, path, runtime_context) -> ObservationFrame:
+    def open(cls, path, runtime_context) -> Optional[ObservationFrame]:
         fits_hdu_list = fits_utils.open_fits_file(path)
         hdu_list = []
         if all('BPM' == hdu.header.get('EXTNAME', '') for hdu in fits_hdu_list if hdu.data is not None):
@@ -791,7 +814,10 @@ class LCOFrameFactory:
                 binning = hdu.meta.get('CCDSUM', '1 1')
                 n_binned_pixels = int(binning[0]) * int(binning[2])
                 update_saturate(image, hdu, 125000.0 * n_binned_pixels / float(hdu.meta['GAIN']))
-        return image
+        if image_utils.image_can_be_processed(image, runtime_context):
+            return image
+        else:
+            return None
 
     @classmethod
     def _get_instrument(cls, image, db_address):

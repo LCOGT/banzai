@@ -8,7 +8,7 @@ logger = logging.getLogger('banzai')
 
 def image_can_be_processed(image, context):
     # Short circuit if the instrument is a guider even if they don't exist in configdb
-    if image.observation_type not in context.LAST_STAGE:
+    if image.obstype not in context.LAST_STAGE:
         logger.warning('Image has an obstype that is not supported by banzai.', extra_tags={'filename': image.filename})
         return False
     passes = instrument_passes_criteria(image.instrument, context.FRAME_SELECTION_CRITERIA)
