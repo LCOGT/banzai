@@ -737,7 +737,8 @@ class LCOFrameFactory:
     def open(cls, path, runtime_context) -> Optional[ObservationFrame]:
         fits_hdu_list = fits_utils.open_fits_file(path)
         hdu_list = []
-        if all('BPM' == hdu.header.get('EXTNAME', '') for hdu in fits_hdu_list if hdu.data is not None):
+        if fits_hdu_list[0].header.get('OBSTYPE').lower() == 'bpm' or \
+                all('BPM' == hdu.header.get('EXTNAME', '') for hdu in fits_hdu_list if hdu.data is not None):
             for hdu in fits_hdu_list:
                 if hdu.data is None:
                     hdu_list.append(HeaderOnly(meta=hdu.header))
