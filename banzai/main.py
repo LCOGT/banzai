@@ -17,7 +17,7 @@ from types import ModuleType
 
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
-from banzai.utils import image_utils, date_utils, fits_utils, stage_utils, import_utils
+from banzai.utils import date_utils, stage_utils, import_utils
 from banzai.celery import process_image, app, schedule_calibration_stacking
 from celery.schedules import crontab
 import celery

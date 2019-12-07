@@ -1,4 +1,3 @@
-import os
 import tempfile
 import logging
 from typing import Optional
@@ -105,17 +104,12 @@ def get_configuration_mode(header):
     return configuration_mode
 
 
-def init_hdu():
-    file_handle = tempfile.NamedTemporaryFile()
-    return fits.open(file_handle, memmap=True)
-
-
 def open_fits_file(filename: str):
     # TODO: deal with a datacube and munging
     # TODO: detect if AWS frame and stream the file in rather than just opening the file,
     # this is done using boto3 and a io.BytesIO() buffer
     with open(filename, 'rb') as f:
-        hdu_list = fits.open(f)
+        hdu_list = fits.open(f, memmap=False)
         uncompressed_hdu_list = unpack(hdu_list)
         hdu_list.close()
         del hdu_list
@@ -185,27 +179,3 @@ def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
         else:
             hdulist.append(hdu)
     return fits.HDUList(hdulist)
-
-
-def _get_hdu_list(self):
-    image_hdu = fits.PrimaryHDU(self.data.astype(np.float32), header=self.header)
-    image_hdu.header['BITPIX'] = -32
-    image_hdu.header['BSCALE'] = 1.0
-    image_hdu.header['BZERO'] = 0.0
-    image_hdu.header['SIMPLE'] = True
-    image_hdu.header['EXTEND'] = True
-    image_hdu.name = 'SCI'
-
-    hdu_list = [image_hdu]
-    hdu_list = self._add_data_tables_to_hdu_list(hdu_list)
-    hdu_list = self._add_bpm_to_hdu_list(hdu_list)
-    fits_hdu_list = fits.HDUList(hdu_list)
-    try:
-        fits_hdu_list.verify(option='exception')
-    except fits.VerifyError as fits_error:
-        logger.warning('Error in FITS Verification. {0}. Attempting fix.'.format(fits_error), image=self)
-        try:
-            fits_hdu_list.verify(option='silentfix+exception')
-        except fits.VerifyError as fix_attempt_error:
-            logger.error('Could not repair FITS header. {0}'.format(fix_attempt_error), image=self)
-    return fits.HDUList(hdu_list)
