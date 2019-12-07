@@ -250,9 +250,7 @@ def update_db():
 
 
 def add_bpm():
-    parser = argparse.ArgumentParser(description="Query the configdb to ensure that the instruments table"
-                                                 "has the most up-to-date information")
-    parser.add_argument('--filename', help='Full path to Bad Pixel Mask file')
+    parser = argparse.ArgumentParser(description="Add a bad pixel mask to the db.")
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--db-address', dest='db_address',
