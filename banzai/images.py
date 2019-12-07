@@ -881,7 +881,7 @@ def stack(data_to_stack, nsigma_reject) -> CCDData:
     # Again if a pixel is bad in all images, fill the uncertainties with the quadrature sum / N images
     uncertainties[mask3d] = 0.0
     uncertainties *= uncertainties
-    uncertainties[np.logical_not(mask3d)] /= n_good_pixels[np.logical_not(mask3d)] ** 2.0
+    uncertainties /= n_good_pixels ** 2.0
     stacked_uncertainty = np.sqrt(uncertainties.sum(axis=0))
 
     return CCDData(data=stacked_data, meta=data_to_stack[0].meta, uncertainty=stacked_uncertainty, mask=stacked_mask)
