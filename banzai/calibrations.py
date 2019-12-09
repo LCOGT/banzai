@@ -61,22 +61,22 @@ class CalibrationStacker(CalibrationMaker):
         # This is just for convenience. Technically N can be anything you want.
         # I assume that you can read a couple of images into memory so order N sections is good for memory management.
         N = len(images)
-        # Split along the y-direction for faster indexing
+        # Split along the x-direction because the median utils functions are parallelized along the y-direction
         # detector section (y_stop - y_start) // binning(y) // N, abs(x_stop - x_start) // binning(x)
-        y_step = images[0].shape[0] // N
+        x_step = images[0].shape[1] // N
         for i in range(N + 1):
-            y_start = 1 + i * y_step
+            x_start = 1 + i * x_step
             if i == N:
                 # If the image divided evenly just move on.
-                if images[0].shape[0] % N == 0:
+                if images[0].shape[1] % N == 0:
                     break
                 # Otherwise, don't forget to do the last %mod sized section
-                y_stop = images[0].shape[0]
+                x_stop = images[1].shape[0]
             else:
-                y_stop = (i + 1) * y_step
+                x_stop = (i + 1) * x_step
 
-            section_to_stack = Section(x_start=1, x_stop=images[0].shape[1],
-                                       y_start=y_start, y_stop=y_stop)
+            section_to_stack = Section(x_start=x_start, x_stop=x_stop,
+                                       y_start=0, y_stop=images[0].data.shape[0])
 
             data_to_stack = [image.primary_hdu[section_to_stack] for image in images]
             stacked_data = stack(data_to_stack, 3.0)

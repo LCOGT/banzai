@@ -51,6 +51,7 @@ services:
       RETRY_DELAY: "0"
       REDIS_HOST: "redis://redis:6379/0"
       OBSERVATION_PORTAL_URL: "http://internal-observation-portal.lco.gtn/api/observations/"
+      OMP_NUM_THREADS: "4"
     labels:
       io.rancher.container.pull_image: always
       io.rancher.sidekicks: banzai-e2e
