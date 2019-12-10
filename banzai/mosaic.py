@@ -18,7 +18,7 @@ class MosaicCreator(Stage):
                                 meta=image.primary_hdu.meta)
         mosaiced_data.binning = image.binning
         mosaiced_data.detector_section = mosaiced_detector_region
-        mosaiced_data._data_section = Section(x_start=1, y_start=1, x_stop=binned_shape[1], y_stop=binned_shape[0])
+        mosaiced_data.data_section = Section(x_start=1, y_start=1, x_stop=binned_shape[1], y_stop=binned_shape[0])
         mosaiced_data.extension_name = 'SCI'
 
         mosaiced_data.gain = np.mean([data.meta.get('GAIN') for data in image.ccd_hdus])

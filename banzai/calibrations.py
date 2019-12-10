@@ -57,6 +57,9 @@ class CalibrationStacker(CalibrationMaker):
         master_frame_class = import_utils.import_attribute(self.runtime_context.MASTER_CALIBRATION_FRAME_CLASS)
         master_image = master_frame_class(images, master_calibration_filename, grouping_criteria=grouping)
 
+        # turn off memory mapping for each segment
+        for image in images:
+            image.primary_hdu.memmap = False
         # Split the image into N sections where N is the number of images
         # This is just for convenience. Technically N can be anything you want.
         # I assume that you can read a couple of images into memory so order N sections is good for memory management.
@@ -76,7 +79,7 @@ class CalibrationStacker(CalibrationMaker):
                 x_stop = (i + 1) * x_step
 
             section_to_stack = Section(x_start=x_start, x_stop=x_stop,
-                                       y_start=0, y_stop=images[0].data.shape[0])
+                                       y_start=1, y_stop=images[0].data.shape[0])
 
             data_to_stack = [image.primary_hdu[section_to_stack] for image in images]
             stacked_data = stack(data_to_stack, 3.0)

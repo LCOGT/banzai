@@ -20,7 +20,8 @@ class Data(metaclass=abc.ABCMeta):
     _file_handles = []
 
     def __init__(self, data: Union[np.array, Table], meta: Union[dict, fits.Header],
-                 mask: np.array = None, name: str = ''):
+                 mask: np.array = None, name: str = '', memmap=True):
+        self.memmap = memmap
         self.data = self._init_array(data)
         self.meta = meta.copy()
         self._validate_mask(mask)
@@ -33,6 +34,8 @@ class Data(metaclass=abc.ABCMeta):
                 raise ValueError('Mask must have the same dimensions as the data')
 
     def _init_array(self, array: np.array = None, dtype: Type = None):
+        if not self.memmap:
+            return array
         file_handle = tempfile.NamedTemporaryFile('w+b')
         if array is None:
             shape = self.data.shape
@@ -76,23 +79,23 @@ class Data(metaclass=abc.ABCMeta):
 
 class HeaderOnly(Data):
     def __init__(self, meta: Union[dict, fits.Header]):
-        super().__init__(data=np.zeros(0), meta=meta)
+        super().__init__(data=np.zeros(0), meta=meta, memmap=False)
 
     def to_fits(self, context):
         return fits.HDUList([fits.ImageHDU(data=None, header=self.meta)])
 
 
 class DataTable(Data):
-    def __init__(self, data, meta, name):
-        super().__init__(data, meta, name=name)
+    def __init__(self, data, meta, name, memmap=True):
+        super().__init__(data, meta, name=name, memmap=memmap)
 
     def to_fits(self, context) -> Union[fits.HDUList, list]:
         return [fits.BinTableHDU(data=self.data, header=self.meta)]
 
 
 class ArrayData(Data):
-    def __init__(self, data, meta, name):
-        super().__init__(data, meta, name=name)
+    def __init__(self, data, meta, name, memmap=True):
+        super().__init__(data, meta, name=name, memmap=memmap)
 
     def to_fits(self, context) -> Union[fits.HDUList, list]:
         return [fits.ImageHDU(data=self.data, header=self.meta)]
@@ -100,11 +103,13 @@ class ArrayData(Data):
 
 class CCDData(Data):
     def __init__(self, data: Union[np.array, Table], meta: Union[dict, fits.Header],
-                 mask: np.array = None, name: str = '', uncertainty: np.array = None):
-        super().__init__(data=data, meta=meta, mask=mask, name=name)
+                 mask: np.array = None, name: str = '', uncertainty: np.array = None, memmap=True):
+        super().__init__(data=data, meta=meta, mask=mask, name=name, memmap=memmap)
         if uncertainty is None:
             uncertainty = self.read_noise * np.ones(data.shape, dtype=data.dtype) / self.gain
         self.uncertainty = self._init_array(uncertainty)
+        self._detector_section = Section.parse_region_keyword(self.meta.get('DETSEC'))
+        self._data_section = Section.parse_region_keyword(self.meta.get('DATASEC'))
 
     def __getitem__(self, section):
         """
@@ -201,11 +206,11 @@ class CCDData(Data):
 
         trimmed_image = type(self)(data=self.data[trim_section.to_slice()], meta=self.meta,
                                    mask=self.mask[trim_section.to_slice()], name=self.name,
-                                   uncertainty=self.uncertainty[trim_section.to_slice()])
+                                   uncertainty=self.uncertainty[trim_section.to_slice()], memmap=self.memmap)
         trimmed_image.detector_section = self.data_to_detector_section(trim_section)
-        trimmed_image._data_section = Section(x_start=1, y_start=1,
-                                              x_stop=trimmed_image.data.shape[1],
-                                              y_stop=trimmed_image.data.shape[0])
+        trimmed_image.data_section = Section(x_start=1, y_start=1,
+                                             x_stop=trimmed_image.data.shape[1],
+                                             y_stop=trimmed_image.data.shape[0])
         return trimmed_image
 
     @property
@@ -255,19 +260,21 @@ class CCDData(Data):
 
     @property
     def detector_section(self):
-        return Section.parse_region_keyword(self.meta.get('DETSEC'))
+        return self._detector_section
 
     @detector_section.setter
     def detector_section(self, section):
         self.meta['DETSEC'] = section.to_region_keyword()
+        self._detector_section = section
 
     @property
-    def _data_section(self):
-        return Section.parse_region_keyword(self.meta.get('DATASEC'))
+    def data_section(self):
+        return self._data_section
 
-    @_data_section.setter
-    def _data_section(self, section):
+    @data_section.setter
+    def data_section(self, section):
         self.meta['DATASEC'] = section.to_region_keyword()
+        self._data_section = section
 
     def rebin(self, binning):
         # TODO: Implement me
@@ -279,15 +286,15 @@ class CCDData(Data):
     def detector_to_data_section_oned(self, axis, section):
         binning_indices = {'x': 0, 'y': 1}
         sign = np.sign(getattr(self.detector_section, f'{axis}_stop') - getattr(self.detector_section, f'{axis}_start'))
-        sign *= np.sign(getattr(self._data_section, f'{axis}_stop') - getattr(self._data_section, f'{axis}_start'))
+        sign *= np.sign(getattr(self.data_section, f'{axis}_stop') - getattr(self.data_section, f'{axis}_start'))
 
         start = sign * (getattr(section, f'{axis}_start') - getattr(self.detector_section, f'{axis}_start'))
         start //= self.binning[binning_indices[axis]]
-        start += getattr(self._data_section, f'{axis}_start')
+        start += getattr(self.data_section, f'{axis}_start')
 
         stop = sign * (getattr(section, f'{axis}_stop') - getattr(self.detector_section, f'{axis}_start'))
         stop //= self.binning[binning_indices[axis]]
-        stop += getattr(self._data_section, f'{axis}_start')
+        stop += getattr(self.data_section, f'{axis}_start')
         return start, stop
 
     def detector_to_data_section(self, section):
@@ -315,13 +322,13 @@ class CCDData(Data):
     def data_to_detector_section_oned(self, axis, section):
         binning_indices = {'x': 0, 'y': 1}
         sign = np.sign(getattr(self.detector_section, f'{axis}_stop') - getattr(self.detector_section, f'{axis}_start'))
-        sign *= np.sign(getattr(self._data_section, f'{axis}_stop') - getattr(self._data_section, f'{axis}_start'))
+        sign *= np.sign(getattr(self.data_section, f'{axis}_stop') - getattr(self.data_section, f'{axis}_start'))
 
-        start = sign * (getattr(section, f'{axis}_start') - getattr(self._data_section, f'{axis}_start'))
+        start = sign * (getattr(section, f'{axis}_start') - getattr(self.data_section, f'{axis}_start'))
         start *= self.binning[binning_indices[axis]]
         start += getattr(self.detector_section, f'{axis}_start')
 
-        stop = sign * (getattr(section, f'{axis}_stop') - getattr(self._data_section, f'{axis}_start'))
+        stop = sign * (getattr(section, f'{axis}_stop') - getattr(self.data_section, f'{axis}_start'))
         stop *= self.binning[binning_indices[axis]]
         stop += getattr(self.detector_section, f'{axis}_start')
 
@@ -785,12 +792,11 @@ class LCOFrameFactory:
             if hdu.meta.get('DETSEC', 'UNKNOWN') in ['UNKNOWN', 'N/A']:
                 # DETSEC missing?
                 binning = hdu.meta.get('CCDSUM', image.primary_hdu.meta.get('CCDSUM', '1 1'))
-                data_section = Section.parse_region_keyword(hdu.meta['DATASEC'])
                 detector_section = Section(1,
-                                           max(data_section.x_start, data_section.x_stop) * int(binning[0]),
+                                           max(hdu.data_section.x_start, hdu.data_section.x_stop) * int(binning[0]),
                                            1,
-                                           max(data_section.y_start, data_section.y_stop) * int(binning[2]))
-                hdu.meta['DETSEC'] = detector_section.to_region_keyword()
+                                           max(hdu.data_section.y_start, hdu.data_section.y_stop) * int(binning[2]))
+                hdu.detector_section = detector_section
 
             # SATURATE Missing?
             def update_saturate(image, hdu, default):
@@ -881,8 +887,7 @@ def stack(data_to_stack, nsigma_reject) -> CCDData:
     # Again if a pixel is bad in all images, fill the uncertainties with the quadrature sum / N images
     uncertainties[mask3d] = 0.0
     uncertainties *= uncertainties
-    uncertainties /= n_good_pixels ** 2.0
-    stacked_uncertainty = np.sqrt(uncertainties.sum(axis=0))
+    stacked_uncertainty = np.sqrt(uncertainties.sum(axis=0) / (n_good_pixels ** 2.0))
 
     return CCDData(data=stacked_data, meta=data_to_stack[0].meta, uncertainty=stacked_uncertainty, mask=stacked_mask)
 
