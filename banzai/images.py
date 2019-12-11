@@ -821,7 +821,7 @@ class LCOFrameFactory:
                 binning = hdu.meta.get('CCDSUM', '1 1')
                 n_binned_pixels = int(binning[0]) * int(binning[2])
                 update_saturate(image, hdu, 125000.0 * n_binned_pixels / float(hdu.meta['GAIN']))
-        if image_utils.image_can_be_processed(image, runtime_context):
+        if image.instrument is not None and image_utils.image_can_be_processed(image, runtime_context):
             return image
         else:
             return None
@@ -839,8 +839,7 @@ class LCOFrameFactory:
         if instrument is None:
             msg = 'Instrument is not in the database, Please add it before reducing this data.'
             tags = {'site': site, 'camera': camera, 'telescop': name}
-            logger.error(msg, extra_tags=tags)
-            raise ValueError('Instrument is missing from the database.')
+            logger.debug(msg, extra_tags=tags)
         return instrument
 
 
