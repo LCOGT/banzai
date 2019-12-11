@@ -48,11 +48,11 @@ def run_pipeline_stages(image_paths, runtime_context):
         stages_to_do = runtime_context.CALIBRATION_STACKER_STAGES[images[0].obstype.upper()]
     else:
         images = frame_factory.open(image_paths, runtime_context)
+        if images is None:
+            return
         stages_to_do = get_stages_for_individual_frame(runtime_context.ORDERED_STAGES,
                                                        last_stage=runtime_context.LAST_STAGE[images.obstype.upper()],
                                                        extra_stages=runtime_context.EXTRA_STAGES[images.obstype.upper()])
-        if images is None:
-            return
 
     for stage_name in stages_to_do:
         stage_constructor = import_utils.import_attribute(stage_name)
