@@ -1,3 +1,7 @@
+0.27.5 (2019-12-11)
+-------------------
+- Change ra, dec parsing to default to CRVAL header keywords. Ref. Redmine issue #1104.
+
 0.27.4 (2019-11-13)
 -------------------
 - Fix for parsing instruments with empty string codes from ConfigDB
