@@ -63,10 +63,9 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
 
     parser.add_argument("--processed-path", default='/archive/engineering',
                         help='Top level directory where the processed data will be stored')
-    parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
-                                                                 'critical', 'fatal', 'error'])
-    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true',
-                        default=False)
+    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
+                                                                'critical', 'fatal', 'error'])
+    parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
     parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
                         default=False)
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
