@@ -80,13 +80,13 @@ def table_to_fits(table):
 
 def parse_ra_dec(header):
     try:
-        coord = SkyCoord(header.get('RA'), header.get('DEC'), unit=(units.hourangle, units.degree))
+        coord = SkyCoord(header.get('CRVAl1'), header.get('CRVAL2'), unit=(units.degree, units.degree))
         ra = coord.ra.deg
         dec = coord.dec.deg
     except (ValueError, TypeError):
-        # Fallback to CRVAL1 and CRVAL2
+        # Fallback to RA and DEC
         try:
-            coord = SkyCoord(header.get('CRVAl1'), header.get('CRVAL2'), unit=(units.degree, units.degree))
+            coord = SkyCoord(header.get('RA'), header.get('DEC'), unit=(units.hourangle, units.degree))
             ra = coord.ra.deg
             dec = coord.dec.deg
         except (ValueError, TypeError):
