@@ -444,7 +444,6 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def __init__(self, hdu_list: list, file_path: str):
         self._hdus = hdu_list
         self._file_path = file_path
-        self.epoch = self.primary_hdu.meta.get('DAY-OBS')
         self.instrument = None
 
     @property
@@ -531,6 +530,15 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def exptime(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def epoch(self):
+        pass
+    @property
+    @abc.abstractmethod
+    def request_number(self):
         pass
 
     @property
@@ -639,6 +647,14 @@ class LCOObservationFrame(ObservationFrame):
     @property
     def obstype(self):
         return self.primary_hdu.meta.get('OBSTYPE')
+
+    @property
+    def epoch(self):
+        return self.primary_hdu.meta.get('DAY-OBS')
+
+    @property
+    def request_number(self):
+        return self.primary_hdu.meta.get('REQNUM')
 
     @property
     def filter(self):
