@@ -1,6 +1,7 @@
 import logging
 import abc
 import os
+from datetime import datetime
 
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs
@@ -51,7 +52,8 @@ class CalibrationStacker(CalibrationMaker):
         make_calibration_name = file_utils.make_calibration_filename_function(self.calibration_type,
                                                                               self.runtime_context)
 
-        master_calibration_filename = make_calibration_name(images[0])
+        # use the most recent image in the stack to create the master filename
+        master_calibration_filename = make_calibration_name(max(images, key=lambda x: datetime.strptime(x.epoch, '%Y%m%d') ))
 
         grouping = self.runtime_context.CALIBRATION_SET_CRITERIA.get(images[0].obstype, [])
         master_frame_class = import_utils.import_attribute(self.runtime_context.MASTER_CALIBRATION_FRAME_CLASS)
