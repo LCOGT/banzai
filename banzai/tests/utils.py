@@ -58,6 +58,54 @@ class FakeLCOObservationFrame(LCOObservationFrame):
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
 
+<<<<<<< Updated upstream
+=======
+class FakeCCDData(CCDData):
+    def __init__(self, image_multiplier=1.0, nx=101, ny=103, n_amps=1, name='test_image', read_noise = 11.0,
+                 bias_level=0.0, meta=Header(), data=None, mask=None, uncertainty=None, **kwargs):
+        self.name = name
+        self.meta = meta
+        self.meta['RDNOISE'] = read_noise
+        self.meta['BIASLVL'] = bias_level
+
+        if data is None:
+            self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
+        else:
+            self.data = data
+        if mask is None:
+            self.mask = np.zeros(self.data.shape, dtype=np.uint8)
+        else:
+            self.mask = mask
+        if uncertainty is None:
+            self.uncertainty = self.read_noise * np.ones(self.data.shape, dtype=self.data.dtype)
+        else:
+            self.uncertainty = uncertainty
+        if n_amps > 1:
+            self.data = np.stack(n_amps * [self.data])
+
+        for keyword in kwargs:
+            setattr(self, keyword, kwargs[keyword])
+
+
+class FakeLCOObservationFrame(LCOObservationFrame):
+    def __init__(self, hdu_list=None, file_path='/tmp/test_image.fits', instrument=None, epoch='20160101',
+                 **kwargs):
+        if hdu_list is None:
+            self._hdus = [FakeCCDData()]
+        else:
+            self._hdus = hdu_list
+        if instrument is None:
+            self.instrument = FakeInstrument(0, 'cpt', 'fa16', 'doma', '1m0a', '1M-SCICAM-SINISTRO', schedulable=True)
+        else:
+            self.instrument = instrument
+        self.epoch = epoch
+        self._file_path = file_path
+        self.is_bad = False
+
+        for keyword in kwargs:
+            setattr(self, keyword, kwargs[keyword])
+
+>>>>>>> Stashed changes
 
 class FakeImage(Image):
     def __init__(self, runtime_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',

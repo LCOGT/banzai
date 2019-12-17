@@ -40,6 +40,11 @@ class CalibrationMaker(MultiFrameStage):
             msg = 'Number of images less than minimum requirement of {min_images}, not combining'
             logger.warning(msg.format(min_images=min_images))
             return []
+        try:
+            image_utils.check_image_homogeneity(images, self.group_by_attributes())
+        except image_utils.InhomogeneousSetException:
+            logger.error(logs.format_exception())
+            return []
 
         return [self.make_master_calibration_frame(images)]
 
