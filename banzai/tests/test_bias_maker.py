@@ -59,62 +59,15 @@ def test_bias_level_is_average_of_inputs(mock_namer):
     mock_namer.return_value = lambda *x: 'foo.fits'
     nimages = 20
     bias_levels = np.arange(nimages, dtype=float)
-    image_header = Header({'DATE-OBS': '2019-12-04T14:34:00',
-                           'DETSEC': '[1:100,1:100]',
-                           'DATASEC': '[1:100,1:100]',
-                           'OBSTYPE': 'BIAS'})
 
-    # images = []
-    # for level in bias_levels:
-    #     # print(level)
-    #     # image = FakeCCDData(bias_level=level, meta=image_header)
-    #     # image.meta['BIASLVL'] = level
-    #     # print(level)
-    #     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(bias_level=level, meta=image_header)])
-    #     images.append(image)
-    #     # images.append(FakeLCOObservationFrame(hdu_list=[FakeCCDData(bias_level=level, meta=image_header)]))
-    # pdb.set_trace()
-    #
-    # images.append(FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(1, size=(99,99)),
-    #                                                             bias_level=1, meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
-    #                        'DETSEC': '[1:100,1:100]',
-    #                        'DATASEC': '[1:100,1:100]',
-    #                        'OBSTYPE': 'BIAS'}))]))
-    #
-    # images.append(FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(2, size=(99,99)),
-    #                                                             bias_level=2, meta=image_header)]))
-    #
-    # images.append(FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(2, size=(99,99)),
-    #                                                             bias_level=2, meta=image_header)]))
-    #
-    # images.append(FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(2, size=(99,99)),
-    #                                                             bias_level=2, meta=image_header)]))
-    #
-    # images.append(FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(2, size=(99,99)),
-    #                                                             bias_level=2, meta=image_header)]))
-
-
-
-    # pdb.set_trace()
     images = [FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(i, size=(99,99)),
                                                             bias_level=i, meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
                                                                                        'DETSEC': '[1:100,1:100]',
                                                                                        'DATASEC': '[1:100,1:100]',
                                                                                        'OBSTYPE': 'BIAS'}))]) for i in bias_levels]
-    # pdb.set_trace()
-    #
-    # for idx, image in enumerate(images):
-    #     image.bias_level = bias_levels[idx]
-    #     print(image.bias_level)
-    #     print(image.primary_hdu.meta['BIASLVL'])
-    #
-    # pdb.set_trace()
-    # mock_instrument_info.return_value = None, None, None
+
     fake_context = FakeContext()
-    # fake_context.db_address = ''
-    # pdb.set_trace()
     maker = BiasMaker(fake_context)
-    pdb.set_trace()
     master_bias = maker.do_stage(images)[0]
 
     assert master_bias.meta['BIASLVL'] == np.mean(bias_levels)

@@ -7,7 +7,7 @@ from astropy.io.fits import Header
 
 from banzai import settings
 from banzai.stages import Stage
-from banzai.images import Image, CCDData, LCOObservationFrame, HeaderOnly, LCOCalibrationFrame
+from banzai.images import Image, CCDData, LCOObservationFrame, HeaderOnly, LCOCalibrationFrame, Section
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
 
@@ -20,6 +20,8 @@ class FakeCCDData(CCDData):
         self.meta = meta
         self.meta['RDNOISE'] = read_noise
         self.meta['BIASLVL'] = bias_level
+        self._detector_section = Section.parse_region_keyword(self.meta.get('DETSEC'))
+        self._data_section = Section.parse_region_keyword(self.meta.get('DATASEC'))
 
         if data is None:
             self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
@@ -51,7 +53,7 @@ class FakeLCOObservationFrame(LCOObservationFrame):
             self.instrument = FakeInstrument(0, 'cpt', 'fa16', 'doma', '1m0a', '1M-SCICAM-SINISTRO', schedulable=True)
         else:
             self.instrument = instrument
-        self.epoch = epoch
+        self.primary_hdu.meta['DAY-OBS'] = epoch
         self._file_path = file_path
         self.is_bad = False
 
