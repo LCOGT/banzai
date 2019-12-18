@@ -721,15 +721,23 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
         CalibrationFrame.write(self, runtime_context)
 
 
-class LCOMasterCalibrationFrame(LCOCalibrationFrame):
-    def __init__(self, images: list, file_path: str, grouping_criteria: list = None):
-        super().__init__(images, file_path, grouping_criteria=grouping_criteria)
-        self._hdus = [CCDData(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
-                           meta=self._create_master_calibration_header(images[0].meta, images))]
+class MasterCalibrationFrame(ObservationFrame, CalibrationFrame):
+    def __init__(self, hdu_list: list, file_path: str, grouping_criteria: list = None):
+        CalibrationFrame.__init__(self, grouping_criteria=grouping_criteria)
+        ObservationFrame.__init__(self, hdu_list, file_path)
         self.is_master = True
+
+
+class LCOMasterCalibrationFrame(MasterCalibrationFrame, LCOCalibrationFrame):
+    def __init__(self, images: list, file_path: str, grouping_criteria: list = None):
+        hdu_list = [CCDData(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
+                            meta=self.init_header(images[0].meta, images))]
+        LCOCalibrationFrame.__init__(self, hdu_list=hdu_list, file_path=file_path, grouping_criteria=grouping_criteria)
+        MasterCalibrationFrame.__init__(self, hdu_list, file_path, grouping_criteria=grouping_criteria)
         self.instrument = images[0].instrument
 
-    def _create_master_calibration_header(self, old_header, images):
+    @staticmethod
+    def init_header(old_header, images):
         header = fits.Header()
         for key in old_header.keys():
             try:
@@ -907,7 +915,3 @@ def stack(data_to_stack, nsigma_reject) -> CCDData:
     stacked_uncertainty = np.sqrt(uncertainties.sum(axis=0) / (n_good_pixels ** 2.0))
 
     return CCDData(data=stacked_data, meta=data_to_stack[0].meta, uncertainty=stacked_uncertainty, mask=stacked_mask)
-
-
-def regenerate_data_table_from_fits_hdu_list():
-    pass
