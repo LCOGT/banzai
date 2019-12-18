@@ -14,12 +14,14 @@ import logging
 logger = logging.getLogger('banzai')
 
 class FakeCCDData(CCDData):
-    def __init__(self, image_multiplier=1.0, nx=101, ny=103, n_amps=1, name='test_image', read_noise = 11.0,
-                 bias_level=0, meta=Header(), data=None, mask=None, uncertainty=None, **kwargs):
+    def __init__(self, image_multiplier=1.0, nx=101, ny=103, n_amps=1, name='test_image', read_noise = None,
+                 bias_level=None, meta=Header(), data=None, mask=None, uncertainty=None, **kwargs):
         self.name = name
         self.meta = meta
-        self.meta['RDNOISE'] = read_noise
-        self.meta['BIASLVL'] = bias_level
+        if bias_level is not None:
+            self.meta['BIASLVL'] = bias_level
+        if read_noise is not None:
+            self.meta['RDNOISE'] = read_noise
         self._detector_section = Section.parse_region_keyword(self.meta.get('DETSEC'))
         self._data_section = Section.parse_region_keyword(self.meta.get('DATASEC'))
 

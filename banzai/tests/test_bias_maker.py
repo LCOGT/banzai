@@ -5,9 +5,6 @@ from astropy.io.fits import Header
 
 from banzai.bias import BiasMaker
 from banzai.tests.utils import FakeContext, FakeLCOObservationFrame, FakeCCDData
-from banzai.tests.bias_utils import FakeBiasImage
-
-import pdb
 
 pytestmark = pytest.mark.bias_maker
 
@@ -22,7 +19,6 @@ def test_group_by_attributes():
     maker = BiasMaker(FakeContext())
     assert maker.group_by_attributes() == ['configuration_mode', 'binning']
 
-
 @mock.patch('banzai.images.LCOFrameFactory.open')
 @mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
 def test_header_cal_type_bias(mock_namer, mock_master_frame):
@@ -35,8 +31,8 @@ def test_header_cal_type_bias(mock_namer, mock_master_frame):
 
     fake_master_image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(master_bias_level, master_readnoise,
                                                                                             size=(ny, nx)),
-                                                read_noise=master_readnoise,
-                                                bias_level=master_bias_level)])
+                                                                      read_noise=master_readnoise,
+                                                                      bias_level=master_bias_level)])
 
     mock_master_frame.return_value = fake_master_image
 
@@ -48,7 +44,8 @@ def test_header_cal_type_bias(mock_namer, mock_master_frame):
                            'OBSTYPE': 'BIAS'})
 
     images = maker.do_stage([FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.zeros((ny, nx)),
-                                                                           meta=image_header)])
+                                                                           meta=image_header,
+                                                                           bias_level=0.0)])
                              for x in range(6)])
 
     assert images[0].meta['OBSTYPE'].upper() == 'BIAS'
@@ -74,20 +71,23 @@ def test_bias_level_is_average_of_inputs(mock_namer):
 
 
 @mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
-@mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
-def test_makes_a_sensible_master_bias(mock_frame, mock_namer):
+def test_makes_a_sensible_master_bias(mock_namer):
     mock_namer.return_value = lambda *x: 'foo.fits'
     nimages = 20
     expected_readnoise = 15.0
 
-    images = [FakeBiasImage() for x in range(nimages)]
-    for image in images:
-        image.data = np.random.normal(loc=0.0, scale=expected_readnoise,
-                                      size=(image.ny, image.nx))
+    images = [FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(0.0, size=(99, 99), scale=expected_readnoise),
+                                                            bias_level=0.0,
+                                                            read_noise= expected_readnoise,
+                                                            meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
+                                                                         'DETSEC': '[1:100,1:100]',
+                                                                         'DATASEC': '[1:100,1:100]',
+                                                                         'OBSTYPE': 'BIAS'}))]) for i in range(nimages)]
 
-    maker = BiasMaker(FakeContext(frame_class=FakeBiasImage))
+    maker = BiasMaker(FakeContext())
     stacked_images = maker.do_stage(images)
     master_bias = stacked_images[0].data
     assert np.abs(np.mean(master_bias)) < 0.1
     actual_readnoise = np.std(master_bias)
     assert np.abs(actual_readnoise - expected_readnoise / (nimages ** 0.5)) < 0.2
+

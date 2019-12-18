@@ -131,10 +131,9 @@ class CCDData(Data):
         if isinstance(value, CCDData):
             self.data /= value.data
             self.uncertainty /= value.uncertainty
-            # TODO: is this correct for flat normalization?
-            # self.meta['SATURATE'] /= value.meta['SATURATE']
-            # self.meta['GAIN'] /= value.meta['GAIN']
-            # self.meta['MAXLIN'] /= value.meta['MAXLIN']
+            self.meta['SATURATE'] /= value.meta['SATURATE']
+            self.meta['GAIN'] /= value.meta['GAIN']
+            self.meta['MAXLIN'] /= value.meta['MAXLIN']
         else:
             self.__imul__(1.0 / value)
         return self
