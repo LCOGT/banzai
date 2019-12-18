@@ -15,9 +15,12 @@ logger = logging.getLogger('banzai')
 
 class FakeCCDData(CCDData):
     def __init__(self, image_multiplier=1.0, nx=101, ny=103, n_amps=1, name='test_image', read_noise = None,
-                 bias_level=None, meta=Header(), data=None, mask=None, uncertainty=None, **kwargs):
+                 bias_level=None, meta=None, data=None, mask=None, uncertainty=None, **kwargs):
         self.name = name
-        self.meta = meta
+        if meta is not None:
+            self.meta = meta
+        else:
+            self.meta = Header()
         if bias_level is not None:
             self.meta['BIASLVL'] = bias_level
         if read_noise is not None:
@@ -118,7 +121,7 @@ class FakeImage(Image):
 
 
 class FakeContext(object):
-    def __init__(self, preview_mode=False, fpack=True, frame_class=FakeImage):
+    def __init__(self, preview_mode=False, fpack=True, frame_class=FakeImage, **kwargs):
         self.FRAME_CLASS = frame_class
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
@@ -131,6 +134,9 @@ class FakeContext(object):
         for setting in dir(settings):
             if '__' != setting[:2] and not isinstance(getattr(settings, setting), ModuleType):
                 setattr(self, setting, getattr(settings, setting))
+
+        for keyword in kwargs:
+            setattr(self, keyword, kwargs[keyword])
 
     def image_can_be_processed(self, header):
         return True
