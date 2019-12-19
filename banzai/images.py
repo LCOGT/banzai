@@ -721,19 +721,12 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
         CalibrationFrame.write(self, runtime_context)
 
 
-class MasterCalibrationFrame(ObservationFrame, CalibrationFrame):
-    def __init__(self, hdu_list: list, file_path: str, grouping_criteria: list = None):
-        CalibrationFrame.__init__(self, grouping_criteria=grouping_criteria)
-        ObservationFrame.__init__(self, hdu_list, file_path)
-        self.is_master = True
-
-
-class LCOMasterCalibrationFrame(MasterCalibrationFrame, LCOCalibrationFrame):
+class LCOMasterCalibrationFrame(LCOCalibrationFrame):
     def __init__(self, images: list, file_path: str, grouping_criteria: list = None):
         hdu_list = [CCDData(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
                             meta=self.init_header(images[0].meta, images))]
-        LCOCalibrationFrame.__init__(self, hdu_list=hdu_list, file_path=file_path, grouping_criteria=grouping_criteria)
-        MasterCalibrationFrame.__init__(self, hdu_list, file_path, grouping_criteria=grouping_criteria)
+        super().__init__(hdu_list=hdu_list, file_path=file_path, grouping_criteria=grouping_criteria)
+        self.is_master = True
         self.instrument = images[0].instrument
 
     @staticmethod
