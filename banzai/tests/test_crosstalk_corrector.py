@@ -7,7 +7,6 @@ from banzai.crosstalk import CrosstalkCorrector
 
 pytestmark = pytest.mark.crosstalk_corrector
 
-
 @pytest.fixture(scope='module')
 def set_random_seed():
     np.random.seed(6234585)
@@ -24,7 +23,7 @@ def test_crosstalk(set_random_seed):
     nx = 101
     ny = 103
 
-    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(nx=nx, ny=ny) for amp in range(4)], data_is_3d=True)
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(nx=nx, ny=ny) for amp in range(4)])
     # Add random pixels at 10000 to each of the extensions
     for extension in image.ccd_hdus:
         extension.data = np.ones((ny, nx)) * 1000.0
