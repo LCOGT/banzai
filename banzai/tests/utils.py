@@ -46,12 +46,16 @@ class FakeCCDData(CCDData):
 
 
 class FakeLCOObservationFrame(LCOObservationFrame):
-    def __init__(self, hdu_list=None, file_path='/tmp/test_image.fits', instrument=None, epoch='20160101',
+    def __init__(self, hdu_list=None, meta=None, file_path='/tmp/test_image.fits', instrument=None, epoch='20160101',
                  **kwargs):
         if hdu_list is None:
             self._hdus = [FakeCCDData()]
         else:
             self._hdus = hdu_list
+        if meta is None:
+            self.primary_hdu.meta = {}
+        else:
+            self.primary_hdu.meta = meta
         if instrument is None:
             self.instrument = FakeInstrument(0, 'cpt', 'fa16', 'doma', '1m0a', '1M-SCICAM-SINISTRO', schedulable=True)
         else:
