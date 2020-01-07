@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger('banzai')
 
 class FakeCCDData(CCDData):
-    def __init__(self, image_multiplier=1.0, nx=101, ny=103, n_amps=1, name='test_image', read_noise = None,
+    def __init__(self, image_multiplier=1.0, nx=101, ny=103, n_amps=1, name='test_image', read_noise=None,
                  bias_level=None, meta=None, data=None, mask=None, uncertainty=None, **kwargs):
         self.name = name
         if meta is not None:

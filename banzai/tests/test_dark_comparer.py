@@ -42,16 +42,18 @@ def test_does_not_flag_noisy_images(mock_master_cal_name, mock_master_frame, set
     nx = 101
     ny = 103
     dark_exptime = 900.0
+    image_readnoise = 11.0
 
     dark_pattern = get_dark_pattern(nx, ny, master_dark_fraction)
     mock_master_frame.return_value = make_realistic_master_dark(dark_pattern, nx=nx, ny=ny,
                                                                 dark_level=30.0, dark_exptime=dark_exptime)
     comparer = DarkComparer(FakeContext())
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(meta={'EXPTIME': dark_exptime},
-                                                          read_noise=11.0)])
+                                                          read_noise=image_readnoise)])
     image.primary_hdu.data = np.random.normal(0.0, image.primary_hdu.read_noise, size=(ny, nx))
     image.primary_hdu.data += np.random.poisson(dark_pattern * dark_exptime, size=(ny, nx))
     image.primary_hdu.data /= image.exptime
+    image.primary_hdu.uncertainty /= image.exptime
 
     image = comparer.do_stage(image)
 
