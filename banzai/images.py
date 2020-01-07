@@ -739,7 +739,7 @@ class LCOMasterCalibrationFrame(LCOCalibrationFrame):
             except ValueError as e:
                 logger.error('Could not add keyword {key}: {error}'.format(key=key, error=e))
                 continue
-        header = fits_utils.sanitizeheader(header)
+        header = fits_utils.sanitize_header(header)
         observation_dates = [image.dateobs for image in images]
         mean_dateobs = date_utils.mean_date(observation_dates)
 

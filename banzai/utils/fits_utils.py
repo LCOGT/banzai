@@ -13,7 +13,7 @@ logger = logging.getLogger('banzai')
 FITS_MANDATORY_KEYWORDS = ['SIMPLE', 'BITPIX', 'NAXIS', 'EXTEND', 'COMMENT', 'CHECKSUM', 'DATASUM']
 
 
-def sanitizeheader(header):
+def sanitize_header(header):
     # Remove the mandatory keywords from a header so it can be copied to a new
     # image.
     header = header.copy()
@@ -24,18 +24,6 @@ def sanitizeheader(header):
             header.pop(i)
 
     return header
-
-
-def split_region_keyword(pixel_section):
-    pixels = pixel_section.split(':')
-    if int(pixels[1]) > int(pixels[0]):
-        pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]), 1)
-    else:
-        if int(pixels[1]) == 1:
-            pixel_slice = slice(int(pixels[0]) - 1, None, -1)
-        else:
-            pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]) - 2, -1)
-    return pixel_slice
 
 
 def table_to_fits(table):
@@ -51,7 +39,7 @@ def table_to_fits(table):
             column_name = hdu.header[k].lower()
             description = table[column_name].description
             hdu.header[k] = (column_name.upper(), description)
-            # Get the value of n in TTYPEn
+            # Get the value of n in TTYPE
             n = k[5:]
             hdu.header['TCOMM{0}'.format(n)] = description
     return hdu
