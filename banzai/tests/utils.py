@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger('banzai')
 
 class FakeCCDData(CCDData):
-    def __init__(self, image_multiplier=1.0, nx=101, ny=103, n_amps=1, name='test_image', read_noise=None,
+    def __init__(self, image_multiplier=1.0, nx=101, ny=103, name='test_image', read_noise=None,
                  bias_level=None, meta=None, data=None, mask=None, uncertainty=None, **kwargs):
         self.name = name
         if meta is not None:
@@ -40,8 +40,6 @@ class FakeCCDData(CCDData):
             self.uncertainty = self.read_noise * np.ones(self.data.shape, dtype=self.data.dtype)
         else:
             self.uncertainty = uncertainty
-        if n_amps > 1:
-            self.data = np.stack(n_amps * [self.data])
 
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
