@@ -19,22 +19,12 @@ def test_group_by_attributes():
     maker = BiasMaker(FakeContext())
     assert maker.group_by_attributes() == ['configuration_mode', 'binning']
 
-@mock.patch('banzai.images.LCOFrameFactory.open')
-@mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
-def test_header_cal_type_bias(mock_namer, mock_master_frame):
-    mock_namer.return_value = lambda *x: 'foo.fits'
 
-    master_readnoise = 10.0
-    master_bias_level = 0.0
+@mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
+def test_header_cal_type_bias(mock_namer):
+    mock_namer.return_value = lambda *x: 'foo.fits'
     nx = 100
     ny = 100
-
-    fake_master_image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(master_bias_level, master_readnoise,
-                                                                                            size=(ny, nx)),
-                                                                      read_noise=master_readnoise,
-                                                                      bias_level=master_bias_level)])
-
-    mock_master_frame.return_value = fake_master_image
 
     maker = BiasMaker(FakeContext())
 
