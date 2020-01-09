@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+
 from banzai.stages import Stage
 from banzai.images import CCDData, Section
 

@@ -52,10 +52,6 @@ class FakeLCOObservationFrame(LCOObservationFrame):
             self._hdus = [FakeCCDData()]
         else:
             self._hdus = hdu_list
-        # if meta is None and self.meta is None:
-        #     self.primary_hdu.meta = {}
-        # else:
-        #     self.primary_hdu.meta = meta
         if instrument is None:
             self.instrument = FakeInstrument(0, 'cpt', 'fa16', 'doma', '1m0a', '1M-SCICAM-SINISTRO', schedulable=True)
         else:

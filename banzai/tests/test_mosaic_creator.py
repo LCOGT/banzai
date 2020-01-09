@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 
+from banzai.images import Section
 from banzai.mosaic import MosaicCreator
 from banzai.tests.utils import FakeLCOObservationFrame, FakeCCDData
 
@@ -39,7 +40,7 @@ def test_get_mosaic_size():
 def test_get_mosaic_detector_region():
     data = [FakeCCDData(meta=extension_header) for extension_header in extension_headers]
     image = FakeLCOObservationFrame(hdu_list=data)
-    assert MosaicCreator.get_mosaic_detector_region(image).shape == (1024, 1024)
+    assert MosaicCreator.get_mosaic_detector_region(image).shape == (2048, 2048)
 
 
 def test_mosaic_maker(set_random_seed):
@@ -63,6 +64,8 @@ def test_mosaic_maker(set_random_seed):
     bpm_arrays = []
     fake_images = []
 
+    # Create 4 images, each with 4 extensions
+    # Each image will have the same 4 datasecs, but the detsecs will differ from image-to-image
     for i, detsec in enumerate(detsecs):
         extension_data = np.random.uniform(0, 1, size=data_sizes[i])
         extension_masks = np.random.choice([0, 1], size=data_sizes[i])
@@ -72,10 +75,11 @@ def test_mosaic_maker(set_random_seed):
 
         hdu_list = [FakeCCDData(data=data.copy(),
                                 meta={'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0},
-                                mask=mask.copy()) for data, mask in zip(extension_data, extension_masks)]
+                                mask=mask.copy(), memmap=False) for data, mask in zip(extension_data, extension_masks)]
 
         for j in range(4):
-            hdu_list[j].meta.update({'DATASEC': datasecs[i], 'DETSEC': detsec[j]})
+            hdu_list[j].detector_section = Section.parse_region_keyword(detsec[j])
+            hdu_list[j].data_section = Section.parse_region_keyword(datasecs[i])
 
         image = FakeLCOObservationFrame(hdu_list=hdu_list)
         fake_images.append(image)
@@ -87,11 +91,10 @@ def test_mosaic_maker(set_random_seed):
         assert image.data.shape == expected_mosaic_sizes[i]
         for j, s in enumerate(expected_quad_slices[i]):
             np.testing.assert_allclose(image.data[s], data_arrays[i][j])
-            np.testing.assert_allclose(image.bpm[s], bpm_arrays[i][j])
+            np.testing.assert_allclose(image.mask[s], bpm_arrays[i][j])
 
 
 def test_mosaic_maker_for_binned_windowed_mode():
-
     extension_data = [np.random.uniform(0, 1, size=(512,512)) for i in range(4)]
     extension_masks = [np.random.choice([0, 1], size=(512,512)) for i in range(4)]
     hdu_list = [FakeCCDData(meta=header,
