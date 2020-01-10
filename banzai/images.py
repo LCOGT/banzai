@@ -535,6 +535,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def epoch(self):
         pass
+
     @property
     @abc.abstractmethod
     def request_number(self):
@@ -644,6 +645,10 @@ class LCOObservationFrame(ObservationFrame):
         return output_filename
 
     @property
+    def n_amps(self):
+        return len(self.ccd_hdus)
+
+    @property
     def obstype(self):
         return self.primary_hdu.meta.get('OBSTYPE')
 
@@ -654,6 +659,10 @@ class LCOObservationFrame(ObservationFrame):
     @property
     def request_number(self):
         return self.primary_hdu.meta.get('REQNUM')
+
+    @property
+    def camera(self):
+        return self.primary_hdu.meta.get('INSTRUME')
 
     @property
     def filter(self):

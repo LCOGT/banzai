@@ -1,7 +1,5 @@
 import logging
-
 import numpy as np
-from astropy.io import fits
 
 logger = logging.getLogger('banzai')
 
@@ -25,19 +23,19 @@ def munge(image):
         update_saturate(image, 64000.0)
     elif 'fs02' == image.instrument.camera:
         # These values were given by Joe Tufts on 2016-06-07
-        binning = image.header.get('CCDSUM', '1 1')
+        binning = image.meta.get('CCDSUM', '1 1')
         n_binned_pixels = int(binning[0]) * int(binning[2])
-        update_saturate(image, 125000.0 * n_binned_pixels / float(image.header['GAIN']))
+        update_saturate(image, 125000.0 * n_binned_pixels / float(image.meta['GAIN']))
 
     if not image_has_valid_saturate_value(image):
         raise ValueError('Saturate value not valid {f}'.format(f=image.filename))
 
 
 def update_saturate(image, saturation_level):
-    if image.header.get('SATURATE', 0.0) == 0.0:
-        image.header['SATURATE'] = (saturation_level, '[ADU] Saturation level used')
-    if image.header.get('MAXLIN', 0.0) == 0.0:
-        image.header['MAXLIN'] = (saturation_level, '[ADU] Non-linearity level')
+    if image.meta.get('SATURATE', 0.0) == 0.0:
+        image.meta['SATURATE'] = (saturation_level, '[ADU] Saturation level used')
+    if image.meta.get('MAXLIN', 0.0) == 0.0:
+        image.meta['MAXLIN'] = (saturation_level, '[ADU] Non-linearity level')
 
 
 def crosstalk_coefficients_in_header(image):
@@ -46,7 +44,7 @@ def crosstalk_coefficients_in_header(image):
 
     Parameters
     ----------
-    image: banzai.images.Image
+    image: banzai.images.LCOObservationFrame
            Sinistro image to check
 
     Returns
@@ -54,10 +52,14 @@ def crosstalk_coefficients_in_header(image):
     in_header: bool
                True if all the crosstalk coefficients are in the header
     """
-    n_amps = image.get_n_amps()
+    n_amps = image.n_amps
 
-    crosstalk_values = [image.header.get('CRSTLK{0}{1}'.format(i+1, j+1))
-                        for i in range(n_amps) for j in range(n_amps) if i!=j]
+    crosstalk_values = []
+
+    for i, hdu in enumerate(image.ccd_hdus):
+        crosstalk_values.extend([hdu.meta.get('CRSTLK{0}{1}'.format(i+1, j+1), None)
+                                 for j in range (n_amps) if i != j])
+
     return None not in crosstalk_values
 
 
@@ -67,8 +69,8 @@ def sinistro_mode_is_supported(image):
 
     Parameters
     ----------
-    image: banzai.images.Image
-           Sinistro image to check
+    image: banzai.images.LCOObservationFrame
+        Sinistro image to check
 
     Returns
     -------
@@ -95,18 +97,15 @@ sinistro_detsecs = {'missing': ['[1:2048,1:2048]', '[4096:2049,1:2048]',
                     'full': ['[1:2048,1:2048]', '[4096:2049,1:2048]',
                              '[4096:2049,4096:2049]', '[1:2048,4096:2049]']}
 
-
+#TODO: Audit this with new infrastructure in mind
 def munge_sinistro(image):
-    if not image.extension_headers:
-        image.extension_headers = [fits.Header() for i in range(4)]
+    # Gain is a single value
+    gain = image.primary_hdu.gain
+    for hdu in image.ccd_hdus:
+        hdu.gain = gain
 
-    if not hasattr(image.gain, "__len__"):
-        # Gain is a single value
-        gain = image.gain
-        image.gain = [gain for i in range(4)]
-
-    if image.header['SATURATE'] == 0:
-        image.header['SATURATE'] = 47500.0
+    if image.meta['SATURATE'] == 0:
+        image.meta['SATURATE'] = 47500.0
 
     set_crosstalk_header_keywords(image)
 
@@ -122,8 +121,8 @@ def munge_sinistro(image):
                                         ('DATASEC', datasecs[i], '[binned pixel] Data section'),
                                         ('DETSEC', detsecs[i], '[unbinned pixel] Detector section')]:
             # Don't override values if they exist already
-            if image.extension_headers[i].get(keyword) is None:
-                image.extension_headers[i][keyword] = value
+            if image.ccd_hdus[i].meta.get(keyword) is None:
+                image.ccd_hdus[i].meta[keyword] = value
 
 
 def image_has_valid_saturate_value(image):
@@ -132,7 +131,7 @@ def image_has_valid_saturate_value(image):
 
     Parameters
     ----------
-    image: banzai.images.Image
+    image: banzai.images.LCOObservationFrame
 
     Returns
     -------
@@ -146,7 +145,7 @@ def image_has_valid_saturate_value(image):
     """
     valid = True
 
-    if float(image.header['SATURATE']) == 0.0:
+    if float(image.meta['SATURATE']) == 0.0:
         logger.error('SATURATE keyword cannot be zero', image=image)
         valid = False
 
@@ -154,7 +153,7 @@ def image_has_valid_saturate_value(image):
 
 
 def set_crosstalk_header_keywords(image):
-    n_amps = image.get_n_amps()
+    n_amps = image.n_amps
     coefficients = crosstalk_coefficients[image.camera]
 
     for i in range(n_amps):
@@ -163,8 +162,8 @@ def set_crosstalk_header_keywords(image):
                 crosstalk_comment = '[Crosstalk coefficient] Signal from Q{i} onto Q{j}'.format(i=i+1, j=j+1)
                 keyword = 'CRSTLK{0}{1}'.format(i + 1, j + 1)
                 # Don't override existing header keywords.
-                if image.header.get(keyword) is None:
-                    image.header[keyword] = coefficients[i, j], crosstalk_comment
+                if image.ccd_hdus[i].meta.get(keyword) is None:
+                    image.ccd_hdus[i].meta[keyword] = coefficients[i, j], crosstalk_comment
 
 
 """These matrices should have the following structure:
