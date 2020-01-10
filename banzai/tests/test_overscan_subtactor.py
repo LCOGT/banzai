@@ -59,7 +59,7 @@ def test_overscan_subtractor_3d():
     nx = 101
     ny = 103
     noverscan = 10
-    image_multipliers = range(3)
+    image_multipliers = range(4)
     image = FakeOverscanImage(hdu_list=[FakeCCDData(image_multiplier=multiplier,
                                                     meta=Header({'BIASSEC': '[{nover}:{nx},1:{ny}]'.format(nover=nx-noverscan, nx=nx, ny=ny)}))
                                         for multiplier in image_multipliers])

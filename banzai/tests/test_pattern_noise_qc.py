@@ -5,9 +5,11 @@ import mock
 import numpy as np
 
 from banzai.qc import pattern_noise
-from banzai.tests.utils import FakeImage, gaussian2d
+from banzai.tests.utils import gaussian2d, FakeCCDData, FakeLCOObservationFrame
 
 logger = logging.getLogger('banzai')
+
+pytestmark = pytest.mark.pattern_noise_qc
 
 
 @pytest.fixture(scope='module')
@@ -58,8 +60,7 @@ def test_pattern_noise_does_not_detect_stars(set_random_seed):
 
 
 def test_pattern_noise_on_2d_image(set_random_seed):
-    image = FakeImage()
-    image.data = generate_data(has_pattern_noise=True)
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=generate_data(has_pattern_noise=True))])
 
     detector = pattern_noise.PatternNoiseDetector(None)
     logger.error = mock.MagicMock()
