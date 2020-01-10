@@ -15,6 +15,7 @@ test_header = Header({'DATE-OBS': '2020-01-10T13:00:00.000',
                       'OBSTYPE': 'EXPOSE',
                       'SITEID': 'CPT'})
 
+
 def test_format_qc_results_basic_info():
     image = FakeLCOObservationFrame([FakeCCDData(meta=test_header)])
     filename, results = qc.format_qc_results({}, image)
