@@ -415,11 +415,11 @@ class Section:
         :return: x, y index slices
         """
         if not keyword_value:
-            return cls(None, None, None, None)
+            return None
         elif keyword_value.lower() == 'unknown':
-            return cls(None, None, None, None)
+            return None
         elif keyword_value.lower() == 'n/a':
-            return cls(None, None, None, None)
+            return None
         else:
             # Strip off the brackets and split the coordinates
             pixel_sections = keyword_value[1:-1].split(',')
