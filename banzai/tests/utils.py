@@ -124,6 +124,8 @@ class FakeContext(object):
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
         self.db_address = 'sqlite:foo'
+        self.elasticsearch_qc_index = 'banzai_qc'
+        self.elasticsearch_doc_type = 'qc'
         self.ignore_schedulability = False
         self.max_tries = 5
         self.fpack = fpack
@@ -136,7 +138,7 @@ class FakeContext(object):
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
 
-    def image_can_be_processed(self, header):
+    def image_can_be_processed(self):
         return True
 
 
