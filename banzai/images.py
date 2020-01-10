@@ -661,6 +661,10 @@ class LCOObservationFrame(ObservationFrame):
         return self.primary_hdu.meta.get('REQNUM')
 
     @property
+    def site(self):
+        return self.primary_hdu.meta.get('SITEID')
+
+    @property
     def camera(self):
         return self.primary_hdu.meta.get('INSTRUME')
 
