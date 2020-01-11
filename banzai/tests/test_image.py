@@ -1,25 +1,20 @@
 import pytest
 import numpy as np
-# from astropy.table import Table
-from astropy.io import fits
-
-# from banzai.images import Image, DataTable, regenerate_data_table_from_fits_hdu_list
-# from banzai.tests.utils import FakeContext, FakeImage
 
 from banzai.images import CCDData, Section
 from banzai.tests.utils import FakeCCDData, FakeLCOObservationFrame, FakeContext
-from banzai.utils import fits_utils
 
-pytestmark = pytest.mark.test_image
+pytestmark = pytest.mark.image
 
-# @pytest.fixture(scope='module')
-# def set_random_seed():
-#     np.random.seed(10031312)
+
+@pytest.fixture(scope='module')
+def set_random_seed():
+    np.random.seed(10031312)
 
 
 def test_to_fits():
     test_data = FakeCCDData(meta={'EXTNAME': 'SCI'})
-    hdu_list = test_data.to_fits()
+    hdu_list = test_data.to_fits(FakeContext())
     
     assert len(hdu_list) == 3
     assert hdu_list[0].header['EXTNAME'] == 'SCI'
@@ -29,15 +24,18 @@ def test_to_fits():
 
 def test_subtract():
     test_data = FakeCCDData(image_multiplier=4, uncertainty=3)
-    test_data.subtract(1)
+    test_data -= 1
 
     assert (test_data.data == 3 * np.ones(test_data.data.shape)).all()
 
 
 def test_trim():
-    test_data = FakeCCDData(nx=1000, ny=1000, meta={'TRIMSEC': '[1:950, 1:945]',
-                                                    'DATASEC': '[1:1000, 1:1000]',
-                                                    'DETSEC': '[1:1000, 1:1000]'})
+    test_data = FakeCCDData(nx=1000, ny=1000,
+                            meta={'TRIMSEC': '[1:950, 1:945]',
+                                  'DATASEC': '[1:1000, 1:1000]',
+                                  'DETSEC': '[1:1000, 1:1000]'},
+                            memmap=False)
+
     trimmed_data = test_data.trim()
 
     assert trimmed_data.data.shape == (945, 950)
@@ -58,48 +56,6 @@ def test_get_output_filename():
     filename = test_frame.get_output_filename(test_context)
 
     assert filename == '/tmp/cpt/fa16/20160101/processed/test_image_91.fits.fz'
-
-
-# def test_detector_to_data_section():
-#     nx = 1024
-#     ny = 1024
-#     datasec = '[1:1024,1:1024]'
-#     detsec = '[1:1024,1:1024]'
-#     test_image = CCDData(np.zeros((ny, nx)), {})
-#     test_image._data_section = Section.parse_region_keyword(datasec)
-#     test_image.detector_section = Section.parse_region_keyword(detsec)
-
-#     requested_detsec = '[1:1024,1:1024]'
-#     expected_datasec = '[1:1024,1:1024]'
-
-#     requested_detsec = Section.parse_region_keyword(requested_detsec)
-#     assert expected_datasec == test_image.detector_to_data_section(requested_detsec).to_region_keyword()
-
-
-def test_section_transformations():
-    sizes = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1048, 1048), (1048, 1048), (1024, 1024), (1024, 1024)]
-    datasecs = ['[1:1024,1:1024]', '[1:1024,1:1024]', '[1:1024,1:1024]', '[1:1024,1:1024]', '[25:1048,25:1048]', '[25:1048,25:1048]', '[1:1024,1:1024]', '[1:1024,1:1024]']
-    detsecs = ['[1:1024,1:1024]', '[1:2048,1:2048]', '[1:2048,1:2048]', '[1:3072,1:3072]', '[1:1024,1:1024]', '[1:2048,1:2048]', '[1024:1,1024:1]', '[1:3072,1:3072]']
-    binnings = ['1 1', '2 2', '2 2', '3 3', '1 1', '2 2', '1 1', '3 3' ]
-    requested_sections = [{'DATASEC': '[1:1024, 1:1024]', 'DETSEC':'[1:1024, 1:1024]'},
-                          {'DATASEC':'[1:1024, 1:1024]', 'DETSEC': '[1:2048, 1:2048]'},
-                          {'DATASEC':'[3:7, 1:1024]', 'DETSEC': '[5:14, 1:2048]'},
-                          {'DATASEC':'[3:4, 1:1024]', 'DETSEC': '[7:12, 1:3072]'},
-                          {'DATASEC':'[25:1048, 25:1048]', 'DETSEC': '[1:1024, 1:1024]'},
-                          {'DATASEC':'[25:1048, 25:1048]', 'DETSEC': '[1:2048, 1:2048]'},
-                          {'DATASEC':'[1024:1, 1024:1]', 'DETSEC': '[1:1024, 1:1024]'},
-                          {'DATASEC':'[4:3, 1:1024]', 'DETSEC': '[12:7, 1:3072]'}]
-
-    for size, datasec, detsec, binning, requested_section in zip(sizes, datasecs, detsecs, binnings, requested_sections):
-        test_image = CCDData(np.zeros((size[1], size[0])), {'CCDSUM': binning})
-        test_image._data_section = Section.parse_region_keyword(datasec)
-        test_image.detector_section = Section.parse_region_keyword(detsec)
-
-        test_datasec = Section.parse_region_keyword(requested_section['DATASEC'])
-        test_detsec = Section.parse_region_keyword(requested_section['DETSEC'])
-
-        assert test_image.data_to_detector_section(test_datasec).to_region_keyword() == test_detsec.to_region_keyword() 
-        assert test_image.detector_to_data_section(test_detsec).to_region_keyword() == test_datasec.to_region_keyword() 
 
 
 def test_section_transformation():
@@ -207,10 +163,6 @@ def test_detector_to_data_section_flipped():
     test_image._data_section = Section.parse_region_keyword(datasec)
     test_image.detector_section = Section.parse_region_keyword(detsec)
 
-
-    {'DATASEC': Section.parse_region_keyword('[1024:1, 1024:1]'),
-     'DETSEC': Section.parse_region_keyword('[1:1024, 1:1024]')}
-
     requested_detsec = '[1:1024,1:1024]'
     expected_datasec = '[1024:1,1024:1]'
 
@@ -227,31 +179,11 @@ def test_detector_to_data_section_with_binning_small_3_flipped():
     test_image._data_section = Section.parse_region_keyword(datasec)
     test_image.detector_section = Section.parse_region_keyword(detsec)
 
-    {'DATASEC': Section.parse_region_keyword('[4:3, 1:1024]'),
-     'DETSEC': Section.parse_region_keyword('[12:7, 1:3072]')}
-
     requested_detsec = '[12:7,1:3072]'
     expected_datasec = '[4:3,1:1024]'
 
     requested_detsec = Section.parse_region_keyword(requested_detsec)
     assert expected_datasec == test_image.detector_to_data_section(requested_detsec).to_region_keyword()
-
-
-def test_data_to_detector_section_with_binning_small_3_flipped():
-    nx = 1024
-    ny = 1024
-    datasec = '[1:1024,1:1024]'
-    detsec = '[1:3072,1:3072]'
-    test_image = CCDData(np.zeros((ny, nx)), {'CCDSUM': '3 3'})
-    test_image._data_section = Section.parse_region_keyword(datasec)
-    test_image.detector_section = Section.parse_region_keyword(detsec)
-
-    expected_detsec = '[12:7,1:3072]'
-    requested_datasec = '[4:3,1:1024]'
-
-    requested_datasec = Section.parse_region_keyword(requested_datasec)
-    assert expected_detsec == test_image.data_to_detector_section(requested_datasec).to_region_keyword()
-
 
 
 def test_detector_to_data_section_2k_binned():
