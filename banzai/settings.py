@@ -104,7 +104,7 @@ CONFIGDB_URL = os.getenv('CONFIGDB_URL', 'http://configdb.lco.gtn/sites/')
 OBSERVATION_REQUEST_TYPES = {}
 
 # For some extension names, we want to just have corresponding BPM or ERR extensions
-EXTENSION_NAMES_TO_CONDENSE = ['SCI']
+EXTENSION_NAMES_TO_CONDENSE = ['SCI', 'UNKNOWN']
 
 CALIBRATION_LOOKBACK = {'BIAS': 0.5, 'DARK': 0.5, 'SKYFLAT': 0.5}
 

@@ -110,6 +110,7 @@ class CCDData(Data):
         self.uncertainty = self._init_array(uncertainty)
         self._detector_section = Section.parse_region_keyword(self.meta.get('DETSEC'))
         self._data_section = Section.parse_region_keyword(self.meta.get('DATASEC'))
+        self._background = None
 
     def __getitem__(self, section):
         """
@@ -139,6 +140,7 @@ class CCDData(Data):
         return self
 
     def to_fits(self, context):
+        # TODO: Make sure the BPM has the same EXTVER as the main data. This may require an update to the factory below as well
         data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta))
         bpm_extname = self.extension_name + 'BPM'
         for extname in context.EXTENSION_NAMES_TO_CONDENSE:
@@ -355,6 +357,25 @@ class CCDData(Data):
     def init_poisson_uncertainties(self):
         self.uncertainty += np.sqrt(np.abs(self.data))
 
+    @property
+    def background(self):
+        return self._background
+
+    @background.setter
+    def background(self, value):
+        if self._background is not None:
+            self.data += self._background
+        self._background = value
+        self.data -= self._background
+
+
+class LCOCCDData(CCDData):
+    def __init__(self, data: Union[np.array, Table], meta: Union[dict, fits.Header],
+                 mask: np.array = None, name: str = '', uncertainty: np.array = None, memmap=True):
+        super().__init__(data, meta, mask, uncertainty=uncertainty, memmap=memmap)
+        self.init_saturate()
+        self.init_detector_section
+
 
 class Section:
     def __init__(self, x_start, x_stop, y_start, y_stop):
@@ -482,6 +503,14 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @property
     def filename(self):
         return os.path.basename(self._file_path)
+
+    @property
+    def background(self):
+        return self.primary_hdu.background
+
+    @background.setter
+    def background(self, value):
+        self.primary_hdu.background = value
 
     @abc.abstractmethod
     def save_processing_metadata(self, context):
@@ -735,13 +764,14 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
 
 class LCOMasterCalibrationFrame(LCOCalibrationFrame):
     def __init__(self, images: list, file_path: str, grouping_criteria: list = None):
-        super().__init__(images, file_path, grouping_criteria=grouping_criteria)
-        self._hdus = [CCDData(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
-                           meta=self._create_master_calibration_header(images[0].meta, images))]
+        hdu_list = [CCDData(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
+                            meta=self.init_header(images[0].meta, images))]
+        super().__init__(hdu_list=hdu_list, file_path=file_path, grouping_criteria=grouping_criteria)
         self.is_master = True
         self.instrument = images[0].instrument
 
-    def _create_master_calibration_header(self, old_header, images):
+    @staticmethod
+    def init_header(old_header, images):
         header = fits.Header()
         for key in old_header.keys():
             try:
@@ -769,96 +799,78 @@ class LCOMasterCalibrationFrame(LCOCalibrationFrame):
 class LCOFrameFactory:
     observation_frame_class = LCOObservationFrame
     calibration_frame_class = LCOCalibrationFrame
+    data_class = CCDData
+    associated_extensions = [{'FITS_NAME': 'BPM', 'NAME': 'mask'}, {'FITS_NAME': 'ERR', 'NAME': 'uncertainty'}]
     @classmethod
     def open(cls, path, runtime_context) -> Optional[ObservationFrame]:
         fits_hdu_list = fits_utils.open_fits_file(path)
         hdu_list = []
-        if fits_hdu_list[0].header.get('OBSTYPE').lower() == 'bpm' or \
-                all('BPM' == hdu.header.get('EXTNAME', '') for hdu in fits_hdu_list if hdu.data is not None):
+        associated_fits_extensions = [associated_extension['FITS_NAME']
+                                      for associated_extension in cls.associated_extensions]
+        # If all of the extensions are arrays we would normally associate with a CCDData object (e.g. BPMs)
+        # treat the extensions as normal data
+        if fits_hdu_list[0].header['OBSTYPE'] in associated_fits_extensions or \
+                all(hdu.header.get('EXTNAME', '') in associated_fits_extensions
+                    for hdu in fits_hdu_list if hdu.data is not None):
             for hdu in fits_hdu_list:
                 if hdu.data is None:
                     hdu_list.append(HeaderOnly(meta=hdu.header))
                 else:
-                    hdu_list.append(CCDData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
-
-        for hdu in fits_hdu_list:
-            # Move on from the BPM and ERROR arrays
-            if 'BPM' in hdu.header.get('EXTNAME', '') or 'ERR' in hdu.header.get('EXTNAME', ''):
-                continue
-            if hdu.data is None:
-                hdu_list.append(HeaderOnly(meta=hdu.header))
-            elif isinstance(hdu, fits.BinTableHDU):
-                hdu_list.append(DataTable(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
-            elif 'GAIN' in hdu.header:
-                condensed_name = hdu.header.get('EXTNAME', '')
-                for extension_name_to_condense in runtime_context.EXTENSION_NAMES_TO_CONDENSE:
-                    condensed_name = condensed_name.replace(extension_name_to_condense, '')
-                if (condensed_name + 'BPM', hdu.header.get('EXTVER')) in fits_hdu_list:
-                    bpm_array = fits_hdu_list[condensed_name + 'BPM', hdu.header.get('EXTVER')].data
+                    hdu_list.append(cls.data_class(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
+        else:
+            for hdu in fits_hdu_list:
+                # Move on from any associated arrays like BPM or ERR
+                if any(associated_extension['FITS_NAME'] in hdu.header.get('EXTNAME', '')
+                       for associated_extension in cls.associated_extensions):
+                    continue
+                # Otherwise parse the fits file into a frame object and the corresponding data objects
+                if hdu.data is None:
+                    hdu_list.append(HeaderOnly(meta=hdu.header))
+                elif isinstance(hdu, fits.BinTableHDU):
+                    hdu_list.append(DataTable(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
+                elif 'GAIN' in hdu.header:
+                    associated_data = {}
+                    condensed_name = hdu.header.get('EXTNAME', '')
+                    for extension_name_to_condense in runtime_context.EXTENSION_NAMES_TO_CONDENSE:
+                        condensed_name = condensed_name.replace(extension_name_to_condense, '')
+                    for associated_extension in cls.associated_extensions:
+                        associated_fits_extension_name = condensed_name + associated_extension['FITS_NAME']
+                        if associated_fits_extension_name in fits_hdu_list:
+                            if hdu.header.get('EXTVER') == 0:
+                                extension_version = None
+                            else:
+                                extension_version = hdu.header.get('EXTVER')
+                            associated_data[associated_extension['NAME']] = fits_hdu_list[associated_fits_extension_name,
+                                                                                          extension_version].data
+                        else:
+                            associated_data[associated_extension['NAME']] = None
+                    if hdu.data.dtype == np.uint16:
+                        hdu.data = hdu.data.astype(np.float32)
+                    hdu_list.append(CCDData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME'),
+                                            **associated_data))
                 else:
-                    bpm_array = None
+                    hdu_list.append(ArrayData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
 
-                if (condensed_name + 'ERR', hdu.header.get('EXTVER')) in fits_hdu_list:
-                    error_array = fits_hdu_list[condensed_name + 'ERR', hdu.header.get('EXTVER')].data
-                else:
-                    error_array = None
-                if hdu.data.dtype == np.uint16:
-                    hdu.data = hdu.data.astype(np.float32)
-                hdu_list.append(CCDData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME'),
-                                        mask=bpm_array, uncertainty=error_array))
-            else:
-                hdu_list.append(ArrayData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
+        # Either use the calibration frame type or normal frame type depending on the OBSTYPE keyword
         if hdu_list[0].meta.get('OBSTYPE') in runtime_context.CALIBRATION_IMAGE_TYPES:
             grouping = runtime_context.CALIBRATION_SET_CRITERIA.get(hdu_list[0].meta.get('OBSTYPE'), [])
             image = cls.calibration_frame_class(hdu_list, os.path.basename(path), grouping_criteria=grouping)
         else:
             image = cls.observation_frame_class(hdu_list, os.path.basename(path))
-        image.instrument = cls._get_instrument(image, runtime_context.db_address)
+        image.instrument = cls._get_instrument_from_header(image, runtime_context.db_address)
 
-        if image.instrument is None:
-            return
-        # TODO: Put all munge code here
+        # Do some munging specific to LCO data when our headers were not complete
+        cls._init_detector_sections(image)
+        cls._init_saturate(image)
 
-        for hdu in image.ccd_hdus:
-            if hdu.meta.get('DETSEC', 'UNKNOWN') in ['UNKNOWN', 'N/A']:
-                # DETSEC missing?
-                binning = hdu.meta.get('CCDSUM', image.primary_hdu.meta.get('CCDSUM', '1 1'))
-                detector_section = Section(1,
-                                           max(hdu.data_section.x_start, hdu.data_section.x_stop) * int(binning[0]),
-                                           1,
-                                           max(hdu.data_section.y_start, hdu.data_section.y_stop) * int(binning[2]))
-                hdu.detector_section = detector_section
-
-            # SATURATE Missing?
-            def update_saturate(image, hdu, default):
-                if hdu.meta.get('SATURATE', 0.0) == 0.0:
-                    hdu.meta['SATURATE'] = image.meta.get('SATURATE', 0.0)
-                    hdu.meta['MAXLIN'] = image.meta.get('MAXLIN', 0.0)
-                if hdu.meta.get('SATURATE', 0.0) == 0.0:
-                    hdu.meta['SATURATE'] = (default, '[ADU] Saturation level used')
-                    hdu.meta['MAXLIN'] = (default, '[ADU] Non-linearity level')
-            if 'sinistro' in image.instrument.type.lower():
-                update_saturate(image, hdu, 47500.0)
-
-            elif '1m0' in image.instrument.type:
-                # Saturation level from ORAC Pipeline
-                update_saturate(image, hdu, 46000.0)
-            elif '0m4' in image.instrument.type or '0m8' in image.instrument.type:
-                # Measured by Daniel Harbeck
-                update_saturate(image, hdu, 64000.0)
-
-            elif 'spectral' in image.instrument.type.lower():
-                # These values were given by Joe Tufts on 2016-06-07
-                binning = hdu.meta.get('CCDSUM', '1 1')
-                n_binned_pixels = int(binning[0]) * int(binning[2])
-                update_saturate(image, hdu, 125000.0 * n_binned_pixels / float(hdu.meta['GAIN']))
-        if image_utils.image_can_be_processed(image, runtime_context):
+        # If the frame cannot be processed for some reason return None instead of the new image object
+        if image.instrument is not None and image_utils.image_can_be_processed(image, runtime_context):
             return image
         else:
             return None
 
-    @classmethod
-    def _get_instrument(cls, image, db_address):
+    @staticmethod
+    def _get_instrument_from_header(image, db_address):
         site = image.meta.get('SITEID')
         camera = image.meta.get('INSTRUME')
         instrument = dbs.query_for_instrument(db_address, site, camera)
@@ -872,6 +884,41 @@ class LCOFrameFactory:
             tags = {'site': site, 'camera': camera, 'telescop': name}
             logger.debug(msg, extra_tags=tags)
         return instrument
+
+    @staticmethod
+    def _init_saturate(image):
+        # Spectral values were given by Joe Tufts on 2016-06-07
+        # Sbig 1m's from ORAC
+        # Sbigs 0.4m and 0.8m values measured by Daniel Harbeck
+        defaults = {'1m0-scicam-sinistro': 47500.0 * 2.0, '1m0-scicam-sbig': 46000.0 / 4 * 1.4,
+                    '0m8': 64000.0 / 4 * 0.851, '0m4': 64000.0 / 4, 'spectral': 125000.0}
+        for hdu in image.ccd_hdus:
+            for camera_type in defaults:
+                if camera_type in image.instrument.type.lower():
+                    n_binned_pixels = hdu.binning[0] * hdu.binning[1]
+                    default = defaults[camera_type] * n_binned_pixels / hdu.gain
+                    break
+
+            # Pull from the primary extension by default
+            if hdu.meta.get('SATURATE', 0.0) == 0.0:
+                hdu.meta['SATURATE'] = image.meta.get('SATURATE', 0.0)
+                hdu.meta['MAXLIN'] = image.meta.get('MAXLIN', 0.0)
+            # If still nothing, use hard coded defaults
+            if hdu.meta.get('SATURATE', 0.0) == 0.0:
+                hdu.meta['SATURATE'] = (default, '[ADU] Saturation level used')
+                hdu.meta['MAXLIN'] = (default, '[ADU] Non-linearity level')
+
+    @staticmethod
+    def _init_detector_sections(image):
+        for hdu in image.ccd_hdus:
+            if hdu.meta.get('DETSEC', 'UNKNOWN') in ['UNKNOWN', 'N/A']:
+                # DETSEC missing?
+                binning = hdu.meta.get('CCDSUM', image.primary_hdu.meta.get('CCDSUM', '1 1'))
+                detector_section = Section(1,
+                                           max(hdu.data_section.x_start, hdu.data_section.x_stop) * int(binning[0]),
+                                           1,
+                                           max(hdu.data_section.y_start, hdu.data_section.y_stop) * int(binning[2]))
+                hdu.detector_section = detector_section
 
 
 def stack(data_to_stack, nsigma_reject) -> CCDData:
@@ -920,7 +967,3 @@ def stack(data_to_stack, nsigma_reject) -> CCDData:
     stacked_uncertainty = np.sqrt(uncertainties.sum(axis=0) / (n_good_pixels ** 2.0))
 
     return CCDData(data=stacked_data, meta=data_to_stack[0].meta, uncertainty=stacked_uncertainty, mask=stacked_mask)
-
-
-def regenerate_data_table_from_fits_hdu_list():
-    pass
