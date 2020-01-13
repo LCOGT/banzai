@@ -141,6 +141,7 @@ class CCDData(Data):
         return self
 
     def to_fits(self, context):
+        # TODO: Make sure the BPM has the same EXTVER as the main data. This may require an update to the factory below as well
         data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta))
         bpm_extname = self.extension_name + 'BPM'
         for extname in context.EXTENSION_NAMES_TO_CONDENSE:
