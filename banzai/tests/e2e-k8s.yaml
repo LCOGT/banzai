@@ -80,7 +80,7 @@ spec:
           value: "calibrate"
         - name: OBSERVATION_PORTAL_URL
           value: "http://internal-observation-portal.lco.gtn/api/observations/"
-        - nmae: OMP_NUM_THREADS
+        - name: OMP_NUM_THREADS
           value: "4"
       command:
         - celery
