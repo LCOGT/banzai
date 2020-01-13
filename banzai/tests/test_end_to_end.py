@@ -40,9 +40,13 @@ CONFIGDB_FILENAME = get_pkg_data_filename('data/configdb_example.json', TEST_PAC
 
 def celery_join():
     celery_inspector = app.control.inspect()
+    log_counter = 0
     while True:
         queues = [celery_inspector.active(), celery_inspector.scheduled(), celery_inspector.reserved()]
         time.sleep(1)
+        log_counter += 1
+        if log_counter % 30:
+            logger.info('Processing: ' + '. ' * (log_counter // 30))
         if any([queue is None or 'celery@banzai-celery-worker' not in queue for queue in queues]):
             logger.warning('No valid celery queues were detected, retrying...', extra_tags={'queues': queues})
             # Reset the celery connection
