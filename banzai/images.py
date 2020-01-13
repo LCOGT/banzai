@@ -482,7 +482,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
 
     @property
     def data(self):
-        return self.primary_hdu.data
+        if isinstance(self.primary_hdu, HeaderOnly):
+            return self.ccd_hdus[0].data
+        else:
+            return self.primary_hdu.data
 
     @property
     def mask(self):
