@@ -107,6 +107,8 @@ matrix:
         - os: linux
           env: MAIN_CMD='pycodestyle banzai --count' RUN_TESTS=0
 
+before_install:
+    - pip uninstall -y numpy
 
 install:
 
