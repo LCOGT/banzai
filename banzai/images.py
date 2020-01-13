@@ -823,8 +823,12 @@ class LCOFrameFactory:
                     for associated_extension in cls.associated_extensions:
                         associated_fits_extension_name = condensed_name + associated_extension['FITS_NAME']
                         if associated_fits_extension_name in fits_hdu_list:
+                            if hdu.header.get('EXTVER') == 0:
+                                extension_version = None
+                            else:
+                                extension_version = hdu.header.get('EXTVER')
                             associated_data[associated_extension['NAME']] = fits_hdu_list[associated_fits_extension_name,
-                                                                                          hdu.header.get('EXTVER')].data
+                                                                                          extension_version].data
                         else:
                             associated_data[associated_extension['NAME']] = None
                     if hdu.data.dtype == np.uint16:
