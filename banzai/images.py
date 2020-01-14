@@ -140,10 +140,12 @@ class Image(object):
         if runtime_context.fpack and not self.filename.endswith('.fz'):
             self.filename += '.fz'
 
+    #TODO: s3-ify?
     def _get_filepath(self, runtime_context):
         output_directory = file_utils.make_output_directory(runtime_context, self)
         return os.path.join(output_directory, os.path.basename(self.filename))
 
+    #TODO: s3ify
     def _writeto(self, filepath, fpack=False):
         logger.info('Writing file to {filepath}'.format(filepath=filepath), image=self)
         hdu_list = self._get_hdu_list()

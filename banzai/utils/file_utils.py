@@ -1,6 +1,8 @@
+import datetime
 import hashlib
 import os
 import logging
+import requests
 
 from kombu import Connection, Exchange
 from banzai.utils import import_utils
@@ -86,3 +88,40 @@ def make_calibration_filename_function(calibration_type, context):
         cal_file += '.fits'
         return cal_file
     return get_calibration_filename
+
+
+def load_remote_image(filename, runtime_context):
+    logger.info('Attempting to download image from archive.')
+
+    headers = {'Authorization': 'Token ' + runtime_context.ARCHIVE_API_TOKEN}
+
+    basename = os.path.basename(filename)
+    basename = basename[:basename.index('.')]  # remove extension
+    start, end = date_range_from_basename(basename)
+    url = runtime_context.ARCHIVE_FRAMES_URL + '?basename={0}&start={1}&end={2}'.format(
+        basename, start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
+    )
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    response_dict = response.json()
+
+    if not response_dict['results']:
+        raise Exception('Could not find file {} locally or remotely'.format(basename))
+
+    frame_url = response_dict['results'][0]['url']
+    file_response = requests.get(frame_url)
+    file_response.raise_for_status()
+
+    return os.io.BytesIO(file_response.content)
+
+
+def date_range_from_basename(basename):
+    """
+    Return a 60 day window around the dateobs of the fits file to use as a
+    search contraint on the archive. This is simply to speed up the response.
+    """
+    date_str = basename.split('-')[2]
+    middle_date = datetime.strptime(date_str, '%Y%m%d')
+    start = middle_date - datetime.timedelta(days=30)
+    end = middle_date + datetime.timedelta(days=30)
+    return start, end

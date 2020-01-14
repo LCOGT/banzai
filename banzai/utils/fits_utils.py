@@ -101,7 +101,7 @@ def parse_ra_dec(header):
                 ra, dec = np.nan, np.nan
     return ra, dec
 
-
+# TODO: S3-ify
 def open_fits_file(filename):
     """
     Load a fits file
