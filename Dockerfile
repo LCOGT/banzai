@@ -6,7 +6,7 @@ RUN yum -y install epel-release gcc mariadb-devel \
         && yum -y install fpack \
         && yum -y clean all
 
-RUN conda install -y numpy==1.16.0 pip scipy astropy pytest mock requests ipython coverage pyyaml\
+RUN conda install -y numpy==1.18.0 pip scipy astropy pytest mock requests ipython coverage pyyaml\
         && conda install -y -c conda-forge kombu=4.4.0 elasticsearch\<6.0.0,\>=5.0.0 pytest-astropy mysql-connector-python\
         && conda clean -y --all
 
