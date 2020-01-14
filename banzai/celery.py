@@ -14,6 +14,8 @@ from banzai.context import Context
 app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
 app.conf.update(broker_url=os.getenv('REDIS_HOST', 'redis://localhost:6379/0'))
+# Increase broker timeout to avoid re-scheduling tasks that aren't completed within an hour
+app.conf.broker_transport_options = {'visibility_timeout': 86400}
 
 logger = logging.getLogger('banzai')
 

@@ -1,3 +1,9 @@
+0.27.6 (2020-01-13)
+-------------------
+- Update celery task visibility timeout to 24h to avoid re-scheduling stacking tasks that do not complete within an hour. 
+  This addresses the issue of creating multiple calibration stacks within seconds of each other.
+- https://docs.celeryproject.org/en/latest/getting-started/brokers/redis.html#id1
+
 0.27.5 (2019-12-11)
 -------------------
 - Change ra, dec parsing to default to CRVAL header keywords. Ref. Redmine issue #1104.
