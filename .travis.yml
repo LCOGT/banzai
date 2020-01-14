@@ -96,7 +96,7 @@ matrix:
         # time.
 
         - os: linux
-          env: NUMPY_VERSION=1.16.0
+          env: NUMPY_VERSION=1.18.0
 
         # Try numpy pre-release
         - os: linux
