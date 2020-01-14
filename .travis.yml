@@ -30,13 +30,13 @@ env:
         # The following versions are the 'default' for tests, unless
         # overridden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
-        - PYTHON_VERSION=3.6
-        - NUMPY_VERSION=stable
+        - PYTHON_VERSION=3.7
+        - NUMPY_VERSION=1.17.4
         - ASTROPY_VERSION=stable
         - MAIN_CMD='python setup.py'
         - RUN_TESTS=1
         - SETUP_CMD=''
-        - PIP_DEPENDENCIES='lcogt_logging==0.3.2 requests mock kombu==4.4.0 sqlalchemy python-dateutil elasticsearch>=5.0.0,<6.0.0 celery[redis]==4.3.0 scipy numpy==1.17.4'
+        - PIP_DEPENDENCIES='lcogt_logging==0.3.2 requests mock kombu==4.4.0 sqlalchemy python-dateutil elasticsearch>=5.0.0,<6.0.0 celery[redis]==4.3.0 scipy'
         - EVENT_TYPE='pull_request push'
 
 
