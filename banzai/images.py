@@ -113,11 +113,18 @@ class Image(object):
         self._update_filename(runtime_context)
         filepath = self._get_filepath(runtime_context)
         self._writeto(filepath, fpack=runtime_context.fpack)
+        if runtime_context.post_to_archive:
+            archived_image_info = self._post_to_archive(filepath, runtime_context)
+            # update file info from ingester response
+            self._update_file_info(archived_image_info)
         if self.obstype in settings.CALIBRATION_IMAGE_TYPES:
             dbs.save_calibration_info(filepath, self, db_address=runtime_context.db_address)
-        if runtime_context.post_to_archive:
-            #use ingester library to post image to archive
-            self._post_to_archive(filepath, runtime_context)
+
+    def _update_file_info(self, archive_image_info):
+        if self.file_info is None:
+            self.file_info = archive_image_info
+        else:
+            self.file_info.update({k: archive_image_info[k] for k in archive_image_info.keys()})
 
     def _save_pipeline_metadata(self, runtime_context):
         self.datecreated = datetime.datetime.utcnow()
@@ -204,8 +211,13 @@ class Image(object):
         return hdu_list
 
     def _post_to_archive(self, filepath):
+        """
+        Post file to LCO archive
+        :param filepath: path to file on disk
+        :return: image_info: Response from ingester library, including archive frame ID and checksum
+        """
         logger.info('Posting file to the archive', image=self)
-        file_utils.post_to_archive_queue(filepath)
+        return file_utils.post_to_archive_queue(filepath)
 
     def write_catalog(self, filename, nsources=None):
         if self.data_tables.get('catalog') is None:
