@@ -9,7 +9,6 @@ import requests
 from lco_ingester import ingester
 from lco_ingester.exceptions import RetryError, DoNotRetryError, BackoffRetryError, NonFatalDoNotRetryError
 
-from banzai.logs import format_exception
 from banzai.utils import import_utils
 
 logger = logging.getLogger('banzai')
