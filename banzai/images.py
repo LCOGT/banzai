@@ -10,7 +10,7 @@ from astropy.table import Table, Column
 
 import banzai
 from banzai import dbs, settings, exceptions
-from banzai.utils import date_utils, file_utils, fits_utils
+from banzai.utils import date_utils, file_utils, fits_utils, realtime_utils
 from banzai import logs
 
 logger = logging.getLogger('banzai')
@@ -42,7 +42,7 @@ class DataTable(object):
 
 class Image(object):
 
-    def __init__(self, runtime_context, filename=None, data=None, data_tables=None,
+    def __init__(self, runtime_context, file_info=None, data=None, data_tables=None,
                  header=None, extension_headers=None, bpm=None):
         if header is None:
             header = fits.Header()
@@ -53,12 +53,14 @@ class Image(object):
         if extension_headers is None:
             extension_headers = []
 
-        if filename is not None:
-            data, header, bpm, extension_headers = fits_utils.open_image(filename)
+        if file_info is not None:
+            data, header, bpm, extension_headers = fits_utils.open_image(file_info, runtime_context)
+            filename = realtime_utils.get_filename_from_info(file_info)
             if '.fz' == filename[-3:]:
                 filename = filename[:-3]
             self.filename = os.path.basename(filename)
 
+        self.file_info = file_info
         self.data = data
         self.data_tables = data_tables
         self.header = header
@@ -114,6 +116,7 @@ class Image(object):
         if self.obstype in settings.CALIBRATION_IMAGE_TYPES:
             dbs.save_calibration_info(filepath, self, db_address=runtime_context.db_address)
         if runtime_context.post_to_archive:
+            #use ingester library to post image to archive
             self._post_to_archive(filepath, runtime_context)
 
     def _save_pipeline_metadata(self, runtime_context):
@@ -140,7 +143,6 @@ class Image(object):
         if runtime_context.fpack and not self.filename.endswith('.fz'):
             self.filename += '.fz'
 
-    #TODO: s3-ify?
     def _get_filepath(self, runtime_context):
         output_directory = file_utils.make_output_directory(runtime_context, self)
         return os.path.join(output_directory, os.path.basename(self.filename))
@@ -201,12 +203,9 @@ class Image(object):
             hdu_list.append(bpm_hdu)
         return hdu_list
 
-    def _post_to_archive(self, filepath, runtime_context):
+    def _post_to_archive(self, filepath):
         logger.info('Posting file to the archive', image=self)
-        try:
-            file_utils.post_to_archive_queue(filepath, runtime_context.broker_url)
-        except Exception:
-            logger.error("Could not post to ingester: {error}".format(error=logs.format_exception()), image=self)
+        file_utils.post_to_archive_queue(filepath)
 
     def write_catalog(self, filename, nsources=None):
         if self.data_tables.get('catalog') is None:

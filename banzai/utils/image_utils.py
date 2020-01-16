@@ -7,7 +7,7 @@ from banzai import dbs
 from banzai.munge import munge
 from banzai.utils.fits_utils import get_primary_header
 from banzai.utils.instrument_utils import instrument_passes_criteria
-from banzai.utils import import_utils
+from banzai.utils import import_utils, realtime_utils
 from banzai.exceptions import InhomogeneousSetException
 
 
@@ -93,10 +93,10 @@ def image_can_be_processed(header, context):
     return passes
 
 
-def read_image(filename, runtime_context):
+def read_image(file_info, runtime_context):
     try:
         frame_class = import_utils.import_attribute(runtime_context.FRAME_CLASS)
-        image = frame_class(runtime_context, filename=filename)
+        image = frame_class(runtime_context, file_info)
         if image.instrument is None:
             logger.error("Image instrument attribute is None, aborting", image=image)
             raise IOError
@@ -104,4 +104,4 @@ def read_image(filename, runtime_context):
         return image
     except Exception:
         logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
-                     extra_tags={'filename': filename})
+                     extra_tags={'filename': realtime_utils.get_filename(file_info)})

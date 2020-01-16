@@ -1,5 +1,5 @@
 from banzai import settings
-from banzai.utils import import_utils, image_utils
+from banzai.utils import import_utils, image_utils, realtime_utils
 import logging
 
 logger = logging.getLogger('banzai')
@@ -43,11 +43,12 @@ def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
     return stages_todo
 
 
-def run(image_path, runtime_context):
+def run(file_info, runtime_context):
     """
     Main driver script for banzai.
     """
-    image = image_utils.read_image(image_path, runtime_context)
+    #TODO: Update to use archive API
+    image = image_utils.read_image(file_info, runtime_context)
     if image is None:
         return
     stages_to_do = get_stages_todo(settings.ORDERED_STAGES,
@@ -58,7 +59,7 @@ def run(image_path, runtime_context):
         stage_to_run = stage(runtime_context)
         image = stage_to_run.run(image)
     if image is None:
-        logger.error('Reduction stopped', extra_tags={'filename': image_path})
+        logger.error('Reduction stopped', extra_tags={'filename': realtime_utils.get_filename(file_info)})
         return
     image.write(runtime_context)
     logger.info("Finished reducing frame", image=image)

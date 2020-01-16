@@ -47,8 +47,8 @@ def add_empty_bpm(image):
     set_image_bpm_and_header(image, bpm, '')
 
 
-def load_bpm(bpm_filename):
-    bpm_hdu = fits_utils.open_fits_file(bpm_filename)
+def load_bpm(bpm_filename, runtime_context):
+    bpm_hdu = fits_utils.open_fits_file(bpm_filename, runtime_context)
     bpm_extensions = fits_utils.get_extensions_by_name(bpm_hdu, 'BPM')
     # Filter out BPM extensions without data
     bpm_extensions = [extension for extension in bpm_extensions if extension.data is not None]

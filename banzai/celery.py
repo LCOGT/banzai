@@ -108,19 +108,23 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
 
 
 @app.task(name='celery.process_image')
-def process_image(path: str, runtime_context: dict):
+def process_image(file_info: dict, runtime_context: dict):
+    """
+    :param file_info: Body of queue message: dict
+    :param runtime_context:
+    :return:
+    """
     runtime_context = Context(runtime_context)
     logger.info('Running process image.')
+    filename = realtime_utils.get_filename_from_info(file_info)
     try:
-        if realtime_utils.need_to_process_image(path, runtime_context):
-            logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
-
+        if realtime_utils.need_to_process_image(file_info, runtime_context):
+            logger.info('Reducing frame', extra_tags={'filename': filename})
             # Increment the number of tries for this file
-            realtime_utils.increment_try_number(path, db_address=runtime_context.db_address)
-
-            run(path, runtime_context)
-            realtime_utils.set_file_as_processed(path, db_address=runtime_context.db_address)
-
+            realtime_utils.increment_try_number(filename, db_address=runtime_context.db_address)
+            run(file_info, runtime_context)
+            realtime_utils.set_file_as_processed(filename, db_address=runtime_context.db_address)
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
-                     extra_tags={'filename': os.path.basename(path)})
+                     extra_tags={'filename': filename})
+

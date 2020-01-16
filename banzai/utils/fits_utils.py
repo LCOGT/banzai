@@ -10,6 +10,9 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
 
+from banzai.utils import realtime_utils
+from banzai.utils.file_utils import download_from_s3
+
 logger = logging.getLogger('banzai')
 
 
@@ -101,8 +104,8 @@ def parse_ra_dec(header):
                 ra, dec = np.nan, np.nan
     return ra, dec
 
-# TODO: S3-ify
-def open_fits_file(filename):
+
+def open_fits_file(file_info, runtime_context):
     """
     Load a fits file
 
@@ -110,6 +113,8 @@ def open_fits_file(filename):
     ----------
     filename: str
               File name/path to open
+    frame_id: int
+              LCO Archive frame ID
 
     Returns
     -------
@@ -119,31 +124,44 @@ def open_fits_file(filename):
     -----
     This is a wrapper to astropy.io.fits.open but funpacks the file first.
     """
-    base_filename, file_extension = os.path.splitext(os.path.basename(filename))
+    # Determine whether we are downloading from the archive or via NFS
+    download_from_archive = realtime_utils.need_to_get_from_s3(file_info)
+
+    if download_from_archive:
+        base_filename, file_extension = os.path.splitext(file_info.get('filename'))
+    else:
+        path_to_file = realtime_utils.get_local_path_from_info(file_info)
+        base_filename, file_extension = os.path.splitext(os.path.basename(path_to_file))
+
     if file_extension == '.fz':
         with tempfile.TemporaryDirectory() as tmpdirname:
-            output_filename = os.path.join(tmpdirname, base_filename)
-            os.system('funpack -O {0} {1}'.format(output_filename, filename))
-            hdulist = fits.open(output_filename, 'readonly')
+            output_filepath = os.path.join(tmpdirname, base_filename)
+            if download_from_archive:
+                downloaded_filepath = download_from_s3(file_info.get('frameid'), tmpdirname, runtime_context)
+                os.system('funpack -O {0} {1}'.format(base_filename, downloaded_filepath))
+            else:
+                os.system('funpack -O {0} {1}'.format(output_filepath, path_to_file))
+
+            hdulist = fits.open(output_filepath, 'readonly')
             hdulist_copy = copy.deepcopy(hdulist)
             hdulist.close()
     else:
-        hdulist = fits.open(filename, 'readonly')
+        hdulist = fits.open(path_to_file, 'readonly')
         hdulist_copy = copy.deepcopy(hdulist)
         hdulist.close()
     return hdulist_copy
 
 
-def get_primary_header(filename):
+def get_primary_header(file_info, runtime_context):
     try:
-        hdulist = open_fits_file(filename)
+        hdulist = open_fits_file(file_info, runtime_context)
         return hdulist[0].header
     except Exception:
         logger.error("Unable to open fits file: {}".format(logs.format_exception()), extra_tags={'filename': filename})
         return None
 
 
-def open_image(filename):
+def open_image(file_info, runtime_context):
     """
     Load an image from a FITS file
 
@@ -151,6 +169,8 @@ def open_image(filename):
     ----------
     filename: str
               Full path of the file to open
+    frame_id: int
+              LCO Archive frame ID
 
     Returns
     -------
@@ -172,7 +192,7 @@ def open_image(filename):
     Sinsitro frames that were taken as datacubes will be munged later so that the
     output images are consistent
     """
-    hdulist = open_fits_file(filename)
+    hdulist = open_fits_file(file_info, runtime_context)
 
     # Get the main header
     header = hdulist[0].header

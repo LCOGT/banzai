@@ -77,6 +77,7 @@ class CalibrationImage(Base):
     type = Column(String(50), index=True)
     filename = Column(String(100), unique=True)
     filepath = Column(String(150))
+    frameid = Column(Integer, nullable=True)
     dateobs = Column(DateTime, index=True)
     datecreated = Column(DateTime, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
@@ -118,12 +119,13 @@ class ProcessedImage(Base):
     __tablename__ = 'processedimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String(100), index=True)
+    frameid = Column(Integer, nullable=True)
     checksum = Column(CHAR(32), index=True, default='0'*32)
     success = Column(Boolean, default=False)
     tries = Column(Integer, default=0)
 
 
-def create_db(bpm_directory, db_address=_DEFAULT_DB,
+def create_db(bpm_directory, runtime_context, db_address=_DEFAULT_DB,
               configdb_address=_CONFIGDB_ADDRESS):
     """
     Create the database structure.
@@ -138,7 +140,7 @@ def create_db(bpm_directory, db_address=_DEFAULT_DB,
     Base.metadata.create_all(engine)
 
     populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
-    populate_calibration_table_with_bpms(bpm_directory, db_address=db_address)
+    populate_calibration_table_with_bpms(bpm_directory, runtime_context, db_address=db_address)
 
 
 def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
@@ -293,12 +295,12 @@ def add_or_update_record(db_session, table_model, equivalence_criteria, record_a
     return record
 
 
-def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
+def populate_calibration_table_with_bpms(directory, runtime_context, db_address=_DEFAULT_DB):
     with get_session(db_address=db_address) as db_session:
         bpm_filenames = glob(os.path.join(directory, '*bpm*.fits*'))
         for bpm_filename in bpm_filenames:
 
-            hdu = fits_utils.open_fits_file(bpm_filename)
+            hdu = fits_utils.open_fits_file(bpm_filename, runtime_context)
 
             header = hdu[0].header
             ccdsum = header.get('CCDSUM')
@@ -403,6 +405,8 @@ def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
                              'is_master': image.is_master,
                              'is_bad': image.is_bad,
                              'attributes': {}}
+        if image.file_info.get('frameid') is not None:
+            record_attributes['frameid'] = image.file_info.get('frameid')
         for attribute in image.attributes:
             record_attributes['attributes'][attribute] = getattr(image, attribute)
 
@@ -411,8 +415,7 @@ def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
         db_session.commit()
 
 
-def get_processed_image(path, db_address=_DEFAULT_DB):
-    filename = os.path.basename(path)
+def get_processed_image(filename, db_address=_DEFAULT_DB):
     with get_session(db_address=db_address) as db_session:
         processed_image = add_or_update_record(db_session, ProcessedImage, {'filename': filename},
                                                {'filename': filename})
@@ -449,6 +452,7 @@ def get_instrument_by_id(id, db_address=_DEFAULT_DB):
     return instrument
 
 
+# Returns a full file path to a master calibration image
 def get_master_calibration_image(image, calibration_type, master_selection_criteria,
                                  use_only_older_calibrations=False, db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()

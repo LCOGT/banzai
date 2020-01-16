@@ -44,8 +44,7 @@ class RealtimeModeListener(ConsumerMixin):
         return [consumer]
 
     def on_message(self, body, message):
-        path = body.get('path')
-        process_image.apply_async(args=(path, vars(self.runtime_context)))
+        process_image.apply_async(args=(body, vars(self.runtime_context)))
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
@@ -118,8 +117,7 @@ def reduce_single_frame():
                                 'kwargs': {'dest': 'path', 'help': 'Full path to the file to process'}}]
     runtime_context = parse_directory_args(extra_console_arguments=extra_console_arguments)
     # Short circuit
-    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(runtime_context.path),
-                                              runtime_context):
+    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(runtime_context.path), runtime_context):
         logger.error('Image cannot be processed. Check to make sure the instrument '
                      'is in the database and that the OBSTYPE is recognized by BANZAI',
                      extra_tags={'filename': runtime_context.path})
@@ -191,7 +189,7 @@ def run_realtime_pipeline():
 
     logger.info('Starting pipeline listener')
 
-    fits_exchange = Exchange('fits_files', type='fanout')
+    fits_exchange = Exchange('archived_fits', type='fanout')
     listener = RealtimeModeListener(runtime_context)
 
     with Connection(runtime_context.broker_url) as connection:
