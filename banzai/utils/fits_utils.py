@@ -111,10 +111,8 @@ def open_fits_file(file_info, runtime_context):
 
     Parameters
     ----------
-    filename: str
-              File name/path to open
-    frame_id: int
-              LCO Archive frame ID
+    :param file_info: Queue message body: dict
+    :param runtime_context: Context object with runtime environment info
 
     Returns
     -------
@@ -138,7 +136,7 @@ def open_fits_file(file_info, runtime_context):
             output_filepath = os.path.join(tmpdirname, base_filename)
             if download_from_archive:
                 downloaded_filepath = download_from_s3(file_info.get('frameid'), tmpdirname, runtime_context)
-                os.system('funpack -O {0} {1}'.format(base_filename, downloaded_filepath))
+                os.system('funpack -O {0} {1}'.format(output_filepath, downloaded_filepath))
             else:
                 os.system('funpack -O {0} {1}'.format(output_filepath, path_to_file))
 
@@ -167,10 +165,8 @@ def open_image(file_info, runtime_context):
 
     Parameters
     ----------
-    filename: str
-              Full path of the file to open
-    frame_id: int
-              LCO Archive frame ID
+    :param file_info: Queue message body: dict
+    :param runtime_context: Context object with runtime environment info
 
     Returns
     -------

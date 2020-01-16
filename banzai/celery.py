@@ -111,8 +111,7 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
 def process_image(file_info: dict, runtime_context: dict):
     """
     :param file_info: Body of queue message: dict
-    :param runtime_context:
-    :return:
+    :param runtime_context: Context object with runtime environment info
     """
     runtime_context = Context(runtime_context)
     logger.info('Running process image.')

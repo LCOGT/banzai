@@ -15,7 +15,7 @@ def get_filename_from_info(file_info):
 
     When running using a /archive mount, BANZAI listens on the fits_queue, which contains a
     path to an image on the archive machine. When running using AWS and s3, we listen to archived_fits
-    which contains a complete dictionary of image parameters.
+    which contains a complete dictionary of image parameters, one of which is a filename including extension.
     """
     path = file_info.get('path')
     if path is None:
@@ -26,8 +26,9 @@ def get_filename_from_info(file_info):
 def get_local_path_from_info(file_info, runtime_context):
     """
     Given a message from an LCO fits queue, determine where the image would
-    be stored locally by the pipeline
+    be stored locally by the pipeline.
     :param file_info: Queue message body: dict
+    :param runtime_context: Context object with runtime environment info
     :return: filepath: str
     """
     if is_s3_queue_message(file_info):
@@ -54,6 +55,7 @@ def need_to_get_from_s3(file_info, runtime_context):
     If it does not exist locally, and the queue message indicates we are operating
     using s3, then we must pull the image down
     :param file_info: Queue message body: dict
+    :param runtime_context: Context object with runtime environment info
     :return: True if we should read from s3, else False
     """
     local_file_path = get_local_path_from_info(file_info, runtime_context)

@@ -47,7 +47,6 @@ def run(file_info, runtime_context):
     """
     Main driver script for banzai.
     """
-    #TODO: Update to use archive API
     image = image_utils.read_image(file_info, runtime_context)
     if image is None:
         return

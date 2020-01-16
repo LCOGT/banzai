@@ -94,6 +94,12 @@ def image_can_be_processed(header, context):
 
 
 def read_image(file_info, runtime_context):
+    """
+    Construct a BANZAI image object from a FITS image.
+    :param file_info: Queue message body: dict
+    :param runtime_context: Context object with runtime environment info
+    :return: BANZAI image object: banzai.images.Image
+    """
     try:
         frame_class = import_utils.import_attribute(runtime_context.FRAME_CLASS)
         image = frame_class(runtime_context, file_info)
