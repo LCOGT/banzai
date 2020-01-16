@@ -125,22 +125,21 @@ class ProcessedImage(Base):
     tries = Column(Integer, default=0)
 
 
-def create_db(bpm_directory, runtime_context, db_address=_DEFAULT_DB,
-              configdb_address=_CONFIGDB_ADDRESS):
+def create_db(bpm_directory, runtime_context, configdb_address=_CONFIGDB_ADDRESS):
     """
     Create the database structure.
 
     This only needs to be run once on initialization of the database.
     """
     # Create an engine for the database
-    engine = create_engine(db_address)
+    engine = create_engine(runtime_context.db_address)
 
     # Create all tables in the engine
     # This only needs to be run once on initialization.
     Base.metadata.create_all(engine)
 
-    populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
-    populate_calibration_table_with_bpms(bpm_directory, runtime_context, db_address=db_address)
+    populate_instrument_tables(db_address=runtime_context.db_address, configdb_address=configdb_address)
+    populate_calibration_table_with_bpms(bpm_directory, runtime_context, db_address=runtime_context.db_address)
 
 
 def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
@@ -452,7 +451,6 @@ def get_instrument_by_id(id, db_address=_DEFAULT_DB):
     return instrument
 
 
-# Returns a full file path to a master calibration image
 def get_master_calibration_image(image, calibration_type, master_selection_criteria,
                                  use_only_older_calibrations=False, db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
@@ -480,14 +478,13 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     # Find the closest date
     date_deltas = np.abs(np.array([i.dateobs - image.dateobs for i in calibration_images]))
     closest_calibration_image = calibration_images[np.argmin(date_deltas)]
-    calibration_file = os.path.join(closest_calibration_image.filepath, closest_calibration_image.filename)
 
     if abs(min(date_deltas)) > datetime.timedelta(days=30):
         msg = "The closest calibration file in the database was created more than 30 days before or after " \
               "the image being reduced."
-        logger.warning(msg, image=image, extra_tags={'master_calibration': os.path.basename(calibration_file)})
+        logger.warning(msg, image=image, extra_tags={'master_calibration': os.path.basename(closest_calibration_image.filename)})
 
-    return calibration_file
+    return closest_calibration_image
 
 
 def get_individual_calibration_images(instrument, calibration_type, min_date: str, max_date: str,
