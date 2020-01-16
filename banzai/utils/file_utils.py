@@ -124,9 +124,26 @@ def make_calibration_filename_function(calibration_type, context):
     return get_calibration_filename
 
 
-def download_from_s3(frame_id, output_directory, runtime_context):
-    url = f'{runtime_context.ARCHIVE_FRAME_URL}/{frame_id}'
-    response = requests.get(url, headers=settings.ARCHIVE_AUTH_TOKEN, stream=True).json()
+def get_basename(path):
+    basename = None
+    if path is not None:
+        filename = os.path.basename(path)
+        if filename.find('.') > 0:
+            basename = filename[:filename.index('.')]
+        else:
+            basename = filename
+    return basename
+
+
+def download_from_s3(file_info, output_directory, runtime_context):
+    frame_id = file_info.get('frameid')
+    if frame_id is not None:
+        url = f'{runtime_context.ARCHIVE_FRAME_URL}/{frame_id}'
+    else:
+        basename = get_basename(file_info.get('path'))
+        url = f'{runtime_context.ARCHIVE_FRAME_URL}/?basename={basename}'
+
+    response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN, stream=True).json()
     path = os.path.join(output_directory, response['filename'])
     with open(path, 'wb') as f:
         f.write(requests.get(response['url']).content)

@@ -122,20 +122,18 @@ def open_fits_file(file_info, runtime_context):
     -----
     This is a wrapper to astropy.io.fits.open but funpacks the file first.
     """
-    # Determine whether we are downloading from the archive or via NFS
-    download_from_archive = realtime_utils.need_to_get_from_s3(file_info)
+    base_filename, file_extension = os.path.splitext(realtime_utils.get_filename_from_info(file_info))
+    path_to_file = realtime_utils.get_local_path_from_info(file_info)
 
-    if download_from_archive:
-        base_filename, file_extension = os.path.splitext(file_info.get('filename'))
-    else:
-        path_to_file = realtime_utils.get_local_path_from_info(file_info)
-        base_filename, file_extension = os.path.splitext(os.path.basename(path_to_file))
+    need_to_download = False
+    if not os.path.isfile(path_to_file):
+        need_to_download = True
 
     if file_extension == '.fz':
         with tempfile.TemporaryDirectory() as tmpdirname:
             output_filepath = os.path.join(tmpdirname, base_filename)
-            if download_from_archive:
-                downloaded_filepath = download_from_s3(file_info.get('frameid'), tmpdirname, runtime_context)
+            if need_to_download:
+                downloaded_filepath = download_from_s3(file_info, tmpdirname, runtime_context)
                 os.system('funpack -O {0} {1}'.format(output_filepath, downloaded_filepath))
             else:
                 os.system('funpack -O {0} {1}'.format(output_filepath, path_to_file))
