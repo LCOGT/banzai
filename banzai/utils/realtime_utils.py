@@ -7,7 +7,6 @@ from banzai.utils import fits_utils, image_utils, file_utils, realtime_utils
 logger = logging.getLogger('banzai')
 
 
-#TODO: Write test
 def get_filename_from_info(file_info):
     """
     Get a filename from a queue message
@@ -24,7 +23,6 @@ def get_filename_from_info(file_info):
     return os.path.basename(path)
 
 
-#TODO: Write test
 def get_local_path_from_info(file_info, runtime_context):
     """
     Given a message from an LCO fits queue, determine where the image would
@@ -50,8 +48,7 @@ def get_local_path_from_info(file_info, runtime_context):
     return path
 
 
-#TODO: Write test
-def need_to_get_from_s3(file_info):
+def need_to_get_from_s3(file_info, runtime_context):
     """
     Determine whether we need to retrieve a file from s3
     If it does not exist locally, and the queue message indicates we are operating
@@ -59,12 +56,10 @@ def need_to_get_from_s3(file_info):
     :param file_info: Queue message body: dict
     :return: True if we should read from s3, else False
     """
-    local_file_path = get_local_path_from_info(file_info)
+    local_file_path = get_local_path_from_info(file_info, runtime_context)
     return is_s3_queue_message(file_info) and not os.path.isfile(local_file_path)
 
 
-
-#TODO: Write test
 def is_s3_queue_message(file_info):
     """
     Determine if we are reading from s3 based on the contents of the
@@ -127,7 +122,7 @@ def need_to_process_image(file_info, context):
         header = file_info
         checksum = header['version_set']['md5']
     else:
-        path = file_info.get('path')
+        path = get_local_path_from_info(file_info, context)
         header = fits_utils.get_primary_header(path)
         checksum = file_utils.get_md5(path)
 
