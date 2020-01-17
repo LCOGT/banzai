@@ -3,7 +3,7 @@ import mock
 import numpy as np
 
 from banzai.dark import DarkComparer
-from banzai.tests.utils import handles_inhomogeneous_set, FakeContext
+from banzai.tests.utils import handles_inhomogeneous_set, FakeContext, FakeCalImage
 from banzai.tests.dark_utils import FakeDarkImage, make_context_with_realistic_master_dark, get_dark_pattern
 
 
@@ -24,27 +24,27 @@ def test_master_selection_criteria():
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 def test_returns_null_if_configuration_modes_are_different(mock_cal, mock_frame):
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     handles_inhomogeneous_set(DarkComparer, FakeContext(), 'configuration_mode', 'central_2k_2x2')
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 def test_returns_null_if_nx_are_different(mock_cal, mock_frame):
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     handles_inhomogeneous_set(DarkComparer, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 def test_returns_null_if_ny_are_different(mock_cal, mock_frame):
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     handles_inhomogeneous_set(DarkComparer, FakeContext(), 'ny', 107)
 
 
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 def test_flags_bad_if_no_master_calibration(mock_cal):
     mock_cal.return_value = None
     context = FakeContext()
@@ -54,10 +54,10 @@ def test_flags_bad_if_no_master_calibration(mock_cal):
     assert image.is_bad is True
 
 
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
 def test_does_not_flag_noisy_images(mock_frame, mock_cal, set_random_seed):
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     master_dark_fraction = 0.05
     nx = 101
     ny = 103
@@ -77,10 +77,10 @@ def test_does_not_flag_noisy_images(mock_frame, mock_cal, set_random_seed):
     assert image.is_bad is False
 
 
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeDarkImage)
 def test_does_flag_bad_images(mock_frame, mock_cal, set_random_seed):
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     master_dark_fraction = 0.05
     nx = 101
     ny = 103

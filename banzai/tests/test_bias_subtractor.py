@@ -2,7 +2,7 @@ import mock
 import numpy as np
 
 from banzai.bias import BiasSubtractor
-from banzai.tests.utils import FakeImage, handles_inhomogeneous_set, FakeContext
+from banzai.tests.utils import FakeImage, handles_inhomogeneous_set, FakeContext, FakeCalImage
 
 from banzai.tests.bias_utils import make_context_with_master_bias, FakeBiasImage
 
@@ -19,11 +19,11 @@ def test_master_selection_criteria():
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 def test_header_has_biaslevel(mock_cal, mock_frame):
     nx = 101
     ny = 103
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     context = make_context_with_master_bias(nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
     image = subtractor.do_stage(FakeImage(nx=nx, ny=ny))
@@ -31,12 +31,12 @@ def test_header_has_biaslevel(mock_cal, mock_frame):
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS')
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 def test_header_biaslevel_is_1(mock_cal, mock_frame):
     nx = 101
     ny = 103
     mock_frame.return_value = FakeBiasImage(bias_level=1.0, nx=nx, ny=ny)
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     context = make_context_with_master_bias(bias_level=1.0, readnoise=10.0, nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
     image = subtractor.do_stage(FakeImage(nx=nx, ny=ny))
@@ -44,12 +44,12 @@ def test_header_biaslevel_is_1(mock_cal, mock_frame):
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS')
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 def test_header_biaslevel_is_2(mock_cal, mock_frame):
     nx = 101
     ny = 103
     mock_frame.return_value = FakeBiasImage(bias_level=2.0, nx=nx, ny=ny)
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     context = make_context_with_master_bias(bias_level=2.0, readnoise=10.0, nx=nx, ny=ny)
     subtractor = BiasSubtractor(context)
     image = subtractor.do_stage(FakeImage(nx=nx, ny=ny))
@@ -57,27 +57,27 @@ def test_header_biaslevel_is_2(mock_cal, mock_frame):
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 def test_returns_null_if_configuration_modes_are_different(mock_cal, mock_frame):
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     handles_inhomogeneous_set(BiasSubtractor, FakeContext(), 'configuration_mode', 'central_2k_2x2')
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 def test_returns_null_if_nx_are_different(mock_cal, mock_frame):
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     handles_inhomogeneous_set(BiasSubtractor, FakeContext(), 'nx', 105)
 
 
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 def test_returns_null_if_ny_are_different(mock_cal, mock_frame):
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     handles_inhomogeneous_set(BiasSubtractor, FakeContext(), 'ny', 107)
 
 
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 def test_flags_image_if_no_master_calibration(mock_cal):
     mock_cal.return_value = None
     nx = 101
@@ -88,10 +88,10 @@ def test_flags_image_if_no_master_calibration(mock_cal):
     assert image.is_bad is True
 
 
-@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_filename')
+@mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
 @mock.patch('banzai.calibrations.FRAME_CLASS')
 def test_bias_subtraction_is_reasonable(mock_frame, mock_cal):
-    mock_cal.return_value = 'test.fits'
+    mock_cal.return_value = FakeCalImage()
     input_bias = 1000.0
     input_readnoise = 9.0
     input_level = 2000.0

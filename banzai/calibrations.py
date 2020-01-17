@@ -110,7 +110,7 @@ class ApplyCalibration(Stage):
 
     def construct_file_info_for_master_calibration(self, master_calibration_image):
         file_info = {'frameid': master_calibration_image.frameid,
-                     'path': master_calibration_image.filepath}
+                     'path': os.path.join(master_calibration_image.filepath, master_calibration_image.filename)}
         return file_info
 
     def on_missing_master_calibration(self, image):

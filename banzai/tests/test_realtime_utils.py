@@ -1,3 +1,4 @@
+import os
 import mock
 
 from banzai.tests.utils import FakeContext
@@ -11,6 +12,9 @@ archived_fits_queue_message = {'SITEID': 'lsc',
                                'DAY-OBS': '20200114',
                                'RLEVEL': 91,
                                'filename': 'lsc1m005-fa15-20200114-0129-d91.fits.fz'}
+
+master_file_info = {'frameid': 1234,
+                    'path': '/archive/engineering/lsc/fa15/20200114/processed/lsc1m005-fa15-20200114-skyflat-center-bin2x2-w.fits.fz'}
 
 
 def test_get_filename_from_info_fits_queue():
@@ -29,34 +33,33 @@ def test_get_local_path_from_info_fits_queue():
     context = FakeContext()
 
     filepath = realtime_utils.get_local_path_from_info(fits_queue_message, context)
+    base_filename, file_extension = os.path.splitext(os.path.basename(filepath))
 
     assert filepath == fits_queue_message['path']
+    assert base_filename == 'lsc1m005-fa15-20200114-0129-d91.fits'
+    assert file_extension == '.fz'
 
 
 def test_get_local_path_from_info_archived_fits_queue():
     context = FakeContext()
 
     filepath = realtime_utils.get_local_path_from_info(archived_fits_queue_message, context)
+    base_filename, file_extension = os.path.splitext(os.path.basename(filepath))
 
     assert filepath == '/tmp/lsc/fa15/20200114/processed/lsc1m005-fa15-20200114-0129-d91.fits.fz'
+    assert base_filename == 'lsc1m005-fa15-20200114-0129-d91.fits'
+    assert file_extension == '.fz'
 
 
-@mock.patch('banzai.utils.realtime_utils.os.path.isfile', return_value=True)
-def test_need_to_get_from_s3_fits_queue(mock_file_exists):
+def test_get_local_path_from_master_cal():
     context = FakeContext()
-    assert not realtime_utils.need_to_get_from_s3(fits_queue_message, context)
 
+    filepath = realtime_utils.get_local_path_from_info(master_file_info, context)
+    base_filename, file_extension = os.path.splitext(os.path.basename(filepath))
 
-@mock.patch('banzai.utils.realtime_utils.os.path.isfile', return_value=False)
-def test_need_to_get_from_s3_archived_fits_queue_no_local_file(mock_file_exists):
-    context = FakeContext()
-    assert realtime_utils.need_to_get_from_s3(archived_fits_queue_message, context)
-
-
-@mock.patch('banzai.utils.realtime_utils.os.path.isfile', return_value=True)
-def test_need_to_get_from_s3_archived_fits_queue_local_file_exists(mock_file_exists):
-    context = FakeContext()
-    assert not realtime_utils.need_to_get_from_s3(archived_fits_queue_message, context)
+    assert filepath == '/archive/engineering/lsc/fa15/20200114/processed/lsc1m005-fa15-20200114-skyflat-center-bin2x2-w.fits.fz'
+    assert base_filename == 'lsc1m005-fa15-20200114-skyflat-center-bin2x2-w.fits'
+    assert file_extension == '.fz'
 
 
 def test_is_s3_queue_message_archived_fits():
@@ -65,3 +68,4 @@ def test_is_s3_queue_message_archived_fits():
 
 def test_is_s3_queue_message_fits_queue():
     assert not realtime_utils.is_s3_queue_message(fits_queue_message)
+

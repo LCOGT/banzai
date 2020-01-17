@@ -24,7 +24,7 @@ def test_no_processing_if_previous_success(mock_can_process, mock_instrument, mo
     mock_instrument.return_value = FakeInstrument()
     mock_processed.return_value = FakeRealtimeImage(success=True, checksum=md5_hash1)
     mock_md5.return_value = md5_hash1
-    assert not need_to_process_image('test.fits', FakeContext())
+    assert not need_to_process_image({'path':'test.fits'}, FakeContext())
 
 
 @mock.patch('banzai.dbs.commit_processed_image')
@@ -38,7 +38,7 @@ def test_do_process_if_never_tried(mock_can_process, mock_instrument, mock_heade
     mock_instrument.return_value = FakeInstrument()
     mock_processed.return_value = FakeRealtimeImage(success=False, checksum=md5_hash1, tries=0)
     mock_md5.return_value = md5_hash1
-    assert need_to_process_image('test.fits', FakeContext())
+    assert need_to_process_image({'path':'test.fits'}, FakeContext())
 
 
 @mock.patch('banzai.dbs.commit_processed_image')
@@ -54,7 +54,7 @@ def test_do_process_if_tries_less_than_max(mock_can_process, mock_instrument, mo
     mock_md5.return_value = md5_hash1
     context = FakeContext()
     context.max_tries = 5
-    assert need_to_process_image('test.fits', context)
+    assert need_to_process_image({'path':'test.fits'}, context)
 
 
 @mock.patch('banzai.dbs.commit_processed_image')
@@ -71,7 +71,7 @@ def test_no_processing_if_tries_at_max(mock_can_process, mock_instrument, mock_h
     mock_md5.return_value = md5_hash1
     context = FakeContext()
     context.max_tries = max_tries
-    assert not need_to_process_image('test.fits', context)
+    assert not need_to_process_image({'path':'test.fits'}, context)
 
 
 @mock.patch('banzai.dbs.commit_processed_image')
@@ -87,7 +87,7 @@ def test_do_process_if_new_checksum(mock_can_process, mock_instrument, mock_head
     mock_processed.return_value = image
     mock_md5.return_value = md5_hash2
     mock_instrument.return_value = FakeInstrument()
-    assert need_to_process_image('test.fits', FakeContext())
+    assert need_to_process_image({'path':'test.fits'}, FakeContext())
     assert not image.success
     assert image.tries == 0
     assert image.checksum == md5_hash2

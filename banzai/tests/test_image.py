@@ -12,8 +12,8 @@ def set_random_seed():
     np.random.seed(10031312)
 
 
-def test_null_filename():
-    test_image = Image(FakeContext(), filename=None)
+def test_null_file_info():
+    test_image = Image(FakeContext(), file_info=None)
     assert test_image.data is None
 
 
@@ -60,7 +60,7 @@ def test_image_creates_and_loads_tables_correctly():
     create fits.HDUList objects correctly from astropy tables with single element entries
     and for astropy tables with columns where each element is a list.
     """
-    test_image = Image(FakeContext(), filename=None)
+    test_image = Image(FakeContext(), file_info=None)
     table_name = 'test'
     a = np.arange(3)
     array_1 = [a, a]
