@@ -139,7 +139,7 @@ def create_db(bpm_directory, runtime_context, configdb_address=_CONFIGDB_ADDRESS
     Base.metadata.create_all(engine)
 
     populate_instrument_tables(db_address=runtime_context.db_address, configdb_address=configdb_address)
-    populate_calibration_table_with_bpms(bpm_directory, runtime_context, db_address=runtime_context.db_address)
+    populate_calibration_table_with_bpms(bpm_directory, runtime_context)
 
 
 def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
@@ -294,12 +294,12 @@ def add_or_update_record(db_session, table_model, equivalence_criteria, record_a
     return record
 
 
-def populate_calibration_table_with_bpms(directory, runtime_context, db_address=_DEFAULT_DB):
-    with get_session(db_address=db_address) as db_session:
+def populate_calibration_table_with_bpms(directory, runtime_context):
+    with get_session(db_address=runtime_context.db_address) as db_session:
         bpm_filenames = glob(os.path.join(directory, '*bpm*.fits*'))
         for bpm_filename in bpm_filenames:
-
-            hdu = fits_utils.open_fits_file(bpm_filename, runtime_context)
+            file_info = {'path': bpm_filename}
+            hdu = fits_utils.open_fits_file(file_info, runtime_context)
 
             header = hdu[0].header
             ccdsum = header.get('CCDSUM')
@@ -308,7 +308,7 @@ def populate_calibration_table_with_bpms(directory, runtime_context, db_address=
             dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
 
             try:
-                instrument = get_instrument(header, db_address=db_address)
+                instrument = get_instrument(header, db_address=runtime_context.db_address)
             except ValueError:
                 logger.error('Instrument is missing from database', extra_tags={'site': header['SITEID'],
                                                                                 'camera': header['INSTRUME']})
@@ -376,18 +376,14 @@ def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_AD
     return instrument
 
 
-def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
+def get_bpm_record(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     with get_session(db_address=db_address) as db_session:
         criteria = (CalibrationImage.type == 'BPM', CalibrationImage.instrument_id == instrument_id,
                     cast(CalibrationImage.attributes['ccdsum'], String) == type_coerce(ccdsum, JSON))
         bpm_query = db_session.query(CalibrationImage).filter(*criteria)
-        bpm = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
+        bpm_record = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
 
-        if bpm is not None:
-            bpm_path = os.path.join(bpm.filepath, bpm.filename)
-        else:
-            bpm_path = None
-    return bpm_path
+    return bpm_record
 
 
 def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
@@ -404,8 +400,9 @@ def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
                              'is_master': image.is_master,
                              'is_bad': image.is_bad,
                              'attributes': {}}
-        if image.file_info.get('frameid') is not None:
-            record_attributes['frameid'] = image.file_info.get('frameid')
+        if image.file_info is not None:
+            # TODO: If frameid is missing, how should we handle that?
+            record_attributes['frameid'] = image.file_info.get('frameid', 0)
         for attribute in image.attributes:
             record_attributes['attributes'][attribute] = getattr(image, attribute)
 
@@ -487,8 +484,8 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     return closest_calibration_image
 
 
-def get_individual_calibration_images(instrument, calibration_type, min_date: str, max_date: str,
-                                      include_bad_frames=False, db_address=_DEFAULT_DB):
+def get_individual_calibration_image_records(instrument, calibration_type, min_date: str, max_date: str,
+                                             include_bad_frames=False, db_address=_DEFAULT_DB):
 
     calibration_criteria = CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
@@ -499,11 +496,9 @@ def get_individual_calibration_images(instrument, calibration_type, min_date: st
         calibration_criteria &= CalibrationImage.is_bad == False
 
     with get_session(db_address=db_address) as db_session:
-        images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
+        image_records = db_session.query(CalibrationImage).filter(calibration_criteria).all()
 
-    image_paths = [os.path.join(image.filepath, image.filename) for image in images]
-
-    return image_paths
+    return image_records
 
 
 def mark_frame(filename, mark_as, db_address=_DEFAULT_DB):

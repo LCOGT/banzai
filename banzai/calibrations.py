@@ -232,8 +232,10 @@ def create_master_calibration_header(old_header, images):
     return header
 
 
-def run_master_maker(image_path_list, runtime_context, frame_type):
-    images = [image_utils.read_image(image_path, runtime_context) for image_path in image_path_list]
+def run_master_maker(calibration_image_records, runtime_context, frame_type):
+    file_info_list= [{'path': os.path.join(record.filepath, record.filename),
+                      'frameid': record.frameid} for record in calibration_image_records]
+    images = [image_utils.read_image(file_info, runtime_context) for file_info in file_info_list]
     stage_constructor = import_utils.import_attribute(settings.CALIBRATION_STACKER_STAGE[frame_type.upper()])
     stage_to_run = stage_constructor(runtime_context)
     images = stage_to_run.run(images)
@@ -248,13 +250,13 @@ def process_master_maker(instrument, frame_type, min_date, max_date, runtime_con
                   'min_date': min_date,
                   'max_date': max_date}
     logger.info("Making master frames", extra_tags=extra_tags)
-    image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
-                                                            db_address=runtime_context.db_address)
-    if len(image_path_list) == 0:
+    calibration_image_records = dbs.get_individual_calibration_image_records(instrument, frame_type, min_date, max_date,
+                                                                             db_address=runtime_context.db_address)
+    if len(calibration_image_records) == 0:
         logger.info("No calibration frames found to stack", extra_tags=extra_tags)
 
     try:
-        run_master_maker(image_path_list, runtime_context, frame_type)
+        run_master_maker(calibration_image_records, runtime_context, frame_type)
     except Exception:
         logger.error(logs.format_exception())
     logger.info("Finished")
