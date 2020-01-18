@@ -10,7 +10,6 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
 
-from banzai.utils import realtime_utils
 from banzai.utils.file_utils import download_from_s3
 
 logger = logging.getLogger('banzai')
@@ -122,8 +121,8 @@ def open_fits_file(file_info, runtime_context):
     -----
     This is a wrapper to astropy.io.fits.open but funpacks the file first.
     """
-    base_filename, file_extension = os.path.splitext(realtime_utils.get_filename_from_info(file_info))
-    path_to_file = realtime_utils.get_local_path_from_info(file_info)
+    base_filename, file_extension = os.path.splitext(get_filename_from_info(file_info))
+    path_to_file = get_local_path_from_info(file_info, runtime_context)
 
     need_to_download = False
     if not os.path.isfile(path_to_file):
@@ -146,15 +145,6 @@ def open_fits_file(file_info, runtime_context):
         hdulist_copy = copy.deepcopy(hdulist)
         hdulist.close()
     return hdulist_copy
-
-
-def get_primary_header(file_info, runtime_context):
-    try:
-        hdulist = open_fits_file(file_info, runtime_context)
-        return hdulist[0].header
-    except Exception:
-        logger.error("Unable to open fits file: {}".format(logs.format_exception()), extra_tags={'filename': filename})
-        return None
 
 
 def open_image(file_info, runtime_context):
@@ -247,3 +237,68 @@ def get_configuration_mode(header):
 
     header['CONFMODE'] = configuration_mode
     return configuration_mode
+
+
+def get_primary_header(file_info, runtime_context):
+    try:
+        hdulist = open_fits_file(file_info, runtime_context)
+        return hdulist[0].header
+    except Exception:
+        logger.error("Unable to open fits file: {}".format(logs.format_exception()), extra_tags={'filename': filename})
+        return None
+
+
+def get_filename_from_info(file_info):
+    """
+    Get a filename from a queue message
+    :param file_info: Queue message body: dict
+    :return: filename : str
+
+    When running using a /archive mount, BANZAI listens on the fits_queue, which contains a
+    path to an image on the archive machine. When running using AWS and s3, we listen to archived_fits
+    which contains a complete dictionary of image parameters, one of which is a filename including extension.
+    """
+    path = file_info.get('path')
+    if path is None:
+        path = file_info.get('filename')
+    return os.path.basename(path)
+
+
+def get_local_path_from_info(file_info, runtime_context):
+    """
+    Given a message from an LCO fits queue, determine where the image would
+    be stored locally by the pipeline.
+    :param file_info: Queue message body: dict
+    :param runtime_context: Context object with runtime environment info
+    :return: filepath: str
+    """
+    if is_s3_queue_message(file_info):
+        # archived_fits contains a dictionary of image attributes and header values
+        path = os.path.join(runtime_context.processed_path, file_info.get('SITEID'),
+                            file_info.get('INSTRUME'), file_info.get('DAY-OBS'))
+
+        if file_info.get('RLEVEL') == 0:
+            path = os.path.join(path, 'raw')
+        elif file_info.get('RLEVEL') == 91:
+            path = os.path.join(path, 'processed')
+
+        path = os.path.join(path, file_info.get('filename'))
+    else:
+        # fits_queue contains paths to images on /archive
+        path = file_info.get('path')
+
+    return path
+
+
+def is_s3_queue_message(file_info):
+    """
+    Determine if we are reading from s3 based on the contents of the
+    message on the queue
+    :param file_info: Queue message body: dict
+    :return: True if we should read from s3, else False
+    """
+    s3_queue_message = False
+    if file_info.get('path') is None:
+        s3_queue_message = True
+
+    return s3_queue_message

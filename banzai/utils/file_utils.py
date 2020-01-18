@@ -9,18 +9,28 @@ import requests
 from lco_ingester import ingester
 from lco_ingester.exceptions import RetryError, DoNotRetryError, BackoffRetryError, NonFatalDoNotRetryError
 
+from kombu import Connection, Exchange
 from banzai.utils import import_utils
 
 logger = logging.getLogger('banzai')
 
 
-def post_to_archive_queue(filepath):
-    retry = False
+def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):
+    exchange = Exchange(exchange_name, type='fanout')
+    with Connection(broker_url) as conn:
+        producer = conn.Producer(exchange=exchange)
+        producer.publish({'path': image_path})
+        producer.release()
+
+
+def post_to_ingester(filepath):
+    retry = True
     try_counter = 1
+    ingester_response = {}
     with open(filepath, 'rb') as f:
         while retry:
             try:
-                ingester.upload_file_and_ingest_to_archive(f)
+                ingester_response = ingester.upload_file_and_ingest_to_archive(f)
                 retry = False
             except DoNotRetryError as exc:
                 logger.warning('Exception occured: {0}. Aborting.'.format(exc),
@@ -49,6 +59,8 @@ def post_to_archive_queue(filepath):
                 logger.fatal('Unexpected exception: {0} Will retry.'.format(exc), extra_tags={'filename': filepath})
                 retry = True
                 try_counter += 1
+
+    return ingester_response
 
 
 def make_output_directory(runtime_context, image_config):

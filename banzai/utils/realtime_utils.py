@@ -1,66 +1,11 @@
 import logging
-import os
+
+from banzai.utils.fits_utils import get_primary_header
 
 from banzai import dbs
-from banzai.utils import fits_utils, image_utils, file_utils, realtime_utils
+from banzai.utils import image_utils, file_utils, fits_utils
 
 logger = logging.getLogger('banzai')
-
-
-def get_filename_from_info(file_info):
-    """
-    Get a filename from a queue message
-    :param file_info: Queue message body: dict
-    :return: filename : str
-
-    When running using a /archive mount, BANZAI listens on the fits_queue, which contains a
-    path to an image on the archive machine. When running using AWS and s3, we listen to archived_fits
-    which contains a complete dictionary of image parameters, one of which is a filename including extension.
-    """
-    path = file_info.get('path')
-    if path is None:
-        path = file_info.get('filename')
-    return os.path.basename(path)
-
-
-def get_local_path_from_info(file_info, runtime_context):
-    """
-    Given a message from an LCO fits queue, determine where the image would
-    be stored locally by the pipeline.
-    :param file_info: Queue message body: dict
-    :param runtime_context: Context object with runtime environment info
-    :return: filepath: str
-    """
-    if is_s3_queue_message(file_info):
-        # archived_fits contains a dictionary of image attributes and header values
-        path = os.path.join(runtime_context.processed_path, file_info.get('SITEID'),
-                            file_info.get('INSTRUME'), file_info.get('DAY-OBS'))
-
-        if file_info.get('RLEVEL') == 0:
-            path = os.path.join(path, 'raw')
-        elif file_info.get('RLEVEL') == 91:
-            path = os.path.join(path, 'processed')
-
-        path = os.path.join(path, file_info.get('filename'))
-    else:
-        # fits_queue contains paths to images on /archive
-        path = file_info.get('path')
-
-    return path
-
-
-def is_s3_queue_message(file_info):
-    """
-    Determine if we are reading from s3 based on the contents of the
-    message on the queue
-    :param file_info: Queue message body: dict
-    :return: True if we should read from s3, else False
-    """
-    s3_queue_message = False
-    if file_info.get('path') is None:
-        s3_queue_message = True
-
-    return s3_queue_message
 
 
 def set_file_as_processed(filename, db_address=dbs._DEFAULT_DB):
@@ -98,20 +43,21 @@ def need_to_process_image(file_info, context):
     If the file has changed, we reset the success flags and the number of tries to zero.
     We only attempt to make images if the instrument is in the database and passes the given criteria.
     """
-    filename = realtime_utils.get_filename_from_info(file_info)
-    is_s3_message = realtime_utils.is_s3_queue_message(file_info)
+    filename = fits_utils.get_filename_from_info(file_info)
+    is_s3_message = fits_utils.is_s3_queue_message(file_info)
 
     logger.info("Checking if file needs to be processed", extra_tags={"filename": filename})
     if not (filename.endswith('.fits') or filename.endswith('.fits.fz')):
-        logger.warning("Filename does not have a .fits extension, stopping reduction", extra_tags={"filename": path})
+        logger.warning("Filename does not have a .fits extension, stopping reduction",
+                       extra_tags={"filename": filename})
         return False
 
     if is_s3_message:
         header = file_info
         checksum = header['version_set'][0]['md5']
     else:
-        path = get_local_path_from_info(file_info, context)
-        header = fits_utils.get_primary_header(file_info, context)
+        path = fits_utils.get_local_path_from_info(file_info, context)
+        header = get_primary_header(file_info, context)
         checksum = file_utils.get_md5(path)
 
     if not image_utils.image_can_be_processed(header, context):
@@ -122,7 +68,8 @@ def need_to_process_image(file_info, context):
     except ValueError:
         return False
     if not context.ignore_schedulability and not instrument.schedulable:
-        logger.info('Image will not be processed because instrument is not schedulable', extra_tags={"filename": filename})
+        logger.info('Image will not be processed because instrument is not schedulable',
+                    extra_tags={"filename": filename})
         return False
 
     # Get the image in db. If it doesn't exist add it.

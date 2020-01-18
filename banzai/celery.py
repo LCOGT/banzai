@@ -7,6 +7,7 @@ from celery import Celery
 
 from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, observation_utils
+from banzai.utils.fits_utils import get_filename_from_info
 from banzai.utils.stage_utils import run
 from celery.signals import setup_logging
 from banzai.context import Context
@@ -84,9 +85,9 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
                 extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
                             'instrument': instrument.camera, 'frame_type': frame_type})
 
-    completed_image_count = len(dbs.get_individual_calibration_images(instrument, frame_type,
-                                                                      min_date, max_date, include_bad_frames=True,
-                                                                      db_address=runtime_context.db_address))
+    completed_image_count = len(dbs.get_individual_calibration_image_records(instrument, frame_type,
+                                                                             min_date, max_date, include_bad_frames=True,
+                                                                             db_address=runtime_context.db_address))
     expected_image_count = 0
     for observation in observations:
         for configuration in observation['request']['configurations']:
@@ -115,7 +116,7 @@ def process_image(file_info: dict, runtime_context: dict):
     """
     runtime_context = Context(runtime_context)
     logger.info('Running process image.')
-    filename = realtime_utils.get_filename_from_info(file_info)
+    filename = get_filename_from_info(file_info)
     try:
         if realtime_utils.need_to_process_image(file_info, runtime_context):
             logger.info('Reducing frame', extra_tags={'filename': filename})

@@ -5,9 +5,9 @@ import logging
 from banzai import logs
 from banzai import dbs
 from banzai.munge import munge
-from banzai.utils.fits_utils import get_primary_header
+from banzai.utils.fits_utils import get_primary_header, get_filename_from_info
 from banzai.utils.instrument_utils import instrument_passes_criteria
-from banzai.utils import import_utils, realtime_utils
+from banzai.utils import import_utils
 from banzai.exceptions import InhomogeneousSetException
 
 
@@ -110,4 +110,4 @@ def read_image(file_info, runtime_context):
         return image
     except Exception:
         logger.error('Error loading image: {error}'.format(error=logs.format_exception()),
-                     extra_tags={'filename': realtime_utils.get_filename(file_info)})
+                     extra_tags={'filename': get_filename_from_info(file_info)})

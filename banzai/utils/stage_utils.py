@@ -1,6 +1,8 @@
 from banzai import settings
-from banzai.utils import import_utils, image_utils, realtime_utils
+from banzai.utils import import_utils, image_utils
 import logging
+
+from banzai.utils.fits_utils import get_filename_from_info
 
 logger = logging.getLogger('banzai')
 
@@ -58,7 +60,7 @@ def run(file_info, runtime_context):
         stage_to_run = stage(runtime_context)
         image = stage_to_run.run(image)
     if image is None:
-        logger.error('Reduction stopped', extra_tags={'filename': realtime_utils.get_filename(file_info)})
+        logger.error('Reduction stopped', extra_tags={'filename': get_filename_from_info(file_info)})
         return
     image.write(runtime_context)
     logger.info("Finished reducing frame", image=image)

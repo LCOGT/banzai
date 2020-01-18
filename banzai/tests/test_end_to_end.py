@@ -14,7 +14,7 @@ from banzai.celery import app, schedule_calibration_stacking
 from banzai.dbs import populate_calibration_table_with_bpms, create_db, get_session, CalibrationImage, get_timezone
 from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
-from banzai.tests.utils import FakeResponse, get_min_and_max_dates
+from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.utils.data import get_pkg_data_filename
 
 import logging
@@ -68,7 +68,7 @@ def run_reduce_individual_frames(raw_filenames):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
-            file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
+            file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'), exchange_name=os.getenv('FITS_QUEUE'))
     celery_join()
     logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
 
@@ -104,6 +104,8 @@ def mark_frames_as_good(raw_filenames):
 
 
 def get_expected_number_of_calibrations(raw_filenames, calibration_type):
+    context = FakeContext()
+    context.db_address = os.environ['DB_ADDRESS']
     number_of_stacks_that_should_have_been_created = 0
     for day_obs in DAYS_OBS:
         raw_filenames_for_this_dayobs = glob(os.path.join(DATA_ROOT, day_obs, 'raw', raw_filenames))
@@ -111,7 +113,7 @@ def get_expected_number_of_calibrations(raw_filenames, calibration_type):
             # Group by filter
             observed_filters = []
             for raw_filename in raw_filenames_for_this_dayobs:
-                skyflat_hdu = fits_utils.open_fits_file(raw_filename)
+                skyflat_hdu = fits_utils.open_fits_file({'path': raw_filename}, context)
                 observed_filters.append(skyflat_hdu[0].header.get('FILTER'))
             observed_filters = set(observed_filters)
             number_of_stacks_that_should_have_been_created += len(observed_filters)
@@ -153,10 +155,12 @@ def observation_portal_side_effect(*args, **kwargs):
 @pytest.fixture(scope='module')
 @mock.patch('banzai.dbs.requests.get', return_value=FakeResponse(CONFIGDB_FILENAME))
 def init(configdb):
-    create_db('.', db_address=os.environ['DB_ADDRESS'], configdb_address='http://configdbdev.lco.gtn/sites/')
+    context = FakeContext()
+    context.db_address = os.environ['DB_ADDRESS']
+    create_db('.', context, configdb_address='http://configdbdev.lco.gtn/sites/')
     for instrument in INSTRUMENTS:
         populate_calibration_table_with_bpms(os.path.join(DATA_ROOT, instrument, 'bpm'),
-                                             db_address=os.environ['DB_ADDRESS'])
+                                             context)
 
 
 @pytest.mark.e2e
