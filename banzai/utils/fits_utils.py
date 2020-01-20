@@ -244,7 +244,8 @@ def get_primary_header(file_info, runtime_context):
         hdulist = open_fits_file(file_info, runtime_context)
         return hdulist[0].header
     except Exception:
-        logger.error("Unable to open fits file: {}".format(logs.format_exception()), extra_tags={'filename': filename})
+        logger.error("Unable to open fits file: {}".format(logs.format_exception()),
+                     extra_tags={'filename': get_filename_from_info(file_info)})
         return None
 
 
