@@ -128,6 +128,10 @@ class ApplyCalibration(Stage):
         file_info = self.construct_file_info_for_master_calibration(master_calibration)
 
         master_calibration_image = FRAME_CLASS(self.runtime_context, file_info=file_info)
+        # cache the master calibration image for future use
+        if not os.path.isfile(file_info.get('path')):
+            master_calibration_image.write()
+            
         try:
             image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
         except image_utils.InhomogeneousSetException as e:
