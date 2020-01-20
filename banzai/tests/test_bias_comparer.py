@@ -22,31 +22,34 @@ def test_master_selection_criteria():
     comparer = BiasComparer(FakeContext())
     assert comparer.master_selection_criteria == ['configuration_mode', 'ccdsum']
 
-
+@mock.patch('banzai.calibrations.os.path.isfile', return_value=True)
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
-def test_returns_null_if_configuration_modes_are_different(mock_cal, mock_frame):
+def test_returns_null_if_configuration_modes_are_different(mock_cal, mock_frame, mock_is_file):
     mock_cal.return_value = FakeCalImage()
     handles_inhomogeneous_set(BiasComparer, FakeContext(), 'configuration_mode', 'central_2k_2x2')
 
 
+@mock.patch('banzai.calibrations.os.path.isfile', return_value=True)
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
-def test_returns_null_if_nx_are_different(mock_cal, mock_frame):
+def test_returns_null_if_nx_are_different(mock_cal, mock_frame, mock_is_file):
     mock_cal.return_value = FakeCalImage()
     handles_inhomogeneous_set(BiasComparer, FakeContext(), 'nx', 105)
 
 
+@mock.patch('banzai.calibrations.os.path.isfile', return_value=True)
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
-def test_returns_null_if_ny_are_different(mock_cal, mock_frame):
+def test_returns_null_if_ny_are_different(mock_cal, mock_frame, mock_is_file):
     mock_cal.return_value = FakeCalImage()
     handles_inhomogeneous_set(BiasComparer, FakeContext(), 'ny', 107)
 
 
+@mock.patch('banzai.calibrations.os.path.isfile', return_value=True)
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
-def test_flags_bad_if_no_master_calibration(mock_cal, mock_frame, set_random_seed):
+def test_flags_bad_if_no_master_calibration(mock_cal, mock_frame, mock_is_file, set_random_seed):
     mock_cal.return_value = None
     nx = 101
     ny = 103
@@ -56,9 +59,10 @@ def test_flags_bad_if_no_master_calibration(mock_cal, mock_frame, set_random_see
     assert image.is_bad is True
 
 
+@mock.patch('banzai.calibrations.os.path.isfile', return_value=True)
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
-def test_does_not_reject_noisy_image(mock_cal, mock_frame, set_random_seed):
+def test_does_not_reject_noisy_image(mock_cal, mock_frame, mock_is_file, set_random_seed):
     mock_cal.return_value = FakeCalImage()
     master_readnoise = 3.0
     nx = 101
@@ -74,9 +78,10 @@ def test_does_not_reject_noisy_image(mock_cal, mock_frame, set_random_seed):
     assert image.is_bad is False
 
 
+@mock.patch('banzai.calibrations.os.path.isfile', return_value=True)
 @mock.patch('banzai.calibrations.FRAME_CLASS', side_effect=FakeBiasImage)
 @mock.patch('banzai.calibrations.ApplyCalibration.get_calibration_image')
-def test_does_flag_bad_image(mock_cal, mock_frame, set_random_seed):
+def test_does_flag_bad_image(mock_cal, mock_frame, mock_is_file, set_random_seed):
     mock_cal.return_value = FakeCalImage()
     master_readnoise = 3.0
     nx = 101
