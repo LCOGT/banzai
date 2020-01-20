@@ -143,9 +143,9 @@ class ApplyCalibration(Stage):
         pass
 
     def get_calibration_image(self, image):
-        return dbs.get_master_calibration_image(image, self.calibration_type, self.master_selection_criteria,
-                                                use_only_older_calibrations=self.runtime_context.use_only_older_calibrations,
-                                                db_address=self.runtime_context.db_address)
+        return dbs.get_master_calibration_image_record(image, self.calibration_type, self.master_selection_criteria,
+                                                       use_only_older_calibrations=self.runtime_context.use_only_older_calibrations,
+                                                       db_address=self.runtime_context.db_address)
 
 
 class CalibrationComparer(ApplyCalibration):

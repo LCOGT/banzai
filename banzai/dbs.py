@@ -448,8 +448,8 @@ def get_instrument_by_id(id, db_address=_DEFAULT_DB):
     return instrument
 
 
-def get_master_calibration_image(image, calibration_type, master_selection_criteria,
-                                 use_only_older_calibrations=False, db_address=_DEFAULT_DB):
+def get_master_calibration_image_record(image, calibration_type, master_selection_criteria,
+                                        use_only_older_calibrations=False, db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
