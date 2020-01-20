@@ -51,10 +51,11 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                                                                                  'instrument': instrument.camera,
                                                                                  'frame_type': frame_type})
             blocks_for_calibration = observation_utils.filter_calibration_blocks_for_type(instrument, frame_type,
-                                                                                   calibration_blocks)
+                                                                                          calibration_blocks)
             if len(blocks_for_calibration) > 0:
                 # block_end should be the latest block end time
-                calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)
+                calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(
+                    tzinfo=None)
                 stack_delay = timedelta(seconds=runtime_context.CALIBRATION_STACK_DELAYS[frame_type.upper()])
                 now = datetime.utcnow().replace(microsecond=0)
                 message_delay = calibration_end_time - now + stack_delay
@@ -86,7 +87,8 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
                             'instrument': instrument.camera, 'frame_type': frame_type})
 
     completed_image_count = len(dbs.get_individual_calibration_image_records(instrument, frame_type,
-                                                                             min_date, max_date, include_bad_frames=True,
+                                                                             min_date, max_date,
+                                                                             include_bad_frames=True,
                                                                              db_address=runtime_context.db_address))
     expected_image_count = 0
     for observation in observations:
@@ -94,7 +96,8 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
             if frame_type.upper() == configuration['type']:
                 for instrument_config in configuration['instrument_configs']:
                     expected_image_count += instrument_config['exposure_count']
-    logger.info('expected image count: {0}, completed image count: {1}'.format(str(expected_image_count), str(completed_image_count)))
+    logger.info('expected image count: {0}, completed image count: {1}'.format(str(expected_image_count),
+                                                                               str(completed_image_count)))
     if completed_image_count < expected_image_count and self.request.retries < 3:
         logger.info('Number of processed images less than expected. '
                     'Expected: {}, Completed: {}'.format(expected_image_count, completed_image_count),
@@ -103,8 +106,8 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
         raise self.retry()
     else:
         logger.info('Starting to stack', extra_tags={'site': instrument.site, 'min_date': min_date,
-                                                      'max_date': max_date, 'instrument': instrument.camera,
-                                                      'frame_type': frame_type})
+                                                     'max_date': max_date, 'instrument': instrument.camera,
+                                                     'frame_type': frame_type})
         calibrations.process_master_maker(instrument, frame_type, min_date, max_date, runtime_context)
 
 
@@ -127,4 +130,3 @@ def process_image(file_info: dict, runtime_context: dict):
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
                      extra_tags={'filename': filename})
-
