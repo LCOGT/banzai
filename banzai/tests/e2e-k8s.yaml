@@ -80,6 +80,9 @@ spec:
           value: "calibrate"
         - name: OBSERVATION_PORTAL_URL
           value: "http://internal-observation-portal.lco.gtn/api/observations/"
+        - name: FITS_QUEUE
+          value: "fits_files"
+
       command:
         - celery
         - -A
@@ -141,6 +144,8 @@ spec:
           value: "calibrate"
         - name: OBSERVATION_PORTAL_URL
           value: "http://internal-observation-portal.lco.gtn/api/observations/"
+        - name: FITS_QUEUE
+          value: "fits_files"
       command:
         - banzai_run_realtime_pipeline
         - "--db-address=sqlite:////archive/engineering/test.db"
