@@ -27,7 +27,7 @@ def add_bpm_to_image(image, runtime_context):
     # Exit if image already has a BPM
     if image.bpm is not None:
         return
-    # Get the BPM filename
+    # Get the BPM record
     bpm_record = dbs.get_bpm_record(image.instrument.id, image.ccdsum, db_address=runtime_context.db_address)
     # Check if file is missing
     if bpm_record is None:
