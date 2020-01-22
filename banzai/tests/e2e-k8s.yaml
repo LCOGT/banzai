@@ -80,7 +80,7 @@ spec:
           value: "calibrate"
         - name: OBSERVATION_PORTAL_URL
           value: "http://internal-observation-portal.lco.gtn/api/observations/"
-        - name: FITS_QUEUE
+        - name: FITS_EXCHANGE
           value: "fits_files"
 
       command:
@@ -144,7 +144,7 @@ spec:
           value: "calibrate"
         - name: OBSERVATION_PORTAL_URL
           value: "http://internal-observation-portal.lco.gtn/api/observations/"
-        - name: FITS_QUEUE
+        - name: FITS_EXCHANGE
           value: "fits_files"
       command:
         - banzai_run_realtime_pipeline

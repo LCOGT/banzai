@@ -189,7 +189,7 @@ def run_realtime_pipeline():
 
     logger.info('Starting pipeline listener')
 
-    fits_exchange = Exchange(runtime_context.FITS_QUEUE, type='fanout')
+    fits_exchange = Exchange(runtime_context.FITS_EXCHANGE, type='fanout')
     listener = RealtimeModeListener(runtime_context)
 
     with Connection(runtime_context.broker_url) as connection:

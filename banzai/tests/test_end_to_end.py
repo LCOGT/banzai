@@ -72,7 +72,7 @@ def run_reduce_individual_frames(raw_filenames):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
-            file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'), exchange_name=os.getenv('FITS_QUEUE'))
+            file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'), exchange_name=os.getenv('FITS_EXCHANGE'))
     celery_join()
     logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
 
