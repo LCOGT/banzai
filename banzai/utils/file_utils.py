@@ -1,4 +1,3 @@
-import datetime
 import hashlib
 import os
 import logging
@@ -136,24 +135,11 @@ def make_calibration_filename_function(calibration_type, context):
     return get_calibration_filename
 
 
-def get_basename(path):
-    basename = None
-    if path is not None:
-        filename = os.path.basename(path)
-        if filename.find('.') > 0:
-            basename = filename[:filename.index('.')]
-        else:
-            basename = filename
-    return basename
-
-
 def download_from_s3(file_info, output_directory, runtime_context):
     frame_id = file_info.get('frameid')
-    if frame_id is not None:
-        url = f'{runtime_context.ARCHIVE_FRAME_URL}/{frame_id}'
-    else:
-        basename = get_basename(file_info.get('path'))
-        url = f'{runtime_context.ARCHIVE_FRAME_URL}/?basename={basename}'
+    logger.info(f"Downloading file {file_info.get('filename')} from archive. ID: {frame_id}.",
+                extra_tags={'filename': file_info.get('filename')})
+    url = f'{runtime_context.ARCHIVE_FRAME_URL}/{frame_id}'
 
     response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN, stream=True).json()
     path = os.path.join(output_directory, response['filename'])
