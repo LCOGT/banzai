@@ -54,7 +54,7 @@ def need_to_process_image(file_info, context):
 
     if is_s3_message:
         header = file_info
-        checksum = header['version_set'][0]['md5']
+        checksum = header['version_set'][0].get('md5')
     else:
         path = fits_utils.get_local_path_from_info(file_info, context)
         header = get_primary_header(file_info, context)

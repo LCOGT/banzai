@@ -401,8 +401,7 @@ def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
                              'is_bad': image.is_bad,
                              'attributes': {}}
         if image.file_info is not None:
-            # TODO: If frameid is missing, how should we handle that?
-            record_attributes['frameid'] = image.file_info.get('frameid', 0)
+            record_attributes['frameid'] = image.file_info.get('frameid')
         for attribute in image.attributes:
             record_attributes['attributes'][attribute] = getattr(image, attribute)
 
