@@ -11,7 +11,6 @@ from astropy.table import Table, Column
 import banzai
 from banzai import dbs, settings, exceptions
 from banzai.utils import date_utils, file_utils, fits_utils
-from banzai import logs
 
 logger = logging.getLogger('banzai')
 
@@ -42,7 +41,7 @@ class DataTable(object):
 
 class Image(object):
 
-    def __init__(self, runtime_context, filename=None, data=None, data_tables=None,
+    def __init__(self, runtime_context, file_info=None, data=None, data_tables=None,
                  header=None, extension_headers=None, bpm=None):
         if header is None:
             header = fits.Header()
@@ -53,12 +52,14 @@ class Image(object):
         if extension_headers is None:
             extension_headers = []
 
-        if filename is not None:
-            data, header, bpm, extension_headers = fits_utils.open_image(filename)
+        if file_info is not None:
+            data, header, bpm, extension_headers = fits_utils.open_image(file_info, runtime_context)
+            filename = fits_utils.get_filename_from_info(file_info)
             if '.fz' == filename[-3:]:
                 filename = filename[:-3]
             self.filename = os.path.basename(filename)
 
+        self.file_info = file_info
         self.data = data
         self.data_tables = data_tables
         self.header = header
@@ -111,10 +112,20 @@ class Image(object):
         self._update_filename(runtime_context)
         filepath = self._get_filepath(runtime_context)
         self._writeto(filepath, fpack=runtime_context.fpack)
+        if runtime_context.post_to_archive:
+            archived_image_info = self._post_to_archive(filepath)
+            # update file info from ingester response
+            self._update_file_info(archived_image_info)
+        else:
+            self._update_file_info({'path': filepath})
         if self.obstype in settings.CALIBRATION_IMAGE_TYPES:
             dbs.save_calibration_info(filepath, self, db_address=runtime_context.db_address)
-        if runtime_context.post_to_archive:
-            self._post_to_archive(filepath, runtime_context)
+
+    def _update_file_info(self, info_to_update):
+        if self.file_info is None:
+            self.file_info = info_to_update
+        else:
+            self.file_info.update({k: info_to_update[k] for k in info_to_update.keys()})
 
     def _save_pipeline_metadata(self, runtime_context):
         self.datecreated = datetime.datetime.utcnow()
@@ -199,12 +210,14 @@ class Image(object):
             hdu_list.append(bpm_hdu)
         return hdu_list
 
-    def _post_to_archive(self, filepath, runtime_context):
+    def _post_to_archive(self, filepath):
+        """
+        Post file to LCO archive
+        :param filepath: path to file on disk
+        :return: image_info: Response from ingester library, including archive frame ID and checksum
+        """
         logger.info('Posting file to the archive', image=self)
-        try:
-            file_utils.post_to_archive_queue(filepath, runtime_context.broker_url)
-        except Exception:
-            logger.error("Could not post to ingester: {error}".format(error=logs.format_exception()), image=self)
+        return file_utils.post_to_ingester(filepath)
 
     def write_catalog(self, filename, nsources=None):
         if self.data_tables.get('catalog') is None:

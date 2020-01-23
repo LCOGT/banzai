@@ -213,7 +213,7 @@ class TestMain():
                                                    countdown=(60+CALIBRATION_STACK_DELAYS['BIAS']))
 
     @mock.patch('banzai.calibrations.process_master_maker')
-    @mock.patch('banzai.celery.dbs.get_individual_calibration_images')
+    @mock.patch('banzai.celery.dbs.get_individual_calibration_image_records')
     @mock.patch('banzai.celery.dbs.get_instrument_by_id')
     def test_stack_calibrations(self, mock_get_instrument, mock_get_calibration_images, mock_process_master_maker, setup):
         mock_get_instrument.return_value = self.fake_inst
@@ -223,7 +223,7 @@ class TestMain():
         mock_process_master_maker.assert_called_with(self.fake_inst, self.frame_type, self.min_date, self.max_date, ANY)
 
     @mock.patch('banzai.calibrations.process_master_maker')
-    @mock.patch('banzai.celery.dbs.get_individual_calibration_images')
+    @mock.patch('banzai.celery.dbs.get_individual_calibration_image_records')
     @mock.patch('banzai.celery.dbs.get_instrument_by_id')
     def test_stack_calibrations_not_enough_images(self, mock_get_instrument, mock_get_calibration_images, mock_process_master_maker, setup):
         mock_get_instrument.return_value = self.fake_inst

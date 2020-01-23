@@ -77,6 +77,7 @@ class CalibrationImage(Base):
     type = Column(String(50), index=True)
     filename = Column(String(100), unique=True)
     filepath = Column(String(150))
+    frameid = Column(Integer, nullable=True)
     dateobs = Column(DateTime, index=True)
     datecreated = Column(DateTime, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
@@ -118,27 +119,27 @@ class ProcessedImage(Base):
     __tablename__ = 'processedimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String(100), index=True)
+    frameid = Column(Integer, nullable=True)
     checksum = Column(CHAR(32), index=True, default='0'*32)
     success = Column(Boolean, default=False)
     tries = Column(Integer, default=0)
 
 
-def create_db(bpm_directory, db_address=_DEFAULT_DB,
-              configdb_address=_CONFIGDB_ADDRESS):
+def create_db(bpm_directory, runtime_context, configdb_address=_CONFIGDB_ADDRESS):
     """
     Create the database structure.
 
     This only needs to be run once on initialization of the database.
     """
     # Create an engine for the database
-    engine = create_engine(db_address)
+    engine = create_engine(runtime_context.db_address)
 
     # Create all tables in the engine
     # This only needs to be run once on initialization.
     Base.metadata.create_all(engine)
 
-    populate_instrument_tables(db_address=db_address, configdb_address=configdb_address)
-    populate_calibration_table_with_bpms(bpm_directory, db_address=db_address)
+    populate_instrument_tables(db_address=runtime_context.db_address, configdb_address=configdb_address)
+    populate_calibration_table_with_bpms(bpm_directory, runtime_context)
 
 
 def parse_configdb(configdb_address=_CONFIGDB_ADDRESS):
@@ -293,12 +294,12 @@ def add_or_update_record(db_session, table_model, equivalence_criteria, record_a
     return record
 
 
-def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
-    with get_session(db_address=db_address) as db_session:
+def populate_calibration_table_with_bpms(directory, runtime_context):
+    with get_session(db_address=runtime_context.db_address) as db_session:
         bpm_filenames = glob(os.path.join(directory, '*bpm*.fits*'))
         for bpm_filename in bpm_filenames:
-
-            hdu = fits_utils.open_fits_file(bpm_filename)
+            file_info = {'path': bpm_filename}
+            hdu = fits_utils.open_fits_file(file_info, runtime_context)
 
             header = hdu[0].header
             ccdsum = header.get('CCDSUM')
@@ -307,7 +308,7 @@ def populate_calibration_table_with_bpms(directory, db_address=_DEFAULT_DB):
             dateobs = date_utils.parse_date_obs(header.get('DATE-OBS'))
 
             try:
-                instrument = get_instrument(header, db_address=db_address)
+                instrument = get_instrument(header, db_address=runtime_context.db_address)
             except ValueError:
                 logger.error('Instrument is missing from database', extra_tags={'site': header['SITEID'],
                                                                                 'camera': header['INSTRUME']})
@@ -375,18 +376,14 @@ def get_instrument(header, db_address=_DEFAULT_DB, configdb_address=_CONFIGDB_AD
     return instrument
 
 
-def get_bpm_filename(instrument_id, ccdsum, db_address=_DEFAULT_DB):
+def get_bpm_record(instrument_id, ccdsum, db_address=_DEFAULT_DB):
     with get_session(db_address=db_address) as db_session:
         criteria = (CalibrationImage.type == 'BPM', CalibrationImage.instrument_id == instrument_id,
                     cast(CalibrationImage.attributes['ccdsum'], String) == type_coerce(ccdsum, JSON))
         bpm_query = db_session.query(CalibrationImage).filter(*criteria)
-        bpm = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
+        bpm_record = bpm_query.order_by(desc(CalibrationImage.dateobs)).first()
 
-        if bpm is not None:
-            bpm_path = os.path.join(bpm.filepath, bpm.filename)
-        else:
-            bpm_path = None
-    return bpm_path
+    return bpm_record
 
 
 def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
@@ -403,6 +400,8 @@ def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
                              'is_master': image.is_master,
                              'is_bad': image.is_bad,
                              'attributes': {}}
+        if image.file_info is not None:
+            record_attributes['frameid'] = image.file_info.get('frameid')
         for attribute in image.attributes:
             record_attributes['attributes'][attribute] = getattr(image, attribute)
 
@@ -411,8 +410,7 @@ def save_calibration_info(output_file, image, db_address=_DEFAULT_DB):
         db_session.commit()
 
 
-def get_processed_image(path, db_address=_DEFAULT_DB):
-    filename = os.path.basename(path)
+def get_processed_image(filename, db_address=_DEFAULT_DB):
     with get_session(db_address=db_address) as db_session:
         processed_image = add_or_update_record(db_session, ProcessedImage, {'filename': filename},
                                                {'filename': filename})
@@ -449,8 +447,8 @@ def get_instrument_by_id(id, db_address=_DEFAULT_DB):
     return instrument
 
 
-def get_master_calibration_image(image, calibration_type, master_selection_criteria,
-                                 use_only_older_calibrations=False, db_address=_DEFAULT_DB):
+def get_master_calibration_image_record(image, calibration_type, master_selection_criteria,
+                                        use_only_older_calibrations=False, db_address=_DEFAULT_DB):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
@@ -476,18 +474,17 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     # Find the closest date
     date_deltas = np.abs(np.array([i.dateobs - image.dateobs for i in calibration_images]))
     closest_calibration_image = calibration_images[np.argmin(date_deltas)]
-    calibration_file = os.path.join(closest_calibration_image.filepath, closest_calibration_image.filename)
 
     if abs(min(date_deltas)) > datetime.timedelta(days=30):
         msg = "The closest calibration file in the database was created more than 30 days before or after " \
               "the image being reduced."
-        logger.warning(msg, image=image, extra_tags={'master_calibration': os.path.basename(calibration_file)})
+        logger.warning(msg, image=image, extra_tags={'master_calibration': os.path.basename(closest_calibration_image.filename)})
 
-    return calibration_file
+    return closest_calibration_image
 
 
-def get_individual_calibration_images(instrument, calibration_type, min_date: str, max_date: str,
-                                      include_bad_frames=False, db_address=_DEFAULT_DB):
+def get_individual_calibration_image_records(instrument, calibration_type, min_date: str, max_date: str,
+                                             include_bad_frames=False, db_address=_DEFAULT_DB):
 
     calibration_criteria = CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
@@ -498,11 +495,9 @@ def get_individual_calibration_images(instrument, calibration_type, min_date: st
         calibration_criteria &= CalibrationImage.is_bad == False
 
     with get_session(db_address=db_address) as db_session:
-        images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
+        image_records = db_session.query(CalibrationImage).filter(calibration_criteria).all()
 
-    image_paths = [os.path.join(image.filepath, image.filename) for image in images]
-
-    return image_paths
+    return image_records
 
 
 def mark_frame(filename, mark_as, db_address=_DEFAULT_DB):

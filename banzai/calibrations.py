@@ -108,37 +108,48 @@ class ApplyCalibration(Stage):
     def calibration_type(self):
         pass
 
+    def construct_file_info_for_master_calibration(self, master_calibration_image):
+        file_info = {'frameid': master_calibration_image.frameid,
+                     'path': os.path.join(master_calibration_image.filepath, master_calibration_image.filename)}
+        return file_info
+
     def on_missing_master_calibration(self, image):
         msg = 'Master Calibration file does not exist for {stage}, flagging image as bad'
         logger.error(msg.format(stage=self.stage_name), image=image)
         image.is_bad = True
 
     def do_stage(self, image):
-        master_calibration_filename = self.get_calibration_filename(image)
+        master_calibration = self.get_calibration_image(image)
 
-        if master_calibration_filename is None:
+        if master_calibration is None:
             self.on_missing_master_calibration(image)
             return image
 
-        master_calibration_image = FRAME_CLASS(self.runtime_context, filename=master_calibration_filename)
+        file_info = self.construct_file_info_for_master_calibration(master_calibration)
+
+        master_calibration_image = FRAME_CLASS(self.runtime_context, file_info=file_info)
+        # cache the master calibration image for future use
+        if not os.path.isfile(file_info.get('path')):
+            master_calibration_image.write(self.runtime_context)
+
         try:
             image_utils.check_image_homogeneity([image, master_calibration_image], self.master_selection_criteria)
         except image_utils.InhomogeneousSetException as e:
             logger.error('Master calibration was not the same format as the input: {0}'.format(e), image=image,
-                         extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
+                         extra_tags={'master_calibration': master_calibration.filename})
             return None
         logger.info('Applying master calibration', image=image,
-                    extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
+                    extra_tags={'master_calibration': master_calibration.filename})
         return self.apply_master_calibration(image, master_calibration_image)
 
     @abc.abstractmethod
     def apply_master_calibration(self, image, master_calibration_image):
         pass
 
-    def get_calibration_filename(self, image):
-        return dbs.get_master_calibration_image(image, self.calibration_type, self.master_selection_criteria,
-                                                use_only_older_calibrations=self.runtime_context.use_only_older_calibrations,
-                                                db_address=self.runtime_context.db_address)
+    def get_calibration_image(self, image):
+        return dbs.get_master_calibration_image_record(image, self.calibration_type, self.master_selection_criteria,
+                                                       use_only_older_calibrations=self.runtime_context.use_only_older_calibrations,
+                                                       db_address=self.runtime_context.db_address)
 
 
 class CalibrationComparer(ApplyCalibration):
@@ -225,8 +236,10 @@ def create_master_calibration_header(old_header, images):
     return header
 
 
-def run_master_maker(image_path_list, runtime_context, frame_type):
-    images = [image_utils.read_image(image_path, runtime_context) for image_path in image_path_list]
+def run_master_maker(calibration_image_records, runtime_context, frame_type):
+    file_info_list= [{'path': os.path.join(record.filepath, record.filename),
+                      'frameid': record.frameid} for record in calibration_image_records]
+    images = [image_utils.read_image(file_info, runtime_context) for file_info in file_info_list]
     stage_constructor = import_utils.import_attribute(settings.CALIBRATION_STACKER_STAGE[frame_type.upper()])
     stage_to_run = stage_constructor(runtime_context)
     images = stage_to_run.run(images)
@@ -241,13 +254,13 @@ def process_master_maker(instrument, frame_type, min_date, max_date, runtime_con
                   'min_date': min_date,
                   'max_date': max_date}
     logger.info("Making master frames", extra_tags=extra_tags)
-    image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
-                                                            db_address=runtime_context.db_address)
-    if len(image_path_list) == 0:
+    calibration_image_records = dbs.get_individual_calibration_image_records(instrument, frame_type, min_date, max_date,
+                                                                             db_address=runtime_context.db_address)
+    if len(calibration_image_records) == 0:
         logger.info("No calibration frames found to stack", extra_tags=extra_tags)
 
     try:
-        run_master_maker(image_path_list, runtime_context, frame_type)
+        run_master_maker(calibration_image_records, runtime_context, frame_type)
     except Exception:
         logger.error(logs.format_exception())
     logger.info("Finished")

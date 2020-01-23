@@ -3,7 +3,7 @@ import numpy as np
 
 
 class FakeDarkImage(FakeImage):
-    def __init__(self, runtime_context=None, exptime=30.0, filename='', data=None, header=None, **kwargs):
+    def __init__(self, runtime_context=None, exptime=30.0, file_info=None, data=None, header=None, **kwargs):
         self.exptime = exptime
         super(FakeDarkImage, self).__init__(runtime_context=runtime_context, data=data, header=header, **kwargs)
         self.header['OBSTYPE'] = 'DARK'

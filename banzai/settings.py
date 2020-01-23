@@ -78,5 +78,10 @@ CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_fi
 
 TELESCOPE_FILENAME_FUNCTION = 'banzai.utils.file_utils.telescope_to_filename'
 
+ARCHIVE_API_ROOT = os.getenv('API_ROOT')
+ARCHIVE_FRAME_URL = f'{ARCHIVE_API_ROOT}frames'
+ARCHIVE_AUTH_TOKEN = {'Authorization': f'Token {os.getenv("AUTH_TOKEN")}'}
+FITS_EXCHANGE = os.getenv('FITS_EXCHANGE', 'archived_fits')
+
 OBSERVATION_PORTAL_URL = os.getenv('OBSERVATION_PORTAL_URL', 'http://internal-observation-portal.lco.gtn/api/observations/')
 CALIBRATE_PROPOSAL_ID = os.getenv('CALIBRATE_PROPOSAL_ID', 'calibrate')

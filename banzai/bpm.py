@@ -27,16 +27,18 @@ def add_bpm_to_image(image, runtime_context):
     # Exit if image already has a BPM
     if image.bpm is not None:
         return
-    # Get the BPM filename
-    bpm_filename = dbs.get_bpm_filename(image.instrument.id, image.ccdsum, db_address=runtime_context.db_address)
+    # Get the BPM record
+    bpm_record = dbs.get_bpm_record(image.instrument.id, image.ccdsum, db_address=runtime_context.db_address)
     # Check if file is missing
-    if bpm_filename is None:
+    if bpm_record is None:
         logger.warning('Unable to find BPM in database, falling back to empty BPM', image=image)
         add_empty_bpm(image)
         return
+    bpm_file_info = {'path': os.path.join(bpm_record.filepath, bpm_record.filename),
+                     'frameid': bpm_record.frameid}
     # Load and add the BPM
-    bpm = load_bpm(bpm_filename)
-    set_image_bpm_and_header(image, bpm, os.path.basename(bpm_filename))
+    bpm = load_bpm(bpm_file_info, runtime_context)
+    set_image_bpm_and_header(image, bpm, os.path.basename(bpm_record.filename))
 
 
 def add_empty_bpm(image):
@@ -47,8 +49,8 @@ def add_empty_bpm(image):
     set_image_bpm_and_header(image, bpm, '')
 
 
-def load_bpm(bpm_filename):
-    bpm_hdu = fits_utils.open_fits_file(bpm_filename)
+def load_bpm(bpm_file_info, runtime_context):
+    bpm_hdu = fits_utils.open_fits_file(bpm_file_info, runtime_context)
     bpm_extensions = fits_utils.get_extensions_by_name(bpm_hdu, 'BPM')
     # Filter out BPM extensions without data
     bpm_extensions = [extension for extension in bpm_extensions if extension.data is not None]

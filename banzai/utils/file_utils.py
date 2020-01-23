@@ -1,9 +1,13 @@
 import hashlib
 import os
 import logging
+from time import sleep
+
+from lco_ingester import ingester
+from lco_ingester.exceptions import RetryError, DoNotRetryError, BackoffRetryError, NonFatalDoNotRetryError
 
 from kombu import Connection, Exchange
-from banzai.utils import import_utils
+from banzai.utils import import_utils, fits_utils
 
 logger = logging.getLogger('banzai')
 
@@ -14,6 +18,46 @@ def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):
         producer = conn.Producer(exchange=exchange)
         producer.publish({'path': image_path})
         producer.release()
+
+
+def post_to_ingester(filepath):
+    retry = True
+    try_counter = 1
+    ingester_response = {}
+    with open(filepath, 'rb') as f:
+        while retry:
+            try:
+                ingester_response = ingester.upload_file_and_ingest_to_archive(f)
+                retry = False
+            except DoNotRetryError as exc:
+                logger.warning('Exception occured: {0}. Aborting.'.format(exc),
+                               extra_tags={'filename': filepath})
+                retry = False
+            except NonFatalDoNotRetryError as exc:
+                logger.debug('Non-fatal Exception occured: {0}. Aborting.'.format(exc),
+                             extra_tags={'filename': filepath})
+                retry = False
+            except RetryError as exc:
+                logger.debug('Retry Exception occured: {0}. Retrying.'.format(exc),
+                             extra_tags={'tags': {'filename': filepath}})
+                retry = True
+                try_counter += 1
+            except BackoffRetryError as exc:
+                logger.debug('BackoffRetry Exception occured: {0}. Retrying.'.format(exc),
+                             extra_tags={'filename': filepath})
+                if try_counter > 5:
+                    logger.warning('Giving up because we tried too many times.', extra_tags={'filename': filepath})
+                    retry = False
+                else:
+                    sleep(5 ** try_counter)
+                    retry = True
+                    try_counter += 1
+            except Exception as exc:
+                logger.fatal('Unexpected exception: {0} Will retry.'.format(exc), extra_tags={'filename': filepath})
+                retry = True
+                try_counter += 1
+
+    return ingester_response
 
 
 def make_output_directory(runtime_context, image_config):
@@ -85,4 +129,5 @@ def make_calibration_filename_function(calibration_type, context):
                 cal_file += '-{}'.format(filename_part)
         cal_file += '.fits'
         return cal_file
+
     return get_calibration_filename

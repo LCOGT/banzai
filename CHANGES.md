@@ -1,3 +1,8 @@
+0.28.0 (2020-01-23)
+-------------------
+- Migrate BANZAI to be compatible with s3. Frames will now be downloaded from the LCO Archive, and posted
+  directly to the ingester, bypassing LCO's `/archive` machine. 
+
 0.27.6 (2020-01-13)
 -------------------
 - Update celery task visibility timeout to 24h to avoid re-scheduling stacking tasks that do not complete within an hour. 

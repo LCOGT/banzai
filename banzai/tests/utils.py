@@ -8,6 +8,7 @@ from banzai.stages import Stage
 from banzai.images import Image
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
+
 logger = logging.getLogger('banzai')
 
 
@@ -26,7 +27,7 @@ class FakeImage(Image):
         else:
             self.data = data
         if n_amps > 1:
-            self.data = np.stack(n_amps*[self.data])
+            self.data = np.stack(n_amps * [self.data])
         self.filename = 'test.fits'
         self.filter = filter
         self.dateobs = datetime(2016, 1, 1)
@@ -70,7 +71,7 @@ class FakeContext(object):
         self.FRAME_CLASS = frame_class
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
-        self.db_address = 'sqlite:foo'
+        self.db_address = 'sqlite:///test.db'
         self.ignore_schedulability = False
         self.max_tries = 5
 
@@ -114,7 +115,7 @@ def gaussian2d(image_shape, x0, y0, brightness, fwhm):
 
 def get_min_and_max_dates(timezone, dayobs):
     # Gets next midnight relative to date of observation
-    midnight_at_site = datetime.strptime(dayobs, '%Y%m%d') + timedelta(hours=24-timezone)
+    midnight_at_site = datetime.strptime(dayobs, '%Y%m%d') + timedelta(hours=24 - timezone)
     min_date = midnight_at_site - timedelta(days=0.5)
     max_date = midnight_at_site + timedelta(days=0.5)
     return min_date.strftime(TIMESTAMP_FORMAT), max_date.strftime(TIMESTAMP_FORMAT)
@@ -142,3 +143,10 @@ class FakeInstrument(object):
         self.schedulable = schedulable
         self.type = type
         self.name = camera
+
+
+class FakeCalImage:
+    def __init__(self):
+        self.frameid = 1234
+        self.filepath = '/tmp/'
+        self.filename = 'test.fits'

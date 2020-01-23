@@ -7,6 +7,7 @@ from celery import Celery
 
 from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, observation_utils
+from banzai.utils.fits_utils import get_filename_from_info
 from banzai.utils.stage_utils import run
 from celery.signals import setup_logging
 from banzai.context import Context
@@ -50,10 +51,11 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                                                                                  'instrument': instrument.camera,
                                                                                  'frame_type': frame_type})
             blocks_for_calibration = observation_utils.filter_calibration_blocks_for_type(instrument, frame_type,
-                                                                                   calibration_blocks)
+                                                                                          calibration_blocks)
             if len(blocks_for_calibration) > 0:
                 # block_end should be the latest block end time
-                calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)
+                calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(
+                    tzinfo=None)
                 stack_delay = timedelta(seconds=runtime_context.CALIBRATION_STACK_DELAYS[frame_type.upper()])
                 now = datetime.utcnow().replace(microsecond=0)
                 message_delay = calibration_end_time - now + stack_delay
@@ -84,16 +86,18 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
                 extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
                             'instrument': instrument.camera, 'frame_type': frame_type})
 
-    completed_image_count = len(dbs.get_individual_calibration_images(instrument, frame_type,
-                                                                      min_date, max_date, include_bad_frames=True,
-                                                                      db_address=runtime_context.db_address))
+    completed_image_count = len(dbs.get_individual_calibration_image_records(instrument, frame_type,
+                                                                             min_date, max_date,
+                                                                             include_bad_frames=True,
+                                                                             db_address=runtime_context.db_address))
     expected_image_count = 0
     for observation in observations:
         for configuration in observation['request']['configurations']:
             if frame_type.upper() == configuration['type']:
                 for instrument_config in configuration['instrument_configs']:
                     expected_image_count += instrument_config['exposure_count']
-    logger.info('expected image count: {0}, completed image count: {1}'.format(str(expected_image_count), str(completed_image_count)))
+    logger.info('expected image count: {0}, completed image count: {1}'.format(str(expected_image_count),
+                                                                               str(completed_image_count)))
     if completed_image_count < expected_image_count and self.request.retries < 3:
         logger.info('Number of processed images less than expected. '
                     'Expected: {}, Completed: {}'.format(expected_image_count, completed_image_count),
@@ -102,25 +106,27 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
         raise self.retry()
     else:
         logger.info('Starting to stack', extra_tags={'site': instrument.site, 'min_date': min_date,
-                                                      'max_date': max_date, 'instrument': instrument.camera,
-                                                      'frame_type': frame_type})
+                                                     'max_date': max_date, 'instrument': instrument.camera,
+                                                     'frame_type': frame_type})
         calibrations.process_master_maker(instrument, frame_type, min_date, max_date, runtime_context)
 
 
 @app.task(name='celery.process_image')
-def process_image(path: str, runtime_context: dict):
+def process_image(file_info: dict, runtime_context: dict):
+    """
+    :param file_info: Body of queue message: dict
+    :param runtime_context: Context object with runtime environment info
+    """
     runtime_context = Context(runtime_context)
     logger.info('Running process image.')
+    filename = get_filename_from_info(file_info)
     try:
-        if realtime_utils.need_to_process_image(path, runtime_context):
-            logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
-
+        if realtime_utils.need_to_process_image(file_info, runtime_context):
+            logger.info('Reducing frame', extra_tags={'filename': filename})
             # Increment the number of tries for this file
-            realtime_utils.increment_try_number(path, db_address=runtime_context.db_address)
-
-            run(path, runtime_context)
-            realtime_utils.set_file_as_processed(path, db_address=runtime_context.db_address)
-
+            realtime_utils.increment_try_number(filename, db_address=runtime_context.db_address)
+            run(file_info, runtime_context)
+            realtime_utils.set_file_as_processed(filename, db_address=runtime_context.db_address)
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
-                     extra_tags={'filename': os.path.basename(path)})
+                     extra_tags={'filename': filename})
