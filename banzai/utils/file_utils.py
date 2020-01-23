@@ -3,13 +3,11 @@ import os
 import logging
 from time import sleep
 
-import requests
-
 from lco_ingester import ingester
 from lco_ingester.exceptions import RetryError, DoNotRetryError, BackoffRetryError, NonFatalDoNotRetryError
 
 from kombu import Connection, Exchange
-from banzai.utils import import_utils
+from banzai.utils import import_utils, fits_utils
 
 logger = logging.getLogger('banzai')
 
@@ -133,16 +131,3 @@ def make_calibration_filename_function(calibration_type, context):
         return cal_file
 
     return get_calibration_filename
-
-
-def download_from_s3(file_info, output_directory, runtime_context):
-    frame_id = file_info.get('frameid')
-    logger.info(f"Downloading file {file_info.get('filename')} from archive. ID: {frame_id}.",
-                extra_tags={'filename': file_info.get('filename')})
-    url = f'{runtime_context.ARCHIVE_FRAME_URL}/{frame_id}'
-
-    response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN).json()
-    path = os.path.join(output_directory, response['filename'])
-    with open(path, 'wb') as f:
-        f.write(requests.get(response['url']).content)
-    return path

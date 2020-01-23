@@ -141,3 +141,15 @@ def test_is_s3_queue_message_archived_fits():
 
 def test_is_s3_queue_message_fits_queue():
     assert not fits_utils.is_s3_queue_message(fits_queue_message)
+
+
+def test_get_basename_filename_fpacked():
+    assert fits_utils.get_basename('foo.fits.fz') == 'foo'
+
+
+def test_get_basename_fits():
+    assert fits_utils.get_basename('foo.fits') == 'foo'
+
+
+def test_get_basename_filepath():
+    assert fits_utils.get_basename('/foo/bar/baz.fits.fz') == 'baz'

@@ -2,6 +2,7 @@ import os
 import tempfile
 import logging
 import copy
+import requests
 
 from banzai import logs
 
@@ -9,8 +10,6 @@ import numpy as np
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
-
-from banzai.utils.file_utils import download_from_s3
 
 logger = logging.getLogger('banzai')
 
@@ -201,6 +200,41 @@ def open_image(file_info, runtime_context):
         bpm = None
 
     return data, header, bpm, extension_headers
+
+
+def get_basename(path):
+    basename = None
+    if path is not None:
+        filename = os.path.basename(path)
+        if filename.find('.') > 0:
+            basename = filename[:filename.index('.')]
+        else:
+            basename = filename
+    return basename
+
+
+def download_from_s3(file_info, output_directory, runtime_context):
+    frame_id = file_info.get('frameid')
+    filename = get_filename_from_info(file_info)
+
+    logger.info(f"Downloading file {file_info.get('filename')} from archive. ID: {frame_id}.",
+                extra_tags={'filename': file_info.get('filename')})
+
+    if frame_id is not None:
+        url = f'{runtime_context.ARCHIVE_FRAME_URL}/{frame_id}'
+        response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN).json()
+        path = os.path.join(output_directory, response['filename'])
+        with open(path, 'wb') as f:
+            f.write(requests.get(response['url']).content)
+    else:
+        basename = get_basename(filename)
+        url = f'{runtime_context.ARCHIVE_FRAME_URL}/?basename={basename}'
+        response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN).json()
+        path = os.path.join(output_directory, response['results'][0]['filename'])
+        with open(path, 'wb') as f:
+            f.write(requests.get(response['results'][0]['url']).content)
+
+    return path
 
 
 def get_extensions_by_name(fits_hdulist, name):
