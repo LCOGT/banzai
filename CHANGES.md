@@ -1,3 +1,7 @@
+0.28.1 (2020-01-27)
+-------------------
+- Update lco-ingester to latest version (2.1.9)
+
 0.28.0 (2020-01-23)
 -------------------
 - Migrate BANZAI to be compatible with s3. Frames will now be downloaded from the LCO Archive, and posted
