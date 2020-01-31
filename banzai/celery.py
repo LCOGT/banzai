@@ -9,7 +9,7 @@ from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, observation_utils
 from banzai.utils.fits_utils import get_filename_from_info
 from banzai.utils.stage_utils import run
-from celery.signals import setup_logging
+from celery.signals import setup_logging, worker_process_init
 from banzai.context import Context
 
 app = Celery('banzai')
@@ -26,6 +26,14 @@ RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 @setup_logging.connect
 def setup_loggers(*args, **kwargs):
     logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
+
+
+@worker_process_init.connect
+def configure_workers(**kwargs):
+    # We need to do this because of how the metrics library uses threads and how celery spawns workers.
+    from importlib import reload
+    from opentsdb_python_metrics import metric_wrappers
+    reload(metric_wrappers)
 
 
 @app.task(name='celery.schedule_calibration_stacking')
