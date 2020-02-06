@@ -58,7 +58,6 @@ def post_to_ingester(filepath):
                 logger.fatal('Unexpected exception: {0} Will retry.'.format(exc), extra_tags={'filename': filepath})
                 retry = True
                 try_counter += 1
-                
     return ingester_response
 
 
