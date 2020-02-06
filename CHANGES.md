@@ -1,3 +1,8 @@
+0.28.2 (2020-02-06)
+-------------------
+- Fix for parsing RLEVEL from archived_fits message
+- Fix for metrics collection
+
 0.28.1 (2020-01-27)
 -------------------
 - Update lco-ingester to latest version (2.1.9)

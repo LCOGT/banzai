@@ -170,6 +170,8 @@ class Image(object):
                 base_filename += '.fz'
             shutil.move(os.path.join(temp_directory, base_filename), filepath)
 
+        logger.info(f"File written to {filepath}")
+
     def _get_hdu_list(self):
         image_hdu = fits.PrimaryHDU(self.data.astype(np.float32), header=self.header)
         image_hdu.header['BITPIX'] = -32
@@ -216,7 +218,7 @@ class Image(object):
         :param filepath: path to file on disk
         :return: image_info: Response from ingester library, including archive frame ID and checksum
         """
-        logger.info('Posting file to the archive', image=self)
+        logger.info(f'Posting file to the archive. Filepath: {filepath}', image=self)
         return file_utils.post_to_ingester(filepath)
 
     def write_catalog(self, filename, nsources=None):

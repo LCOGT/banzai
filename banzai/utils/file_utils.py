@@ -21,6 +21,7 @@ def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):
 
 
 def post_to_ingester(filepath):
+    logger.debug(f"Posting to ingester from {filepath}")
     retry = True
     try_counter = 1
     ingester_response = {}
@@ -28,6 +29,7 @@ def post_to_ingester(filepath):
         while retry:
             try:
                 ingester_response = ingester.upload_file_and_ingest_to_archive(f)
+                logger.debug(f"Ingester response: {ingester_response}")
                 retry = False
             except DoNotRetryError as exc:
                 logger.warning('Exception occured: {0}. Aborting.'.format(exc),
@@ -56,7 +58,6 @@ def post_to_ingester(filepath):
                 logger.fatal('Unexpected exception: {0} Will retry.'.format(exc), extra_tags={'filename': filepath})
                 retry = True
                 try_counter += 1
-
     return ingester_response
 
 

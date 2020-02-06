@@ -18,7 +18,9 @@ def get_obstype(header):
 
 
 def get_reduction_level(header):
-    return header.get('RLEVEL', '00')
+    reduction_level =  header.get('RLEVEL', '00')
+    # return a correctly-formatted RLEVEL string - 00 or 91
+    return '{:02d}'.format(int(reduction_level))
 
 
 def is_master(header):
@@ -86,10 +88,10 @@ def image_can_be_processed(header, context):
         return False
     passes = instrument_passes_criteria(instrument, context.FRAME_SELECTION_CRITERIA)
     if not passes:
-        logger.debug('Image does not pass reduction criteria')
+        logger.info('Image does not pass reduction criteria')
     passes &= get_reduction_level(header) == '00'
     if get_reduction_level(header) != '00':
-        logger.debug('Image has nonzero reduction level')
+        logger.info('Image has nonzero reduction level')
     return passes
 
 
