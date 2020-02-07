@@ -179,3 +179,13 @@ def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
         else:
             hdulist.append(hdu)
     return fits.HDUList(hdulist)
+
+
+def to_fits_image_extension(data, master_extension_name, extension_name, context, extension_version=None):
+    extension_name = master_extension_name + extension_name
+    for extname_to_condense in context.EXTENSION_NAMES_TO_CONDENSE:
+        extension_name = extension_name.replace(extname_to_condense, '')
+    header = fits.Header({'EXTNAME': extension_name})
+    if extension_version is not None:
+        header['EXTVER'] = extension_version
+    return fits.ImageHDU(data=data, header=header)

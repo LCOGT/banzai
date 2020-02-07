@@ -102,7 +102,7 @@ class ArrayData(Data):
 
 
 class CCDData(Data):
-    def __init__(self, data: Union[np.array, Table], meta: Union[dict, fits.Header],
+    def __init__(self, data: Union[np.array, Table], meta: fits.Header,
                  mask: np.array = None, name: str = '', uncertainty: np.array = None, memmap=True):
         super().__init__(data=data, meta=meta, mask=mask, name=name, memmap=memmap)
         if uncertainty is None:
@@ -141,17 +141,12 @@ class CCDData(Data):
         return self
 
     def to_fits(self, context):
-        # TODO: Make sure the BPM has the same EXTVER as the main data. This may require an update to the factory below as well
         data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta))
-        bpm_extname = self.extension_name + 'BPM'
-        for extname in context.EXTENSION_NAMES_TO_CONDENSE:
-            bpm_extname = bpm_extname.replace(extname, '')
-        mask_hdu = fits.ImageHDU(data=self.mask, header=fits.Header({'EXTNAME': bpm_extname}))
-        uncertainty_extname = self.extension_name + 'ERR'
-        for extname in context.EXTENSION_NAMES_TO_CONDENSE:
-            uncertainty_extname = uncertainty_extname.replace(extname, '')
-        uncertainty_hdu = fits.ImageHDU(data=self.uncertainty, header=fits.Header({'EXTNAME': uncertainty_extname}))
-        hdulist = fits.HDUList([data_hdu, mask_hdu, uncertainty_hdu])
+        bpm_hdu = fits_utils.to_fits_image_extension(self.mask, self.extension_name, 'BPM', context,
+                                                     extension_version=self.meta.get('EXTVER'))
+        uncertainty_hdu = fits_utils.to_fits_image_extension(self.uncertainty, self.extension_name, 'ERR', context,
+                                                             extension_version=self.meta.get('EXTVER'))
+        hdulist = fits.HDUList([data_hdu, bpm_hdu, uncertainty_hdu])
         return hdulist
 
     def __del__(self):
@@ -492,6 +487,14 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @mask.setter
     def mask(self, mask):
         self.primary_hdu.mask = mask
+
+    @property
+    def uncertainty(self):
+        return self.primary_hdu.uncertainty
+
+    @uncertainty.setter
+    def uncertainty(self, uncertainty):
+        self.primary_hdu.uncertainty = uncertainty
 
     @property
     def meta(self):
