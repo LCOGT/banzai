@@ -10,6 +10,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
+from tenacity import retry, wait_exponential, stop_after_attempt
 
 logger = logging.getLogger('banzai')
 
@@ -213,26 +214,28 @@ def get_basename(path):
     return basename
 
 
+@retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
 def download_from_s3(file_info, output_directory, runtime_context):
     frame_id = file_info.get('frameid')
     filename = get_filename_from_info(file_info)
 
     logger.info(f"Downloading file {file_info.get('filename')} from archive. ID: {frame_id}.",
-                extra_tags={'filename': file_info.get('filename')})
+                extra_tags={'filename': file_info.get('filename'),
+                            'attempt_number': download_from_s3.retry.statistics['attempt_number']})
 
     if frame_id is not None:
         url = f'{runtime_context.ARCHIVE_FRAME_URL}/{frame_id}'
         response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN).json()
         path = os.path.join(output_directory, response['filename'])
         with open(path, 'wb') as f:
-            f.write(requests.get(response['url']).content)
+            f.write(requests.get(response['url'], stream=True).content)
     else:
         basename = get_basename(filename)
         url = f'{runtime_context.ARCHIVE_FRAME_URL}/?basename={basename}'
         response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN).json()
         path = os.path.join(output_directory, response['results'][0]['filename'])
         with open(path, 'wb') as f:
-            f.write(requests.get(response['results'][0]['url']).content)
+            f.write(requests.get(response['results'][0]['url'], stream=True).content)
 
     return path
 
