@@ -214,6 +214,8 @@ def get_basename(path):
     return basename
 
 
+# Stop after 4 attempts, and back off exponentially with a minimum wait time of 4 seconds, and a maximum of 10.
+# If it fails after 4 attempts, "reraise" the original exception back up to the caller.
 @retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
 def download_from_s3(file_info, output_directory, runtime_context):
     frame_id = file_info.get('frameid')

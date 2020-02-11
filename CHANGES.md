@@ -1,3 +1,10 @@
+0.28.3 (2020-02-11)
+-------------------
+- Fixes for ChunkedEncodingErrors when downloading files from s3:
+- Add retry and exponential backoff to s3 file downloading
+- Add `stream=True` flag to `requests.get()` call when downloading from s3
+- Adds dependency on tenacity==6.0.0 for retry logic
+
 0.28.2 (2020-02-06)
 -------------------
 - Fix for parsing RLEVEL from archived_fits message
