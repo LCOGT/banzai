@@ -7,19 +7,26 @@ from astropy.io.fits import Header
 
 from banzai import settings
 from banzai.stages import Stage
-from banzai.images import Image, CCDData, LCOObservationFrame, HeaderOnly, LCOCalibrationFrame
+from banzai.images import Image, CCDData, LCOObservationFrame, HeaderOnly, LCOCalibrationFrame, Section
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
 
 logger = logging.getLogger('banzai')
 
 class FakeCCDData(CCDData):
-    def __init__(self, image_multiplier=1.0, nx=101, ny=103, n_amps=1, name='test_image', read_noise = 11.0,
-                 bias_level=0, meta=Header(), data=None, mask=None, uncertainty=None, **kwargs):
+    def __init__(self, image_multiplier=1.0, nx=101, ny=103, name='test_image', read_noise=None,
+                 bias_level=None, meta=None, data=None, mask=None, uncertainty=None, **kwargs):
         self.name = name
-        self.meta = meta
-        self.meta['RDNOISE'] = read_noise
-        self.meta['BIASLVL'] = bias_level
+        if meta is not None:
+            self.meta = meta
+        else:
+            self.meta = Header()
+        if bias_level is not None:
+            self.meta['BIASLVL'] = bias_level
+        if read_noise is not None:
+            self.meta['RDNOISE'] = read_noise
+        self._detector_section = Section.parse_region_keyword(self.meta.get('DETSEC'))
+        self._data_section = Section.parse_region_keyword(self.meta.get('DATASEC'))
 
         if data is None:
             self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
@@ -33,8 +40,6 @@ class FakeCCDData(CCDData):
             self.uncertainty = self.read_noise * np.ones(self.data.shape, dtype=self.data.dtype)
         else:
             self.uncertainty = uncertainty
-        if n_amps > 1:
-            self.data = np.stack(n_amps * [self.data])
 
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
@@ -51,7 +56,7 @@ class FakeLCOObservationFrame(LCOObservationFrame):
             self.instrument = FakeInstrument(0, 'cpt', 'fa16', 'doma', '1m0a', '1M-SCICAM-SINISTRO', schedulable=True)
         else:
             self.instrument = instrument
-        self.epoch = epoch
+        self.primary_hdu.meta['DAY-OBS'] = epoch
         self._file_path = file_path
         self.is_bad = False
 
@@ -114,11 +119,13 @@ class FakeImage(Image):
 
 
 class FakeContext(object):
-    def __init__(self, preview_mode=False, fpack=True, frame_class=FakeImage):
+    def __init__(self, preview_mode=False, fpack=True, frame_class=FakeImage, **kwargs):
         self.FRAME_CLASS = frame_class
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
         self.db_address = 'sqlite:foo'
+        self.elasticsearch_qc_index = 'banzai_qc'
+        self.elasticsearch_doc_type = 'qc'
         self.ignore_schedulability = False
         self.max_tries = 5
         self.fpack = fpack
@@ -128,7 +135,10 @@ class FakeContext(object):
             if '__' != setting[:2] and not isinstance(getattr(settings, setting), ModuleType):
                 setattr(self, setting, getattr(settings, setting))
 
-    def image_can_be_processed(self, header):
+        for keyword in kwargs:
+            setattr(self, keyword, kwargs[keyword])
+
+    def image_can_be_processed(self):
         return True
 
 

@@ -21,7 +21,7 @@ class SaturationTest(Stage):
         super(SaturationTest, self).__init__(runtime_context)
 
     def do_stage(self, image):
-        saturation_level = float(image.header['SATURATE'])
+        saturation_level = float(image.meta['SATURATE'])
         saturated_pixels = image.data >= saturation_level
         total_pixels = image.data.size
         saturation_fraction = float(saturated_pixels.sum()) / total_pixels
@@ -37,7 +37,7 @@ class SaturationTest(Stage):
             logger.error('SATFRAC exceeds threshold.', image=image, extra_tags=logging_tags)
             qc_results['rejected'] = True
         else:
-            image.header['SATFRAC'] = (saturation_fraction,
+            image.meta['SATFRAC'] = (saturation_fraction,
                                        "Fraction of Pixels that are Saturated")
 
         qc.save_qc_results(self.runtime_context, qc_results, image)

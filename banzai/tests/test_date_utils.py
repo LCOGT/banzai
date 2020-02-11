@@ -1,9 +1,11 @@
 import mock
 
 from datetime import datetime, timedelta
+import pytest
 
 from banzai.utils import date_utils
 
+pytestmark = pytest.mark.date_utils
 
 test_site_data = {
     'coj': {

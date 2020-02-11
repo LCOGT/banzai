@@ -132,10 +132,9 @@ class CCDData(Data):
         if isinstance(value, CCDData):
             self.data /= value.data
             self.uncertainty /= value.uncertainty
-            # TODO: is this correct for flat normalization?
-            # self.meta['SATURATE'] /= value.meta['SATURATE']
-            # self.meta['GAIN'] /= value.meta['GAIN']
-            # self.meta['MAXLIN'] /= value.meta['MAXLIN']
+            self.meta['SATURATE'] /= value.meta['SATURATE']
+            self.meta['GAIN'] /= value.meta['GAIN']
+            self.meta['MAXLIN'] /= value.meta['MAXLIN']
         else:
             self.__imul__(1.0 / value)
         return self
@@ -432,11 +431,11 @@ class Section:
         :return: x, y index slices
         """
         if not keyword_value:
-            return cls(None, None, None, None)
+            return None
         elif keyword_value.lower() == 'unknown':
-            return cls(None, None, None, None)
+            return None
         elif keyword_value.lower() == 'n/a':
-            return cls(None, None, None, None)
+            return None
         else:
             # Strip off the brackets and split the coordinates
             pixel_sections = keyword_value[1:-1].split(',')
@@ -478,7 +477,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
 
     @property
     def data(self):
-        return self.primary_hdu.data
+        if isinstance(self.primary_hdu, HeaderOnly):
+            return self.ccd_hdus[0].data
+        else:
+            return self.primary_hdu.data
 
     @property
     def mask(self):
@@ -568,6 +570,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def epoch(self):
         pass
+
     @property
     @abc.abstractmethod
     def request_number(self):
@@ -677,6 +680,10 @@ class LCOObservationFrame(ObservationFrame):
         return output_filename
 
     @property
+    def n_amps(self):
+        return len(self.ccd_hdus)
+
+    @property
     def obstype(self):
         return self.primary_hdu.meta.get('OBSTYPE')
 
@@ -687,6 +694,14 @@ class LCOObservationFrame(ObservationFrame):
     @property
     def request_number(self):
         return self.primary_hdu.meta.get('REQNUM')
+
+    @property
+    def site(self):
+        return self.primary_hdu.meta.get('SITEID')
+
+    @property
+    def camera(self):
+        return self.primary_hdu.meta.get('INSTRUME')
 
     @property
     def filter(self):
@@ -773,7 +788,7 @@ class LCOMasterCalibrationFrame(LCOCalibrationFrame):
             except ValueError as e:
                 logger.error('Could not add keyword {key}: {error}'.format(key=key, error=e))
                 continue
-        header = fits_utils.sanitizeheader(header)
+        header = fits_utils.sanitize_header(header)
         observation_dates = [image.dateobs for image in images]
         mean_dateobs = date_utils.mean_date(observation_dates)
 

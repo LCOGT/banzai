@@ -9,8 +9,8 @@ logger = logging.getLogger('banzai')
 
 
 def format_qc_results(qc_results, image):
-    results_to_save = {'site': image.instrument.site,
-                       'instrument': image.instrument.name,
+    results_to_save = {'site': image.site,
+                       'instrument': image.camera,
                        'dayobs': image.epoch,
                        'request_number': image.request_number,
                        'obstype': image.obstype,
@@ -34,7 +34,7 @@ def save_qc_results(runtime_context, qc_results, image, **kwargs):
                       Context instance with runtime values
     qc_results : dict
                  Dictionary of key value pairs to be saved to ElasticSearch
-    image : banzai.images.Image
+    image : banzai.images.ObservationFrame
             Image that should be linked
 
     Notes

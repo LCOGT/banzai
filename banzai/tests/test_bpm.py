@@ -3,41 +3,15 @@ import mock
 import numpy as np
 
 from banzai.bpm import BadPixelMaskLoader
-from banzai.tests.utils import FakeImage, FakeContext
+from banzai.tests.utils import FakeImage, FakeContext, FakeLCOObservationFrame, FakeCCDData
+
+
+pytestmark = pytest.mark.bpm
 
 
 @pytest.fixture(scope='module')
 def set_random_seed():
     np.random.seed(81232385)
-
-
-class FakeImageForBPM(FakeImage):
-
-    def __init__(self, *args, **kwargs):
-        make_image_3d = kwargs.pop('make_image_3d', False)
-        super(FakeImageForBPM, self).__init__(*args, **kwargs)
-        self.header['DATASEC'] = '[1:{0},1:{1}]'.format(int(self.nx), int(self.ny))
-        if make_image_3d:
-            data_shape = (4, self.ny, self.nx)
-        else:
-            data_shape = (self.ny, self.nx)
-        self.data = np.random.normal(1, 1, size=data_shape)
-        self.header['SATURATE'] = 10000
-        self.bpm = None
-        self.instrument = FakeInstrument()
-
-
-class FakeInstrument(object):
-    def __init__(self):
-        self.id = 1
-
-
-class FakeContextForBPM(FakeContext):
-
-    def __init__(self, *args, **kwargs):
-        self.no_bpm = kwargs.pop('no_bpm', False)
-        self.db_address = 'FakeDBAddress'
-        super(FakeContextForBPM, self).__init__(*args, **kwargs)
 
 
 def make_test_bpm(nx, ny, bad_pixel_fraction=0.1, make_3d=False):
@@ -59,65 +33,70 @@ def test_null_input_imags():
     assert image is None
 
 
-@mock.patch('banzai.bpm.dbs.get_bpm_filename')
-@mock.patch('banzai.bpm.load_bpm')
-def test_adds_good_bpm(mock_load_bpm, mock_get_bpm_filename, set_random_seed):
-    image = FakeImageForBPM()
-    bpm_to_load = make_test_bpm(image.nx, image.ny)
-    mock_get_bpm_filename.return_value = 'fake_bpm_filename'
-    mock_load_bpm.return_value = bpm_to_load
-    tester = BadPixelMaskLoader(FakeContextForBPM())
+@mock.patch('banzai.images.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+def test_adds_good_bpm(mock_bpm_name, mock_bpm, set_random_seed):
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False)])
+    master_image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=make_test_bpm(101,103), memmap=False)],
+                                           file_path='test.fits')
+    mock_bpm.return_value = master_image
+    tester = BadPixelMaskLoader(FakeContext())
     image = tester.do_stage(image)
-    np.testing.assert_array_equal(image.bpm, bpm_to_load)
-    assert image.header.get('L1IDMASK') == 'fake_bpm_filename'
+    np.testing.assert_array_equal(image.mask, master_image.data)
+    assert image.meta.get('L1IDMASK') == 'test.fits'
 
 
-@mock.patch('banzai.bpm.dbs.get_bpm_filename')
-@mock.patch('banzai.bpm.load_bpm')
-def test_adds_good_bpm_3d(mock_load_bpm, mock_get_bpm_filename, set_random_seed):
-    image = FakeImageForBPM(make_image_3d=True)
-    bpm_to_load = make_test_bpm(image.nx, image.ny, make_3d=True)
-    mock_get_bpm_filename.return_value = 'fake_bpm_filename'
-    mock_load_bpm.return_value = bpm_to_load
-    tester = BadPixelMaskLoader(FakeContextForBPM())
+@mock.patch('banzai.images.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+def test_adds_good_bpm_3d(mock_bpm_name, mock_bpm, set_random_seed):
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False) for i in range(4)])
+    master_image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=bpm_data, memmap=False) for bpm_data in make_test_bpm(101, 103,
+                                                                                                                            make_3d=True)],
+                                           file_path='test.fits')
+
+    mock_bpm.return_value = master_image
+    tester = BadPixelMaskLoader(FakeContext())
     image = tester.do_stage(image)
-    np.testing.assert_array_equal(image.bpm, bpm_to_load)
-    assert image.header.get('L1IDMASK') == 'fake_bpm_filename'
+    for image_hdu, master_hdu in zip(image.ccd_hdus, master_image.ccd_hdus):
+        np.testing.assert_array_equal(image_hdu.mask, master_hdu.data)
+    assert image.meta.get('L1IDMASK') == 'test.fits'
 
 
-@mock.patch('banzai.bpm.dbs.get_bpm_filename')
-def test_removes_image_if_file_missing(mock_get_bpm_filename):
-    image = FakeImageForBPM()
-    mock_get_bpm_filename.return_value = None
-    tester = BadPixelMaskLoader(FakeContextForBPM())
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value=None)
+def test_removes_image_if_file_missing(mock_bpm_filename):
+    image = FakeCCDData()
+    tester = BadPixelMaskLoader(FakeContext(override_missing=False))
     assert tester.do_stage(image) is None
 
 
-@mock.patch('banzai.bpm.dbs.get_bpm_filename')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value=None)
 def test_uses_fallback_if_bpm_missing_and_no_bpm_set(mock_get_bpm_filename):
-    image = FakeImageForBPM()
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False)])
     fallback_bpm = np.zeros(image.data.shape, dtype=np.uint8)
-    mock_get_bpm_filename.return_value = None
-    tester = BadPixelMaskLoader(FakeContextForBPM(no_bpm=True))
-    assert tester.do_stage(image) is not None
-    np.testing.assert_array_equal(image.bpm, fallback_bpm)
+    tester = BadPixelMaskLoader(FakeContext(no_bpm=True, override_missing=True))
+    tester.do_stage(image)
+    assert image is not None
+    np.testing.assert_array_equal(image.mask, fallback_bpm)
 
 
-@mock.patch('banzai.bpm.dbs.get_bpm_filename')
-@mock.patch('banzai.bpm.load_bpm')
-def test_removes_image_if_wrong_shape(mock_load_bpm, mock_get_bpm_filename, set_random_seed):
-    image = FakeImageForBPM()
-    mock_get_bpm_filename.return_value = 'fake_bpm_filename'
-    mock_load_bpm.return_value = make_test_bpm(image.nx+1, image.ny)
-    tester = BadPixelMaskLoader(FakeContextForBPM())
+@mock.patch('banzai.images.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+def test_removes_image_if_wrong_shape(mock_get_bpm_filename, mock_bpm, set_random_seed):
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False)])
+    mock_bpm.return_value = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=make_test_bpm(image.data.shape[1] + 1,
+                                                                                             image.data.shape[0]))])
+    tester = BadPixelMaskLoader(FakeContext())
     assert tester.do_stage(image) is None
 
 
-@mock.patch('banzai.bpm.dbs.get_bpm_filename')
-@mock.patch('banzai.bpm.load_bpm')
-def test_removes_image_wrong_shape_3d(mock_load_bpm, mock_get_bpm_filename, set_random_seed):
-    image = FakeImageForBPM(make_image_3d=True)
-    mock_get_bpm_filename.return_value = 'fake_bpm_filename'
-    mock_load_bpm.return_value = make_test_bpm(image.nx, image.ny)
-    tester = BadPixelMaskLoader(FakeContextForBPM())
+@mock.patch('banzai.images.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+def test_removes_image_wrong_shape_3d(mock_get_bpm_filename, mock_bpm, set_random_seed):
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False)])
+    master_image = FakeLCOObservationFrame(
+        hdu_list=[FakeCCDData(data=bpm_data, memmap=False) for bpm_data in make_test_bpm(image.data.shape[1] + 1,
+                                                                                         image.data.shape[0], make_3d=True)],
+        file_path='test.fits')
+    mock_bpm.return_value = master_image
+    tester = BadPixelMaskLoader(FakeContext())
     assert tester.do_stage(image) is None

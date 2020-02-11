@@ -1,8 +1,12 @@
 import numpy as np
+from astropy.io.fits import Header
 from astropy.table import Table
 from astropy.io import fits
+import pytest
 
 from banzai.utils import fits_utils
+
+pytestmark = pytest.mark.fits_utils
 
 
 def test_table_to_fits():
@@ -36,33 +40,40 @@ def test_table_to_fits():
     assert hdu.header.cards['TTYPE3'].comment == 'Column c'
 
 
-def test_get_sci_extensions():
-    hdulist = [fits.PrimaryHDU(header=fits.Header({'test': 'test'}))]
+def test_sanitize_header():
+    header = Header({'CCDSUM': '1 1',
+                     'SIMPLE': 'foo',
+                     'BITPIX': 8,
+                     'NAXIS': 2,
+                     'CHECKSUM': 'asdf'})
 
-    input_data = []
-    for i in range(4):
-        data = np.random.uniform(0, 1, size=(101, 101)).astype(dtype=np.float32)
-        input_data.append(data)
-        # Build the fits header manually because of a bug in the latest stable version of astropy
-        # This should be
-        # header = fits.Header({'EXTNAME': 'SCI', 'EXTVER': i + 1})
-        header = fits.Header()
-        header['EXTNAME'] = 'SCI'
-        header['EXTVER'] = i + 1
-        hdulist.append(fits.ImageHDU(data=data, header=header))
+    sanitized_header = fits_utils.sanitize_header(header)
 
-    bpm_header = fits.Header()
-    bpm_header['EXTNAME'] = 'BPM'
-    bpm_hdu = fits.ImageHDU(data=np.zeros((101, 101), dtype=np.uint8), header=bpm_header)
-    hdulist.append(bpm_hdu)
+    assert list(sanitized_header.keys()) == ['CCDSUM']
 
-    hdulist = fits.HDUList(hdulist)
 
-    sci_extensions = fits_utils.get_extensions_by_name(hdulist, 'SCI')
+def test_get_configuration_mode_na():
+    header = Header({'CONFMODE': 'N/A'})
 
-    assert len(sci_extensions) == 4
-    for i in range(4):
-        np.testing.assert_allclose(sci_extensions[i].data, input_data[i], atol=1e-5)
+    configuration_mode = fits_utils.get_configuration_mode(header)
+
+    assert configuration_mode == 'default'
+
+
+def test_get_configuration_mode_none():
+    header = Header({})
+
+    configuration_mode = fits_utils.get_configuration_mode(header)
+
+    assert configuration_mode == 'default'
+
+
+def test_get_configuration_mode_central_2k():
+    header = Header({'CONFMODE': 'central_2k_2x2'})
+
+    configuration_mode = fits_utils.get_configuration_mode(header)
+
+    assert configuration_mode == 'central_2k_2x2'
 
 
 def test_open_image():

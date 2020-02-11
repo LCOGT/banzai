@@ -15,31 +15,31 @@ FRAME_FACTORY = 'banzai.images.LCOFrameFactory'
 
 MASTER_CALIBRATION_FRAME_CLASS = 'banzai.images.LCOMasterCalibrationFrame'
 
-# ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
-#                   #'banzai.bpm.SaturatedPixelFlagger',
-#                   #'banzai.qc.HeaderChecker',
-#                   #'banzai.qc.ThousandsTest',
-#                   #'banzai.qc.SaturationTest',
-#                   'banzai.bias.OverscanSubtractor',
-#                   #'banzai.crosstalk.CrosstalkCorrector',
-#                   'banzai.gain.GainNormalizer',
-#                   'banzai.mosaic.MosaicCreator',
-#                   'banzai.trim.Trimmer',
-#                   'banzai.bias.BiasSubtractor',
-#                   #'banzai.dark.DarkSubtractor',
-#                   #'banzai.flats.FlatDivider',
-#                   #'banzai.qc.PatternNoiseDetector',
-#                   #'banzai.photometry.SourceDetector',
-#                   #'banzai.astrometry.WCSSolver',
-#                   #'banzai.qc.pointing.PointingTest']
 ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
+                  'banzai.bpm.SaturatedPixelFlagger',
+                  'banzai.qc.header_checker.HeaderChecker',
+                  'banzai.qc.sinistro_1000s.ThousandsTest',
+                  'banzai.qc.saturation.SaturationTest',
                   'banzai.bias.OverscanSubtractor',
+                  'banzai.crosstalk.CrosstalkCorrector',
                   'banzai.gain.GainNormalizer',
                   'banzai.mosaic.MosaicCreator',
                   'banzai.trim.Trimmer',
                   'banzai.bias.BiasSubtractor',
                   'banzai.dark.DarkSubtractor',
-                  'banzai.flats.FlatDivider']
+                  'banzai.flats.FlatDivider',
+                  'banzai.qc.pattern_noise.PatternNoiseDetector',]
+                  #'banzai.photometry.SourceDetector',
+                  #'banzai.astrometry.WCSSolver',
+                  #'banzai.qc.pointing.PointingTest']
+# ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
+#                   'banzai.bias.OverscanSubtractor',
+#                   'banzai.gain.GainNormalizer',
+#                   'banzai.mosaic.MosaicCreator',
+#                   'banzai.trim.Trimmer',
+#                   'banzai.bias.BiasSubtractor',
+#                   'banzai.dark.DarkSubtractor',
+#                   'banzai.flats.FlatDivider']
 
 CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,

@@ -26,7 +26,7 @@ class ThousandsTest(Stage):
         super(ThousandsTest, self).__init__(runtime_context)
 
     def do_stage(self, image):
-        npixels = np.product(image.data.shape)
+        npixels = image.data.size
         fraction_1000s = float(np.sum(image.data == 1000)) / npixels
         logging_tags = {'FRAC1000': fraction_1000s,
                         'threshold': self.THOUSANDS_THRESHOLD}

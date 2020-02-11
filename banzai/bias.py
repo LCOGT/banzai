@@ -51,6 +51,10 @@ class OverscanSubtractor(Stage):
                 data -= overscan_level
                 data.meta['L1STATOV'] = '1', 'Status flag for overscan correction'
                 data.meta['OVERSCAN'] = overscan_level, 'Overscan value that was subtracted'
+            else:
+                data.meta['L1STATOV'] = 0, 'Status flag for overscan correction'
+                data.meta['OVERSCAN'] = 0.0
+
         return image
 
 

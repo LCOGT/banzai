@@ -1,6 +1,9 @@
 import numpy as np
+import pytest
 
 from banzai.utils import median_utils
+
+pytestmark = pytest.mark.median_utils
 
 
 def _compare_median1d(a, mask):

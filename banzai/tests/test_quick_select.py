@@ -1,6 +1,9 @@
 import numpy as np
+import pytest
 
 from banzai.utils import median_utils
+
+pytestmark = pytest.mark.quick_select
 
 
 def test_quick_select_arange():

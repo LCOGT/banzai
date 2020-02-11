@@ -1,9 +1,9 @@
+import pytest
 from collections import namedtuple
-import operator
-
-import mock
 
 from banzai.utils.instrument_utils import InstrumentCriterion, instrument_passes_criteria
+
+pytestmark = pytest.mark.image_criteria
 
 FakeInstrument = namedtuple('FakeInstrument', ['schedulable', 'type'])
 
