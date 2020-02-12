@@ -1,3 +1,7 @@
+0.28.4 (2020-02-12)
+-------------------
+- Add initial crosstalk coefficients for fa19
+
 0.28.3 (2020-02-11)
 -------------------
 - Fixes for ChunkedEncodingErrors when downloading files from s3:
