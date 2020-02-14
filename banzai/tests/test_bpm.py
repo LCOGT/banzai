@@ -3,7 +3,7 @@ import mock
 import numpy as np
 
 from banzai.bpm import BadPixelMaskLoader
-from banzai.tests.utils import FakeImage, FakeContext, FakeLCOObservationFrame, FakeCCDData
+from banzai.tests.utils import FakeContext, FakeLCOObservationFrame, FakeCCDData
 
 
 pytestmark = pytest.mark.bpm
@@ -33,8 +33,8 @@ def test_null_input_imags():
     assert image is None
 
 
-@mock.patch('banzai.images.LCOFrameFactory.open')
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info', return_value={'filename': 'test.fits'})
 def test_adds_good_bpm(mock_bpm_name, mock_bpm, set_random_seed):
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False)])
     master_image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=make_test_bpm(101,103), memmap=False)],
@@ -46,8 +46,8 @@ def test_adds_good_bpm(mock_bpm_name, mock_bpm, set_random_seed):
     assert image.meta.get('L1IDMASK') == 'test.fits'
 
 
-@mock.patch('banzai.images.LCOFrameFactory.open')
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info', return_value={'filename': 'test.fits'})
 def test_adds_good_bpm_3d(mock_bpm_name, mock_bpm, set_random_seed):
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False) for i in range(4)])
     master_image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=bpm_data, memmap=False) for bpm_data in make_test_bpm(101, 103,
@@ -62,14 +62,14 @@ def test_adds_good_bpm_3d(mock_bpm_name, mock_bpm, set_random_seed):
     assert image.meta.get('L1IDMASK') == 'test.fits'
 
 
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value=None)
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info', return_value=None)
 def test_removes_image_if_file_missing(mock_bpm_filename):
     image = FakeCCDData()
     tester = BadPixelMaskLoader(FakeContext(override_missing=False))
     assert tester.do_stage(image) is None
 
 
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value=None)
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info', return_value=None)
 def test_uses_fallback_if_bpm_missing_and_no_bpm_set(mock_get_bpm_filename):
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False)])
     fallback_bpm = np.zeros(image.data.shape, dtype=np.uint8)
@@ -79,8 +79,8 @@ def test_uses_fallback_if_bpm_missing_and_no_bpm_set(mock_get_bpm_filename):
     np.testing.assert_array_equal(image.mask, fallback_bpm)
 
 
-@mock.patch('banzai.images.LCOFrameFactory.open')
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info', return_value={'filename': 'test.fits'})
 def test_removes_image_if_wrong_shape(mock_get_bpm_filename, mock_bpm, set_random_seed):
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False)])
     mock_bpm.return_value = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=make_test_bpm(image.data.shape[1] + 1,
@@ -89,8 +89,8 @@ def test_removes_image_if_wrong_shape(mock_get_bpm_filename, mock_bpm, set_rando
     assert tester.do_stage(image) is None
 
 
-@mock.patch('banzai.images.LCOFrameFactory.open')
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info', return_value={'filename': 'test.fits'})
 def test_removes_image_wrong_shape_3d(mock_get_bpm_filename, mock_bpm, set_random_seed):
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False)])
     master_image = FakeLCOObservationFrame(

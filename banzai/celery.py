@@ -7,7 +7,7 @@ from celery import Celery
 
 from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, stage_utils
-from celery.signals import setup_logging
+from celery.signals import setup_logging, worker_process_init
 from banzai.context import Context
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
 from banzai.utils.date_utils import get_stacking_date_range
@@ -15,6 +15,8 @@ from banzai.utils.date_utils import get_stacking_date_range
 app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
 app.conf.update(broker_url=os.getenv('REDIS_HOST', 'redis://localhost:6379/0'))
+# Increase broker timeout to avoid re-scheduling tasks that aren't completed within an hour
+app.conf.broker_transport_options = {'visibility_timeout': 86400}
 
 logger = logging.getLogger('banzai')
 
@@ -24,6 +26,14 @@ RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 @setup_logging.connect
 def setup_loggers(*args, **kwargs):
     logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
+
+
+@worker_process_init.connect
+def configure_workers(**kwargs):
+    # We need to do this because of how the metrics library uses threads and how celery spawns workers.
+    from importlib import reload
+    from opentsdb_python_metrics import metric_wrappers
+    reload(metric_wrappers)
 
 
 @app.task(name='celery.schedule_calibration_stacking')
@@ -105,9 +115,9 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
                     extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
                                 'instrument': instrument.name, 'frame_type': frame_type})
 
-        completed_image_count = len(dbs.get_individual_calibration_images(instrument, frame_type,
-                                                                          min_date, max_date, include_bad_frames=True,
-                                                                          db_address=runtime_context.db_address))
+        completed_image_count = len(dbs.get_individual_cal_frames(instrument, frame_type,
+                                                                  min_date, max_date, include_bad_frames=True,
+                                                                  db_address=runtime_context.db_address))
         expected_image_count = 0
         for observation in observations:
             for configuration in observation['request']['configurations']:
@@ -137,18 +147,23 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
 
 
 @app.task(name='celery.process_image')
-def process_image(path: str, runtime_context: dict):
+def process_image(file_info: dict, runtime_context: dict):
+    """
+    :param file_info: Body of queue message: dict
+    :param runtime_context: Context object with runtime environment info
+    """
     runtime_context = Context(runtime_context)
-    logger.info('Running process image.')
     try:
-        if realtime_utils.need_to_process_image(path, runtime_context):
-            logger.info('Reducing frame', extra_tags={'filename': os.path.basename(path)})
-
+        if realtime_utils.need_to_process_image(file_info, runtime_context):
+            if 'path' in file_info:
+                filename = os.path.basename(file_info['path'])
+            else:
+                filename = file_info.get('filename')
+            logger.info('Reducing frame', extra_tags={'filename': filename})
             # Increment the number of tries for this file
-            realtime_utils.increment_try_number(path, db_address=runtime_context.db_address)
-            stage_utils.run_pipeline_stages(path, runtime_context)
-            realtime_utils.set_file_as_processed(path, db_address=runtime_context.db_address)
-
+            realtime_utils.increment_try_number(filename, db_address=runtime_context.db_address)
+            stage_utils.run_pipeline_stages(file_info, runtime_context)
+            realtime_utils.set_file_as_processed(filename, db_address=runtime_context.db_address)
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
-                     extra_tags={'filename': os.path.basename(path)})
+                     extra_tags={'file_info': file_info})

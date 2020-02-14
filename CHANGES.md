@@ -1,7 +1,34 @@
-0.28.0 (2019-11-21)
+0.29.0 (2020-02-11)
 -------------------
 - Refactored Image class. Cleaned up a lot of plumbing code
   
+0.28.3 (2020-02-11)
+-------------------
+- Fixes for ChunkedEncodingErrors when downloading files from s3:
+- Add retry and exponential backoff to s3 file downloading
+- Add `stream=True` flag to `requests.get()` call when downloading from s3
+- Adds dependency on tenacity==6.0.0 for retry logic
+
+0.28.2 (2020-02-06)
+-------------------
+- Fix for parsing RLEVEL from archived_fits message
+- Fix for metrics collection
+
+0.28.1 (2020-01-27)
+-------------------
+- Update lco-ingester to latest version (2.1.9)
+
+0.28.0 (2020-01-23)
+-------------------
+- Migrate BANZAI to be compatible with s3. Frames will now be downloaded from the LCO Archive, and posted
+  directly to the ingester, bypassing LCO's `/archive` machine. 
+
+0.27.6 (2020-01-13)
+-------------------
+- Update celery task visibility timeout to 24h to avoid re-scheduling stacking tasks that do not complete within an hour. 
+  This addresses the issue of creating multiple calibration stacks within seconds of each other.
+- https://docs.celeryproject.org/en/latest/getting-started/brokers/redis.html#id1
+
 0.27.5 (2019-12-11)
 -------------------
 - Change ra, dec parsing to default to CRVAL header keywords. Ref. Redmine issue #1104.

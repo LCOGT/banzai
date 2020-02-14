@@ -218,7 +218,7 @@ class TestMain():
                                                    countdown=(60+CALIBRATION_STACK_DELAYS['BIAS']))
 
     @mock.patch('banzai.calibrations.make_master_calibrations')
-    @mock.patch('banzai.celery.dbs.get_individual_calibration_images')
+    @mock.patch('banzai.celery.dbs.get_individual_cal_frames')
     @mock.patch('banzai.celery.dbs.get_instrument_by_id')
     def test_stack_calibrations(self, mock_get_instrument, mock_get_calibration_images, mock_make_master_cals, setup):
         mock_get_instrument.return_value = self.fake_inst
@@ -233,9 +233,9 @@ class TestMain():
         mock_make_master_cals.assert_called_with(self.fake_inst, self.frame_type, self.min_date, self.max_date, ANY)
 
     @mock.patch('banzai.calibrations.make_master_calibrations')
-    @mock.patch('banzai.celery.dbs.get_individual_calibration_images')
+    @mock.patch('banzai.celery.dbs.get_individual_cal_frames')
     @mock.patch('banzai.celery.dbs.get_instrument_by_id')
-    def test_stack_calibrations_not_enough_images(self, mock_get_instrument, mock_get_calibration_images, mock_make_master_cals, setup):
+    def test_stack_calibrations_not_enough_images(self, mock_get_instrument, mock_get_calibration_images, mock_maker, setup):
         mock_get_instrument.return_value = self.fake_inst
         mock_get_calibration_images.return_value = [FakeLCOObservationFrame(hdu_list=[FakeCCDData()])]
         with pytest.raises(Retry) as e:

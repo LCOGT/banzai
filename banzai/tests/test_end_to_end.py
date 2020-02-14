@@ -14,7 +14,7 @@ from banzai.celery import app, schedule_calibration_stacking
 from banzai.dbs import get_session, CalibrationImage, get_timezone, populate_instrument_tables
 from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
-from banzai.tests.utils import FakeResponse, get_min_and_max_dates
+from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.utils.data import get_pkg_data_filename
 
 import logging
@@ -45,7 +45,7 @@ def celery_join():
         queues = [celery_inspector.active(), celery_inspector.scheduled(), celery_inspector.reserved()]
         time.sleep(1)
         log_counter += 1
-        if log_counter % 30:
+        if log_counter % 30 == 0:
             logger.info('Processing: ' + '. ' * (log_counter // 30))
         if any([queue is None or 'celery@banzai-celery-worker' not in queue for queue in queues]):
             logger.warning('No valid celery queues were detected, retrying...', extra_tags={'queues': queues})
@@ -74,7 +74,7 @@ def run_reduce_individual_frames(raw_filenames):
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
         for filename in glob(os.path.join(raw_path, raw_filenames)):
-            file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER_URL'))
+            file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER'), exchange_name=os.getenv('FITS_EXCHANGE'))
     celery_join()
     logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
 
@@ -90,7 +90,8 @@ def stack_calibrations(frame_type):
                                db_address=os.environ['DB_ADDRESS'], elasticsearch_qc_index='banzai_qc',
                                elasticsearch_url='http://elasticsearch.lco.gtn:9200', elasticsearch_doc_type='qc',
                                no_bpm=False, ignore_schedulability=True, use_only_older_calibrations=False,
-                               preview_mode=False, max_tries=5, broker_url=os.getenv('FITS_BROKER_URL'))
+                               preview_mode=False, max_tries=5, broker_url=os.getenv('FITS_BROKER'),
+                               no_file_cache=False)
         for setting in dir(settings):
             if '__' != setting[:2] and not isinstance(getattr(settings, setting), ModuleType):
                 runtime_context[setting] = getattr(settings, setting)
@@ -109,6 +110,8 @@ def mark_frames_as_good(raw_filenames):
 
 
 def get_expected_number_of_calibrations(raw_filenames, calibration_type):
+    context = FakeContext()
+    context.db_address = os.environ['DB_ADDRESS']
     number_of_stacks_that_should_have_been_created = 0
     for day_obs in DAYS_OBS:
         raw_filenames_for_this_dayobs = glob(os.path.join(DATA_ROOT, day_obs, 'raw', raw_filenames))
@@ -116,7 +119,7 @@ def get_expected_number_of_calibrations(raw_filenames, calibration_type):
             # Group by filter
             observed_filters = []
             for raw_filename in raw_filenames_for_this_dayobs:
-                skyflat_hdu = fits_utils.open_fits_file(raw_filename)
+                skyflat_hdu, skyflat_filename = fits_utils.open_fits_file({'path': raw_filename}, context)
                 observed_filters.append(skyflat_hdu[0].header.get('FILTER'))
             observed_filters = set(observed_filters)
             number_of_stacks_that_should_have_been_created += len(observed_filters)

@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from banzai.images import Section
+from banzai.utils.image_utils import Section
 from banzai.mosaic import MosaicCreator
 from banzai.tests.utils import FakeLCOObservationFrame, FakeCCDData
 

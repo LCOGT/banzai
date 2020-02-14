@@ -82,6 +82,9 @@ spec:
           value: "http://internal-observation-portal.lco.gtn/api/observations/"
         - name: OMP_NUM_THREADS
           value: "4"
+        - name: FITS_EXCHANGE
+          value: "fits_files"
+
       command:
         - celery
         - -A
@@ -95,7 +98,7 @@ spec:
         - "debug"
       resources:
         requests:
-          cpu: 0.1
+          cpu: 2
           memory: 8Gi
         limits:
           cpu: 4
@@ -135,7 +138,7 @@ spec:
       env:
         - name: DB_ADDRESS
           value: "sqlite:////archive/engineering/test.db"
-        - name: FITS_BROKER_URL
+        - name: FITS_BROKER
           value: "localhost"
         - name: REDIS_HOST
           value: "redis://localhost:6379/0"
@@ -143,6 +146,8 @@ spec:
           value: "calibrate"
         - name: OBSERVATION_PORTAL_URL
           value: "http://internal-observation-portal.lco.gtn/api/observations/"
+        - name: FITS_EXCHANGE
+          value: "fits_files"
       command:
         - banzai_run_realtime_pipeline
         - "--db-address=sqlite:////archive/engineering/test.db"

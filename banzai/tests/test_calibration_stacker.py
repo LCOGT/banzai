@@ -1,4 +1,5 @@
-from banzai.images import LCOCalibrationFrame, CCDData
+from banzai.lco import LCOCalibrationFrame
+from banzai.data import CCDData
 from banzai.context import Context
 from banzai.calibrations import CalibrationStacker
 from banzai.dbs import Instrument
@@ -13,7 +14,7 @@ header = {'DATASEC': f'[1:{nx},1:{ny}]', 'DETSEC': f'[1:{nx},1:{ny}]', 'CCDSUM':
 context = {'CALIBRATION_MIN_FRAMES': {'TEST': 1},
            'CALIBRATION_FILENAME_FUNCTIONS': {'TEST': ['banzai.utils.file_utils.ccdsum_to_filename']},
            'CALIBRATION_SET_CRITERIA': {'TEST': ['binning']},
-           'MASTER_CALIBRATION_FRAME_CLASS': 'banzai.images.LCOMasterCalibrationFrame',
+           'MASTER_CALIBRATION_FRAME_CLASS': 'banzai.lco.LCOMasterCalibrationFrame',
            'TELESCOPE_FILENAME_FUNCTION': 'banzai.utils.file_utils.telescope_to_filename'}
 context = Context(context)
 instrument = Instrument(site='cpt', camera='fa11', name='fa11')
@@ -24,7 +25,7 @@ def set_random_seed():
     np.random.seed(84651611)
 
 
-class TestStacker(CalibrationStacker):
+class FakeStacker(CalibrationStacker):
     @property
     def calibration_type(self):
         return 'TEST'
@@ -35,7 +36,7 @@ def test_stacking():
                    for i in range(9)]
     for image in test_images:
         image.instrument = instrument
-    stage = TestStacker(context)
+    stage = FakeStacker(context)
     stacked_data = stage.do_stage(test_images)[0]
     np.testing.assert_allclose(stacked_data.data, np.ones((ny, nx)) * np.mean(np.arange(9)))
     np.testing.assert_allclose(stacked_data.primary_hdu.uncertainty, np.ones((ny, nx)))
@@ -47,7 +48,7 @@ def test_stacking_with_noise():
                    for i in range(81)]
     for image in test_images:
         image.instrument = instrument
-    stage = TestStacker(context)
+    stage = FakeStacker(context)
     stacked_data = stage.do_stage(test_images)[0]
     np.testing.assert_allclose(stacked_data.data, np.zeros((ny, nx)), atol=5.0/3.0)
     np.testing.assert_allclose(stacked_data.primary_hdu.uncertainty, np.ones((ny, nx)) / 3.0, atol=0.05)
@@ -60,7 +61,7 @@ def test_stacking_with_different_pixels():
                    for i in range(9)]
     for image in test_images:
         image.instrument = instrument
-    stage = TestStacker(context)
+    stage = FakeStacker(context)
     stacked_data = stage.do_stage(test_images)[0]
     np.testing.assert_allclose(stacked_data.data, d * np.mean(np.arange(9)))
     np.testing.assert_allclose(stacked_data.primary_hdu.uncertainty, np.ones((ny, nx)))

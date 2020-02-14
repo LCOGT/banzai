@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from banzai.images import stack
+from banzai.data import stack
 from banzai.tests.utils import FakeCCDData
 
 pytestmark = pytest.mark.stacking

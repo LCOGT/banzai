@@ -67,6 +67,7 @@ class CalibrationImage(Base):
     type = Column(String(50), index=True)
     filename = Column(String(100), unique=True)
     filepath = Column(String(150))
+    frameid = Column(Integer, nullable=True)
     dateobs = Column(DateTime, index=True)
     datecreated = Column(DateTime, index=True)
     instrument_id = Column(Integer, ForeignKey("instruments.id"), index=True)
@@ -107,6 +108,7 @@ class ProcessedImage(Base):
     __tablename__ = 'processedimages'
     id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String(100), index=True)
+    frameid = Column(Integer, nullable=True)
     checksum = Column(CHAR(32), index=True, default='0'*32)
     success = Column(Boolean, default=False)
     tries = Column(Integer, default=0)
@@ -240,6 +242,7 @@ def save_calibration_info(output_file, image, db_address):
                              'instrument_id': image.instrument.id,
                              'is_master': image.is_master,
                              'is_bad': image.is_bad,
+                             'frameid': image.frame_id,
                              'attributes': {}}
         for attribute in image.grouping_criteria:
             record_attributes['attributes'][attribute] = str(getattr(image, attribute))
@@ -265,11 +268,11 @@ def commit_processed_image(processed_image, db_address):
         db_session.commit()
 
 
-def save_processed_image(path, db_address):
+def save_processed_image(path, md5, db_address):
     filename = os.path.basename(path)
     output_record = get_processed_image(filename, db_address)
     output_record.success = True
-    output_record.checksum = file_utils.get_md5(path)
+    output_record.checksum = md5
     commit_processed_image(output_record, db_address)
 
 
@@ -294,8 +297,13 @@ def get_instrument_by_id(id, db_address):
     return instrument
 
 
-def get_master_calibration_image(image, calibration_type, master_selection_criteria, db_address,
-                                 use_only_older_calibrations=False):
+def cal_record_to_file_info(record):
+    file_info = {'frameid': record.frameid,
+                 'path': os.path.join(record.filepath, record.filename)}
+    return file_info
+
+
+def get_master_cal(image, calibration_type, master_selection_criteria, db_address, use_only_older_calibrations=False):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
@@ -324,14 +332,12 @@ def get_master_calibration_image(image, calibration_type, master_selection_crite
     # Find the closest date
     date_deltas = np.abs(np.array([i.dateobs - image.dateobs for i in calibration_images]))
     closest_calibration_image = calibration_images[np.argmin(date_deltas)]
-    calibration_file = os.path.join(closest_calibration_image.filepath, closest_calibration_image.filename)
 
-    return calibration_file
+    return cal_record_to_file_info(closest_calibration_image)
 
 
-def get_individual_calibration_images(instrument, calibration_type, min_date: str, max_date: str, db_address: str,
-                                      include_bad_frames: bool = False):
-
+def get_individual_cal_frames(instrument, calibration_type, min_date: str, max_date: str, db_address: str,
+                              include_bad_frames: bool = False):
     calibration_criteria = CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.dateobs >= parse(min_date).replace(tzinfo=None)
@@ -343,11 +349,9 @@ def get_individual_calibration_images(instrument, calibration_type, min_date: st
         calibration_criteria &= CalibrationImage.is_bad == False
 
     with get_session(db_address=db_address) as db_session:
-        images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
+        image_records = db_session.query(CalibrationImage).filter(calibration_criteria).all()
 
-    image_paths = [os.path.join(image.filepath, image.filename) for image in images]
-
-    return image_paths
+    return [cal_record_to_file_info(record) for record in image_records]
 
 
 def mark_frame(filename, mark_as, db_address):

@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 
 from banzai.dark import DarkNormalizer
-from banzai.tests.utils import FakeImage, FakeCCDData, FakeLCOObservationFrame, FakeContext
+from banzai.tests.utils import FakeCCDData, FakeLCOObservationFrame, FakeContext
 
 pytestmark = pytest.mark.dark_normalizer
 

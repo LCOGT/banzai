@@ -11,6 +11,7 @@ from astropy.utils.data import get_pkg_data_filename
 
 pytestmark = pytest.mark.dbs
 
+
 @mock.patch('banzai.dbs.requests.get',
             return_value=FakeResponse(get_pkg_data_filename('data/configdb_example.json', 'banzai.tests')))
 @mock.patch('argparse.ArgumentParser.parse_args',

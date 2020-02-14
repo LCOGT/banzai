@@ -19,9 +19,10 @@ def test_master_selection_criteria():
     assert subtractor.master_selection_criteria == ['configuration_mode', 'binning']
 
 
-@mock.patch('banzai.images.LCOFrameFactory.open')
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info', return_value='test.fits')
 def test_header_has_biaslevel(mock_master_cal_name, mock_master_frame):
+    mock_master_cal_name.return_value = {'filename': 'test.fits'}
     fake_master_image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(bias_level=0.0)])
     mock_master_frame.return_value = fake_master_image
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(bias_level=1.0)])
@@ -30,9 +31,10 @@ def test_header_has_biaslevel(mock_master_cal_name, mock_master_frame):
     assert image.meta.get('BIASLVL') == 0.0
 
 
-@mock.patch('banzai.images.LCOFrameFactory.open')
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info', return_value='test.fits')
 def test_header_biaslevel_is_1(mock_master_cal_name, mock_master_frame):
+    mock_master_cal_name.return_value = {'filename': 'test.fits'}
     mock_master_frame.return_value = FakeLCOObservationFrame(hdu_list=[FakeCCDData(bias_level=1.0, read_noise=10.0)])
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(bias_level=0.0)])
     subtractor = BiasSubtractor(FakeContext())
@@ -40,9 +42,10 @@ def test_header_biaslevel_is_1(mock_master_cal_name, mock_master_frame):
     assert image.meta.get('BIASLVL') == 1.0
 
 
-@mock.patch('banzai.images.LCOFrameFactory.open')
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info', return_value='test.fits')
 def test_header_biaslevel_is_2(mock_master_cal_name, mock_master_frame):
+    mock_master_cal_name.return_value = {'filename': 'test.fits'}
     mock_master_frame.return_value = FakeLCOObservationFrame(hdu_list=[FakeCCDData(bias_level=2.0, read_noise=10.0)])
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(bias_level=0.0)])
     subtractor = BiasSubtractor(FakeContext())
@@ -50,16 +53,17 @@ def test_header_biaslevel_is_2(mock_master_cal_name, mock_master_frame):
     assert image.meta.get('BIASLVL') == 2.0
 
 
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value=None)
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info', return_value=None)
 def test_flags_image_if_no_master_calibration(mock_cal):
     subtractor = BiasSubtractor(FakeContext(override_missing=False))
     image = subtractor.do_stage(FakeLCOObservationFrame(hdu_list=[FakeCCDData()]))
     assert image is None
 
 
-@mock.patch('banzai.images.LCOFrameFactory.open')
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename', return_value='test.fits')
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info')
 def test_bias_subtraction_is_reasonable(mock_master_cal_name, mock_master_frame):
+    mock_master_cal_name.return_value = {'filename': 'test.fits'}
     input_bias = 1000.0
     input_readnoise = 9.0
     input_level = 2000.0

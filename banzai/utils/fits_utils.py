@@ -1,12 +1,16 @@
-import tempfile
 import logging
 from typing import Optional
+import requests
+
 from banzai import logs
 
 import numpy as np
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
+from tenacity import retry, wait_exponential, stop_after_attempt
+import io
+import os
 
 logger = logging.getLogger('banzai')
 
@@ -82,6 +86,22 @@ def get_primary_header(filename) -> Optional[fits.Header]:
         return None
 
 
+# Stop after 4 attempts, and back off exponentially with a minimum wait time of 4 seconds, and a maximum of 10.
+# If it fails after 4 attempts, "reraise" the original exception back up to the caller.
+@retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
+def download_from_s3(file_info, runtime_context):
+    frame_id = file_info.get('frameid')
+
+    logger.info(f"Downloading file {file_info.get('filename')} from archive. ID: {frame_id}.",
+                extra_tags={'filename': file_info.get('filename'),
+                            'attempt_number': download_from_s3.retry.statistics['attempt_number']})
+    url = f'{runtime_context.ARCHIVE_FRAME_URL}/{frame_id}'
+    response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN).json()
+    buffer = io.BytesIO()
+    buffer.write(requests.get(response['url'], stream=True).content)
+    return buffer
+
+
 def get_configuration_mode(header):
     configuration_mode = header.get('CONFMODE', 'default')
     # If the configuration mode is not in the header, fallback to default to support legacy data
@@ -92,16 +112,24 @@ def get_configuration_mode(header):
     return configuration_mode
 
 
-def open_fits_file(filename: str):
-    # TODO: deal with a datacube and munging
-    # TODO: detect if AWS frame and stream the file in rather than just opening the file,
-    # this is done using boto3 and a io.BytesIO() buffer
-    with open(filename, 'rb') as f:
-        hdu_list = fits.open(f, memmap=False)
-        uncompressed_hdu_list = unpack(hdu_list)
-        hdu_list.close()
-        del hdu_list
-    return uncompressed_hdu_list
+def open_fits_file(file_info, context):
+    if file_info.get('path') is not None and os.path.exists(file_info.get('path')):
+        buffer = open(file_info.get('path'), 'rb')
+        filename = os.path.basename(file_info.get('path'))
+    elif file_info.get('frameid') is not None:
+        buffer = download_from_s3(file_info, context)
+        filename = file_info.get('filename')
+    else:
+        raise ValueError('This file does not exist and there is no frame id to get it from S3.')
+
+    hdu_list = fits.open(buffer, memmap=False)
+    uncompressed_hdu_list = unpack(hdu_list)
+    hdu_list.close()
+    buffer.close()
+    del hdu_list
+    del buffer
+
+    return uncompressed_hdu_list, filename
 
 
 def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
@@ -161,8 +189,7 @@ def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
     for hdu in uncompressed_hdulist[1:]:
         if isinstance(hdu, fits.ImageHDU):
             compressed_hdu = fits.CompImageHDU(data=np.ascontiguousarray(hdu.data), header=hdu.header,
-                                               quantize_level=64,
-                                               dither_seed=2048, quantize_method=1)
+                                               quantize_level=64, quantize_method=1)
             hdulist.append(compressed_hdu)
         else:
             hdulist.append(hdu)

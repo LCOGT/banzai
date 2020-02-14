@@ -2,7 +2,8 @@ import logging
 import numpy as np
 
 from banzai.stages import Stage
-from banzai.images import CCDData, Section
+from banzai.utils.image_utils import Section
+from banzai.data import CCDData
 
 logger = logging.getLogger('banzai')
 

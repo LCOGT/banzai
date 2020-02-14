@@ -7,6 +7,7 @@ from banzai.tests.utils import FakeContext, FakeLCOObservationFrame, FakeCCDData
 
 pytestmark = pytest.mark.bias_comparer
 
+
 @pytest.fixture(scope='module')
 def set_random_seed():
     np.random.seed(81232385)
@@ -23,7 +24,7 @@ def test_master_selection_criteria():
     assert comparer.master_selection_criteria == ['configuration_mode', 'binning']
 
 
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info')
 def test_flags_bad_if_no_master_calibration(mock_master_filename, set_random_seed):
     image = FakeLCOObservationFrame()
     mock_master_filename.return_value = None
@@ -32,14 +33,13 @@ def test_flags_bad_if_no_master_calibration(mock_master_filename, set_random_see
     assert image.is_bad is True
 
 
-@mock.patch('banzai.images.LCOFrameFactory.open')
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename')
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info')
 def test_does_not_reject_noisy_image(mock_master_cal_name, mock_master_frame, set_random_seed):
-    mock_master_cal_name.return_value = 'test.fits'
+    mock_master_cal_name.return_value = {'filename': 'test.fits'}
     fake_master_image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(read_noise=11.0)],
                                                 is_master=True)
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(read_noise=3.0)])
-
     mock_master_frame.return_value = fake_master_image
     comparer = BiasComparer(FakeContext())
     image = comparer.do_stage(image)
@@ -47,10 +47,10 @@ def test_does_not_reject_noisy_image(mock_master_cal_name, mock_master_frame, se
     assert image.is_bad is False
 
 
-@mock.patch('banzai.images.LCOFrameFactory.open')
-@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_filename')
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info')
 def test_does_flag_bad_image(mock_master_cal_name, mock_master_frame, set_random_seed):
-    mock_master_cal_name.return_value = 'test.fits'
+    mock_master_cal_name.return_value = {'filename': 'test.fits'}
     master_readnoise = 3.0
     image_readnoise = 11.0
     nx = 101
@@ -61,8 +61,6 @@ def test_does_flag_bad_image(mock_master_cal_name, mock_master_frame, set_random
                                                 is_master=True)
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(0.0, image_readnoise, size=(ny, nx)),
                                                           read_noise=11.0, bias_level=0.0)])
-
-
     mock_master_frame.return_value = fake_master_image
     comparer = BiasComparer(FakeContext())
 

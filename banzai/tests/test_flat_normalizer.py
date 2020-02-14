@@ -3,13 +3,14 @@ import numpy as np
 from astropy.io.fits import Header
 
 from banzai.flats import FlatNormalizer
-from banzai.tests.utils import FakeImage, FakeLCOObservationFrame, FakeCCDData, FakeContext
+from banzai.tests.utils import FakeLCOObservationFrame, FakeCCDData, FakeContext
 
 pytestmark = pytest.mark.flat_normalizer
 
 test_header = Header({'SATURATE': 35000,
                       'GAIN': 3.54,
                       'MAXLIN': 35000})
+
 
 @pytest.fixture(scope='module')
 def set_random_seed():

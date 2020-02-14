@@ -6,7 +6,7 @@ import sep
 
 from banzai.utils import stats, array_utils
 from banzai.stages import Stage
-from banzai.images import DataTable
+from banzai.data import DataTable
 from banzai import logs
 
 logger = logging.getLogger('banzai')

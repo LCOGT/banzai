@@ -3,7 +3,8 @@ import numpy as np
 from astropy.io.fits import Header
 
 from banzai.bias import BiasMasterLevelSubtractor
-from banzai.images import LCOCalibrationFrame, CCDData
+from banzai.lco import LCOCalibrationFrame
+from banzai.data import CCDData
 from banzai.tests.utils import FakeLCOObservationFrame, FakeCCDData
 
 pytestmark = pytest.mark.bias_level_subtractor

@@ -17,7 +17,7 @@ from types import ModuleType
 
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
-from banzai.utils import date_utils, stage_utils, import_utils
+from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils
 from banzai.celery import process_image, app, schedule_calibration_stacking
 from celery.schedules import crontab
 import celery
@@ -43,9 +43,7 @@ class RealtimeModeListener(ConsumerMixin):
         return [consumer]
 
     def on_message(self, body, message):
-        # TODO: Add detection for AWS style paths once we move to AWS
-        path = body.get('path')
-        process_image.apply_async(args=(path, vars(self.runtime_context)))
+        process_image.apply_async(args=(body, vars(self.runtime_context)))
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
@@ -66,6 +64,8 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
+    parser.add_argument('--no-file-cache', dest='no_file_cache', action='store_true', default=False,
+                        help='Turn off saving files to disk')
     parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
                         default=False)
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
@@ -109,6 +109,12 @@ def reduce_single_frame():
     extra_console_arguments = [{'args': ['--filepath'],
                                 'kwargs': {'dest': 'path', 'help': 'Full path to the file to process'}}]
     runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
+    # Short circuit
+    if not image_utils.image_can_be_processed(fits_utils.get_primary_header(runtime_context.path), runtime_context):
+        logger.error('Image cannot be processed. Check to make sure the instrument '
+                     'is in the database and that the OBSTYPE is recognized by BANZAI',
+                     extra_tags={'filename': runtime_context.path})
+        return
     try:
         stage_utils.run_pipeline_stages(runtime_context.path, runtime_context)
     except Exception:
@@ -168,7 +174,7 @@ def start_listener(runtime_context):
     logging.getLogger('amqp').setLevel(max(logger.level, getattr(logging, 'INFO')))
     logger.info('Starting pipeline listener')
 
-    fits_exchange = Exchange('fits_files', type='fanout')
+    fits_exchange = Exchange(runtime_context.FITS_EXCHANGE, type='fanout')
     listener = RealtimeModeListener(runtime_context)
 
     with Connection(runtime_context.broker_url) as connection:
@@ -259,8 +265,8 @@ def add_bpm():
     args = parser.parse_args()
     add_settings_to_context(args, settings)
     logs.set_log_level(args.log_level)
-    frame_factory = import_utils.import_attribute(settings.FRAME_FACTORY)
-    bpm_image = frame_factory.open(args.filename, args)
+    frame_factory = import_utils.import_attribute(settings.FRAME_FACTORY)()
+    bpm_image = frame_factory.open({'path': args.filename}, args)
     bpm_image.is_master = True
     dbs.save_calibration_info(args.filename, bpm_image, args.db_address)
 

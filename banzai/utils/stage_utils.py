@@ -39,7 +39,7 @@ def get_stages_for_individual_frame(ordered_stages, last_stage=None, extra_stage
 
 
 def run_pipeline_stages(image_paths, runtime_context):
-    frame_factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)
+    frame_factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)()
     if isinstance(image_paths, list):
         images = [frame_factory.open(image_path, runtime_context) for image_path in image_paths]
         images = [image for image in images if image is not None]

@@ -7,11 +7,14 @@ from astropy.io.fits import Header
 
 from banzai import settings
 from banzai.stages import Stage
-from banzai.images import Image, CCDData, LCOObservationFrame, HeaderOnly, LCOCalibrationFrame, Section
+from banzai.lco import LCOObservationFrame, LCOCalibrationFrame
+from banzai.utils.image_utils import Section
+from banzai.data import HeaderOnly, CCDData
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
 
 logger = logging.getLogger('banzai')
+
 
 class FakeCCDData(CCDData):
     def __init__(self, image_multiplier=1.0, nx=101, ny=103, name='test_image', read_noise=None,
@@ -64,72 +67,19 @@ class FakeLCOObservationFrame(LCOObservationFrame):
             setattr(self, keyword, kwargs[keyword])
 
 
-class FakeImage(Image):
-    def __init__(self, runtime_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',
-                 ccdsum='2 2', epoch='20160101', n_amps=1, filter='U', data=None, header=None, **kwargs):
-        self.nx = nx
-        self.ny = ny
-        self.instrument_id = -1
-        self.site = site
-        self.camera = camera
-        self.ccdsum = ccdsum
-        self.epoch = epoch
-        if data is None:
-            self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
-        else:
-            self.data = data
-        if n_amps > 1:
-            self.data = np.stack(n_amps * [self.data])
-        self.filename = 'test.fits'
-        self.filter = filter
-        self.dateobs = datetime(2016, 1, 1)
-        if header is None:
-            header = Header({'TELESCOP': '1m0-10'})
-        self.header = header
-        self.caltype = ''
-        self.bpm = np.zeros((ny, nx), dtype=np.uint8)
-        self.request_number = '0000331403'
-        self.readnoise = 11.0
-        self.block_id = '254478983'
-        self.molecule_id = '544562351'
-        self.exptime = 30.0
-        self.obstype = 'TEST'
-        self.is_bad = False
-        self.configuration_mode = 'full_frame'
-        for keyword in kwargs:
-            setattr(self, keyword, kwargs[keyword])
-
-    def get_calibration_filename(self):
-        return '/tmp/{0}_{1}_{2}_bin{3}.fits'.format(self.caltype, self.instrument,
-                                                     self.epoch,
-                                                     self.ccdsum.replace(' ', 'x'))
-
-    def subtract(self, x):
-        self.data -= x
-
-    def add_history(self, msg):
-        pass
-
-    def get_n_amps(self):
-        if len(self.data.shape) > 2:
-            n_amps = self.data.shape[0]
-        else:
-            n_amps = 1
-        return n_amps
-
-
 class FakeContext(object):
-    def __init__(self, preview_mode=False, fpack=True, frame_class=FakeImage, **kwargs):
+    def __init__(self, preview_mode=False, fpack=True, frame_class=FakeLCOObservationFrame, **kwargs):
         self.FRAME_CLASS = frame_class
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
-        self.db_address = 'sqlite:foo'
+        self.db_address = 'sqlite:///test.db'
         self.elasticsearch_qc_index = 'banzai_qc'
         self.elasticsearch_doc_type = 'qc'
         self.ignore_schedulability = False
         self.max_tries = 5
         self.fpack = fpack
         self.reduction_level = '91'
+        self.use_only_older_calibrations = False
         # Get all of the settings that are not builtins and store them in the context object
         for setting in dir(settings):
             if '__' != setting[:2] and not isinstance(getattr(settings, setting), ModuleType):
@@ -206,3 +156,10 @@ class FakeInstrument(object):
         self.schedulable = schedulable
         self.type = type
         self.name = camera
+
+
+class FakeCalImage:
+    def __init__(self):
+        self.frameid = 1234
+        self.filepath = '/tmp/'
+        self.filename = 'test.fits'

@@ -1,7 +1,7 @@
 import mock
 import pytest
 
-from banzai.tests.utils import FakeInstrument, FakeContext
+from banzai.tests.utils import FakeContext
 from banzai.utils.realtime_utils import need_to_process_image
 
 md5_hash1 = '49a6bb35cdd3859224c0214310b1d9b6'
@@ -25,7 +25,7 @@ def test_no_processing_if_previous_success(mock_can_process, mock_header, mock_p
     mock_can_process.return_value = True
     mock_processed.return_value = FakeRealtimeImage(success=True, checksum=md5_hash1)
     mock_md5.return_value = md5_hash1
-    assert not need_to_process_image('test.fits', FakeContext())
+    assert not need_to_process_image({'path':'test.fits'}, FakeContext())
 
 
 @mock.patch('banzai.dbs.commit_processed_image')
@@ -37,7 +37,7 @@ def test_do_process_if_never_tried(mock_can_process, mock_header, mock_processed
     mock_can_process.return_value = True
     mock_processed.return_value = FakeRealtimeImage(success=False, checksum=md5_hash1, tries=0)
     mock_md5.return_value = md5_hash1
-    assert need_to_process_image('test.fits', FakeContext())
+    assert need_to_process_image({'path':'test.fits'}, FakeContext())
 
 
 @mock.patch('banzai.dbs.commit_processed_image')
@@ -51,7 +51,7 @@ def test_do_process_if_tries_less_than_max(mock_can_process, mock_header, mock_p
     mock_md5.return_value = md5_hash1
     context = FakeContext()
     context.max_tries = 5
-    assert need_to_process_image('test.fits', context)
+    assert need_to_process_image({'path':'test.fits'}, context)
 
 
 @mock.patch('banzai.dbs.commit_processed_image')
@@ -66,7 +66,7 @@ def test_no_processing_if_tries_at_max(mock_can_process, mock_header, mock_proce
     mock_md5.return_value = md5_hash1
     context = FakeContext()
     context.max_tries = max_tries
-    assert not need_to_process_image('test.fits', context)
+    assert not need_to_process_image({'path':'test.fits'}, context)
 
 
 @mock.patch('banzai.dbs.commit_processed_image')
@@ -80,7 +80,7 @@ def test_do_process_if_new_checksum(mock_can_process, mock_header, mock_processe
     mock_can_process.return_value = True
     mock_processed.return_value = image
     mock_md5.return_value = md5_hash2
-    assert need_to_process_image('test.fits', FakeContext())
+    assert need_to_process_image({'path': 'test.fits'}, FakeContext())
     assert not image.success
     assert image.tries == 0
     assert image.checksum == md5_hash2

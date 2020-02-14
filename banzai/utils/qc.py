@@ -34,7 +34,7 @@ def save_qc_results(runtime_context, qc_results, image, **kwargs):
                       Context instance with runtime values
     qc_results : dict
                  Dictionary of key value pairs to be saved to ElasticSearch
-    image : banzai.images.ObservationFrame
+    image : banzai.frames.ObservationFrame
             Image that should be linked
 
     Notes

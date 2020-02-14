@@ -1,12 +1,5 @@
-from banzai.tests.utils import FakeImage, FakeLCOObservationFrame, FakeCCDData
+from banzai.tests.utils import FakeLCOObservationFrame, FakeCCDData
 import numpy as np
-
-
-class FakeDarkImage(FakeImage):
-    def __init__(self, runtime_context=None, exptime=30.0, filename='', data=None, header=None, **kwargs):
-        self.exptime = exptime
-        super(FakeDarkImage, self).__init__(runtime_context=runtime_context, data=data, header=header, **kwargs)
-        self.header['OBSTYPE'] = 'DARK'
 
 
 def get_dark_pattern(nx, ny, master_dark_fraction):

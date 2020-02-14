@@ -1,12 +1,12 @@
 import logging
 import abc
-import os
 from datetime import datetime
 
 from banzai.stages import Stage, MultiFrameStage
 from banzai import dbs, logs
 from banzai.utils import qc, import_utils, stage_utils, file_utils
-from banzai.images import Section, stack
+from banzai.data import stack
+from banzai.utils.image_utils import Section
 
 logger = logging.getLogger('banzai')
 
@@ -114,27 +114,25 @@ class CalibrationUser(Stage):
             return None
 
     def do_stage(self, image):
-        master_calibration_filename = self.get_calibration_filename(image)
-
-        if master_calibration_filename is None:
+        master_calibration_file_info = self.get_calibration_file_info(image)
+        if master_calibration_file_info is None:
             return self.on_missing_master_calibration(image)
 
-        frame_factory = import_utils.import_attribute(self.runtime_context.FRAME_FACTORY)
-
-        master_calibration_image = frame_factory.open(master_calibration_filename, self.runtime_context)
+        frame_factory = import_utils.import_attribute(self.runtime_context.FRAME_FACTORY)()
+        master_calibration_image = frame_factory.open(master_calibration_file_info, self.runtime_context)
         master_calibration_image.is_master = True
         logger.info('Applying master calibration', image=image,
-                    extra_tags={'master_calibration': os.path.basename(master_calibration_filename)})
+                    extra_tags={'master_calibration':  master_calibration_image.filename})
         return self.apply_master_calibration(image, master_calibration_image)
 
     @abc.abstractmethod
     def apply_master_calibration(self, image, master_calibration_image):
         pass
 
-    def get_calibration_filename(self, image):
-        return dbs.get_master_calibration_image(image, self.calibration_type, self.master_selection_criteria,
-                                                use_only_older_calibrations=self.runtime_context.use_only_older_calibrations,
-                                                db_address=self.runtime_context.db_address)
+    def get_calibration_file_info(self, image):
+        return dbs.get_master_cal(image, self.calibration_type, self.master_selection_criteria,
+                                  use_only_older_calibrations=self.runtime_context.use_only_older_calibrations,
+                                  db_address=self.runtime_context.db_address)
 
 
 class CalibrationComparer(CalibrationUser):
@@ -180,12 +178,12 @@ def make_master_calibrations(instrument, frame_type, min_date, max_date, runtime
                   'min_date': min_date,
                   'max_date': max_date}
     logger.info("Making master frames", extra_tags=extra_tags)
-    image_path_list = dbs.get_individual_calibration_images(instrument, frame_type, min_date, max_date,
-                                                            db_address=runtime_context.db_address)
-    if len(image_path_list) == 0:
+    calibration_frames_info = dbs.get_individual_cal_frames(instrument, frame_type, min_date, max_date,
+                                                              db_address=runtime_context.db_address)
+    if len(calibration_frames_info) == 0:
         logger.info("No calibration frames found to stack", extra_tags=extra_tags)
     try:
-        stage_utils.run_pipeline_stages(image_path_list, runtime_context)
+        stage_utils.run_pipeline_stages(calibration_frames_info, runtime_context)
     except Exception:
         logger.error(logs.format_exception())
     logger.info("Finished")
