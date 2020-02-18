@@ -1,3 +1,7 @@
+0.28.5 (2020-02-18)
+-------------------
+- Update lco-ingester version to 2.1.11 to add extra metrics tag.
+
 0.28.4 (2020-02-12)
 -------------------
 - Add initial crosstalk coefficients for fa19
