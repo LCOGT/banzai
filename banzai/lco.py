@@ -157,6 +157,10 @@ class MissingCrosstalkCoefficients(Exception):
     pass
 
 
+class MissingSaturate(Exception):
+    pass
+
+
 """These matrices should have the following structure:
 coeffs = [[Q11, Q12, Q13, Q14],
           [Q21, Q22, Q23, Q24],
@@ -332,6 +336,7 @@ class LCOFrameFactory(FrameFactory):
                     hdu_list.append(HeaderOnly(meta=hdu.header))
                 elif isinstance(hdu, fits.BinTableHDU):
                     hdu_list.append(DataTable(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
+                # Check if we are looking at a CCD extension
                 elif 'GAIN' in hdu.header:
                     associated_data = {}
                     condensed_name = hdu.header.get('EXTNAME', '')
@@ -348,6 +353,8 @@ class LCOFrameFactory(FrameFactory):
                                                                                           extension_version].data
                         else:
                             associated_data[associated_extension['NAME']] = None
+                    if len(hdu.data.shape) > 2:
+                        hdu_list += self._munge_data_cube(hdu)
                     if hdu.data.dtype == np.uint16:
                         hdu.data = hdu.data.astype(np.float32)
                     hdu_list.append(CCDData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME'),
@@ -369,7 +376,8 @@ class LCOFrameFactory(FrameFactory):
         try:
             self._init_crosstalk(image)
         except MissingCrosstalkCoefficients:
-            logger.error('Error populating the crosstalk coefficients in a multi-amp image', image=image)
+            logger.error('Crosstalk coefficients are missing from both the header and the defaults. Stopping reduction',
+                         image=image)
             return None
         # If the frame cannot be processed for some reason return None instead of the new image object
         if image.instrument is not None and image_utils.image_can_be_processed(image, runtime_context):
@@ -400,21 +408,29 @@ class LCOFrameFactory(FrameFactory):
         # Sbigs 0.4m and 0.8m values measured by Daniel Harbeck
         defaults = {'1m0-scicam-sinistro': 47500.0 * 2.0, '1m0-scicam-sbig': 46000.0 / 4 * 1.4,
                     '0m8': 64000.0 / 4 * 0.851, '0m4': 64000.0 / 4, 'spectral': 125000.0}
-        for hdu in image.ccd_hdus:
-            for camera_type in defaults:
-                if camera_type in image.instrument.type.lower():
-                    n_binned_pixels = hdu.binning[0] * hdu.binning[1]
-                    default = defaults[camera_type] * n_binned_pixels / hdu.gain
-                    break
 
+        default_unbinned_saturation = None
+        for camera_type in defaults:
+            if camera_type in image.instrument.type.lower():
+                default_unbinned_saturation = defaults[camera_type]
+                break
+
+        for hdu in image.ccd_hdus:
             # Pull from the primary extension by default
             if hdu.meta.get('SATURATE', 0.0) == 0.0:
                 hdu.meta['SATURATE'] = image.meta.get('SATURATE', 0.0)
                 hdu.meta['MAXLIN'] = image.meta.get('MAXLIN', 0.0)
             # If still nothing, use hard coded defaults
-            if hdu.meta.get('SATURATE', 0.0) == 0.0:
+            if hdu.meta.get('SATURATE', 0.0) == 0.0 and default_unbinned_saturation is not None:
+                n_binned_pixels = hdu.binning[0] * hdu.binning[1]
+                default = default_unbinned_saturation * n_binned_pixels / hdu.gain
                 hdu.meta['SATURATE'] = (default, '[ADU] Saturation level used')
                 hdu.meta['MAXLIN'] = (default, '[ADU] Non-linearity level')
+
+        if 0.0 in [hdu.meta.get('SATURATE', 0.0) for hdu in image.ccd_hdus]:
+            logger.error('The SATURATE keyword was not valid and there are no defaults in banzai for this camera.',
+                         image=image)
+            raise MissingSaturate
 
     @staticmethod
     def _init_detector_sections(image):
@@ -430,106 +446,59 @@ class LCOFrameFactory(FrameFactory):
 
     @staticmethod
     def _init_crosstalk(image):
-        pass
+        n_amps = image.n_amps
+        coefficients = DEFAULT_CROSSTALK_COEFFICIENTS.get(image.camera)
 
+        for i in range(n_amps):
+            for j in range(n_amps):
+                if i != j:
+                    crosstalk_comment = '[Crosstalk coefficient] Signal from Q{i} onto Q{j}'.format(i=i+1, j=j+1)
+                    keyword = 'CRSTLK{0}{1}'.format(i + 1, j + 1)
+                    # Don't override existing header keywords.
+                    if image.primary_hdu.meta.get(keyword) is None and coefficients is not None:
+                        image.primary_hdu.meta[keyword] = coefficients[i, j], crosstalk_comment
+        crosstalk_values = []
+        for i in range(n_amps):
+            for j in range(n_amps):
+                if i != j:
+                    crosstalk_values.append(image.meta.get('CRSTLK{0}{1}'.format(i+1, j+1), None))
+        if None in crosstalk_values:
+            raise MissingCrosstalkCoefficients
 
-def crosstalk_coefficients_in_header(image):
-    """
-    Check if there are crosstalk coeffients in the header of an image
+    @staticmethod
+    def _munge_data_cube(hdu):
+        """
+        Munge the old sinistro data cube data into our new format
 
-    Parameters
-    ----------
-    image: banzai.lco.LCOObservationFrame
-           Sinistro image to check
+        :param hdu: Fits.ImageHDU
+        :return: List CCDData objects
+        """
+        # The first extension gets to be a header only object
+        hdu_list = [HeaderOnly(meta=hdu.header)]
 
-    Returns
-    -------
-    in_header: bool
-               True if all the crosstalk coefficients are in the header
-    """
-    n_amps = image.n_amps
-
-    crosstalk_values = []
-
-    for i, hdu in enumerate(image.ccd_hdus):
-        crosstalk_values.extend([hdu.meta.get('CRSTLK{0}{1}'.format(i+1, j+1), None)
-                                 for j in range(n_amps) if i != j])
-
-    return None not in crosstalk_values
-
-
-def sinistro_mode_is_supported(image):
-    """
-    Check to make sure the Sinistro image was taken in a supported mode.
-
-    Parameters
-    ----------
-    image: banzai.lco.LCOObservationFrame
-        Sinistro image to check
-
-    Returns
-    -------
-    supported: bool
-               True if reduction is supported
-    """
-    supported = True
-
-    if image.camera not in crosstalk_coefficients.keys() and not crosstalk_coefficients_in_header(image):
-        supported = False
-        logger.error('Crosstalk Coefficients missing!', image=image)
-
-    return supported
-
-
-# We need to properly set the datasec and detsec keywords in case we didn't read out the
-# middle row (the "Missing Row Problem").
-sinistro_datasecs = {'missing': ['[1:2048,1:2048]', '[1:2048,1:2048]',
-                                 '[1:2048,2:2048]', '[1:2048,2:2048]'],
-                     'full': ['[1:2048,1:2048]', '[1:2048,1:2048]',
-                              '[1:2048,2:2049]', '[1:2048,2:2049]']}
-sinistro_detsecs = {'missing': ['[1:2048,1:2048]', '[4096:2049,1:2048]',
-                                '[4096:2049,4096:2050]', '[1:2048,4096:2050]'],
-                    'full': ['[1:2048,1:2048]', '[4096:2049,1:2048]',
-                             '[4096:2049,4096:2049]', '[1:2048,4096:2049]']}
-
-#TODO: Audit this with new infrastructure in mind
-def munge_sinistro(image):
-    # TODO: deal with a datacube and munging
-    # Gain is a single value
-    gain = image.primary_hdu.gain
-    for hdu in image.ccd_hdus:
-        hdu.gain = gain
-
-    if image.meta['SATURATE'] == 0:
-        image.meta['SATURATE'] = 47500.0
-
-    set_crosstalk_header_keywords(image)
-
-    if image.data.shape[0] > 2048:
-        datasecs = sinistro_datasecs['full']
-        detsecs = sinistro_detsecs['full']
-    else:
-        datasecs = sinistro_datasecs['missing']
-        detsecs = sinistro_detsecs['missing']
-
-    for i in range(4):
-        for keyword, value, comment in [('BIASSEC', '[2055:2080,1:2048]', '[binned pixel] Overscan Region'),
-                                        ('DATASEC', datasecs[i], '[binned pixel] Data section'),
-                                        ('DETSEC', detsecs[i], '[unbinned pixel] Detector section')]:
-            # Don't override values if they exist already
-            if image.ccd_hdus[i].meta.get(keyword) is None:
-                image.ccd_hdus[i].meta[keyword] = value
-
-
-def set_crosstalk_header_keywords(image):
-    n_amps = image.n_amps
-    coefficients = crosstalk_coefficients[image.camera]
-
-    for i in range(n_amps):
-        for j in range(n_amps):
-            if i != j:
-                crosstalk_comment = '[Crosstalk coefficient] Signal from Q{i} onto Q{j}'.format(i=i+1, j=j+1)
-                keyword = 'CRSTLK{0}{1}'.format(i + 1, j + 1)
-                # Don't override existing header keywords.
-                if image.ccd_hdus[i].meta.get(keyword) is None:
-                    image.ccd_hdus[i].meta[keyword] = coefficients[i, j], crosstalk_comment
+        # We need to properly set the datasec and detsec keywords in case we didn't read out the
+        # middle row (the "Missing Row Problem").
+        sinistro_datasecs = {'missing': ['[1:2048,1:2048]', '[1:2048,1:2048]',
+                                         '[1:2048,2:2048]', '[1:2048,2:2048]'],
+                             'full': ['[1:2048,1:2048]', '[1:2048,1:2048]',
+                                      '[1:2048,2:2049]', '[1:2048,2:2049]']}
+        sinistro_detsecs = {'missing': ['[1:2048,1:2048]', '[4096:2049,1:2048]',
+                                        '[4096:2049,4096:2050]', '[1:2048,4096:2050]'],
+                            'full': ['[1:2048,1:2048]', '[4096:2049,1:2048]',
+                                     '[4096:2049,4096:2049]', '[1:2048,4096:2049]']}
+        for i in range(hdu.data.shape[0]):
+            gain = eval(hdu.header['GAIN'])[i]
+            if hdu.data.shape[1] > 2048:
+                mode = 'full'
+            else:
+                mode = 'missing'
+            datasec = sinistro_datasecs[mode][i]
+            detsec = sinistro_detsecs[mode][i]
+            header = {'BIASSEC': ('[2055:2080,1:2048]', '[binned pixel] Overscan Region'),
+                      'GAIN': (gain, hdu.header.comments['GAIN']),
+                      'DATASEC': (datasec, '[binned pixel] Data section'),
+                      'DETSEC': (detsec, '[unbinned pixel] Detector section'),
+                      'CCDSUM': (hdu.header['CCDSUM'], hdu.header.comments['CCDSUM'])}
+            hdu_list.append(CCDData(data=hdu.data[i], meta=fits.Header(header)))
+        # We have to split the gain keyword for each extension
+        return hdu_list
