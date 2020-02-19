@@ -16,7 +16,6 @@ def set_random_seed():
 def test_to_fits():
     test_data = FakeCCDData(meta={'EXTNAME': 'SCI'})
     hdu_list = test_data.to_fits(FakeContext())
-    
     assert len(hdu_list) == 3
     assert hdu_list[0].header['EXTNAME'] == 'SCI'
     assert hdu_list[1].header['EXTNAME'] == 'BPM'
@@ -47,8 +46,7 @@ def test_trim():
 def test_init_poisson_uncertainties():
     test_data = FakeCCDData(image_multiplier=4, uncertainty=1)
     test_data.init_poisson_uncertainties()
-
-    assert (test_data.uncertainty == 3 * np.ones(test_data.data.shape)).all() 
+    assert (test_data.uncertainty == 3 * np.ones(test_data.data.shape)).all()
 
 
 def test_get_output_filename():
@@ -71,8 +69,8 @@ def test_section_transformation():
     test_sections = {'DATASEC': Section.parse_region_keyword('[1:1024, 1:1024]'),
                      'DETSEC': Section.parse_region_keyword('[1:1024, 1:1024]')}
 
-    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword() 
-    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword() 
+    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword()
+    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword()
 
 
 def test_section_transformation_with_binning():
@@ -87,8 +85,8 @@ def test_section_transformation_with_binning():
     test_sections = {'DATASEC': Section.parse_region_keyword('[1:1024, 1:1024]'),
                      'DETSEC': Section.parse_region_keyword('[1:2048, 1:2048]')}
 
-    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword() 
-    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword() 
+    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword()
+    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword()
 
 
 def test_section_transformation_with_binning_small_2():
@@ -103,8 +101,8 @@ def test_section_transformation_with_binning_small_2():
     test_sections = {'DATASEC': Section.parse_region_keyword('[3:7, 1:1024]'),
                      'DETSEC': Section.parse_region_keyword('[5:14, 1:2048]')}
 
-    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword() 
-    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword() 
+    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword()
+    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword()
 
 
 def test_section_transformation_with_binning_small_3():
@@ -119,8 +117,8 @@ def test_section_transformation_with_binning_small_3():
     test_sections = {'DATASEC': Section.parse_region_keyword('[3:4, 1:1024]'),
                      'DETSEC': Section.parse_region_keyword('[7:12, 1:3072]')}
 
-    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword() 
-    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword() 
+    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword()
+    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword()
 
 
 def test_section_transformation_with_offset_datasec():
@@ -135,8 +133,8 @@ def test_section_transformation_with_offset_datasec():
     test_sections = {'DATASEC': Section.parse_region_keyword('[25:1048, 25:1048]'),
                      'DETSEC': Section.parse_region_keyword('[1:1024, 1:1024]')}
 
-    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword() 
-    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword() 
+    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword()
+    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword()
 
 
 def test_section_transformation_with_offset_datasec_with_binning():
@@ -151,8 +149,8 @@ def test_section_transformation_with_offset_datasec_with_binning():
     test_sections = {'DATASEC': Section.parse_region_keyword('[25:1048, 25:1048]'),
                      'DETSEC': Section.parse_region_keyword('[1:2048, 1:2048]')}
 
-    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword() 
-    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword() 
+    assert test_image.data_to_detector_section(test_sections['DATASEC']).to_region_keyword() == test_sections['DETSEC'].to_region_keyword()
+    assert test_image.detector_to_data_section(test_sections['DETSEC']).to_region_keyword() == test_sections['DATASEC'].to_region_keyword()
 
 
 def test_detector_to_data_section_flipped():

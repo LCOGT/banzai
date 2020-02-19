@@ -101,7 +101,7 @@ def test_mosaic_maker_for_binned_windowed_mode():
                             data=data.copy(),
                             mask=mask.copy(),
                             memmap=False) for header, data, mask in zip(extension_headers, extension_data, extension_masks)]
-    
+
     image = FakeLCOObservationFrame(hdu_list=hdu_list)
     expected_quad_slices = [(slice(1023, 511, -1), slice(0, 512)), (slice(0, 512), slice(0, 512)),
                             (slice(0, 512), slice(1023, 511, -1)), (slice(1023, 511, -1), slice(1023, 511, -1))]
@@ -114,6 +114,3 @@ def test_mosaic_maker_for_binned_windowed_mode():
     for j, s in enumerate(expected_quad_slices):
         np.testing.assert_allclose(mosaiced_image.data[s], extension_data[j])
         np.testing.assert_allclose(mosaiced_image.mask[s], extension_masks[j])
-
-
-

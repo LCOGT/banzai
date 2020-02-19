@@ -75,4 +75,3 @@ def test_image_2_percent_saturated(set_random_seed):
     image = tester.do_stage(image)
     assert image is not None
     assert np.abs(image.meta.get('SATFRAC') - 0.02) < 0.001
-

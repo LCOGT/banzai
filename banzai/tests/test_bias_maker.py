@@ -80,4 +80,3 @@ def test_makes_a_sensible_master_bias(mock_namer):
     assert np.abs(np.mean(master_bias)) < 0.1
     actual_readnoise = np.std(master_bias)
     assert np.abs(actual_readnoise - expected_readnoise / (nimages ** 0.5)) < 0.2
-

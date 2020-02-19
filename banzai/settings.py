@@ -123,4 +123,3 @@ DATA_RELEASE_DELAY = 365
 PUBLIC_PROPOSALS = ['calibrate', 'standard', '*epo*', 'pointing']
 
 SUPPORTED_FRAME_TYPES = ['BPM', 'BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'EXPERIMENTAL']
-

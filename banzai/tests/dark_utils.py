@@ -26,7 +26,6 @@ def make_realistic_master_dark(dark_pattern, nx=101, ny=103, dark_level=30.0,
     uncertainty = dark_noise * np.ones((ny, nx)) / dark_exptime
 
 
-    return FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=data, meta={'OBSTYPE': 'DARK',
-                                                                          'EXPTIME': dark_exptime},
+    return FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=data,
+                                                         meta={'OBSTYPE': 'DARK', 'EXPTIME': dark_exptime},
                                                          uncertainty=uncertainty)])
-

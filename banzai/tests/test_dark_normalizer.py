@@ -44,4 +44,3 @@ def test_dark_normalization_is_reasonable(set_random_seed):
     assert image.meta['SATURATE'] == saturation_level / image.exptime
     assert image.meta['MAXLIN'] == saturation_level / image.exptime
     assert image.meta['GAIN'] == gain / image.exptime
-

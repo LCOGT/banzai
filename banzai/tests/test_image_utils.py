@@ -37,6 +37,3 @@ def test_floyds_image_cannot_be_processed():
     image.instrument = FakeInstrument(type='2m0-FLOYDS-SciCam')
 
     assert not image_utils.image_can_be_processed(image, FakeContext())
-
-
-

@@ -85,5 +85,3 @@ def test_overscan_estimation_is_reasonable(set_random_seed):
     image = subtractor.do_stage(image)
     assert np.abs(image.meta['OVERSCAN'] - expected_overscan) < 1.0
     assert np.abs(np.mean(image.data[:, :-noverscan]) - input_level + expected_overscan) < 1.0
-
-
