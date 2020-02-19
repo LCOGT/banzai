@@ -1,7 +1,15 @@
-0.29.0 (2020-02-11)
+0.29.0 (2020-02-18)
 -------------------
 - Refactored Image class. Cleaned up a lot of plumbing code
-  
+
+0.28.5 (2020-02-18)
+-------------------
+- Update lco-ingester version to 2.1.11 to add extra metrics tag.
+
+0.28.4 (2020-02-12)
+-------------------
+- Add initial crosstalk coefficients for fa19
+
 0.28.3 (2020-02-11)
 -------------------
 - Fixes for ChunkedEncodingErrors when downloading files from s3:
