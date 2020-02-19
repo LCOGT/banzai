@@ -357,8 +357,8 @@ class LCOFrameFactory(FrameFactory):
                         hdu_list += self._munge_data_cube(hdu)
                     if hdu.data.dtype == np.uint16:
                         hdu.data = hdu.data.astype(np.float32)
-                    hdu_list.append(CCDData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME'),
-                                            **associated_data))
+                    hdu_list.append(self.data_class(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME'),
+                                                    **associated_data))
                 else:
                     hdu_list.append(ArrayData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
 
