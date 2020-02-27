@@ -298,6 +298,8 @@ def get_instrument_by_id(id, db_address):
 
 
 def cal_record_to_file_info(record):
+    if record is None:
+        return None
     file_info = {'frameid': record.frameid,
                  'path': os.path.join(record.filepath, record.filename)}
     return file_info

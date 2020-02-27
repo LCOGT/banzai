@@ -84,6 +84,8 @@ spec:
           value: "4"
         - name: FITS_EXCHANGE
           value: "fits_files"
+        - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
+          value: "1"
 
       command:
         - celery
@@ -148,6 +150,8 @@ spec:
           value: "http://internal-observation-portal.lco.gtn/api/observations/"
         - name: FITS_EXCHANGE
           value: "fits_files"
+        - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
+          value: "1"
       command:
         - banzai_run_realtime_pipeline
         - "--db-address=sqlite:////archive/engineering/test.db"
