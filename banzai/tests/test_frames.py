@@ -27,6 +27,23 @@ def test_subtract():
     test_data -= 1
 
     assert (test_data.data == 3 * np.ones(test_data.data.shape)).all()
+    assert np.allclose(test_data.uncertainty, 3)
+
+
+def test_uncertainty_propagation_on_divide():
+    data1 = FakeCCDData(data=np.array([2, 2]), uncertainty=np.array([2, 2]))
+    data2 = FakeCCDData(data=np.array([1, 1]), uncertainty=np.array([2, 2]))
+    data1 /= data2
+    assert np.allclose(data1.data, 2)
+    assert np.allclose(data1.uncertainty, 2*np.sqrt(5))
+
+
+def test_uncertainty_propagation_on_subtract():
+    data1 = FakeCCDData(data=np.array([2, 2]), uncertainty=np.sqrt(np.array([2, 2])))
+    data2 = FakeCCDData(data=np.array([1, 1]), uncertainty=np.sqrt(np.array([2, 2])))
+    data1 -= data2
+    assert np.allclose(data1.data, 1)
+    assert np.allclose(data1.uncertainty, 2)
 
 
 def test_trim():

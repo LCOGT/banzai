@@ -37,8 +37,8 @@ services:
     container_name: banzai-celery-workers
     entrypoint: ["celery", "-A", "banzai", "worker",
                  "--hostname", "banzai-celery-worker",
-                 "-l", "debug", "-c", "4"]
-    mem_limit: '8g'
+                 "-l", "debug", "-c", "2"]
+    mem_limit: '1g'
     depends_on:
       - banzai-redis
       - banzai-fits-exchange
@@ -51,7 +51,7 @@ services:
       RETRY_DELAY: "0"
       REDIS_HOST: "redis://redis:6379/0"
       OBSERVATION_PORTAL_URL: "http://internal-observation-portal.lco.gtn/api/observations/"
-      OMP_NUM_THREADS: "4"
+      OMP_NUM_THREADS: "1"
       OPENTSDB_PYTHON_METRICS_TEST_MODE: "1"
     labels:
       io.rancher.container.pull_image: always
@@ -65,7 +65,7 @@ services:
     network_mode: "bridge"
     container_name: banzai-celery-beat
     entrypoint: ["banzai_automate_stack_calibrations"]
-    mem_limit: '8g'
+    mem_limit: '1g'
     depends_on:
       - banzai-redis
       - banzai-fits-exchange
