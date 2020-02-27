@@ -1,7 +1,7 @@
 version: '2'
 services:
   banzai-e2e:
-    image: docker.lco.global/banzai-e2e-data:1.2.3
+    image: docker.lco.global/banzai-e2e-data:1.2.4
     container_name: banzai-e2e
     network_mode: "bridge"
     entrypoint:
@@ -37,7 +37,7 @@ services:
     container_name: banzai-celery-workers
     entrypoint: ["celery", "-A", "banzai", "worker",
                  "--hostname", "banzai-celery-worker",
-                 "-l", "debug"]
+                 "-l", "debug", "-c", "4"]
     mem_limit: '8g'
     depends_on:
       - banzai-redis
@@ -51,6 +51,8 @@ services:
       RETRY_DELAY: "0"
       REDIS_HOST: "redis://redis:6379/0"
       OBSERVATION_PORTAL_URL: "http://internal-observation-portal.lco.gtn/api/observations/"
+      OMP_NUM_THREADS: "4"
+      OPENTSDB_PYTHON_METRICS_TEST_MODE: "1"
     labels:
       io.rancher.container.pull_image: always
       io.rancher.sidekicks: banzai-e2e
@@ -75,6 +77,7 @@ services:
     environment:
       RETRY_DELAY: "0"
       REDIS_HOST: "redis://redis:6379/0"
+      OPENTSDB_PYTHON_METRICS_TEST_MODE: "1"
     labels:
       io.rancher.container.pull_image: always
       io.rancher.sidekicks: banzai-e2e
@@ -102,6 +105,9 @@ services:
       REDIS_HOST: "redis://redis:6379/0"
       FITS_BROKER_URL: "broker"
       OBSERVATION_PORTAL_URL:  "http://internal-observation-portal.lco.gtn/api/observations/"
+      FITS_EXCHANGE: fits_files
+      FITS_BROKER: broker
+      OPENTSDB_PYTHON_METRICS_TEST_MODE: "1"
     volumes_from:
     - banzai-e2e
     labels:

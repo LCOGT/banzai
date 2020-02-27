@@ -1,22 +1,22 @@
 import logging
 
-from banzai.utils.fits_utils import get_primary_header
-
+import os
 from banzai import dbs
-from banzai.utils import image_utils, file_utils, fits_utils
-
+from banzai.utils import file_utils, import_utils, image_utils
+from banzai.data import HeaderOnly
+from banzai import logs
 logger = logging.getLogger('banzai')
 
 
-def set_file_as_processed(filename, db_address=dbs._DEFAULT_DB):
-    image = dbs.get_processed_image(filename, db_address=db_address)
+def set_file_as_processed(path, db_address):
+    image = dbs.get_processed_image(path, db_address=db_address)
     if image is not None:
         image.success = True
         dbs.commit_processed_image(image, db_address=db_address)
 
 
-def increment_try_number(filename, db_address=dbs._DEFAULT_DB):
-    image = dbs.get_processed_image(filename, db_address=db_address)
+def increment_try_number(path, db_address):
+    image = dbs.get_processed_image(path, db_address=db_address)
     # Otherwise increment the number of tries
     image.tries += 1
     dbs.commit_processed_image(image, db_address=db_address)
@@ -43,43 +43,29 @@ def need_to_process_image(file_info, context):
     If the file has changed, we reset the success flags and the number of tries to zero.
     We only attempt to make images if the instrument is in the database and passes the given criteria.
     """
-    filename = fits_utils.get_filename_from_info(file_info)
-    is_s3_message = fits_utils.is_s3_queue_message(file_info)
+    if 'path' not in file_info and 'frameid' not in file_info:
+        logger.error('Ill formed queue message. Aborting')
+        return False
+
+    if 'frameid' in file_info:
+        checksum = file_info['version_set'][0].get('md5')
+        filename = file_info['filename']
+    else:
+        filename = os.path.basename(file_info['path'])
+        checksum = file_utils.get_md5(file_info['path'])
 
     logger.info("Checking if file needs to be processed", extra_tags={"filename": filename})
     if not (filename.endswith('.fits') or filename.endswith('.fits.fz')):
-        logger.warning("Filename does not have a .fits extension, stopping reduction",
-                       extra_tags={"filename": filename})
-        return False
-
-    if is_s3_message:
-        header = file_info
-        checksum = header['version_set'][0].get('md5')
-    else:
-        path = fits_utils.get_local_path_from_info(file_info, context)
-        header = get_primary_header(file_info, context)
-        checksum = file_utils.get_md5(path)
-
-    if not image_utils.image_can_be_processed(header, context):
-        return False
-
-    try:
-        instrument = dbs.get_instrument(header, db_address=context.db_address)
-    except ValueError:
-        return False
-    if not context.ignore_schedulability and not instrument.schedulable:
-        logger.info('Image will not be processed because instrument is not schedulable',
-                    extra_tags={"filename": filename})
+        logger.debug("Filename does not have a .fits extension, stopping reduction",
+                     extra_tags={"filename": filename})
         return False
 
     # Get the image in db. If it doesn't exist add it.
     image = dbs.get_processed_image(filename, db_address=context.db_address)
-    need_to_process = False
-
     # If this is an message on the archived_fits queue, then update the frameid
-    if is_s3_message:
-        image.frameid = file_info.get('frameid')
+    image.frameid = file_info.get('frameid')
 
+    need_to_process = False
     # Check the md5.
     # Reset the number of tries if the file has changed on disk/in s3
     if image.checksum != checksum:
@@ -93,5 +79,25 @@ def need_to_process_image(file_info, context):
     elif image.tries < context.max_tries and not image.success:
         need_to_process = True
         dbs.commit_processed_image(image, context.db_address)
+
+    # if we are pulling off the archived fits queue, make sure that the header can make a valid image object before
+    # bothering to pull it from s3
+    if 'frameid' in file_info:
+        try:
+            factory = import_utils.import_attribute(context.FRAME_FACTORY)()
+            test_image = factory.observation_frame_class([HeaderOnly(file_info)])
+            test_image.instrument = factory.get_instrument_from_header(file_info, db_address=context.db_address)
+            if image.instrument is not None:
+                logger.error('This queue message has an instrument that is not currently in the DB. Aborting:',
+                             extra_tags={'filename': filename})
+                need_to_process = False
+            elif image_utils.image_can_be_processed(image, context):
+                logger.error('The header in this queue message appears to not be complete enough to make a Frame object',
+                             extra_tags={'filename': filename})
+                need_to_process = False
+        except Exception:
+            logger.error('Issue creating Image object with given queue message', extra_tags={"filename": filename})
+            logs.format_exception()
+            need_to_process = False
 
     return need_to_process

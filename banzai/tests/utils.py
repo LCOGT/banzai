@@ -1,81 +1,94 @@
 import json
 from datetime import datetime, timedelta
+from types import ModuleType
 
 import numpy as np
 from astropy.io.fits import Header
 
+from banzai import settings
 from banzai.stages import Stage
-from banzai.images import Image
+from banzai.lco import LCOObservationFrame, LCOCalibrationFrame
+from banzai.utils.image_utils import Section
+from banzai.data import HeaderOnly, CCDData
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
 import logging
 
 logger = logging.getLogger('banzai')
 
 
-class FakeImage(Image):
-    def __init__(self, runtime_context=None, nx=101, ny=103, image_multiplier=1.0, site='elp', camera='kb76',
-                 ccdsum='2 2', epoch='20160101', n_amps=1, filter='U', data=None, header=None, **kwargs):
-        self.nx = nx
-        self.ny = ny
-        self.instrument_id = -1
-        self.site = site
-        self.camera = camera
-        self.ccdsum = ccdsum
-        self.epoch = epoch
+class FakeCCDData(CCDData):
+    def __init__(self, image_multiplier=1.0, nx=101, ny=103, name='test_image', read_noise=None,
+                 bias_level=None, meta=None, data=None, mask=None, uncertainty=None, **kwargs):
+        self.name = name
+        if meta is not None:
+            self.meta = meta
+        else:
+            self.meta = Header()
+        if bias_level is not None:
+            self.meta['BIASLVL'] = bias_level
+        if read_noise is not None:
+            self.meta['RDNOISE'] = read_noise
+        self._detector_section = Section.parse_region_keyword(self.meta.get('DETSEC'))
+        self._data_section = Section.parse_region_keyword(self.meta.get('DATASEC'))
+
         if data is None:
             self.data = image_multiplier * np.ones((ny, nx), dtype=np.float32)
         else:
             self.data = data
-        if n_amps > 1:
-            self.data = np.stack(n_amps * [self.data])
-        self.filename = 'test.fits'
-        self.filter = filter
-        self.dateobs = datetime(2016, 1, 1)
-        if header is None:
-            header = Header({'TELESCOP': '1m0-10'})
-        self.header = header
-        self.caltype = ''
-        self.bpm = np.zeros((ny, nx), dtype=np.uint8)
-        self.request_number = '0000331403'
-        self.readnoise = 11.0
-        self.block_id = '254478983'
-        self.molecule_id = '544562351'
-        self.exptime = 30.0
-        self.obstype = 'TEST'
-        self.is_bad = False
-        self.configuration_mode = 'full_frame'
+        if mask is None:
+            self.mask = np.zeros(self.data.shape, dtype=np.uint8)
+        else:
+            self.mask = mask
+        if uncertainty is None:
+            self.uncertainty = self.read_noise * np.ones(self.data.shape, dtype=self.data.dtype)
+        else:
+            self.uncertainty = uncertainty
+
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
 
-    def get_calibration_filename(self):
-        return '/tmp/{0}_{1}_{2}_bin{3}.fits'.format(self.caltype, self.instrument,
-                                                     self.epoch,
-                                                     self.ccdsum.replace(' ', 'x'))
 
-    def subtract(self, x):
-        self.data -= x
-
-    def add_history(self, msg):
-        pass
-
-    def get_n_amps(self):
-        if len(self.data.shape) > 2:
-            n_amps = self.data.shape[0]
+class FakeLCOObservationFrame(LCOObservationFrame):
+    def __init__(self, hdu_list=None, file_path='/tmp/test_image.fits', instrument=None, epoch='20160101',
+                 **kwargs):
+        if hdu_list is None:
+            self._hdus = [FakeCCDData()]
         else:
-            n_amps = 1
-        return n_amps
+            self._hdus = hdu_list
+        if instrument is None:
+            self.instrument = FakeInstrument(0, 'cpt', 'fa16', 'doma', '1m0a', '1M-SCICAM-SINISTRO', schedulable=True)
+        else:
+            self.instrument = instrument
+        self.primary_hdu.meta['DAY-OBS'] = epoch
+        self._file_path = file_path
+        self.is_bad = False
+
+        for keyword in kwargs:
+            setattr(self, keyword, kwargs[keyword])
 
 
 class FakeContext(object):
-    def __init__(self, preview_mode=False, frame_class=FakeImage):
+    def __init__(self, preview_mode=False, fpack=True, frame_class=FakeLCOObservationFrame, **kwargs):
         self.FRAME_CLASS = frame_class
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
         self.db_address = 'sqlite:///test.db'
+        self.elasticsearch_qc_index = 'banzai_qc'
+        self.elasticsearch_doc_type = 'qc'
         self.ignore_schedulability = False
         self.max_tries = 5
+        self.fpack = fpack
+        self.reduction_level = '91'
+        self.use_only_older_calibrations = False
+        # Get all of the settings that are not builtins and store them in the context object
+        for setting in dir(settings):
+            if '__' != setting[:2] and not isinstance(getattr(settings, setting), ModuleType):
+                setattr(self, setting, getattr(settings, setting))
 
-    def image_can_be_processed(self, header):
+        for keyword in kwargs:
+            setattr(self, keyword, kwargs[keyword])
+
+    def image_can_be_processed(self):
         return True
 
 
@@ -89,12 +102,12 @@ def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_ma
     stage = stagetype(context)
     kwargs = {keyword: value}
     if calibration_maker:
-        images = [FakeImage(**kwargs)]
-        images += [FakeImage() for x in range(6)]
+        images = [LCOCalibrationFrame(hdu_list=[HeaderOnly(meta=kwargs)])]
+        images += [LCOCalibrationFrame(hdu_list=[HeaderOnly()]) for x in range(6)]
         images = stage.do_stage(images)
         assert len(images) == 0
     else:
-        image = FakeImage(**kwargs)
+        image = LCOCalibrationFrame(hdu_list=[CCDData(data=np.zeros(0), meta=kwargs)], file_path='test.fits')
         image = stage.do_stage(image)
         assert image is None
 

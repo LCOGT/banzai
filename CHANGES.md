@@ -1,3 +1,7 @@
+0.29.0 (2020-02-18)
+-------------------
+- Refactored Image class. Cleaned up a lot of plumbing code
+
 0.28.5 (2020-02-18)
 -------------------
 - Update lco-ingester version to 2.1.11 to add extra metrics tag.

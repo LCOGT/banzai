@@ -1,9 +1,9 @@
 import logging
-
 import numpy as np
 
 from banzai.stages import Stage
-from banzai.utils import fits_utils
+from banzai.utils.image_utils import Section
+from banzai.data import CCDData
 
 logger = logging.getLogger('banzai')
 
@@ -13,138 +13,34 @@ class MosaicCreator(Stage):
         super(MosaicCreator, self).__init__(runtime_context)
 
     def do_stage(self, image):
-        if image.data_is_3d():
-            logging_tags = {}
-            nx, ny = get_mosaic_size(image, image.get_n_amps())
-            mosaiced_data = np.zeros((ny, nx), dtype=np.float32)
-            mosaiced_bpm = np.zeros((ny, nx), dtype=np.uint8)
-            x_detsec_limits, y_detsec_limits = get_detsec_limits(image, image.get_n_amps())
-            xmin = min(x_detsec_limits) - 1
-            ymin = min(y_detsec_limits) - 1
-            for i in range(image.get_n_amps()):
-                ccdsum = image.extension_headers[i].get('CCDSUM', image.ccdsum)
-                x_binning, y_binning = ccdsum.split(' ')
-                datasec = image.extension_headers[i]['DATASEC']
-                amp_slice = fits_utils.parse_region_keyword(datasec)
-                logging_tags['DATASEC{0}'.format(i + 1)] = datasec
+        logger.info('Mosaicing image', image=image)
+        mosaiced_detector_region = self.get_mosaic_detector_region(image)
+        binned_shape = [length // binning for length, binning in zip(mosaiced_detector_region.shape, image.binning)]
+        mosaiced_data = CCDData(data=np.zeros(binned_shape, dtype=image.data_type),
+                                meta=image.primary_hdu.meta)
+        mosaiced_data.binning = image.binning
+        mosaiced_data.detector_section = mosaiced_detector_region
+        mosaiced_data.data_section = Section(x_start=1, y_start=1, x_stop=binned_shape[1], y_stop=binned_shape[0])
+        mosaiced_data.extension_name = 'SCI'
 
-                detsec = image.extension_headers[i]['DETSEC']
-                mosaic_slice = get_windowed_mosaic_slices(detsec, xmin, ymin, x_binning, y_binning)
+        mosaiced_data.gain = np.mean([data.meta.get('GAIN') for data in image.ccd_hdus])
+        mosaiced_data.saturate = np.min([data.saturate for data in image.ccd_hdus])
+        mosaiced_data.max_linearity = np.min([data.max_linearity for data in image.ccd_hdus])
 
-                logging_tags['DATASEC{0}'.format(i + 1)] = detsec
+        for data in image.ccd_hdus:
+            mosaiced_data.copy_in(data)
+            image.remove(data)
 
-                mosaiced_data[mosaic_slice] = image.data[i][amp_slice]
-                mosaiced_bpm[mosaic_slice] = image.bpm[i][amp_slice]
-
-            image.data = mosaiced_data
-            image.bpm = mosaiced_bpm
-            # Flag any missing data
-            image.bpm[image.data == 0.0] = 1
-            image.update_shape(nx, ny)
-            update_naxis_keywords(image, nx, ny)
-            logger.info('Mosaiced image', image=image, extra_tags=logging_tags)
+        image.primary_hdu = mosaiced_data
         return image
 
-
-def get_windowed_mosaic_slices(detsec, xmin, ymin, x_binning, y_binning):
-    """
-    Get the array slices to map the image coordinates for a given detector section to the output mosaic coordinates.
-
-    Parameters
-    ----------
-    detsec: str
-            Detector section keyword from the header in IRAF section format.
-    xmin: int
-          Minimum x detector coordinate for the mosaic to go the bottom left of the array
-    ymin: int
-          Minimum y detector coordinate for the mosaic to go the bottom left of the array
-    x_binning: int
-               Binning factor in the x direction for the output mosaic
-    y_binning: int
-               Binning factor in the y direction for the output mosaic
-    Returns
-    -------
-    y_slice, x_slice: slice, slice
-                      Slice to index the output mosaic data array for the given detsec.
-    """
-    unbinned_slice = fits_utils.parse_region_keyword(detsec)
-    return (slice((unbinned_slice[0].start - ymin) // int(y_binning),
-                  (unbinned_slice[0].stop - ymin) // int(y_binning),
-                  unbinned_slice[0].step),
-            slice((unbinned_slice[1].start - xmin) // int(x_binning),
-                  (unbinned_slice[1].stop - xmin) // int(x_binning),
-                  unbinned_slice[1].step))
-
-
-def update_naxis_keywords(image, nx, ny):
-    if 'NAXIS3' in image.header.keys():
-        image.header.pop('NAXIS3')
-    image.header['NAXIS'] = 2
-    image.header['NAXIS1'] = nx
-    image.header['NAXIS2'] = ny
-
-
-def get_detsec_limits(image, n_amps):
-    """
-    Parse the detector section keyword from each extension and return a list of x and y detector positions
-
-    Parameters
-    ----------
-    image: banzai.images.Image
-           image with detector section header keywords to parse
-    n_amps: int
-            Number of amplifiers (fits extensions)
-
-    Returns
-    -------
-    x_detsec_limits, y_detsec_limits: list. list
-                                      x and y list of the detector positions in the each of the DETSEC keywords
-    """
-    x_pixel_limits = []
-    y_pixel_limits = []
-    for i in range(n_amps):
-        detsec_keyword = image.extension_headers[i]['DETSEC']
-        detsec = fits_utils.parse_region_keyword(detsec_keyword)
-        if detsec is not None:
-            # Convert starts from 0 indexed to 1 indexed
-            x_pixel_limits.append(detsec[1].start + 1)
-            y_pixel_limits.append(detsec[0].start + 1)
-            # Note python is not inclusive at the end (unlike IRAF)
-            x_pixel_limits.append(detsec[1].stop)
-            y_pixel_limits.append(detsec[0].stop)
-        else:
-            x_pixel_limits.append(None)
-            y_pixel_limits.append(None)
-
-    # Clean out any Nones
-    x_pixel_limits = [x if x is not None else 1 for x in x_pixel_limits]
-    y_pixel_limits = [y if y is not None else 1 for y in y_pixel_limits]
-
-    return x_pixel_limits, y_pixel_limits
-
-
-def get_mosaic_size(image, n_amps):
-    """
-    Get the necessary size of the output mosaic image
-
-    Parameters
-    ----------
-    image: banzai.images.Image
-           image (with extensions) to mosaic
-    n_amps: int
-            number of amplifiers (fits extensions) in the image
-
-    Returns
-    -------
-    nx, ny: int, int
-            The number of pixels in x and y that needed for the output mosaic.
-
-    Notes
-    -----
-    Astropy fits data arrays are indexed y, x.
-    """
-    ccdsum = image.ccdsum.split(' ')
-    x_pixel_limits, y_pixel_limits = get_detsec_limits(image, n_amps)
-    nx = (np.max(x_pixel_limits) - np.min(x_pixel_limits) + 1) // int(ccdsum[0])
-    ny = (np.max(y_pixel_limits) - np.min(y_pixel_limits) + 1) // int(ccdsum[1])
-    return nx, ny
+    @staticmethod
+    def get_mosaic_detector_region(image):
+        x_detector_sections = []
+        y_detector_sections = []
+        for hdu in image.ccd_hdus:
+            detector_section = Section.parse_region_keyword(hdu.meta.get('DETSEC', 'N/A'))
+            x_detector_sections += [detector_section.x_start, detector_section.x_stop]
+            y_detector_sections += [detector_section.y_start, detector_section.y_stop]
+        return Section(min(x_detector_sections), max(x_detector_sections),
+                       min(y_detector_sections), max(y_detector_sections))

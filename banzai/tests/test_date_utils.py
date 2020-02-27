@@ -1,9 +1,11 @@
 import mock
 
 from datetime import datetime, timedelta
+import pytest
 
 from banzai.utils import date_utils
 
+pytestmark = pytest.mark.date_utils
 
 test_site_data = {
     'coj': {
@@ -62,6 +64,6 @@ def test_get_dayobs(mock_datetime):
 def test_get_expected_min_and_max_dates_for_calibration_scheduling(mock_get_dayobs):
     for data in test_site_data.values():
         mock_get_dayobs.return_value = data['dayobs']
-        calculated_min_date, calculated_max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(data['timezone'])
+        calculated_min_date, calculated_max_date = date_utils.get_stacking_date_range(data['timezone'])
         assert calculated_min_date == data['expected_min_date'].strftime(date_utils.TIMESTAMP_FORMAT)
         assert calculated_max_date == data['expected_max_date'].strftime(date_utils.TIMESTAMP_FORMAT)

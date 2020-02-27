@@ -25,19 +25,18 @@ class PointingTest(Stage):
     def do_stage(self, image):
         try:
             # OFST-RA/DEC is the same as CAT-RA/DEC but includes user requested offset
-            requested_coords = SkyCoord(image.header['OFST-RA'], image.header['OFST-DEC'],
+            requested_coords = SkyCoord(image.meta['OFST-RA'], image.meta['OFST-DEC'],
                                         unit=(u.hour, u.deg), frame='icrs')
         except ValueError as e:
             try:
                 # Fallback to CAT-RA and CAT-DEC
-                requested_coords = SkyCoord(image.header['CAT-RA'], image.header['CAT-DEC'],
+                requested_coords = SkyCoord(image.meta['CAT-RA'], image.meta['CAT-DEC'],
                                             unit=(u.hour, u.deg), frame='icrs')
             except:
                 logger.error(e, image=image)
                 return image
-
         # This only works assuming CRPIX is at the center of the image
-        solved_coords = SkyCoord(image.header['CRVAL1'], image.header['CRVAL2'],
+        solved_coords = SkyCoord(image.meta['CRVAL1'], image.meta['CRVAL2'],
                                  unit=(u.deg, u.deg), frame='icrs')
 
         angular_separation = solved_coords.separation(requested_coords).arcsec
@@ -57,8 +56,6 @@ class PointingTest(Stage):
                       'pointing.offset': angular_separation}
         qc.save_qc_results(self.runtime_context, qc_results, image)
 
-        image.header['PNTOFST'] = (
-            angular_separation, '[arcsec] offset of requested and solved center'
-        )
+        image.meta['PNTOFST'] = (angular_separation, '[arcsec] offset of requested and solved center')
 
         return image

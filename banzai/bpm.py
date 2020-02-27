@@ -1,94 +1,44 @@
-import os
 import logging
-
 import numpy as np
 
+from banzai.calibrations import CalibrationUser
 from banzai.stages import Stage
-from banzai.utils import array_utils, fits_utils
-from banzai import dbs
+from banzai.logs import format_exception
 
 logger = logging.getLogger('banzai')
 
 
-class BPMUpdater(Stage):
-
-    def do_stage(self, image):
-        add_bpm_to_image(image, self.runtime_context)
-        validate_bpm_size(image)
-        if image.header.get('L1IDMASK', '') == '' and not self.runtime_context.no_bpm:
-            logger.error("Can't add BPM to image, stopping reduction", image=image)
+class BadPixelMaskLoader(CalibrationUser):
+    def apply_master_calibration(self, image, master_calibration_image):
+        try:
+            for image_extension, bpm_extension in zip(image.ccd_hdus, master_calibration_image.ccd_hdus):
+                image_extension.add_mask(bpm_extension.data)
+        except:
+            logger.error(f"Can't add BPM to image, stopping reduction: {format_exception()}", image=image)
             return None
-        flag_bad_pixels(image)
-        logger.info('Added BPM to image', image=image, extra_tags={'l1idmask': image.header['L1IDMASK']})
+        image.meta['L1IDMASK'] = master_calibration_image.filename, 'Id. of mask file used'
         return image
 
+    def on_missing_master_calibration(self, image):
+        logger.error('Master {caltype} does not exist'.format(caltype=self.calibration_type.upper()), image=image)
+        if self.runtime_context.override_missing:
+            if image.data is None:
+                bpm = None
+            else:
+                bpm = [np.zeros(extension.data.shape, dtype=np.uint8) for extension in image.ccd_hdus]
+            for image_extension, bpm_data in zip(image.ccd_hdus, bpm):
+                image_extension.add_mask(bpm_data)
+        else:
+            return None
 
-def add_bpm_to_image(image, runtime_context):
-    # Exit if image already has a BPM
-    if image.bpm is not None:
-        return
-    # Get the BPM record
-    bpm_record = dbs.get_bpm_record(image.instrument.id, image.ccdsum, db_address=runtime_context.db_address)
-    # Check if file is missing
-    if bpm_record is None:
-        logger.warning('Unable to find BPM in database, falling back to empty BPM', image=image)
-        add_empty_bpm(image)
-        return
-    bpm_file_info = {'path': os.path.join(bpm_record.filepath, bpm_record.filename),
-                     'frameid': bpm_record.frameid}
-    # Load and add the BPM
-    bpm = load_bpm(bpm_file_info, runtime_context)
-    set_image_bpm_and_header(image, bpm, os.path.basename(bpm_record.filename))
+    @property
+    def calibration_type(self):
+        return 'BPM'
 
 
-def add_empty_bpm(image):
-    if image.data is None:
-        bpm = None
-    else:
-        bpm = np.zeros(image.data.shape, dtype=np.uint8)
-    set_image_bpm_and_header(image, bpm, '')
+class SaturatedPixelFlagger(Stage):
+    def do_stage(self, image):
+        for image_extension in image.ccd_hdus:
+            image_extension.mask[image_extension.data > image_extension.saturate] |= 2
 
-
-def load_bpm(bpm_file_info, runtime_context):
-    bpm_hdu = fits_utils.open_fits_file(bpm_file_info, runtime_context)
-    bpm_extensions = fits_utils.get_extensions_by_name(bpm_hdu, 'BPM')
-    # Filter out BPM extensions without data
-    bpm_extensions = [extension for extension in bpm_extensions if extension.data is not None]
-    if len(bpm_extensions) > 1:
-        extension_shape = bpm_extensions[0].data.shape
-        bpm_shape = (len(bpm_extensions), extension_shape[0], extension_shape[1])
-        bpm = np.zeros(bpm_shape, dtype=np.uint8)
-        for i, extension in enumerate(bpm_extensions):
-            bpm[i, :, :] = extension.data[:, :]
-    elif len(bpm_extensions) == 1:
-        bpm = np.array(bpm_extensions[0].data, dtype=np.uint8)
-    else:
-        bpm = np.array(bpm_hdu[0].data, dtype=np.uint8)
-    return bpm
-
-
-def set_image_bpm_and_header(image, bpm, bpm_filename):
-    image.bpm = bpm
-    image.header['L1IDMASK'] = (bpm_filename, 'Id. of mask file used')
-
-
-def validate_bpm_size(image):
-    if not bpm_has_valid_size(image):
-        logger.warning('BPM shape mismatch, falling back to empty BPM', image=image)
-        add_empty_bpm(image)
-
-
-def bpm_has_valid_size(image):
-    is_valid = True
-    # If 3d, check and make sure the number of extensions is the same
-    if image.data_is_3d():
-        for i in range(image.get_n_amps()):
-            is_valid &= image.bpm[i].shape == image.data[i].shape
-    else:
-        is_valid &= image.bpm.shape == image.data.shape
-    return is_valid
-
-
-def flag_bad_pixels(image):
-    bpm_slices = array_utils.array_indices_to_slices(image.bpm)
-    image.bpm[image.data[bpm_slices] >= float(image.header['SATURATE'])] = 2
+        return image

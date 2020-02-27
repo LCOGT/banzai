@@ -1,7 +1,5 @@
-import os
-import tempfile
 import logging
-import copy
+from typing import Optional
 import requests
 
 from banzai import logs
@@ -11,54 +9,25 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy import units
 from tenacity import retry, wait_exponential, stop_after_attempt
+import io
+import os
 
 logger = logging.getLogger('banzai')
 
+FITS_MANDATORY_KEYWORDS = ['SIMPLE', 'BITPIX', 'NAXIS', 'EXTEND', 'COMMENT', 'CHECKSUM', 'DATASUM']
 
-def sanitizeheader(header):
+
+def sanitize_header(header):
     # Remove the mandatory keywords from a header so it can be copied to a new
     # image.
     header = header.copy()
 
     # Let the new data decide what these values should be
-    for i in ['SIMPLE', 'BITPIX', 'BSCALE', 'BZERO']:
+    for i in FITS_MANDATORY_KEYWORDS:
         if i in header.keys():
             header.pop(i)
 
     return header
-
-
-def split_slice(pixel_section):
-    pixels = pixel_section.split(':')
-    if int(pixels[1]) > int(pixels[0]):
-        pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]), 1)
-    else:
-        if int(pixels[1]) == 1:
-            pixel_slice = slice(int(pixels[0]) - 1, None, -1)
-        else:
-            pixel_slice = slice(int(pixels[0]) - 1, int(pixels[1]) - 2, -1)
-    return pixel_slice
-
-
-def parse_region_keyword(keyword_value):
-    """
-    Convert a header keyword of the form [x1:x2],[y1:y2] into index slices
-    :param keyword_value: Header keyword string
-    :return: x, y index slices
-    """
-    if not keyword_value:
-        pixel_slices = None
-    elif keyword_value.lower() == 'unknown':
-        pixel_slices = None
-    elif keyword_value.lower() == 'n/a':
-        pixel_slices = None
-    else:
-        # Strip off the brackets and split the coordinates
-        pixel_sections = keyword_value[1:-1].split(',')
-        x_slice = split_slice(pixel_sections[0])
-        y_slice = split_slice(pixel_sections[1])
-        pixel_slices = (y_slice, x_slice)
-    return pixel_slices
 
 
 def table_to_fits(table):
@@ -74,7 +43,7 @@ def table_to_fits(table):
             column_name = hdu.header[k].lower()
             description = table[column_name].description
             hdu.header[k] = (column_name.upper(), description)
-            # Get the value of n in TTYPEn
+            # Get the value of n in TTYPE
             n = k[5:]
             hdu.header['TCOMM{0}'.format(n)] = description
     return hdu
@@ -104,241 +73,134 @@ def parse_ra_dec(header):
     return ra, dec
 
 
-def open_fits_file(file_info, runtime_context):
-    """
-    Load a fits file
-
-    Parameters
-    ----------
-    :param file_info: Queue message body: dict
-    :param runtime_context: Context object with runtime environment info
-
-    Returns
-    -------
-    hdulist: astropy.io.fits
-
-    Notes
-    -----
-    This is a wrapper to astropy.io.fits.open but funpacks the file first.
-    """
-    base_filename, file_extension = os.path.splitext(get_filename_from_info(file_info))
-    path_to_file = get_local_path_from_info(file_info, runtime_context)
-
-    need_to_download = False
-    if not os.path.isfile(path_to_file):
-        need_to_download = True
-
-    if file_extension == '.fz':
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            output_filepath = os.path.join(tmpdirname, base_filename)
-            if need_to_download:
-                downloaded_filepath = download_from_s3(file_info, tmpdirname, runtime_context)
-                os.system('funpack -O {0} {1}'.format(output_filepath, downloaded_filepath))
-            else:
-                os.system('funpack -O {0} {1}'.format(output_filepath, path_to_file))
-
-            hdulist = fits.open(output_filepath, 'readonly')
-            hdulist_copy = copy.deepcopy(hdulist)
-            hdulist.close()
-    else:
-        hdulist = fits.open(path_to_file, 'readonly')
-        hdulist_copy = copy.deepcopy(hdulist)
-        hdulist.close()
-    return hdulist_copy
-
-
-def open_image(file_info, runtime_context):
-    """
-    Load an image from a FITS file
-
-    Parameters
-    ----------
-    :param file_info: Queue message body: dict
-    :param runtime_context: Context object with runtime environment info
-
-    Returns
-    -------
-    data: numpy array
-          image data; will have 3 dimensions if the file was either multi-extension or
-          a datacube
-    header: astropy.io.fits.Header
-            Header from the primary extension
-    bpm: numpy array
-         Array of bad pixel mask values if the BPM extension exists. None otherwise.
-    extension_headers: list of astropy.io.fits.Header
-                       List of headers from other SCI extensions that are not the
-                       primary extension
-
-    Notes
-    -----
-    The file can be either compressed or not. If there are multiple extensions,
-    e.g. Sinistros, the extensions should be (SCI, 1), (SCI, 2), ...
-    Sinsitro frames that were taken as datacubes will be munged later so that the
-    output images are consistent
-    """
-    hdulist = open_fits_file(file_info, runtime_context)
-
-    # Get the main header
-    header = hdulist[0].header
-
-    # Check for multi-extension fits
-    extension_headers = []
-    sci_extensions = get_extensions_by_name(hdulist, 'SCI')
-    if len(sci_extensions) > 1:
-        data = np.zeros((len(sci_extensions), sci_extensions[0].data.shape[0],
-                         sci_extensions[0].data.shape[1]), dtype=np.float32)
-        for i, hdu in enumerate(sci_extensions):
-            data[i, :, :] = hdu.data[:, :]
-            extension_headers.append(hdu.header)
-    elif len(sci_extensions) == 1:
-        data = sci_extensions[0].data.astype(np.float32)
-    else:
-        data = hdulist[0].data.astype(np.float32)
-
+def get_primary_header(filename) -> Optional[fits.Header]:
     try:
-        bpm = hdulist['BPM'].data.astype(np.uint8)
-    except KeyError:
-        bpm = None
+        header = fits.getheader(filename, ext=0)
+        for keyword in header:
+            if keyword not in FITS_MANDATORY_KEYWORDS:
+                return header
+        return fits.getheader(filename, ext=1)
 
-    return data, header, bpm, extension_headers
-
-
-def get_basename(path):
-    basename = None
-    if path is not None:
-        filename = os.path.basename(path)
-        if filename.find('.') > 0:
-            basename = filename[:filename.index('.')]
-        else:
-            basename = filename
-    return basename
+    except Exception:
+        logger.error("Unable to open fits file: {}".format(logs.format_exception()), extra_tags={'filename': filename})
+        return None
 
 
 # Stop after 4 attempts, and back off exponentially with a minimum wait time of 4 seconds, and a maximum of 10.
 # If it fails after 4 attempts, "reraise" the original exception back up to the caller.
 @retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
-def download_from_s3(file_info, output_directory, runtime_context):
+def download_from_s3(file_info, runtime_context):
     frame_id = file_info.get('frameid')
-    filename = get_filename_from_info(file_info)
 
     logger.info(f"Downloading file {file_info.get('filename')} from archive. ID: {frame_id}.",
                 extra_tags={'filename': file_info.get('filename'),
                             'attempt_number': download_from_s3.retry.statistics['attempt_number']})
-
-    if frame_id is not None:
-        url = f'{runtime_context.ARCHIVE_FRAME_URL}/{frame_id}'
-        response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN).json()
-        path = os.path.join(output_directory, response['filename'])
-        with open(path, 'wb') as f:
-            f.write(requests.get(response['url'], stream=True).content)
-    else:
-        basename = get_basename(filename)
-        url = f'{runtime_context.ARCHIVE_FRAME_URL}/?basename={basename}'
-        response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN).json()
-        path = os.path.join(output_directory, response['results'][0]['filename'])
-        with open(path, 'wb') as f:
-            f.write(requests.get(response['results'][0]['url'], stream=True).content)
-
-    return path
-
-
-def get_extensions_by_name(fits_hdulist, name):
-    """
-    Get a list of the science extensions from a multi-extension fits file (HDU list)
-
-    Parameters
-    ----------
-    fits_hdulist: HDUList
-                  input fits HDUList to search for SCI extensions
-
-    name: str
-          Extension name to collect, e.g. SCI
-
-    Returns
-    -------
-    HDUList: an HDUList object with only the SCI extensions
-    """
-    # The following of using False is just an awful convention and will probably be
-    # deprecated at some point
-    extension_info = fits_hdulist.info(False)
-    return fits.HDUList([fits_hdulist[ext[0]] for ext in extension_info if ext[1] == name])
+    url = f'{runtime_context.ARCHIVE_FRAME_URL}/{frame_id}'
+    response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN).json()
+    buffer = io.BytesIO()
+    buffer.write(requests.get(response['url'], stream=True).content)
+    return buffer
 
 
 def get_configuration_mode(header):
     configuration_mode = header.get('CONFMODE', 'default')
     # If the configuration mode is not in the header, fallback to default to support legacy data
-    if (
-            configuration_mode == 'N/A' or
-            configuration_mode == 0 or
-            configuration_mode.lower() == 'normal'
-    ):
+    if configuration_mode == 'N/A' or configuration_mode == 0 or configuration_mode.lower() == 'normal':
         configuration_mode = 'default'
 
     header['CONFMODE'] = configuration_mode
     return configuration_mode
 
 
-def get_primary_header(file_info, runtime_context):
-    try:
-        hdulist = open_fits_file(file_info, runtime_context)
-        return hdulist[0].header
-    except Exception:
-        logger.error("Unable to open fits file: {}".format(logs.format_exception()),
-                     extra_tags={'filename': get_filename_from_info(file_info)})
-        return None
-
-
-def get_filename_from_info(file_info):
-    """
-    Get a filename from a queue message
-    :param file_info: Queue message body: dict
-    :return: filename : str
-
-    When running using a /archive mount, BANZAI listens on the fits_queue, which contains a
-    path to an image on the archive machine. When running using AWS and s3, we listen to archived_fits
-    which contains a complete dictionary of image parameters, one of which is a filename including extension.
-    """
-    path = file_info.get('path')
-    if path is None:
-        path = file_info.get('filename')
-    return os.path.basename(path)
-
-
-def get_local_path_from_info(file_info, runtime_context):
-    """
-    Given a message from an LCO fits queue, determine where the image would
-    be stored locally by the pipeline.
-    :param file_info: Queue message body: dict
-    :param runtime_context: Context object with runtime environment info
-    :return: filepath: str
-    """
-    if is_s3_queue_message(file_info):
-        # archived_fits contains a dictionary of image attributes and header values
-        path = os.path.join(runtime_context.processed_path, file_info.get('SITEID'),
-                            file_info.get('INSTRUME'), file_info.get('DAY-OBS'))
-
-        if file_info.get('RLEVEL') == 0:
-            path = os.path.join(path, 'raw')
-        elif file_info.get('RLEVEL') == 91:
-            path = os.path.join(path, 'processed')
-
-        path = os.path.join(path, file_info.get('filename'))
+def open_fits_file(file_info, context):
+    if file_info.get('path') is not None and os.path.exists(file_info.get('path')):
+        buffer = open(file_info.get('path'), 'rb')
+        filename = os.path.basename(file_info.get('path'))
+    elif file_info.get('frameid') is not None:
+        buffer = download_from_s3(file_info, context)
+        filename = file_info.get('filename')
     else:
-        # fits_queue contains paths to images on /archive
-        path = file_info.get('path')
+        raise ValueError('This file does not exist and there is no frame id to get it from S3.')
 
-    return path
+    hdu_list = fits.open(buffer, memmap=False)
+    uncompressed_hdu_list = unpack(hdu_list)
+    hdu_list.close()
+    buffer.close()
+    del hdu_list
+    del buffer
+
+    return uncompressed_hdu_list, filename
 
 
-def is_s3_queue_message(file_info):
-    """
-    Determine if we are reading from s3 based on the contents of the
-    message on the queue
-    :param file_info: Queue message body: dict
-    :return: True if we should read from s3, else False
-    """
-    s3_queue_message = False
-    if file_info.get('path') is None:
-        s3_queue_message = True
+def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
+    # If the primary fits header only has the mandatory keywords, then we throw away that extension
+    # and extension 1 gets moved to 0
+    # Otherwise the primary HDU is kept
+    move_1_to_0 = True
+    for keyword in compressed_hdulist[0].header:
+        if keyword not in FITS_MANDATORY_KEYWORDS:
+            move_1_to_0 = False
+            break
+    if not move_1_to_0 or not isinstance(compressed_hdulist[1], fits.CompImageHDU):
+        primary_hdu = fits.PrimaryHDU(data=None, header=compressed_hdulist[0].header)
+    else:
+        data_type = str(compressed_hdulist[1].data.dtype)
+        if 'int' == data_type[:3]:
+            data_type = 'u' + data_type
+            data = np.array(compressed_hdulist[1].data, getattr(np, data_type))
+        else:
+            data = compressed_hdulist[1].data
+        primary_hdu = fits.PrimaryHDU(data=data, header=compressed_hdulist[1].header)
+        if 'ZDITHER0' in primary_hdu.header:
+            primary_hdu.header.pop('ZDITHER0')
+    hdulist = [primary_hdu]
+    if move_1_to_0:
+        starting_extension = 2
+    else:
+        starting_extension = 1
+    for hdu in compressed_hdulist[starting_extension:]:
+        if isinstance(hdu, fits.CompImageHDU):
+            data_type = str(hdu.data.dtype)
+            if 'int' == data_type[:3]:
+                data_type = getattr(np, 'u' + data_type)
+                data = np.array(hdu.data, data_type)
+            else:
+                data = np.array(hdu.data, hdu.data.dtype)
+            header = hdu.header
+            hdulist.append(fits.ImageHDU(data=data, header=header))
+        elif isinstance(hdu, fits.BinTableHDU):
+            hdulist.append(fits.BinTableHDU(data=hdu.data, header=hdu.header))
+        else:
+            hdulist.append(fits.ImageHDU(data=hdu.data, header=hdu.header))
+    return fits.HDUList(hdulist)
 
-    return s3_queue_message
+
+def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
+    if uncompressed_hdulist[0].data is None:
+        primary_hdu = fits.PrimaryHDU(header=uncompressed_hdulist[0].header)
+        hdulist = [primary_hdu]
+    else:
+        primary_hdu = fits.PrimaryHDU()
+        compressed_hdu = fits.CompImageHDU(data=np.ascontiguousarray(uncompressed_hdulist[0].data),
+                                           header=uncompressed_hdulist[0].header, quantize_level=64,
+                                           dither_seed=2048, quantize_method=1)
+        hdulist = [primary_hdu, compressed_hdu]
+
+    for hdu in uncompressed_hdulist[1:]:
+        if isinstance(hdu, fits.ImageHDU):
+            compressed_hdu = fits.CompImageHDU(data=np.ascontiguousarray(hdu.data), header=hdu.header,
+                                               quantize_level=64, quantize_method=1)
+            hdulist.append(compressed_hdu)
+        else:
+            hdulist.append(hdu)
+    return fits.HDUList(hdulist)
+
+
+def to_fits_image_extension(data, master_extension_name, extension_name, context, extension_version=None):
+    extension_name = master_extension_name + extension_name
+    for extname_to_condense in context.EXTENSION_NAMES_TO_CONDENSE:
+        extension_name = extension_name.replace(extname_to_condense, '')
+    header = fits.Header({'EXTNAME': extension_name})
+    if extension_version is not None:
+        header['EXTVER'] = extension_version
+    return fits.ImageHDU(data=data, header=header)

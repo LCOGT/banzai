@@ -25,7 +25,7 @@ class Stage(abc.ABC):
             return image
 
         except Exception:
-            logger.error(logs.format_exception())
+            logger.error(logs.format_exception(), image=image)
             return None
 
     @abc.abstractmethod
@@ -33,7 +33,7 @@ class Stage(abc.ABC):
         return image
 
 
-class MultiFrameStage(abc.ABC):
+class MultiFrameStage(metaclass=abc.ABCMeta):
 
     def __init__(self, runtime_context):
         self.runtime_context = runtime_context
@@ -48,7 +48,7 @@ class MultiFrameStage(abc.ABC):
         return []
 
     def get_grouping(self, image):
-        grouping_criteria = [image.site, image.camera]
+        grouping_criteria = [image.instrument.site, image.instrument.id]
         if self.group_by_attributes:
             grouping_criteria += [getattr(image, keyword) for keyword in self.group_by_attributes()]
         return grouping_criteria

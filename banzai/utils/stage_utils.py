@@ -1,17 +1,11 @@
-from banzai import settings
-from banzai.utils import import_utils, image_utils
+from banzai.utils import import_utils
+from collections import Iterable
 import logging
-
-from banzai.utils.fits_utils import get_filename_from_info
 
 logger = logging.getLogger('banzai')
 
 
-# TODO: This module should be renamed and/or refactored. It was put in place to resolve an issue with circular imports
-# in an expedient manner and should be given more attention.
-
-
-def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
+def get_stages_for_individual_frame(ordered_stages, last_stage=None, extra_stages=None):
     """
 
     Parameters
@@ -23,8 +17,8 @@ def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
 
     Returns
     -------
-    stages_todo: list of banzai.stages.Stage
-                 The stages that need to be done
+    stages_todo: list of strings
+                 The stages that need to be done: should of type banzai.stages.Stage
 
     Notes
     -----
@@ -38,29 +32,39 @@ def get_stages_todo(ordered_stages, last_stage=None, extra_stages=None):
     else:
         last_index = ordered_stages.index(last_stage) + 1
 
-    stages_todo = [import_utils.import_attribute(stage) for stage in ordered_stages[:last_index]]
-
-    stages_todo += [import_utils.import_attribute(stage) for stage in extra_stages]
+    stages_todo = [stage for stage in ordered_stages[:last_index]]
+    stages_todo += [stage for stage in extra_stages]
 
     return stages_todo
 
 
-def run(file_info, runtime_context):
-    """
-    Main driver script for banzai.
-    """
-    image = image_utils.read_image(file_info, runtime_context)
-    if image is None:
-        return
-    stages_to_do = get_stages_todo(settings.ORDERED_STAGES,
-                                   last_stage=settings.LAST_STAGE[image.obstype],
-                                   extra_stages=settings.EXTRA_STAGES[image.obstype])
-    logger.info("Starting to reduce frame", image=image)
-    for stage in stages_to_do:
-        stage_to_run = stage(runtime_context)
-        image = stage_to_run.run(image)
-    if image is None:
-        logger.error('Reduction stopped', extra_tags={'filename': get_filename_from_info(file_info)})
-        return
-    image.write(runtime_context)
-    logger.info("Finished reducing frame", image=image)
+def run_pipeline_stages(image_paths, runtime_context):
+    frame_factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)()
+    if isinstance(image_paths, list):
+        images = [frame_factory.open(image_path, runtime_context) for image_path in image_paths]
+        images = [image for image in images if image is not None]
+        if len(images) == 0:
+            return
+        stages_to_do = runtime_context.CALIBRATION_STACKER_STAGES[images[0].obstype.upper()]
+    else:
+        images = frame_factory.open(image_paths, runtime_context)
+        if images is None:
+            return
+        stages_to_do = get_stages_for_individual_frame(runtime_context.ORDERED_STAGES,
+                                                       last_stage=runtime_context.LAST_STAGE[images.obstype.upper()],
+                                                       extra_stages=runtime_context.EXTRA_STAGES[images.obstype.upper()])
+
+    for stage_name in stages_to_do:
+        stage_constructor = import_utils.import_attribute(stage_name)
+        stage = stage_constructor(runtime_context)
+        images = stage.run(images)
+
+        if images is None:
+            logger.error('Reduction stopped', extra_tags={'filename': image_paths})
+            return
+
+    if isinstance(images, Iterable):
+        for image in images:
+            image.write(runtime_context)
+    else:
+        images.write(runtime_context)
