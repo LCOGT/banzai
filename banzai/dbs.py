@@ -303,7 +303,8 @@ def cal_record_to_file_info(record):
     return file_info
 
 
-def get_master_cal(image, calibration_type, master_selection_criteria, db_address, use_only_older_calibrations=False):
+def get_master_cal_record(image, calibration_type, master_selection_criteria, db_address,
+                          use_only_older_calibrations=False):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
@@ -333,11 +334,17 @@ def get_master_cal(image, calibration_type, master_selection_criteria, db_addres
     date_deltas = np.abs(np.array([i.dateobs - image.dateobs for i in calibration_images]))
     closest_calibration_image = calibration_images[np.argmin(date_deltas)]
 
-    return cal_record_to_file_info(closest_calibration_image)
+    return closest_calibration_image
 
 
-def get_individual_cal_frames(instrument, calibration_type, min_date: str, max_date: str, db_address: str,
-                              include_bad_frames: bool = False):
+def get_master_cal(image, calibration_type, master_selection_criteria, db_address,
+                   use_only_older_calibrations=False):
+    return cal_record_to_file_info(get_master_cal_record(image, calibration_type, master_selection_criteria, db_address,
+                                                         use_only_older_calibrations=use_only_older_calibrations))
+
+
+def get_individual_cal_records(instrument, calibration_type, min_date: str, max_date: str, db_address: str,
+                               include_bad_frames: bool = False):
     calibration_criteria = CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.dateobs >= parse(min_date).replace(tzinfo=None)
@@ -351,6 +358,13 @@ def get_individual_cal_frames(instrument, calibration_type, min_date: str, max_d
     with get_session(db_address=db_address) as db_session:
         image_records = db_session.query(CalibrationImage).filter(calibration_criteria).all()
 
+    return image_records
+
+
+def get_individual_cal_frames(instrument, calibration_type, min_date: str, max_date: str, db_address: str,
+                              include_bad_frames: bool = False):
+    image_records = get_individual_cal_records(instrument, calibration_type, min_date, max_date, db_address,
+                                               include_bad_frames=include_bad_frames)
     return [cal_record_to_file_info(record) for record in image_records]
 
 
