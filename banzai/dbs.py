@@ -490,6 +490,7 @@ def get_individual_calibration_image_records(instrument, calibration_type, min_d
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.dateobs >= parse(min_date).replace(tzinfo=None)
     calibration_criteria &= CalibrationImage.dateobs <= parse(max_date).replace(tzinfo=None)
+    calibration_criteria &= CalibrationImage.is_master == False
 
     if not include_bad_frames:
         calibration_criteria &= CalibrationImage.is_bad == False
