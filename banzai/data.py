@@ -123,9 +123,9 @@ class CCDData(Data):
         return self
 
     def __itruediv__(self, value):
-        if isinstance(value, type(self)):
-            self.uncertainty = np.abs(self.data / value.data) * np.sqrt(
-                (self.uncertainty / self.data) ** 2 + (value.uncertainty / value.data) ** 2)
+        if isinstance(value, CCDData):
+            self.uncertainty = np.abs(self.data / value.data) * \
+                               np.sqrt((self.uncertainty / self.data) ** 2 + (value.uncertainty / value.data) ** 2)
             self.data = np.divide(self.data, value.data)
             self.meta['SATURATE'] /= value.meta['SATURATE']
             self.meta['GAIN'] /= value.meta['GAIN']
