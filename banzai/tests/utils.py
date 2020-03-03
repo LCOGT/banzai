@@ -23,7 +23,7 @@ class FakeCCDData(CCDData):
         if meta is not None:
             self.meta = meta
         else:
-            self.meta = Header({'SATURATE': 1, 'GAIN': 1, 'MAXLIN': 1})
+            self.meta = Header()
         if bias_level is not None:
             self.meta['BIASLVL'] = bias_level
         if read_noise is not None:
