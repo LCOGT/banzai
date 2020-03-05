@@ -351,6 +351,7 @@ def get_individual_cal_records(instrument, calibration_type, min_date: str, max_
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.dateobs >= parse(min_date).replace(tzinfo=None)
     calibration_criteria &= CalibrationImage.dateobs <= parse(max_date).replace(tzinfo=None)
+    calibration_criteria &= CalibrationImage.is_master == False
 
     calibration_criteria &= CalibrationImage.is_master == False
 
