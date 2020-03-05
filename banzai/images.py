@@ -179,6 +179,7 @@ class Image(object):
         image_hdu.header['BZERO'] = 0.0
         image_hdu.header['SIMPLE'] = True
         image_hdu.header['EXTEND'] = True
+        image_hdu.header['EXPTIME'] = '{:0.6f}'.format(self.exptime)
         image_hdu.name = 'SCI'
 
         hdu_list = [image_hdu]

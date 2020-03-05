@@ -1,3 +1,7 @@
+0.28.7 (2020-03-05)
+-------------------
+- Explicitly truncate exposure time to 6 decimal places, since the Archive API will not accept EXPTIME values with more decimal places.
+
 0.28.6 (2020-03-02)
 -------------------
 - Update retrieving individual calibration image records to exclude master calibrations.
