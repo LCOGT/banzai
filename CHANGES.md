@@ -1,6 +1,12 @@
-0.29.0 (2020-02-18)
+0.29.0 (2020-03)
 -------------------
 - Refactored Image class. Cleaned up a lot of plumbing code
+
+0.28.6 (2020-03-02)
+-------------------
+- Update retrieving individual calibration image records to exclude master calibrations.
+  In some cases, manual stacking of masters was picking up old master calibrations and including
+  them in new master cals.
 
 0.28.5 (2020-02-18)
 -------------------

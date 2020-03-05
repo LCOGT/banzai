@@ -124,11 +124,13 @@ class CCDData(Data):
 
     def __itruediv__(self, value):
         if isinstance(value, CCDData):
-            self.data /= value.data
-            self.uncertainty /= value.uncertainty
+            self.uncertainty = np.abs(self.data / value.data) * \
+                               np.sqrt((self.uncertainty / self.data) ** 2 + (value.uncertainty / value.data) ** 2)
+            self.data = np.divide(self.data, value.data)
             self.meta['SATURATE'] /= value.meta['SATURATE']
             self.meta['GAIN'] /= value.meta['GAIN']
             self.meta['MAXLIN'] /= value.meta['MAXLIN']
+            self.mask |= value.mask
         else:
             self.__imul__(1.0 / value)
         return self
