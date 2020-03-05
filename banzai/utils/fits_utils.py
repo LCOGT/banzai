@@ -175,22 +175,34 @@ def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
     return fits.HDUList(hdulist)
 
 
-def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
+def compress_hdu(hdu: fits.ImageHDU, lossless_compression: bool):
+    if lossless_compression:
+        quantize_level = 0
+        compression_type = 'GZIP_2'
+    else:
+        quantize_level = 64
+        compression_type = 'RICE_1'
+    return fits.CompImageHDU(data=np.ascontiguousarray(hdu.data),
+                             header=hdu.header, quantize_level=quantize_level,
+                             compression_type=compression_type, quantize_method=1)
+
+
+def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: list = None) -> fits.HDUList:
+    if lossless_extensions is None:
+        lossless_extensions = []
+
     if uncompressed_hdulist[0].data is None:
         primary_hdu = fits.PrimaryHDU(header=uncompressed_hdulist[0].header)
         hdulist = [primary_hdu]
     else:
         primary_hdu = fits.PrimaryHDU()
-        compressed_hdu = fits.CompImageHDU(data=np.ascontiguousarray(uncompressed_hdulist[0].data),
-                                           header=uncompressed_hdulist[0].header, quantize_level=64,
-                                           dither_seed=2048, quantize_method=1)
+
+        compressed_hdu = compress_hdu(uncompressed_hdulist[0], uncompressed_hdulist[0].name in lossless_extensions)
         hdulist = [primary_hdu, compressed_hdu]
 
     for hdu in uncompressed_hdulist[1:]:
         if isinstance(hdu, fits.ImageHDU):
-            compressed_hdu = fits.CompImageHDU(data=np.ascontiguousarray(hdu.data), header=hdu.header,
-                                               quantize_level=64, quantize_method=1)
-            hdulist.append(compressed_hdu)
+            hdulist.append(compress_hdu(hdu, hdu.name in lossless_extensions))
         else:
             hdulist.append(hdu)
     return fits.HDUList(hdulist)

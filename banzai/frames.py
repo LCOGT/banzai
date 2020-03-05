@@ -172,7 +172,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         if not isinstance(hdu_list_to_write[0], fits.PrimaryHDU):
             hdu_list_to_write[0] = fits.PrimaryHDU(data=hdu_list_to_write[0].data, header=hdu_list_to_write[0].header)
         if context.fpack:
-            hdu_list_to_write = fits_utils.pack(hdu_list_to_write)
+            hdu_list_to_write = fits_utils.pack(hdu_list_to_write, context.LOSSLESS_EXTENSIONS)
         return hdu_list_to_write
 
     @property
