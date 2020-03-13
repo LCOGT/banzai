@@ -1,3 +1,8 @@
+0.28.8 (2020-03-09)
+-------------------
+- Upgrade ingester lib version to address OpenTSDB default HTTP port issue.
+- Fix EXPTIME to be a float, rounded to 6 digits.
+
 0.28.7 (2020-03-05)
 -------------------
 - Explicitly truncate exposure time to 6 decimal places, since the Archive API will not accept EXPTIME values with more decimal places.
