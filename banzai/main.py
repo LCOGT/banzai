@@ -116,7 +116,7 @@ def reduce_single_frame():
                      extra_tags={'filename': runtime_context.path})
         return
     try:
-        stage_utils.run_pipeline_stages(runtime_context.path, runtime_context)
+        stage_utils.run_pipeline_stages([{'path': runtime_context.path}], runtime_context)
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filepath': runtime_context.path})
 

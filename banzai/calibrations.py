@@ -2,7 +2,7 @@ import logging
 import abc
 from datetime import datetime
 
-from banzai.stages import Stage, MultiFrameStage
+from banzai.stages import Stage
 from banzai import dbs, logs
 from banzai.utils import qc, import_utils, stage_utils, file_utils
 from banzai.data import stack
@@ -11,7 +11,7 @@ from banzai.utils.image_utils import Section
 logger = logging.getLogger('banzai')
 
 
-class CalibrationMaker(MultiFrameStage):
+class CalibrationMaker(Stage):
     def __init__(self, runtime_context):
         super(CalibrationMaker, self).__init__(runtime_context)
 
@@ -34,14 +34,14 @@ class CalibrationMaker(MultiFrameStage):
             msg = 'The minimum number of frames required to create a master calibration of type ' \
                   '{calibration_type} has not been specified in the settings.'
             logger.error(msg.format(calibration_type=self.calibration_type.upper()))
-            return []
+            return None
         if len(images) < min_images:
             # Do nothing
             msg = 'Number of images less than minimum requirement of {min_images}, not combining'
             logger.warning(msg.format(min_images=min_images))
-            return []
+            return None
 
-        return [self.make_master_calibration_frame(images)]
+        return self.make_master_calibration_frame(images)
 
 
 class CalibrationStacker(CalibrationMaker):

@@ -1,6 +1,7 @@
 from banzai.utils import import_utils
 from collections import Iterable
 import logging
+from banzai.context import Context
 
 logger = logging.getLogger('banzai')
 
@@ -38,18 +39,15 @@ def get_stages_for_individual_frame(ordered_stages, last_stage=None, extra_stage
     return stages_todo
 
 
-def run_pipeline_stages(image_paths, runtime_context):
+def run_pipeline_stages(image_paths: list, runtime_context: Context, calibration_maker: bool = False):
     frame_factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)()
-    if isinstance(image_paths, list):
-        images = [frame_factory.open(image_path, runtime_context) for image_path in image_paths]
-        images = [image for image in images if image is not None]
-        if len(images) == 0:
-            return
+    images = [frame_factory.open(image_path, runtime_context) for image_path in image_paths]
+    images = [image for image in images if image is not None]
+    if len(images) == 0:
+        return
+    if calibration_maker:
         stages_to_do = runtime_context.CALIBRATION_STACKER_STAGES[images[0].obstype.upper()]
     else:
-        images = frame_factory.open(image_paths, runtime_context)
-        if images is None:
-            return
         stages_to_do = get_stages_for_individual_frame(runtime_context.ORDERED_STAGES,
                                                        last_stage=runtime_context.LAST_STAGE[images.obstype.upper()],
                                                        extra_stages=runtime_context.EXTRA_STAGES[images.obstype.upper()])
@@ -63,8 +61,5 @@ def run_pipeline_stages(image_paths, runtime_context):
             logger.error('Reduction stopped', extra_tags={'filename': image_paths})
             return
 
-    if isinstance(images, Iterable):
-        for image in images:
-            image.write(runtime_context)
-    else:
-        images.write(runtime_context)
+    for image in images:
+        image.write(runtime_context)
