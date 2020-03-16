@@ -17,7 +17,7 @@ def test_min_images():
 
 def test_group_by_attributes():
     maker = FlatMaker(FakeContext())
-    assert maker.group_by_attributes() == ['configuration_mode', 'binning', 'filter']
+    assert maker.group_by_attributes == ['configuration_mode', 'binning', 'filter']
 
 
 @mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
