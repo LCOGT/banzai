@@ -1,6 +1,7 @@
 import logging
 import abc
 import itertools
+from collections.abc import Iterable
 
 from banzai import logs
 from banzai.frames import ObservationFrame
@@ -30,14 +31,19 @@ class Stage(abc.ABC):
     def run(self, images):
         if not images:
             return images
-        images.sort(key=self.get_grouping)
+        if not self.group_by_attributes:
+            image_sets = images
+        else:
+            images.sort(key=self.get_grouping)
+            image_sets = [list(image_set) for _, image_set in itertools.groupby(images, self.get_grouping)]
         processed_images = []
-        for _, image_set in itertools.groupby(images, self.get_grouping):
+        for image_set in image_sets:
             try:
-                image_set = list(image_set)
-                logger.info('Running {0}'.format(self.stage_name), image=image_set[0])
-                if len(image_set) == 1:
-                    image_set = image_set[0]
+                if isinstance(image_set, Iterable):
+                    image = image_set[0]
+                else:
+                    image = image_set
+                logger.info('Running {0}'.format(self.stage_name), image=image)
                 processed_images.append(self.do_stage(image_set))
             except Exception:
                 logger.error(logs.format_exception())
