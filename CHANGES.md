@@ -2,6 +2,10 @@
 -------------------
 - Refactored Image class. Cleaned up a lot of plumbing code
 
+0.28.9 (2020-03-18)
+-------------------
+- Fix master calibration image selection to not use frames marked as bad.
+
 0.28.8 (2020-03-09)
 -------------------
 - Upgrade ingester lib version to address OpenTSDB default HTTP port issue.
