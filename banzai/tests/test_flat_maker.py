@@ -11,13 +11,13 @@ pytestmark = pytest.mark.flat_maker
 
 def test_min_images():
     flat_maker = FlatMaker(FakeContext())
-    processed_images = flat_maker.do_stage([])
-    assert len(processed_images) == 0
+    processed_image = flat_maker.do_stage([])
+    assert processed_image is None
 
 
 def test_group_by_attributes():
     maker = FlatMaker(FakeContext())
-    assert maker.group_by_attributes() == ['configuration_mode', 'binning', 'filter']
+    assert maker.group_by_attributes == ['configuration_mode', 'binning', 'filter']
 
 
 @mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
@@ -30,7 +30,7 @@ def test_header_cal_type_flat(mock_namer):
                            'DATASEC': '[1:100,1:100]',
                            'OBSTYPE': 'SKYFLAT'})
     master_flat = maker.do_stage([FakeLCOObservationFrame(hdu_list=[FakeCCDData(meta=image_header)])
-                                  for x in range(6)])[0]
+                                  for x in range(6)])
 
     assert master_flat.meta['OBSTYPE'].upper() == 'SKYFLAT'
 
@@ -56,5 +56,5 @@ def test_makes_a_sensible_master_flat(mock_namer):
               for _ in range(nimages)]
 
     maker = FlatMaker(FakeContext())
-    stacked_images = maker.do_stage(images)
-    np.testing.assert_allclose(stacked_images[0].primary_hdu.data, flat_pattern, atol=0.1, rtol=0.1)
+    stacked_image = maker.do_stage(images)
+    np.testing.assert_allclose(stacked_image.primary_hdu.data, flat_pattern, atol=0.1, rtol=0.1)

@@ -12,13 +12,13 @@ pytestmark = pytest.mark.dark_maker
 
 def test_min_images():
     dark_maker = DarkMaker(FakeContext())
-    processed_images = dark_maker.do_stage([])
-    assert len(processed_images) == 0
+    processed_image = dark_maker.do_stage([])
+    assert processed_image is None
 
 
 def test_group_by_attributes():
     maker = DarkMaker(FakeContext())
-    assert maker.group_by_attributes() == ['configuration_mode', 'binning']
+    assert maker.group_by_attributes == ['configuration_mode', 'binning']
 
 
 @mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
@@ -33,11 +33,11 @@ def test_header_cal_type_dark(mock_namer):
                            'DATASEC': '[1:100,1:100]',
                            'OBSTYPE': 'DARK'})
 
-    images = maker.do_stage([FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.zeros((ny,nx)),
+    image = maker.do_stage([FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.zeros((ny,nx)),
                                                                            meta=image_header)])
                              for x in range(6)])
 
-    assert images[0].meta['OBSTYPE'].upper() == 'DARK'
+    assert image.meta['OBSTYPE'].upper() == 'DARK'
 
 
 @mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
@@ -56,6 +56,6 @@ def test_makes_a_sensible_master_dark(mock_namer):
 
     expected_master_dark = stats.sigma_clipped_mean(np.arange(nimages), 3.0)
     maker = DarkMaker(FakeContext())
-    stacked_images = maker.do_stage(images)
+    stacked_image = maker.do_stage(images)
 
-    assert (stacked_images[0].data == expected_master_dark).all()
+    assert (stacked_image.data == expected_master_dark).all()

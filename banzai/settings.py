@@ -32,14 +32,7 @@ ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   #'banzai.photometry.SourceDetector',
                   #'banzai.astrometry.WCSSolver',
                   #'banzai.qc.pointing.PointingTest']
-# ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
-#                   'banzai.bias.OverscanSubtractor',
-#                   'banzai.gain.GainNormalizer',
-#                   'banzai.mosaic.MosaicCreator',
-#                   'banzai.trim.Trimmer',
-#                   'banzai.bias.BiasSubtractor',
-#                   'banzai.dark.DarkSubtractor',
-#                   'banzai.flats.FlatDivider']
+
 
 CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,

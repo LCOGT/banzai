@@ -121,8 +121,9 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
 
 class LCOMasterCalibrationFrame(LCOCalibrationFrame):
     def __init__(self, images: list, file_path: str, grouping_criteria: list = None):
-        hdu_list = [CCDData(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
-                            meta=self.init_header(images[0].meta, images))]
+        data_class = type(images[0].primary_hdu)
+        hdu_list = [data_class(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
+                               meta=self.init_header(images[0].meta, images))]
         super().__init__(hdu_list=hdu_list, file_path=file_path, grouping_criteria=grouping_criteria)
         self.is_master = True
         self.instrument = images[0].instrument

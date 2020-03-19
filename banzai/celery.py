@@ -162,7 +162,7 @@ def process_image(file_info: dict, runtime_context: dict):
             logger.info('Reducing frame', extra_tags={'filename': filename})
             # Increment the number of tries for this file
             realtime_utils.increment_try_number(filename, db_address=runtime_context.db_address)
-            stage_utils.run_pipeline_stages(file_info, runtime_context)
+            stage_utils.run_pipeline_stages([file_info], runtime_context)
             realtime_utils.set_file_as_processed(filename, db_address=runtime_context.db_address)
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
