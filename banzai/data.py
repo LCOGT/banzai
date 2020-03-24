@@ -80,11 +80,26 @@ class HeaderOnly(Data):
 
 
 class DataTable(Data):
-    def __init__(self, data, meta, name, memmap=True):
-        super().__init__(data, meta, name=name, memmap=memmap)
+    def __init__(self, data, name):
+        self.data = data
+        self.meta = fits.BinTableHDU(data).header
+        self.name = name
+
 
     def to_fits(self, context) -> Union[fits.HDUList, list]:
-        return [fits.BinTableHDU(data=self.data, header=self.meta)]
+        hdu = fits.BinTableHDU(self.data)
+        hdu.name = self.name
+        # Put in the description keywords
+        for k in self.meta.keys():
+            if 'TTYPE' in k:
+                column_name = self.meta[k].lower()
+                description = self.data[column_name].description
+                hdu.header[k] = (column_name.upper(), description)
+                # Get the value of n in TTYPEn
+                n = k[5:]
+                hdu.header['TCOMM{0}'.format(n)] = description
+
+        return [hdu]
 
 
 class ArrayData(Data):

@@ -25,11 +25,12 @@ class SourceDetector(Stage):
         try:
             # Set the number of source pixels to be 5% of the total. This keeps us safe from
             # satellites and airplanes.
-            sep.set_extract_pixstack(int(image.nx * image.ny * 0.05))
+            ny, nx = image.shape
+            sep.set_extract_pixstack(int(nx * ny * 0.05))
 
             data = image.data.copy()
-            error = (np.abs(data) + image.readnoise ** 2.0) ** 0.5
-            mask = image.bpm > 0
+            error = (np.abs(data) + image.read_noise ** 2.0) ** 0.5
+            mask = image.mask > 0
 
             # Fits can be backwards byte order, so fix that if need be and subtract
             # the background
@@ -198,15 +199,15 @@ class SourceDetector(Stage):
 
             # Save some background statistics in the header
             mean_background = stats.sigma_clipped_mean(bkg.back(), 5.0)
-            image.header['L1MEAN'] = (mean_background,
+            image.meta['L1MEAN'] = (mean_background,
                                       '[counts] Sigma clipped mean of frame background')
 
             median_background = np.median(bkg.back())
-            image.header['L1MEDIAN'] = (median_background,
+            image.meta['L1MEDIAN'] = (median_background,
                                         '[counts] Median of frame background')
 
             std_background = stats.robust_standard_deviation(bkg.back())
-            image.header['L1SIGMA'] = (std_background,
+            image.meta['L1SIGMA'] = (std_background,
                                        '[counts] Robust std dev of frame background')
 
             # Save some image statistics to the header
@@ -214,27 +215,27 @@ class SourceDetector(Stage):
             for quantity in ['fwhm', 'ellipticity', 'theta']:
                 good_objects = np.logical_and(good_objects, np.logical_not(np.isnan(catalog[quantity])))
             if good_objects.sum() == 0:
-                image.header['L1FWHM'] = ('NaN', '[arcsec] Frame FWHM in arcsec')
-                image.header['L1ELLIP'] = ('NaN', 'Mean image ellipticity (1-B/A)')
-                image.header['L1ELLIPA'] = ('NaN', '[deg] PA of mean image ellipticity')
+                image.meta['L1FWHM'] = ('NaN', '[arcsec] Frame FWHM in arcsec')
+                image.meta['L1ELLIP'] = ('NaN', 'Mean image ellipticity (1-B/A)')
+                image.meta['L1ELLIPA'] = ('NaN', '[deg] PA of mean image ellipticity')
             else:
                 seeing = np.median(catalog['fwhm'][good_objects]) * image.pixel_scale
-                image.header['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
+                image.meta['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
 
                 mean_ellipticity = stats.sigma_clipped_mean(catalog['ellipticity'][good_objects],
                                                             3.0)
-                image.header['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
+                image.meta['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
 
                 mean_position_angle = stats.sigma_clipped_mean(catalog['theta'][good_objects], 3.0)
-                image.header['L1ELLIPA'] = (mean_position_angle,
+                image.meta['L1ELLIPA'] = (mean_position_angle,
                                             '[deg] PA of mean image ellipticity')
 
-            logging_tags = {key: float(image.header[key]) for key in ['L1MEAN', 'L1MEDIAN', 'L1SIGMA',
+            logging_tags = {key: float(image.meta[key]) for key in ['L1MEAN', 'L1MEDIAN', 'L1SIGMA',
                                                                       'L1FWHM', 'L1ELLIP', 'L1ELLIPA']}
 
             logger.info('Extracted sources', image=image, extra_tags=logging_tags)
             # adding catalog (a data table) to the appropriate images attribute.
-            image.data_tables['catalog'] = DataTable(data_table=catalog, name='CAT')
+            image.append(DataTable(catalog, name='CAT'))
         except Exception:
             logger.error(logs.format_exception(), image=image)
         return image

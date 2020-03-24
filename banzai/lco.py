@@ -82,6 +82,18 @@ class LCOObservationFrame(ObservationFrame):
         self.primary_hdu.meta['BIASLVL'] = value
 
     @property
+    def read_noise(self):
+        return self.primary_hdu.meta.get('RDNOISE')
+
+    @read_noise.setter
+    def read_noise(self, value):
+        self.primary_hdu.meta['RDNOISE'] = value
+
+    @property
+    def pixel_scale(self):
+        return self.primary_hdu.meta.get('PIXSCALE')
+
+    @property
     def exptime(self):
         return self.primary_hdu.meta.get('EXPTIME', 0.0)
 

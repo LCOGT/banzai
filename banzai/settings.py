@@ -28,8 +28,8 @@ ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   'banzai.bias.BiasSubtractor',
                   'banzai.dark.DarkSubtractor',
                   'banzai.flats.FlatDivider',
-                  'banzai.qc.pattern_noise.PatternNoiseDetector',]
-                  #'banzai.photometry.SourceDetector',
+                  'banzai.qc.pattern_noise.PatternNoiseDetector',
+                  'banzai.photometry.SourceDetector',]
                   #'banzai.astrometry.WCSSolver',
                   #'banzai.qc.pointing.PointingTest']
 # ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
