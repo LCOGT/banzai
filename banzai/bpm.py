@@ -28,6 +28,7 @@ class BadPixelMaskLoader(CalibrationUser):
                 bpm = [np.zeros(extension.data.shape, dtype=np.uint8) for extension in image.ccd_hdus]
             for image_extension, bpm_data in zip(image.ccd_hdus, bpm):
                 image_extension.add_mask(bpm_data)
+            return image
         else:
             return None
 
