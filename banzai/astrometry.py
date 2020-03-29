@@ -41,8 +41,8 @@ class WCSSolver(Stage):
                            'FLUX': list(image_catalog['flux']),
                            'pixel_scale': image.pixel_scale,
                            'naxis': 2,
-                           'naxis1': image.nx,
-                           'naxis2': image.ny,
+                           'naxis1': image.shape[1],
+                           'naxis2': image.shape[0],
                            'ra': image.ra,
                            'dec': image.dec,
                            'statistics': False}
