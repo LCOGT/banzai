@@ -42,7 +42,6 @@ class SourceDetector(Stage):
             bkg.subfrom(data)
 
             # Do an initial source detection
-            # TODO: Add back in masking after we are sure SEP works
             sources = sep.extract(data, self.threshold, mask=mask, minarea=self.min_area,
                                   err=error, deblend_cont=0.005)
 

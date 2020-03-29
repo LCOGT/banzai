@@ -37,7 +37,7 @@ def test_stacking():
     for image in test_images:
         image.instrument = instrument
     stage = FakeStacker(context)
-    stacked_data = stage.do_stage(test_images)[0]
+    stacked_data = stage.do_stage(test_images)
     np.testing.assert_allclose(stacked_data.data, np.ones((ny, nx)) * np.mean(np.arange(9)))
     np.testing.assert_allclose(stacked_data.primary_hdu.uncertainty, np.ones((ny, nx)))
     assert np.all(stacked_data.mask == 0)
@@ -49,7 +49,7 @@ def test_stacking_with_noise():
     for image in test_images:
         image.instrument = instrument
     stage = FakeStacker(context)
-    stacked_data = stage.do_stage(test_images)[0]
+    stacked_data = stage.do_stage(test_images)
     np.testing.assert_allclose(stacked_data.data, np.zeros((ny, nx)), atol=5.0/3.0)
     np.testing.assert_allclose(stacked_data.primary_hdu.uncertainty, np.ones((ny, nx)) / 3.0, atol=0.05)
     assert np.all(stacked_data.mask == 0)
@@ -62,7 +62,7 @@ def test_stacking_with_different_pixels():
     for image in test_images:
         image.instrument = instrument
     stage = FakeStacker(context)
-    stacked_data = stage.do_stage(test_images)[0]
+    stacked_data = stage.do_stage(test_images)
     np.testing.assert_allclose(stacked_data.data, d * np.mean(np.arange(9)))
     np.testing.assert_allclose(stacked_data.primary_hdu.uncertainty, np.ones((ny, nx)))
     assert np.all(stacked_data.mask == 0)

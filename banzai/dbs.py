@@ -310,6 +310,7 @@ def get_master_cal_record(image, calibration_type, master_selection_criteria, db
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
+    calibration_criteria &= CalibrationImage.is_bad.is_(False)
 
     for criterion in master_selection_criteria:
         # We have to cast to strings according to the sqlalchemy docs for version 1.3:
