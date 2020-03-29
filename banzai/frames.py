@@ -17,6 +17,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def __init__(self, hdu_list: list, file_path: str):
         self._hdus = hdu_list
         self._file_path = file_path
+        self.ra, self.dec = fits_utils.parse_ra_dec(hdu_list[0].meta)
         self.instrument = None
         self.frame_id = None
 

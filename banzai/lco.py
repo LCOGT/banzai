@@ -65,6 +65,10 @@ class LCOObservationFrame(ObservationFrame):
     @property
     def datecreated(self):
         return Time(self.primary_hdu.meta.get('DATE'), scale='utc').datetime
+    
+    @property
+    def catalog(self):
+        return next((hdu.data for hdu in self._hdus if hdu.name == 'CAT'), None)
 
     @property
     def configuration_mode(self):
