@@ -312,7 +312,11 @@ class LCOFrameFactory(FrameFactory):
         return [{'FITS_NAME': 'BPM', 'NAME': 'mask'}, {'FITS_NAME': 'ERR', 'NAME': 'uncertainty'}]
 
     def open(self, file_info, runtime_context) -> Optional[ObservationFrame]:
-        fits_hdu_list, filename = fits_utils.open_fits_file(file_info, runtime_context)
+        if file_info.get('RLEVEL') is not None:
+            is_raw = file_info.get('RLEVEL') == 0
+        else:
+            is_raw = False
+        fits_hdu_list, filename = fits_utils.open_fits_file(file_info, runtime_context, is_raw_frame=is_raw)
         hdu_list = []
         associated_fits_extensions = [associated_extension['FITS_NAME']
                                       for associated_extension in self.associated_extensions]

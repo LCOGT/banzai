@@ -72,7 +72,7 @@ spec:
           value: "sqlite:////archive/engineering/test.db"
         - name: RETRY_DELAY
           value: "0"
-        - name: REDIS_HOST
+        - name: TASK_HOST
           value: "redis://localhost:6379/0"
         - name: BANZAI_WORKER_LOGLEVEL
           value: debug
@@ -118,7 +118,7 @@ spec:
           value: "sqlite:////archive/engineering/test.db"
         - name: RETRY_DELAY
           value: "0"
-        - name: REDIS_HOST
+        - name: TASK_HOST
           value: "redis://localhost:6379/0"
       command:
         - banzai_automate_stack_calibrations
@@ -142,7 +142,7 @@ spec:
           value: "sqlite:////archive/engineering/test.db"
         - name: FITS_BROKER
           value: "localhost"
-        - name: REDIS_HOST
+        - name: TASK_HOST
           value: "redis://localhost:6379/0"
         - name: CALIBRATE_PROPOSAL_ID
           value: "calibrate"
