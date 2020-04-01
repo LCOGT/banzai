@@ -99,7 +99,7 @@ def download_from_s3(file_info, runtime_context):
     response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN).json()
     buffer = io.BytesIO()
     buffer.write(requests.get(response['url'], stream=True).content)
-    return buffer
+    return buffer, frame_id
 
 
 def get_configuration_mode(header):
@@ -116,8 +116,9 @@ def open_fits_file(file_info, context):
     if file_info.get('path') is not None and os.path.exists(file_info.get('path')):
         buffer = open(file_info.get('path'), 'rb')
         filename = os.path.basename(file_info.get('path'))
+        frame_id = None
     elif file_info.get('frameid') is not None:
-        buffer = download_from_s3(file_info, context)
+        buffer, frame_id = download_from_s3(file_info, context, is_raw_frame=is_raw_frame)
         filename = file_info.get('filename')
     else:
         raise ValueError('This file does not exist and there is no frame id to get it from S3.')
@@ -129,7 +130,7 @@ def open_fits_file(file_info, context):
     del hdu_list
     del buffer
 
-    return uncompressed_hdu_list, filename
+    return uncompressed_hdu_list, filename, frame_id
 
 
 def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
