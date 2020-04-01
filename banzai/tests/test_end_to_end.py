@@ -119,7 +119,7 @@ def get_expected_number_of_calibrations(raw_filenames, calibration_type):
             # Group by filter
             observed_filters = []
             for raw_filename in raw_filenames_for_this_dayobs:
-                skyflat_hdu, skyflat_filename = fits_utils.open_fits_file({'path': raw_filename}, context)
+                skyflat_hdu, skyflat_filename, frame_id = fits_utils.open_fits_file({'path': raw_filename}, context)
                 observed_filters.append(skyflat_hdu[0].header.get('FILTER'))
             observed_filters = set(observed_filters)
             number_of_stacks_that_should_have_been_created += len(observed_filters)
