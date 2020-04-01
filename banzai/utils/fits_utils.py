@@ -89,14 +89,20 @@ def get_primary_header(filename) -> Optional[fits.Header]:
 # Stop after 4 attempts, and back off exponentially with a minimum wait time of 4 seconds, and a maximum of 10.
 # If it fails after 4 attempts, "reraise" the original exception back up to the caller.
 @retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
-def download_from_s3(file_info, runtime_context):
+def download_from_s3(file_info, context, is_raw_frame=False):
     frame_id = file_info.get('frameid')
 
     logger.info(f"Downloading file {file_info.get('filename')} from archive. ID: {frame_id}.",
                 extra_tags={'filename': file_info.get('filename'),
                             'attempt_number': download_from_s3.retry.statistics['attempt_number']})
-    url = f'{runtime_context.ARCHIVE_FRAME_URL}/{frame_id}'
-    response = requests.get(url, headers=runtime_context.ARCHIVE_AUTH_TOKEN).json()
+
+    if is_raw_frame:
+        url = f'{context.RAW_DATA_FRAME_URL}/{frame_id}'
+        archive_auth_token = context.RAW_DATA_AUTH_TOKEN
+    else:
+        url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}'
+        archive_auth_token = context.ARCHIVE_AUTH_TOKEN
+    response = requests.get(url, headers=archive_auth_token).json()
     buffer = io.BytesIO()
     buffer.write(requests.get(response['url'], stream=True).content)
     return buffer, frame_id
@@ -112,7 +118,7 @@ def get_configuration_mode(header):
     return configuration_mode
 
 
-def open_fits_file(file_info, context):
+def open_fits_file(file_info, context, is_raw_frame=False):
     if file_info.get('path') is not None and os.path.exists(file_info.get('path')):
         buffer = open(file_info.get('path'), 'rb')
         filename = os.path.basename(file_info.get('path'))
