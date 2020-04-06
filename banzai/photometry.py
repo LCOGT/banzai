@@ -29,8 +29,8 @@ class SourceDetector(Stage):
             sep.set_extract_pixstack(int(nx * ny * 0.05))
 
             data = image.data.copy()
-            error = (np.abs(data) + image.read_noise ** 2.0) ** 0.5
-            mask = image.mask > 0
+            error = image.uncertainty
+            mask = image.mask > 1
 
             # Fits can be backwards byte order, so fix that if need be and subtract
             # the background
