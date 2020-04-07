@@ -313,7 +313,7 @@ class LCOFrameFactory(FrameFactory):
 
     def open(self, file_info, runtime_context) -> Optional[ObservationFrame]:
         if file_info.get('RLEVEL') is not None:
-            is_raw = file_info.get('RLEVEL') == 0
+            is_raw = file_info.get('RLEVEL', 0) == 0
         else:
             is_raw = False
         fits_hdu_list, filename, frame_id = fits_utils.open_fits_file(file_info, runtime_context, is_raw_frame=is_raw)
