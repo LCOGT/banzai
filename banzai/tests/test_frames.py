@@ -63,9 +63,10 @@ def test_trim():
 
 
 def test_init_poisson_uncertainties():
-    test_data = FakeCCDData(image_multiplier=4, uncertainty=1)
+    # Make sure the uncertainties add in quadrature
+    test_data = FakeCCDData(image_multiplier=16, uncertainty=3)
     test_data.init_poisson_uncertainties()
-    assert (test_data.uncertainty == 3 * np.ones(test_data.data.shape)).all()
+    assert (test_data.uncertainty == 5 * np.ones(test_data.data.shape)).all()
 
 
 def test_get_output_filename():

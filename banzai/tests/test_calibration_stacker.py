@@ -10,7 +10,7 @@ import pytest
 nx, ny = 102, 105
 header = {'DATASEC': f'[1:{nx},1:{ny}]', 'DETSEC': f'[1:{nx},1:{ny}]', 'CCDSUM': '1 1',
           'OBSTYPE': 'TEST', 'RDNOISE': 3.0, 'TELESCOP': '1m0-02', 'DAY-OBS': '20191209',
-          'DATE-OBS': '2019-12-09T00:00:00'}
+          'DATE-OBS': '2019-12-09T00:00:00', 'RA': 0.0, 'DEC': 0.0}
 context = {'CALIBRATION_MIN_FRAMES': {'TEST': 1},
            'CALIBRATION_FILENAME_FUNCTIONS': {'TEST': ['banzai.utils.file_utils.ccdsum_to_filename']},
            'CALIBRATION_SET_CRITERIA': {'TEST': ['binning']},
