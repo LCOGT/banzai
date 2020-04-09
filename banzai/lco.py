@@ -118,9 +118,9 @@ class LCOObservationFrame(ObservationFrame):
 
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
-    def __init__(self, hdu_list: list, file_path: str, grouping_criteria: list = None):
+    def __init__(self, hdu_list: list, file_path: str, frame_id: int = None, grouping_criteria: list = None):
         CalibrationFrame.__init__(self, grouping_criteria=grouping_criteria)
-        LCOObservationFrame.__init__(self, hdu_list, file_path)
+        LCOObservationFrame.__init__(self, hdu_list, file_path, frame_id=frame_id)
 
     @property
     def is_master(self):
@@ -136,11 +136,11 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
 
 
 class LCOMasterCalibrationFrame(LCOCalibrationFrame):
-    def __init__(self, images: list, file_path: str, grouping_criteria: list = None):
+    def __init__(self, images: list, file_path: str, frame_id: int = None, grouping_criteria: list = None):
         data_class = type(images[0].primary_hdu)
         hdu_list = [data_class(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
                                meta=self.init_header(images[0].meta, images))]
-        super().__init__(hdu_list=hdu_list, file_path=file_path, grouping_criteria=grouping_criteria)
+        super().__init__(hdu_list=hdu_list, file_path=file_path, frame_id=frame_id, grouping_criteria=grouping_criteria)
         self.is_master = True
         self.instrument = images[0].instrument
 
@@ -336,7 +336,11 @@ class LCOFrameFactory(FrameFactory):
         return [{'FITS_NAME': 'BPM', 'NAME': 'mask'}, {'FITS_NAME': 'ERR', 'NAME': 'uncertainty'}]
 
     def open(self, file_info, runtime_context) -> Optional[ObservationFrame]:
-        fits_hdu_list, filename = fits_utils.open_fits_file(file_info, runtime_context)
+        if file_info.get('RLEVEL') is not None:
+            is_raw = file_info.get('RLEVEL', 0) == 0
+        else:
+            is_raw = False
+        fits_hdu_list, filename, frame_id = fits_utils.open_fits_file(file_info, runtime_context, is_raw_frame=is_raw)
         hdu_list = []
         associated_fits_extensions = [associated_extension['FITS_NAME']
                                       for associated_extension in self.associated_extensions]
@@ -397,9 +401,9 @@ class LCOFrameFactory(FrameFactory):
         # Either use the calibration frame type or normal frame type depending on the OBSTYPE keyword
         if hdu_list[0].meta.get('OBSTYPE') in runtime_context.CALIBRATION_IMAGE_TYPES:
             grouping = runtime_context.CALIBRATION_SET_CRITERIA.get(hdu_list[0].meta.get('OBSTYPE'), [])
-            image = self.calibration_frame_class(hdu_list, filename, grouping_criteria=grouping)
+            image = self.calibration_frame_class(hdu_list, filename, frame_id=frame_id, grouping_criteria=grouping)
         else:
-            image = self.observation_frame_class(hdu_list, filename)
+            image = self.observation_frame_class(hdu_list, filename, frame_id=frame_id)
         image.instrument = self.get_instrument_from_header(image.primary_hdu.meta, runtime_context.db_address)
 
         # Do some munging specific to LCO data when our headers were not complete
