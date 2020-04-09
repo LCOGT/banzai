@@ -47,12 +47,16 @@ def celery_join():
         log_counter += 1
         if log_counter % 30 == 0:
             logger.info('Processing: ' + '. ' * (log_counter // 30))
-        if any([queue is None or 'celery@banzai-celery-worker' not in queue for queue in queues]):
+        queue_names = []
+        for queue in queues:
+            if queue is not None:
+                queue_names += queue.keys()
+        if 'celery@banzai-celery-worker' not in queue_names:
             logger.warning('No valid celery queues were detected, retrying...', extra_tags={'queues': queues})
             # Reset the celery connection
             celery_inspector = app.control.inspect()
             continue
-        if all([len(queue['celery@banzai-celery-worker']) == 0 for queue in queues]):
+        if all(queue is None or len(queue['celery@banzai-celery-worker']) == 0 for queue in queues):
             break
 
 

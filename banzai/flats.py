@@ -34,8 +34,10 @@ class FlatMaker(CalibrationStacker):
 
     def make_master_calibration_frame(self, images):
         master_image = super(FlatMaker, self).make_master_calibration_frame(images)
-        master_image.mask = np.logical_or(master_image.mask, master_image.data < 0.2).astype(np.uint8)
-        master_image.data[master_image.mask] = 1.0
+        occulted_mask = np.zeros(master_image.shape, dtype=np.uint8)
+        occulted_mask[master_image.data < 0.2] = 4
+        master_image.mask |= occulted_mask
+        master_image.data[master_image.mask > 0] = 1.0
         return master_image
 
 

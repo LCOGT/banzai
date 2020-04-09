@@ -30,7 +30,7 @@ class SourceDetector(Stage):
 
             data = image.data.copy()
             error = image.uncertainty
-            mask = image.mask > 1
+            mask = image.mask > 0
 
             # Fits can be backwards byte order, so fix that if need be and subtract
             # the background

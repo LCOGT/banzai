@@ -85,7 +85,6 @@ class DataTable(Data):
         self.meta = fits.BinTableHDU(data).header
         self.name = name
 
-
     def to_fits(self, context) -> Union[fits.HDUList, list]:
         hdu = fits.BinTableHDU(self.data)
         hdu.name = self.name
@@ -361,7 +360,7 @@ class CCDData(Data):
             getattr(self, array_name_to_copy)[my_overlap][:] = array_to_copy[:]
 
     def init_poisson_uncertainties(self):
-        self.uncertainty += np.sqrt(np.abs(self.data))
+        self.uncertainty = np.sqrt(self.uncertainty ** 2.0 + np.abs(self.data))
 
     @property
     def background(self):
