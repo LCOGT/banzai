@@ -14,11 +14,12 @@ logger = logging.getLogger('banzai')
 
 
 class ObservationFrame(metaclass=abc.ABCMeta):
-    def __init__(self, hdu_list: list, file_path: str):
+    def __init__(self, hdu_list: list, file_path: str, frame_id: int = None):
         self._hdus = hdu_list
         self._file_path = file_path
+        self.ra, self.dec = fits_utils.parse_ra_dec(hdu_list[0].meta)
         self.instrument = None
-        self.frame_id = None
+        self.frame_id = frame_id
 
     @property
     def primary_hdu(self):

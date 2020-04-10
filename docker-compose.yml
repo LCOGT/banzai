@@ -51,32 +51,7 @@ services:
       RETRY_DELAY: "0"
       TASK_HOST: "redis://redis:6379/0"
       OBSERVATION_PORTAL_URL: "http://internal-observation-portal.lco.gtn/api/observations/"
-      OMP_NUM_THREADS: "4"
-      OPENTSDB_PYTHON_METRICS_TEST_MODE: "1"
-    labels:
-      io.rancher.container.pull_image: always
-      io.rancher.sidekicks: banzai-e2e
-    logging:
-      options:
-        max-size: '100m'
-        max-file: '3'
-  banzai-celery-beat:
-    image: ${DOCKER_IMG}
-    network_mode: "bridge"
-    container_name: banzai-celery-beat
-    entrypoint: ["banzai_automate_stack_calibrations"]
-    mem_limit: '8g'
-    depends_on:
-      - banzai-redis
-      - banzai-fits-exchange
-      - banzai-e2e
-    links:
-      - banzai-redis:redis
-    volumes_from:
-      - banzai-e2e
-    environment:
-      RETRY_DELAY: "0"
-      TASK_HOST: "redis://redis:6379/0"
+      OMP_NUM_THREADS: "2"
       OPENTSDB_PYTHON_METRICS_TEST_MODE: "1"
     labels:
       io.rancher.container.pull_image: always

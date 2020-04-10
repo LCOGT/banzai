@@ -122,9 +122,11 @@ def open_fits_file(file_info, context, is_raw_frame=False):
     if file_info.get('path') is not None and os.path.exists(file_info.get('path')):
         buffer = open(file_info.get('path'), 'rb')
         filename = os.path.basename(file_info.get('path'))
+        frame_id = None
     elif file_info.get('frameid') is not None:
         buffer = download_from_s3(file_info, context, is_raw_frame=is_raw_frame)
         filename = file_info.get('filename')
+        frame_id = file_info.get('frameid')
     else:
         raise ValueError('This file does not exist and there is no frame id to get it from S3.')
 
@@ -135,7 +137,7 @@ def open_fits_file(file_info, context, is_raw_frame=False):
     del hdu_list
     del buffer
 
-    return uncompressed_hdu_list, filename
+    return uncompressed_hdu_list, filename, frame_id
 
 
 def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:

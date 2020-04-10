@@ -28,7 +28,9 @@ def test_header_cal_type_flat(mock_namer):
     image_header = Header({'DATE-OBS': '2019-12-04T14:34:00',
                            'DETSEC': '[1:100,1:100]',
                            'DATASEC': '[1:100,1:100]',
-                           'OBSTYPE': 'SKYFLAT'})
+                           'OBSTYPE': 'SKYFLAT',
+                           'RA': 0.0,
+                           'DEC': 0.0})
     master_flat = maker.do_stage([FakeLCOObservationFrame(hdu_list=[FakeCCDData(meta=image_header)])
                                   for x in range(6)])
 
@@ -48,7 +50,9 @@ def test_makes_a_sensible_master_flat(mock_namer):
                            'DETSEC': '[1:100,1:100]',
                            'DATASEC': '[1:100,1:100]',
                            'FLATLVL': flat_level,
-                           'OBSTYPE': 'SKYFLAT'})
+                           'OBSTYPE': 'SKYFLAT',
+                           'RA': 0.0,
+                           'DEC': 0.0})
 
     flat_pattern = np.random.normal(1.0, master_flat_variation, size=(ny, nx))
     images = [FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=flat_pattern + np.random.normal(0.0, 0.02, size=(ny, nx)),

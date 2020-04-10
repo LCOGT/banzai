@@ -47,12 +47,16 @@ def celery_join():
         log_counter += 1
         if log_counter % 30 == 0:
             logger.info('Processing: ' + '. ' * (log_counter // 30))
-        if any([queue is None or 'celery@banzai-celery-worker' not in queue for queue in queues]):
+        queue_names = []
+        for queue in queues:
+            if queue is not None:
+                queue_names += queue.keys()
+        if 'celery@banzai-celery-worker' not in queue_names:
             logger.warning('No valid celery queues were detected, retrying...', extra_tags={'queues': queues})
             # Reset the celery connection
             celery_inspector = app.control.inspect()
             continue
-        if all([len(queue['celery@banzai-celery-worker']) == 0 for queue in queues]):
+        if all(queue is None or len(queue['celery@banzai-celery-worker']) == 0 for queue in queues):
             break
 
 
@@ -119,7 +123,7 @@ def get_expected_number_of_calibrations(raw_filenames, calibration_type):
             # Group by filter
             observed_filters = []
             for raw_filename in raw_filenames_for_this_dayobs:
-                skyflat_hdu, skyflat_filename = fits_utils.open_fits_file({'path': raw_filename}, context)
+                skyflat_hdu, skyflat_filename, frame_id = fits_utils.open_fits_file({'path': raw_filename}, context)
                 observed_filters.append(skyflat_hdu[0].header.get('FILTER'))
             observed_filters = set(observed_filters)
             number_of_stacks_that_should_have_been_created += len(observed_filters)

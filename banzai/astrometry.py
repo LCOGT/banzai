@@ -25,15 +25,15 @@ class WCSSolver(Stage):
         # Skip the image if we don't have some kind of initial RA and Dec guess
         if np.isnan(image.ra) or np.isnan(image.dec):
             logger.error('Skipping WCS solution. No initial pointing guess from header.', image=image)
-            image.header['WCSERR'] = FAILED_WCS
+            image.meta['WCSERR'] = FAILED_WCS
             return image
 
-        image_catalog = image.data_tables.get('catalog')
+        image_catalog = image.catalog
 
         # Short circuit
         if image_catalog is None:
             logger.warning('Not attempting WCS solve because no catalog exists', image=image)
-            image.header['WCSERR'] = FAILED_WCS
+            image.meta['WCSERR'] = FAILED_WCS
             return image
 
         catalog_payload = {'X': list(image_catalog['x']),
@@ -41,8 +41,8 @@ class WCSSolver(Stage):
                            'FLUX': list(image_catalog['flux']),
                            'pixel_scale': image.pixel_scale,
                            'naxis': 2,
-                           'naxis1': image.nx,
-                           'naxis2': image.ny,
+                           'naxis1': image.shape[1],
+                           'naxis2': image.shape[0],
                            'ra': image.ra,
                            'dec': image.dec,
                            'statistics': False}
@@ -51,7 +51,7 @@ class WCSSolver(Stage):
             astrometry_response.raise_for_status()
         except ConnectionError:
             logger.error('Astrometry service unreachable.', image=image)
-            image.header['WCSERR'] = FAILED_WCS
+            image.meta['WCSERR'] = FAILED_WCS
             return image
         except HTTPError:
             if astrometry_response.status_code == 400:
@@ -65,40 +65,42 @@ class WCSSolver(Stage):
                 except:
                     logger.error('Astrometry service encountered an error.', image=image)
 
-            image.header['WCSERR'] = FAILED_WCS
+            image.meta['WCSERR'] = FAILED_WCS
             return image
 
         if not astrometry_response.json()['solved']:
             logger.warning('WCS solution failed.', image=image)
-            image.header['WCSERR'] = FAILED_WCS
+            image.meta['WCSERR'] = FAILED_WCS
             return image
 
         header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
                                      'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
 
         for keyword in header_keywords_to_update:
-            image.header[keyword] = astrometry_response.json()[keyword]
+            image.meta[keyword] = astrometry_response.json()[keyword]
 
-        image.header['RA'], image.header['DEC'] = get_ra_dec_in_sexagesimal(image.header['CRVAL1'],
-                                                                            image.header['CRVAL2'])
+        image.meta['RA'], image.meta['DEC'] = get_ra_dec_in_sexagesimal(image.meta['CRVAL1'],
+                                                                        image.meta['CRVAL2'])
 
         add_ra_dec_to_catalog(image)
 
-        image.header['WCSERR'] = SUCCESSFUL_WCS
+        image.meta['WCSERR'] = SUCCESSFUL_WCS
 
-        logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.header['WCSERR']})
+        logger.info('Attempted WCS Solve', image=image, extra_tags={'WCSERR': image.meta['WCSERR']})
         return image
 
 
 def add_ra_dec_to_catalog(image):
-    image_wcs = WCS(image.header)
-    ras, decs = image_wcs.all_pix2world(image.data_tables['catalog']['x'], image.data_tables['catalog']['y'], 1)
-    image.data_tables['catalog']['ra'] = ras
-    image.data_tables['catalog']['dec'] = decs
-    image.data_tables['catalog']['ra'].unit = 'degree'
-    image.data_tables['catalog']['dec'].unit = 'degree'
-    image.data_tables['catalog']['ra'].description = 'Right Ascension'
-    image.data_tables['catalog']['dec'].description = 'Declination'
+    image_wcs = WCS(image.meta)
+    image_catalog = image.catalog
+    ras, decs = image_wcs.all_pix2world(image_catalog['x'], image_catalog['y'], 1)
+
+    image_catalog['ra'] = ras
+    image_catalog['dec'] = decs
+    image_catalog['ra'].unit = 'degree'
+    image_catalog['dec'].unit = 'degree'
+    image_catalog['ra'].description = 'Right Ascension'
+    image_catalog['dec'].description = 'Declination'
 
 
 def get_ra_dec_in_sexagesimal(ra, dec):

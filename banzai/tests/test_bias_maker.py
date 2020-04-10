@@ -31,7 +31,7 @@ def test_header_cal_type_bias(mock_namer):
     image_header = Header({'DATE-OBS': '2019-12-04T14:34:00',
                            'DETSEC': '[1:100,1:100]',
                            'DATASEC': '[1:100,1:100]',
-                           'OBSTYPE': 'BIAS'})
+                           'OBSTYPE': 'BIAS', 'RA': 0.0, 'DEC': 0.0})
 
     image = maker.do_stage([FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.zeros((ny, nx)),
                                                                            meta=image_header,
@@ -51,7 +51,10 @@ def test_bias_level_is_average_of_inputs(mock_namer):
                                                             bias_level=i, meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
                                                                                        'DETSEC': '[1:100,1:100]',
                                                                                        'DATASEC': '[1:100,1:100]',
-                                                                                       'OBSTYPE': 'BIAS'}))]) for i in bias_levels]
+                                                                                       'OBSTYPE': 'BIAS',
+                                                                                       'RA': 0.0,
+                                                                                       'DEC': 0.0}))])
+              for i in bias_levels]
 
     fake_context = FakeContext()
     maker = BiasMaker(fake_context)
@@ -72,7 +75,8 @@ def test_makes_a_sensible_master_bias(mock_namer):
                                                             meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
                                                                          'DETSEC': '[1:100,1:100]',
                                                                          'DATASEC': '[1:100,1:100]',
-                                                                         'OBSTYPE': 'BIAS'}))]) for i in range(nimages)]
+                                                                         'OBSTYPE': 'BIAS', 'RA': 0.0, 'DEC': 0.0}))])
+              for i in range(nimages)]
 
     maker = BiasMaker(FakeContext())
     stacked_image = maker.do_stage(images)

@@ -67,6 +67,10 @@ class LCOObservationFrame(ObservationFrame):
         return Time(self.primary_hdu.meta.get('DATE'), scale='utc').datetime
 
     @property
+    def catalog(self):
+        return next((hdu.data for hdu in self._hdus if hdu.name == 'CAT'), None)
+
+    @property
     def configuration_mode(self):
         mode = self.meta.get('CONFMODE', 'default')
         if str(mode).lower() in ['n/a', '0', 'normal']:
@@ -80,6 +84,18 @@ class LCOObservationFrame(ObservationFrame):
     @bias_level.setter
     def bias_level(self, value):
         self.primary_hdu.meta['BIASLVL'] = value
+
+    @property
+    def read_noise(self):
+        return self.primary_hdu.meta.get('RDNOISE')
+
+    @read_noise.setter
+    def read_noise(self, value):
+        self.primary_hdu.meta['RDNOISE'] = value
+
+    @property
+    def pixel_scale(self):
+        return self.primary_hdu.meta.get('PIXSCALE')
 
     @property
     def exptime(self):
@@ -102,9 +118,9 @@ class LCOObservationFrame(ObservationFrame):
 
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
-    def __init__(self, hdu_list: list, file_path: str, grouping_criteria: list = None):
+    def __init__(self, hdu_list: list, file_path: str, frame_id: int = None, grouping_criteria: list = None):
         CalibrationFrame.__init__(self, grouping_criteria=grouping_criteria)
-        LCOObservationFrame.__init__(self, hdu_list, file_path)
+        LCOObservationFrame.__init__(self, hdu_list, file_path, frame_id=frame_id)
 
     @property
     def is_master(self):
@@ -120,11 +136,11 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
 
 
 class LCOMasterCalibrationFrame(LCOCalibrationFrame):
-    def __init__(self, images: list, file_path: str, grouping_criteria: list = None):
+    def __init__(self, images: list, file_path: str, frame_id: int = None, grouping_criteria: list = None):
         data_class = type(images[0].primary_hdu)
         hdu_list = [data_class(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
                                meta=self.init_header(images[0].meta, images))]
-        super().__init__(hdu_list=hdu_list, file_path=file_path, grouping_criteria=grouping_criteria)
+        super().__init__(hdu_list=hdu_list, file_path=file_path, frame_id=frame_id, grouping_criteria=grouping_criteria)
         self.is_master = True
         self.instrument = images[0].instrument
 
@@ -308,15 +324,23 @@ class LCOFrameFactory(FrameFactory):
         return CCDData
 
     @property
+    def primary_header_keys_to_propagate(self):
+        '''
+        These are keys that may exist in the PrimaryHDU's header, but
+        do not exist in the ImageHDUs.
+        '''
+        return ['RDNOISE']
+
+    @property
     def associated_extensions(self):
         return [{'FITS_NAME': 'BPM', 'NAME': 'mask'}, {'FITS_NAME': 'ERR', 'NAME': 'uncertainty'}]
 
     def open(self, file_info, runtime_context) -> Optional[ObservationFrame]:
         if file_info.get('RLEVEL') is not None:
-            is_raw = file_info.get('RLEVEL') == 0
+            is_raw = file_info.get('RLEVEL', 0) == 0
         else:
             is_raw = False
-        fits_hdu_list, filename = fits_utils.open_fits_file(file_info, runtime_context, is_raw_frame=is_raw)
+        fits_hdu_list, filename, frame_id = fits_utils.open_fits_file(file_info, runtime_context, is_raw_frame=is_raw)
         hdu_list = []
         associated_fits_extensions = [associated_extension['FITS_NAME']
                                       for associated_extension in self.associated_extensions]
@@ -331,6 +355,7 @@ class LCOFrameFactory(FrameFactory):
                 else:
                     hdu_list.append(self.data_class(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
         else:
+            primary_hdu = None
             for hdu in fits_hdu_list:
                 # Move on from any associated arrays like BPM or ERR
                 if any(associated_extension['FITS_NAME'] in hdu.header.get('EXTNAME', '')
@@ -339,6 +364,7 @@ class LCOFrameFactory(FrameFactory):
                 # Otherwise parse the fits file into a frame object and the corresponding data objects
                 if hdu.data is None:
                     hdu_list.append(HeaderOnly(meta=hdu.header))
+                    primary_hdu = hdu
                 elif isinstance(hdu, fits.BinTableHDU):
                     hdu_list.append(DataTable(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
                 # Check if we are looking at a CCD extension
@@ -362,6 +388,11 @@ class LCOFrameFactory(FrameFactory):
                         hdu_list += self._munge_data_cube(hdu)
                     if hdu.data.dtype == np.uint16:
                         hdu.data = hdu.data.astype(np.float32)
+                    # check if we need to propagate any header keywords from the primary header
+                    if primary_hdu is not None:
+                        for keyword in self.primary_header_keys_to_propagate:
+                            if keyword in primary_hdu.header and keyword not in hdu.header:
+                                hdu.header[keyword] = primary_hdu.header[keyword]
                     hdu_list.append(self.data_class(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME'),
                                                     **associated_data))
                 else:
@@ -370,9 +401,9 @@ class LCOFrameFactory(FrameFactory):
         # Either use the calibration frame type or normal frame type depending on the OBSTYPE keyword
         if hdu_list[0].meta.get('OBSTYPE') in runtime_context.CALIBRATION_IMAGE_TYPES:
             grouping = runtime_context.CALIBRATION_SET_CRITERIA.get(hdu_list[0].meta.get('OBSTYPE'), [])
-            image = self.calibration_frame_class(hdu_list, filename, grouping_criteria=grouping)
+            image = self.calibration_frame_class(hdu_list, filename, frame_id=frame_id, grouping_criteria=grouping)
         else:
-            image = self.observation_frame_class(hdu_list, filename)
+            image = self.observation_frame_class(hdu_list, filename, frame_id=frame_id)
         image.instrument = self.get_instrument_from_header(image.primary_hdu.meta, runtime_context.db_address)
 
         # Do some munging specific to LCO data when our headers were not complete
