@@ -429,7 +429,7 @@ class LCOFrameFactory(FrameFactory):
         name = camera
         if instrument is None:
             # if instrument is missing, assume it is an NRES frame and check for the instrument again.
-            name = header.meta.get('TELESCOP')
+            name = header.get('TELESCOP')
             instrument = dbs.query_for_instrument(db_address, site, camera, name=name)
         if instrument is None:
             msg = 'Instrument is not in the database, Please add it before reducing this data.'
