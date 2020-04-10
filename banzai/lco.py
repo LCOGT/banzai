@@ -405,6 +405,8 @@ class LCOFrameFactory(FrameFactory):
         else:
             image = self.observation_frame_class(hdu_list, filename, frame_id=frame_id)
         image.instrument = self.get_instrument_from_header(image.primary_hdu.meta, runtime_context.db_address)
+        if image.instrument is None:
+            return None
 
         # Do some munging specific to LCO data when our headers were not complete
         self._init_detector_sections(image)
@@ -416,7 +418,7 @@ class LCOFrameFactory(FrameFactory):
                          image=image)
             return None
         # If the frame cannot be processed for some reason return None instead of the new image object
-        if image.instrument is not None and image_utils.image_can_be_processed(image, runtime_context):
+        if image_utils.image_can_be_processed(image, runtime_context):
             return image
         else:
             return None
