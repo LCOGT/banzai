@@ -97,7 +97,7 @@ def need_to_process_image(file_info, context):
                 need_to_process = False
         except Exception:
             logger.error('Issue creating Image object with given queue message', extra_tags={"filename": filename})
-            logs.format_exception()
+            logger.error(logs.format_exception())
             need_to_process = False
 
     return need_to_process
