@@ -91,7 +91,7 @@ def need_to_process_image(file_info, context):
                 logger.error('This queue message has an instrument that is not currently in the DB. Aborting:',
                              extra_tags={'filename': filename})
                 need_to_process = False
-            elif image_utils.image_can_be_processed(test_image, context):
+            elif not image_utils.image_can_be_processed(test_image, context):
                 logger.error('The header in this queue message appears to not be complete enough to make a Frame object',
                              extra_tags={'filename': filename})
                 need_to_process = False
