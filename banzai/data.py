@@ -80,9 +80,12 @@ class HeaderOnly(Data):
 
 
 class DataTable(Data):
-    def __init__(self, data, name):
+    def __init__(self, data, name, meta=None):
         self.data = data
-        self.meta = fits.BinTableHDU(data).header
+        if meta is None:
+            self.meta = fits.BinTableHDU(data).header
+        else:
+            self.meta=meta
         self.name = name
 
     def to_fits(self, context) -> Union[fits.HDUList, list]:
