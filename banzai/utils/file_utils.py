@@ -26,7 +26,7 @@ def post_to_ingester(file_object, image):
     ingester_response = {}
     while retry:
         try:
-            ingester_response = ingester.upload_file_and_ingest_to_archive(file_object)
+            ingester_response = ingester.upload_file_and_ingest_to_archive(file_object, path=image.filename)
             logger.debug(f"Ingester response: {ingester_response}", image=image)
             retry = False
         except DoNotRetryError as exc:
