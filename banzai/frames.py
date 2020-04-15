@@ -153,7 +153,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
             self.to_fits(runtime_context).writeto(buffer, overwrite=True, output_verify='silentfix')
             buffer.seek(0)
             if runtime_context.post_to_archive:
-                archived_image_info = file_utils.post_to_ingester(buffer, self)
+                archived_image_info = file_utils.post_to_ingester(buffer, self, output_filename)
                 # update file info from ingester response
                 self.frame_id = archived_image_info.get('frameid')
                 buffer.seek(0)

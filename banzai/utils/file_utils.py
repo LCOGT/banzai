@@ -19,14 +19,14 @@ def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):
         producer.release()
 
 
-def post_to_ingester(file_object, image):
+def post_to_ingester(file_object, image, output_filename):
     logger.info(f'Posting file to the archive', image=image)
     retry = True
     try_counter = 1
     ingester_response = {}
     while retry:
         try:
-            ingester_response = ingester.upload_file_and_ingest_to_archive(file_object, path=image.filename)
+            ingester_response = ingester.upload_file_and_ingest_to_archive(file_object, path=output_filename)
             logger.debug(f"Ingester response: {ingester_response}", image=image)
             retry = False
         except DoNotRetryError as exc:
