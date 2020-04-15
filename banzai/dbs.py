@@ -300,8 +300,13 @@ def get_instrument_by_id(id, db_address):
 def cal_record_to_file_info(record):
     if record is None:
         return None
+    # if the filepath in the DB is not set, make sure we set the path to None.
+    if record.filepath is None:
+        path = None
+    else:
+        path = os.path.join(record.filepath, record.filename)
     file_info = {'frameid': record.frameid,
-                 'path': os.path.join(record.filepath, record.filename)}
+                 'path': path}
     return file_info
 
 
