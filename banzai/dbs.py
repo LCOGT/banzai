@@ -306,7 +306,8 @@ def cal_record_to_file_info(record):
     else:
         path = os.path.join(record.filepath, record.filename)
     file_info = {'frameid': record.frameid,
-                 'path': path}
+                 'path': path,
+                 'filename': record.filename}
     return file_info
 
 
