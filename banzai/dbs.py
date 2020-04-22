@@ -326,7 +326,7 @@ def get_master_cal_record(image, calibration_type, master_selection_criteria, db
 
     # During real-time reduction, we want to avoid using different master calibrations for the same block,
     # therefore we make sure the the calibration frame used was created before the block start time
-    if use_only_older_calibrations and image.block_start is not None:
+    if use_only_older_calibrations and getattr(image, 'block_start') is not None:
         calibration_criteria &= CalibrationImage.datecreated < image.block_start
 
     calibration_criteria &= CalibrationImage.good_after <= image.dateobs
