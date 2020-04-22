@@ -16,7 +16,10 @@ class Data(metaclass=abc.ABCMeta):
     def __init__(self, data: Union[np.array, Table], meta: Union[dict, fits.Header],
                  mask: np.array = None, name: str = '', memmap=True):
         self.memmap = memmap
-        self.data = self._init_array(data)
+        if isinstance(data, Table):
+            self.data = data
+        else:
+            self.data = self._init_array(data)
         self.meta = meta.copy()
         self._validate_mask(mask)
         self.mask = self._init_array(mask, dtype=np.uint8)
@@ -80,13 +83,10 @@ class HeaderOnly(Data):
 
 
 class DataTable(Data):
-    def __init__(self, data, name, meta=None):
-        self.data = data
+    def __init__(self, data, name, meta=None, memmap=False):
         if meta is None:
-            self.meta = fits.BinTableHDU(data).header
-        else:
-            self.meta=meta
-        self.name = name
+            meta = fits.Header({})
+        super().__init__(data, meta, name=name, memmap=memmap)      
 
     def to_fits(self, context) -> Union[fits.HDUList, list]:
         hdu = fits.BinTableHDU(self.data)
