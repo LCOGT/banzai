@@ -91,14 +91,16 @@ class DataTable(Data):
     def to_fits(self, context) -> Union[fits.HDUList, list]:
         hdu = fits.BinTableHDU(self.data)
         hdu.name = self.name
-        # Put in the description keywords
+        # For all TTYPE header keywords, set the header comment
+        # from the table column's description.
         for k in self.meta.keys():
             if 'TTYPE' in k:
-                column_name = self.meta[k].lower()
+                column_name = self.meta[k]
                 description = self.data[column_name].description
                 hdu.header[k] = (column_name.upper(), description)
                 # Get the value of n in TTYPEn
                 n = k[5:]
+                # Also add the TCOMMn header keyword with the description of the table column
                 hdu.header['TCOMM{0}'.format(n)] = description
 
         return [hdu]

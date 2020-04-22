@@ -366,7 +366,7 @@ class LCOFrameFactory(FrameFactory):
                     hdu_list.append(HeaderOnly(meta=hdu.header))
                     primary_hdu = hdu
                 elif isinstance(hdu, fits.BinTableHDU):
-                    hdu_list.append(DataTable(data=hdu.data, name=hdu.header.get('EXTNAME'), meta=hdu.header))
+                    hdu_list.append(DataTable(data=fits.Table(hdu.data), name=hdu.header.get('EXTNAME'), meta=hdu.header))
                 # Check if we are looking at a CCD extension
                 elif 'GAIN' in hdu.header:
                     associated_data = {}
