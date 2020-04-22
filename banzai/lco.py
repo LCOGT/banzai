@@ -7,6 +7,7 @@ import numpy as np
 from astropy.io import fits
 
 from astropy.time import Time
+from astropy.table import Table
 
 from banzai import dbs
 from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData
@@ -370,7 +371,7 @@ class LCOFrameFactory(FrameFactory):
                     hdu_list.append(HeaderOnly(meta=hdu.header))
                     primary_hdu = hdu
                 elif isinstance(hdu, fits.BinTableHDU):
-                    hdu_list.append(DataTable(data=fits.Table(hdu.data), name=hdu.header.get('EXTNAME'), meta=hdu.header))
+                    hdu_list.append(DataTable(data=Table(hdu.data), name=hdu.header.get('EXTNAME'), meta=hdu.header))
                 # Check if we are looking at a CCD extension
                 elif 'GAIN' in hdu.header:
                     associated_data = {}
