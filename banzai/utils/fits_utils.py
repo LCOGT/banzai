@@ -105,6 +105,7 @@ def download_from_s3(file_info, context, is_raw_frame=False):
     response = requests.get(url, headers=archive_auth_token).json()
     buffer = io.BytesIO()
     buffer.write(requests.get(response['url'], stream=True).content)
+    buffer.seek(0)
     return buffer
 
 

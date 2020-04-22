@@ -44,7 +44,9 @@ class Stage(abc.ABC):
                 else:
                     image = image_set
                 logger.info('Running {0}'.format(self.stage_name), image=image)
-                processed_images.append(self.do_stage(image_set))
+                processed_image = self.do_stage(image_set)
+                if processed_image is not None:
+                    processed_images.append(processed_image)
             except Exception:
                 logger.error(logs.format_exception())
         return processed_images

@@ -7,6 +7,7 @@ import numpy as np
 from astropy.io import fits
 
 from astropy.time import Time
+from astropy.table import Table
 
 from banzai import dbs
 from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData
@@ -45,6 +46,10 @@ class LCOObservationFrame(ObservationFrame):
     @property
     def request_number(self):
         return self.primary_hdu.meta.get('REQNUM')
+
+    @property
+    def block_start(self):
+        return Time(self.primary_hdu.meta.get('BLKSDATE'), scale='utc').datetime
 
     @property
     def site(self):
@@ -366,7 +371,7 @@ class LCOFrameFactory(FrameFactory):
                     hdu_list.append(HeaderOnly(meta=hdu.header))
                     primary_hdu = hdu
                 elif isinstance(hdu, fits.BinTableHDU):
-                    hdu_list.append(DataTable(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
+                    hdu_list.append(DataTable(data=Table(hdu.data), name=hdu.header.get('EXTNAME'), meta=hdu.header))
                 # Check if we are looking at a CCD extension
                 elif 'GAIN' in hdu.header:
                     associated_data = {}
@@ -405,6 +410,8 @@ class LCOFrameFactory(FrameFactory):
         else:
             image = self.observation_frame_class(hdu_list, filename, frame_id=frame_id)
         image.instrument = self.get_instrument_from_header(image.primary_hdu.meta, runtime_context.db_address)
+        if image.instrument is None:
+            return None
 
         # Do some munging specific to LCO data when our headers were not complete
         self._init_detector_sections(image)
@@ -416,7 +423,7 @@ class LCOFrameFactory(FrameFactory):
                          image=image)
             return None
         # If the frame cannot be processed for some reason return None instead of the new image object
-        if image.instrument is not None and image_utils.image_can_be_processed(image, runtime_context):
+        if image_utils.image_can_be_processed(image, runtime_context):
             return image
         else:
             return None
@@ -429,7 +436,7 @@ class LCOFrameFactory(FrameFactory):
         name = camera
         if instrument is None:
             # if instrument is missing, assume it is an NRES frame and check for the instrument again.
-            name = header.meta.get('TELESCOP')
+            name = header.get('TELESCOP')
             instrument = dbs.query_for_instrument(db_address, site, camera, name=name)
         if instrument is None:
             msg = 'Instrument is not in the database, Please add it before reducing this data.'

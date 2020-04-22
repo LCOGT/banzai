@@ -16,7 +16,10 @@ class Data(metaclass=abc.ABCMeta):
     def __init__(self, data: Union[np.array, Table], meta: Union[dict, fits.Header],
                  mask: np.array = None, name: str = '', memmap=True):
         self.memmap = memmap
-        self.data = self._init_array(data)
+        if isinstance(data, Table):
+            self.data = data
+        else:
+            self.data = self._init_array(data)
         self.meta = meta.copy()
         self._validate_mask(mask)
         self.mask = self._init_array(mask, dtype=np.uint8)
@@ -80,22 +83,24 @@ class HeaderOnly(Data):
 
 
 class DataTable(Data):
-    def __init__(self, data, name):
-        self.data = data
-        self.meta = fits.BinTableHDU(data).header
-        self.name = name
+    def __init__(self, data, name, meta=None, memmap=False):
+        if meta is None:
+            meta = fits.Header({})
+        super().__init__(data, meta, name=name, memmap=memmap)
 
     def to_fits(self, context) -> Union[fits.HDUList, list]:
         hdu = fits.BinTableHDU(self.data)
         hdu.name = self.name
-        # Put in the description keywords
+        # For all TTYPE header keywords, set the header comment
+        # from the table column's description.
         for k in self.meta.keys():
             if 'TTYPE' in k:
-                column_name = self.meta[k].lower()
+                column_name = self.meta[k]
                 description = self.data[column_name].description
                 hdu.header[k] = (column_name.upper(), description)
                 # Get the value of n in TTYPEn
                 n = k[5:]
+                # Also add the TCOMMn header keyword with the description of the table column
                 hdu.header['TCOMM{0}'.format(n)] = description
 
         return [hdu]
