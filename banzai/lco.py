@@ -47,6 +47,10 @@ class LCOObservationFrame(ObservationFrame):
         return self.primary_hdu.meta.get('REQNUM')
 
     @property
+    def block_start(self):
+        return Time(self.primary_hdu.meta.get('BLKSDATE'), scale='utc').datetime
+
+    @property
     def site(self):
         return self.primary_hdu.meta.get('SITEID')
 
