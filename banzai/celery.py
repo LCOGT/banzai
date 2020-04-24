@@ -12,11 +12,6 @@ from banzai.context import Context
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
 from banzai.utils.date_utils import get_stacking_date_range
 
-app = Celery('banzai')
-app.config_from_object('banzai.celeryconfig')
-app.conf.update(broker_url=os.getenv('TASK_HOST', 'redis://localhost:6379/0'))
-# Increase broker timeout to avoid re-scheduling tasks that aren't completed within an hour
-app.conf.broker_transport_options = {'visibility_timeout': 86400}
 
 logger = logging.getLogger('banzai')
 
@@ -38,8 +33,12 @@ def configure_workers(**kwargs):
     reload(metric_wrappers)
 
 
-app = Celery('tasks')
+app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
+app.conf.update(broker_url=os.getenv('TASK_HOST', 'redis://localhost:6379/0'))
+# Increase broker timeout to avoid re-scheduling tasks that aren't completed within an hour
+app.conf.broker_transport_options = {'visibility_timeout': 86400}
+
 logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
 # Calling setup() uses setup_celery_logging. Use redirect to get more celery logs to our logger.
 app.log.setup()
