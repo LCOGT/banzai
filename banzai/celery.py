@@ -30,11 +30,6 @@ def setup_celery_logging(**kwargs):
     pass
 
 
-@after_setup_task_logger.connect
-def setup_loggers(*args, **kwargs):
-    logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
-
-
 @worker_process_init.connect
 def configure_workers(**kwargs):
     # We need to do this because of how the metrics library uses threads and how celery spawns workers.
@@ -45,6 +40,7 @@ def configure_workers(**kwargs):
 
 app = Celery('tasks')
 app.config_from_object('settings.settings.celeryconfig')
+logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
 # Calling setup() uses setup_celery_logging. Use redirect to get more celery logs to our logger.
 app.log.setup()
 app.log.redirect_stdouts_to_logger(logger, 'INFO')
