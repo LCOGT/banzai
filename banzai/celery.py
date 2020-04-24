@@ -7,7 +7,7 @@ from celery import Celery
 
 from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, stage_utils
-from celery.signals import setup_logging, worker_process_init, after_setup_task_logger
+from celery.signals import setup_logging, worker_process_init
 from banzai.context import Context
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
 from banzai.utils.date_utils import get_stacking_date_range
@@ -39,7 +39,7 @@ def configure_workers(**kwargs):
 
 
 app = Celery('tasks')
-app.config_from_object('settings.settings.celeryconfig')
+app.config_from_object('banzai.celeryconfig')
 logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
 # Calling setup() uses setup_celery_logging. Use redirect to get more celery logs to our logger.
 app.log.setup()
