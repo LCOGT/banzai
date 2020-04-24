@@ -12,20 +12,17 @@ from banzai.context import Context
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
 from banzai.utils.date_utils import get_stacking_date_range
 
-app = Celery('banzai')
-app.config_from_object('banzai.celeryconfig')
-app.conf.update(broker_url=os.getenv('TASK_HOST', 'redis://localhost:6379/0'))
-# Increase broker timeout to avoid re-scheduling tasks that aren't completed within an hour
-app.conf.broker_transport_options = {'visibility_timeout': 86400}
 
 logger = logging.getLogger('banzai')
 
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 
 
+# Celery sets up a logger on its own, which messes up the LCOGTFormatter that I want to use.
+# Using this disables celery's logging setup.
 @setup_logging.connect
-def setup_loggers(*args, **kwargs):
-    logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
+def setup_celery_logging(**kwargs):
+    pass
 
 
 @worker_process_init.connect
@@ -34,6 +31,18 @@ def configure_workers(**kwargs):
     from importlib import reload
     from opentsdb_python_metrics import metric_wrappers
     reload(metric_wrappers)
+
+
+app = Celery('banzai')
+app.config_from_object('banzai.celeryconfig')
+app.conf.update(broker_url=os.getenv('TASK_HOST', 'redis://localhost:6379/0'))
+# Increase broker timeout to avoid re-scheduling tasks that aren't completed within an hour
+app.conf.broker_transport_options = {'visibility_timeout': 86400}
+
+logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
+# Calling setup() uses setup_celery_logging. Use redirect to get more celery logs to our logger.
+app.log.setup()
+app.log.redirect_stdouts_to_logger(logger, 'INFO')
 
 
 @app.task(name='celery.schedule_calibration_stacking')
