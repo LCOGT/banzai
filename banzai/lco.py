@@ -75,6 +75,10 @@ class LCOObservationFrame(ObservationFrame):
     def catalog(self):
         return next((hdu.data for hdu in self._hdus if hdu.name == 'CAT'), None)
 
+    @catalog.setter
+    def catalog(self, value: DataTable):
+        self._hdus.append(value)
+
     @property
     def configuration_mode(self):
         mode = self.meta.get('CONFMODE', 'default')
@@ -120,6 +124,9 @@ class LCOObservationFrame(ObservationFrame):
             date_observed = date_utils.parse_date_obs(self.meta['DATE-OBS'])
             next_year = date_observed + datetime.timedelta(days=context.DATA_RELEASE_DELAY)
             self.meta['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year), '[UTC] Date the frame becomes public')
+
+    def to_fits(self, context, reorder=True):
+        return super().to_fits(context, reorder=reorder)
 
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):

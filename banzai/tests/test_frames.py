@@ -1,8 +1,9 @@
 import pytest
 import numpy as np
+from astropy.table import Table
 
 from banzai.utils.image_utils import Section
-from banzai.data import CCDData
+from banzai.data import CCDData, DataTable
 from banzai.tests.utils import FakeCCDData, FakeLCOObservationFrame, FakeContext
 
 pytestmark = pytest.mark.frames
@@ -13,13 +14,37 @@ def set_random_seed():
     np.random.seed(10031312)
 
 
-def test_to_fits():
+def test_ccd_data_to_fits():
     test_data = FakeCCDData(meta={'EXTNAME': 'SCI'})
     hdu_list = test_data.to_fits(FakeContext())
     assert len(hdu_list) == 3
     assert hdu_list[0].header['EXTNAME'] == 'SCI'
     assert hdu_list[1].header['EXTNAME'] == 'BPM'
     assert hdu_list[2].header['EXTNAME'] == 'ERR'
+
+
+def test_to_fits_correct_ordering_fpack():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+    test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
+    context = FakeContext()
+    context.fpack = True
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == [None, 'SCI', 'CAT', 'BPM', 'ERR']
+
+
+def test_to_fits_correct_ordering_no_fpack():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+    test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
+    context = FakeContext()
+    context.fpack = False
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == ['SCI', 'CAT', 'BPM', 'ERR']
+
+
+def test_to_fits_no_reorder_fpack():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+    test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
+    context = FakeContext()
+    context.fpack = True
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context, reorder=False)] == [None, 'SCI', 'BPM', 'ERR', 'CAT']
 
 
 def test_subtract():

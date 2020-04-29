@@ -166,10 +166,17 @@ class ObservationFrame(metaclass=abc.ABCMeta):
 
         dbs.save_processed_image(output_filename, md5, db_address=runtime_context.db_address)
 
-    def to_fits(self, context):
+    def to_fits(self, context, reorder=False):
         hdu_list_to_write = fits.HDUList([])
         for hdu in self._hdus:
             hdu_list_to_write += hdu.to_fits(context)
+        if reorder:
+            # order the hdu list in accordance with our data policy
+            for idx, extension_name in enumerate(context.REDUCED_DATA_EXTENSION_ORDERING):
+                if hdu_list_to_write[idx].name != extension_name:
+                    hdu = hdu_list_to_write[extension_name]
+                    hdu_list_to_write.remove(hdu)
+                    hdu_list_to_write.insert(idx, hdu)
         if not isinstance(hdu_list_to_write[0], fits.PrimaryHDU):
             hdu_list_to_write[0] = fits.PrimaryHDU(data=hdu_list_to_write[0].data, header=hdu_list_to_write[0].header)
         if context.fpack:
