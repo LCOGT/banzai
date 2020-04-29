@@ -172,7 +172,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
             hdu_list_to_write += hdu.to_fits(context)
         if reorder:
             # order the hdu list in accordance with our data policy
-            for idx, extension_name in enumerate(context.REDUCED_DATA_EXTENSION_ORDERING):
+            for idx, extension_name in enumerate(context.REDUCED_DATA_EXTENSION_ORDERING.get(self.obstype)):
                 if hdu_list_to_write[idx].name != extension_name:
                     hdu = hdu_list_to_write[extension_name]
                     hdu_list_to_write.remove(hdu)

@@ -23,28 +23,44 @@ def test_ccd_data_to_fits():
     assert hdu_list[2].header['EXTNAME'] == 'ERR'
 
 
-def test_to_fits_correct_ordering_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+def test_exposure_to_fits_reorder_fpack():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = True
-    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == [None, 'SCI', 'CAT', 'BPM', 'ERR']
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context, reorder=True)] == [None, 'SCI', 'CAT', 'BPM', 'ERR']
 
 
-def test_to_fits_correct_ordering_no_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+def test_exposure_to_fits_reorder_no_fpack():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = False
-    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == ['SCI', 'CAT', 'BPM', 'ERR']
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context, reorder=True)] == ['SCI', 'CAT', 'BPM', 'ERR']
 
 
-def test_to_fits_no_reorder_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+def test_exposure_to_fits_no_reorder_fpack():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = True
     assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context, reorder=False)] == [None, 'SCI', 'BPM', 'ERR', 'CAT']
+
+
+def test_calibration_to_fits_reorder_fpack():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'BIAS'})]
+    test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
+    context = FakeContext()
+    context.fpack = True
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context, reorder=True)] == [None, 'SCI', 'BPM', 'ERR']
+
+
+def test_calibration_to_fits_reorder_no_fpack():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'BIAS'})]
+    test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
+    context = FakeContext()
+    context.fpack = False
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context, reorder=True)] == ['SCI', 'BPM', 'ERR']
 
 
 def test_subtract():
