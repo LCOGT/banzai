@@ -1,8 +1,9 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 import requests
 
 from banzai import logs
+from banzai.context import Context
 
 import numpy as np
 from astropy.io import fits
@@ -213,3 +214,11 @@ def to_fits_image_extension(data, master_extension_name, extension_name, context
     if extension_version is not None:
         header['EXTVER'] = extension_version
     return fits.ImageHDU(data=data, header=header)
+
+
+def reorder_hdus(hdu_list: List,  obstype: str, context: Context):
+    for idx, extension_name in enumerate(context.REDUCED_DATA_EXTENSION_ORDERING.get(obstype)):
+        if hdu_list[idx].name != extension_name:
+            hdu = hdu_list[extension_name]
+            hdu_list.remove(hdu)
+            hdu_list.insert(idx, hdu)

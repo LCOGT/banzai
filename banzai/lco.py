@@ -75,6 +75,10 @@ class LCOObservationFrame(ObservationFrame):
     def catalog(self):
         return next((hdu.data for hdu in self._hdus if hdu.name == 'CAT'), None)
 
+    @catalog.setter
+    def catalog(self, value: DataTable):
+        self._hdus.append(value)
+
     @property
     def configuration_mode(self):
         mode = self.meta.get('CONFMODE', 'default')
