@@ -28,7 +28,7 @@ def test_exposure_to_fits_reorder_fpack():
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = True
-    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context, reorder=True)] == [None, 'SCI', 'CAT', 'BPM', 'ERR']
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == [None, 'SCI', 'CAT', 'BPM', 'ERR']
 
 
 def test_exposure_to_fits_reorder_no_fpack():
@@ -36,15 +36,7 @@ def test_exposure_to_fits_reorder_no_fpack():
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = False
-    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context, reorder=True)] == ['SCI', 'CAT', 'BPM', 'ERR']
-
-
-def test_exposure_to_fits_no_reorder_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
-    test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
-    context = FakeContext()
-    context.fpack = True
-    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context, reorder=False)] == [None, 'SCI', 'BPM', 'ERR', 'CAT']
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == ['SCI', 'CAT', 'BPM', 'ERR']
 
 
 def test_calibration_to_fits_reorder_fpack():
@@ -52,7 +44,7 @@ def test_calibration_to_fits_reorder_fpack():
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = True
-    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context, reorder=True)] == [None, 'SCI', 'BPM', 'ERR']
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == [None, 'SCI', 'BPM', 'ERR']
 
 
 def test_calibration_to_fits_reorder_no_fpack():
@@ -60,7 +52,7 @@ def test_calibration_to_fits_reorder_no_fpack():
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = False
-    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context, reorder=True)] == ['SCI', 'BPM', 'ERR']
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == ['SCI', 'BPM', 'ERR']
 
 
 def test_subtract():

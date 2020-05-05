@@ -125,9 +125,6 @@ class LCOObservationFrame(ObservationFrame):
             next_year = date_observed + datetime.timedelta(days=context.DATA_RELEASE_DELAY)
             self.meta['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year), '[UTC] Date the frame becomes public')
 
-    def to_fits(self, context, reorder=True):
-        return super().to_fits(context, reorder=reorder)
-
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
     def __init__(self, hdu_list: list, file_path: str, frame_id: int = None, grouping_criteria: list = None):
