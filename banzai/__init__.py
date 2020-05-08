@@ -31,5 +31,5 @@ handler = logging.StreamHandler(stream=sys.stdout)
 handler.setFormatter(LCOGTFormatter())
 logger.addHandler(handler)
 
-sqlalchemy_logger = logging.getLogger('sqlalchemy')
-sqlalchemy_logger.setLevel(logging.WARN)
+# Default the logger to INFO so that we actually get messages by default.
+logger.setLevel('INFO')
