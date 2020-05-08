@@ -30,3 +30,6 @@ logger = logging.getLogger('banzai')
 handler = logging.StreamHandler(stream=sys.stdout)
 handler.setFormatter(LCOGTFormatter())
 logger.addHandler(handler)
+
+sqlalchemy_logger = logging.getLogger('sqlalchemy')
+sqlalchemy_logger.setLevel(logging.WARN)
