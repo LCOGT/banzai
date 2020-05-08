@@ -54,9 +54,17 @@ def add_settings_to_context(args, settings):
             setattr(args, setting, getattr(settings, setting))
 
 
-def parse_args(settings, extra_console_arguments=None, parser_description='Process LCO data.'):
-    """Parse arguments, including default command line argument, and set the overall log level"""
-
+def parse_args(settings, extra_console_arguments=None, parser_description='Process LCO data.',
+               parse_system_args=True):
+    """
+    Create a context object from the given arguments
+    :param settings: settings object/module that has defaults for the context object
+    :param extra_console_arguments: Non default arguments to add to the command line
+    :param parser_description: Help str printed to the console
+    :param parse_system_args: Actually parse command line parameters. Setting this False is
+        useful to create a context object with defaults to be used for testing.
+    :return:
+    """
     parser = argparse.ArgumentParser(description=parser_description)
 
     parser.add_argument("--processed-path", default='/archive/engineering',
@@ -97,8 +105,11 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
         extra_console_arguments = []
     for argument in extra_console_arguments:
         parser.add_argument(*argument['args'], **argument['kwargs'])
-    args = parser.parse_args()
 
+    if parse_system_args:
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args([])
     logs.set_log_level(args.log_level)
 
     add_settings_to_context(args, settings)
