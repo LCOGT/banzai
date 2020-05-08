@@ -8,7 +8,7 @@ from banzai.utils import date_utils
 
 
 class BanzaiLogger(logging.getLoggerClass()):
-    def __init__(self, name, level='NOTSET'):
+    def __init__(self, name, level='INFO'):
         super(BanzaiLogger, self).__init__(name, level)
 
     def _log(self, level, msg, *args, **kwargs):
