@@ -216,8 +216,15 @@ def to_fits_image_extension(data, master_extension_name, extension_name, context
     return fits.ImageHDU(data=data, header=header)
 
 
-def reorder_hdus(hdu_list: List,  obstype: str, context: Context):
-    for idx, extension_name in enumerate(context.REDUCED_DATA_EXTENSION_ORDERING.get(obstype)):
+def reorder_hdus(hdu_list: fits.HDUList,  obstype: str, ordering_dict: dict):
+    """
+    Re-order HDUs in an HDUList before writing to disk
+    :param hdu_list: Astropy fits.HDUList
+    :param obstype: Observation type from header
+    :param ordering_dict: A dictionary, keyed by OBSTYPE with the desired ordering of
+    extensions by EXTNAME
+    """
+    for idx, extension_name in enumerate(ordering_dict.get(obstype)):
         if hdu_list[idx].name != extension_name:
             hdu = hdu_list[extension_name]
             hdu_list.remove(hdu)
