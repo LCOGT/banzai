@@ -45,14 +45,15 @@ CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'binning'],
 
 LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
               'DARK': 'banzai.bias.BiasSubtractor', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
-              'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None}
+              'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None, 'EXPERIMENTAL': None}
 
 EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
                 'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkComparer'],
                 'SKYFLAT': ['banzai.flats.FlatNormalizer', 'banzai.qc.PatternNoiseDetector',
                             'banzai.flats.FlatComparer'],
                 'STANDARD': None,
-                'EXPOSE': None}
+                'EXPOSE': None,
+                'EXPERIMENTAL': None}
 
 CALIBRATION_STACKER_STAGES = {'BIAS': ['banzai.bias.BiasMaker'],
                               'DARK': ['banzai.dark.DarkMaker'],
