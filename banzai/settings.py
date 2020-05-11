@@ -13,7 +13,7 @@ FRAME_SELECTION_CRITERIA = [('type', 'not contains', 'FLOYDS'), ('type', 'not co
 
 FRAME_FACTORY = 'banzai.lco.LCOFrameFactory'
 
-MASTER_CALIBRATION_FRAME_CLASS = 'banzai.lco.LCOMasterCalibrationFrame'
+CALIBRATION_FRAME_CLASS = 'banzai.lco.LCOCalibrationFrame'
 
 ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   'banzai.bpm.SaturatedPixelFlagger',
@@ -124,4 +124,7 @@ REDUCED_DATA_EXTENSION_ORDERING = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                    'DARK': ['SCI', 'BPM', 'ERR'],
                                    'SKYFLAT': ['SCI', 'BPM', 'ERR'],
                                    'EXPOSE': ['SCI', 'CAT', 'BPM', 'ERR'],
-                                   'STANDARD':['SCI', 'CAT', 'BPM', 'ERR']}
+                                   'STANDARD': ['SCI', 'CAT', 'BPM', 'ERR']}
+MASTER_CALIBRATION_EXTENSION_ORDER = {'BIAS': ['SCI', 'BPM', 'ERR'],
+                                      'DARK': ['SCI', 'BPM', 'ERR'],
+                                      'SKYFLAT': ['SCI', 'BPM', 'ERR']}

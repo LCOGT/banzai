@@ -222,6 +222,8 @@ def reorder_hdus(hdu_list: fits.HDUList, extensions: list):
     :param hdu_list: Astropy fits.HDUList
     :param extensions: Ordered list of extensions by EXTNAME
     """
+    if extensions is None:
+        extensions = []
     for idx, extension_name in enumerate(extensions):
         if hdu_list[idx].name != extension_name:
             hdu = hdu_list[extension_name]

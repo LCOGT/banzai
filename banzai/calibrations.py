@@ -58,7 +58,10 @@ class CalibrationStacker(CalibrationMaker):
 
         grouping = self.runtime_context.CALIBRATION_SET_CRITERIA.get(images[0].obstype, [])
         master_frame_class = import_utils.import_attribute(self.runtime_context.MASTER_CALIBRATION_FRAME_CLASS)
-        master_image = master_frame_class(images, master_calibration_filename, grouping_criteria=grouping)
+        hdu_order = self.runtime_context.MASTER_CALIBRATION_EXTENSION_ORDER.get(self.calibration_type)
+
+        master_image = master_frame_class.init_master_frame(images, master_calibration_filename,
+                                                            grouping_criteria=grouping, hdu_order=hdu_order)
 
         # turn off memory mapping for each segment
         for image in images:

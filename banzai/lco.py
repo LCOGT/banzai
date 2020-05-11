@@ -127,9 +127,10 @@ class LCOObservationFrame(ObservationFrame):
 
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
-    def __init__(self, hdu_list: list, file_path: str, frame_id: int = None, grouping_criteria: list = None):
+    def __init__(self, hdu_list: list, file_path: str, frame_id: int = None, grouping_criteria: list = None,
+                 hdu_order: list = None):
         CalibrationFrame.__init__(self, grouping_criteria=grouping_criteria)
-        LCOObservationFrame.__init__(self, hdu_list, file_path, frame_id=frame_id)
+        LCOObservationFrame.__init__(self, hdu_list, file_path, frame_id=frame_id, hdu_order=hdu_order)
 
     @property
     def is_master(self):
@@ -143,18 +144,20 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
         LCOObservationFrame.write(self, runtime_context)
         CalibrationFrame.write(self, runtime_context)
 
-
-class LCOMasterCalibrationFrame(LCOCalibrationFrame):
-    def __init__(self, images: list, file_path: str, frame_id: int = None, grouping_criteria: list = None):
+    @classmethod
+    def init_master_frame(cls, images: list, file_path: str, frame_id: int = None,
+                          grouping_criteria: list = None, hdu_order: list = None):
         data_class = type(images[0].primary_hdu)
         hdu_list = [data_class(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
-                               meta=self.init_header(images[0].meta, images))]
-        super().__init__(hdu_list=hdu_list, file_path=file_path, frame_id=frame_id, grouping_criteria=grouping_criteria)
-        self.is_master = True
-        self.instrument = images[0].instrument
+                               meta=cls.init_master_header(images[0].meta, images))]
+        frame = cls.__init__(hdu_list=hdu_list, file_path=file_path, frame_id=frame_id,
+                             grouping_criteria=grouping_criteria, hdu_order=hdu_order)
+        frame.is_master = True
+        frame.instrument = images[0].instrument
+        return frame
 
     @staticmethod
-    def init_header(old_header, images):
+    def init_master_header(old_header, images):
         header = fits.Header()
         for key in old_header.keys():
             try:
@@ -334,10 +337,10 @@ class LCOFrameFactory(FrameFactory):
 
     @property
     def primary_header_keys_to_propagate(self):
-        '''
+        """
         These are keys that may exist in the PrimaryHDU's header, but
         do not exist in the ImageHDUs.
-        '''
+        """
         return ['RDNOISE']
 
     @property
@@ -408,11 +411,14 @@ class LCOFrameFactory(FrameFactory):
                     hdu_list.append(ArrayData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
 
         # Either use the calibration frame type or normal frame type depending on the OBSTYPE keyword
+        hdu_order = runtime_context.REDUCED_DATA_EXTENSION_ORDERING.get(hdu_list[0].meta.get('OBSTYPE'))
+
         if hdu_list[0].meta.get('OBSTYPE') in runtime_context.CALIBRATION_IMAGE_TYPES:
             grouping = runtime_context.CALIBRATION_SET_CRITERIA.get(hdu_list[0].meta.get('OBSTYPE'), [])
-            image = self.calibration_frame_class(hdu_list, filename, frame_id=frame_id, grouping_criteria=grouping)
+            image = self.calibration_frame_class(hdu_list, filename, frame_id=frame_id, grouping_criteria=grouping,
+                                                 hdu_order=hdu_order)
         else:
-            image = self.observation_frame_class(hdu_list, filename, frame_id=frame_id)
+            image = self.observation_frame_class(hdu_list, filename, frame_id=frame_id, hdu_order=hdu_order)
         image.instrument = self.get_instrument_from_header(image.primary_hdu.meta, runtime_context.db_address)
         if image.instrument is None:
             return None
