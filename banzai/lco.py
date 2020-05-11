@@ -150,8 +150,8 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
         data_class = type(images[0].primary_hdu)
         hdu_list = [data_class(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
                                meta=cls.init_master_header(images[0].meta, images))]
-        frame = cls.__init__(hdu_list=hdu_list, file_path=file_path, frame_id=frame_id,
-                             grouping_criteria=grouping_criteria, hdu_order=hdu_order)
+        frame = cls(hdu_list=hdu_list, file_path=file_path, frame_id=frame_id,
+                    grouping_criteria=grouping_criteria, hdu_order=hdu_order)
         frame.is_master = True
         frame.instrument = images[0].instrument
         return frame

@@ -57,7 +57,7 @@ class CalibrationStacker(CalibrationMaker):
         master_calibration_filename = make_calibration_name(max(images, key=lambda x: datetime.strptime(x.epoch, '%Y%m%d') ))
 
         grouping = self.runtime_context.CALIBRATION_SET_CRITERIA.get(images[0].obstype, [])
-        master_frame_class = import_utils.import_attribute(self.runtime_context.MASTER_CALIBRATION_FRAME_CLASS)
+        master_frame_class = import_utils.import_attribute(self.runtime_context.CALIBRATION_FRAME_CLASS)
         hdu_order = self.runtime_context.MASTER_CALIBRATION_EXTENSION_ORDER.get(self.calibration_type)
 
         master_image = master_frame_class.init_master_frame(images, master_calibration_filename,
