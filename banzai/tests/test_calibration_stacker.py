@@ -14,8 +14,11 @@ header = {'DATASEC': f'[1:{nx},1:{ny}]', 'DETSEC': f'[1:{nx},1:{ny}]', 'CCDSUM':
 context = {'CALIBRATION_MIN_FRAMES': {'TEST': 1},
            'CALIBRATION_FILENAME_FUNCTIONS': {'TEST': ['banzai.utils.file_utils.ccdsum_to_filename']},
            'CALIBRATION_SET_CRITERIA': {'TEST': ['binning']},
-           'MASTER_CALIBRATION_FRAME_CLASS': 'banzai.lco.LCOMasterCalibrationFrame',
-           'TELESCOPE_FILENAME_FUNCTION': 'banzai.utils.file_utils.telescope_to_filename'}
+           'CALIBRATION_FRAME_CLASS': 'banzai.lco.LCOCalibrationFrame',
+           'TELESCOPE_FILENAME_FUNCTION': 'banzai.utils.file_utils.telescope_to_filename',
+           'MASTER_CALIBRATION_EXTENSION_ORDER': {'BIAS': ['SCI', 'BPM', 'ERR'],
+                                                  'DARK': ['SCI', 'BPM', 'ERR'],
+                                                  'SKYFLAT': ['SCI', 'BPM', 'ERR']}}
 context = Context(context)
 instrument = Instrument(site='cpt', camera='fa11', name='fa11')
 
