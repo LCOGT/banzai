@@ -62,6 +62,7 @@ class FakeLCOObservationFrame(LCOObservationFrame):
         self.primary_hdu.meta['DAY-OBS'] = epoch
         self._file_path = file_path
         self.is_bad = False
+        self.hdu_order = ['SCI', 'CAT', 'BPM', 'ERR']
 
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])

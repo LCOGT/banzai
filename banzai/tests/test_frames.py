@@ -42,6 +42,7 @@ def test_exposure_to_fits_reorder_no_fpack():
 def test_calibration_to_fits_reorder_fpack():
     hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'BIAS'})]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
+    test_frame.hdu_order = ['SCI', 'BPM', 'ERR']
     context = FakeContext()
     context.fpack = True
     assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == [None, 'SCI', 'BPM', 'ERR']
@@ -50,6 +51,7 @@ def test_calibration_to_fits_reorder_fpack():
 def test_calibration_to_fits_reorder_no_fpack():
     hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'BIAS'})]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
+    test_frame.hdu_order = ['SCI', 'BPM', 'ERR']
     context = FakeContext()
     context.fpack = False
     assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == ['SCI', 'BPM', 'ERR']

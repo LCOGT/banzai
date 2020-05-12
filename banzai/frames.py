@@ -14,12 +14,13 @@ logger = logging.getLogger('banzai')
 
 
 class ObservationFrame(metaclass=abc.ABCMeta):
-    def __init__(self, hdu_list: list, file_path: str, frame_id: int = None):
+    def __init__(self, hdu_list: list, file_path: str, frame_id: int = None, hdu_order: list = None):
         self._hdus = hdu_list
         self._file_path = file_path
         self.ra, self.dec = fits_utils.parse_ra_dec(hdu_list[0].meta)
         self.instrument = None
         self.frame_id = frame_id
+        self.hdu_order = hdu_order
 
     @property
     def primary_hdu(self):
@@ -170,7 +171,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         hdu_list_to_write = fits.HDUList([])
         for hdu in self._hdus:
             hdu_list_to_write += hdu.to_fits(context)
-        fits_utils.reorder_hdus(hdu_list_to_write, self.obstype, context)
+        fits_utils.reorder_hdus(hdu_list_to_write, self.hdu_order)
         if not isinstance(hdu_list_to_write[0], fits.PrimaryHDU):
             hdu_list_to_write[0] = fits.PrimaryHDU(data=hdu_list_to_write[0].data, header=hdu_list_to_write[0].header)
         if context.fpack:
