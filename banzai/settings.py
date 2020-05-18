@@ -125,4 +125,5 @@ REDUCED_DATA_EXTENSION_ORDERING = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                    'DARK': ['SCI', 'BPM', 'ERR'],
                                    'SKYFLAT': ['SCI', 'BPM', 'ERR'],
                                    'EXPOSE': ['SCI', 'CAT', 'BPM', 'ERR'],
-                                   'STANDARD':['SCI', 'CAT', 'BPM', 'ERR']}
+                                   'STANDARD': ['SCI', 'CAT', 'BPM', 'ERR'],
+                                   'EXPERIMENTAL': ['SCI', 'CAT', 'BPM', 'ERR']}
