@@ -1,9 +1,9 @@
 import logging
-from typing import Optional, List
+from typing import Optional
 import requests
 
 from banzai import logs
-from banzai.context import Context
+from banzai.utils import import_utils
 
 import numpy as np
 from astropy.io import fits
@@ -229,3 +229,15 @@ def reorder_hdus(hdu_list: fits.HDUList, extensions: list):
             hdu = hdu_list[extension_name]
             hdu_list.remove(hdu)
             hdu_list.insert(idx, hdu)
+
+
+def convert_extension_datatypes(hdu_list: fits.HDUList, extension_datatypes: dict):
+    """
+    Convert extensions' data types into desired form.
+    :param data: FITS HDUList
+    :param extension_datatypes: Dictionary of desired data types, keyed by exentension name
+    """
+    for hdu in hdu_list:
+        if hdu.name in extension_datatypes:
+            data_type_object = import_utils.import_attribute(extension_datatypes.get(hdu.name))
+            hdu.data = data_type_object(hdu.data)
