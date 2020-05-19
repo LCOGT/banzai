@@ -234,8 +234,8 @@ def reorder_hdus(hdu_list: fits.HDUList, extensions: list):
 def convert_extension_datatypes(hdu_list: fits.HDUList, extension_datatypes: dict):
     """
     Convert extensions' data types into desired form.
-    :param data: FITS HDUList
-    :param extension_datatypes: Dictionary of desired data types, keyed by exentension name
+    :param hdu_list: FITS HDUList
+    :param extension_datatypes: Dictionary of desired data types, keyed by extension name
     """
     for hdu in hdu_list:
         if hdu.name in extension_datatypes:
