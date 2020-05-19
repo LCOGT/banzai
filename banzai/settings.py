@@ -130,6 +130,6 @@ MASTER_CALIBRATION_EXTENSION_ORDER = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                       'DARK': ['SCI', 'BPM', 'ERR'],
                                       'SKYFLAT': ['SCI', 'BPM', 'ERR']}
 
-REDUCED_DATA_EXTENSION_TYPES = {'SCI': 'numpy.float32',
-                                'ERR': 'numpy.float32',
-                                'BPM': 'numpy.uint8'}
+REDUCED_DATA_EXTENSION_TYPES = {'SCI': 'float32',
+                                'ERR': 'float32',
+                                'BPM': 'uint8'}

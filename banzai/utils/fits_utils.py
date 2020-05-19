@@ -3,7 +3,6 @@ from typing import Optional
 import requests
 
 from banzai import logs
-from banzai.utils import import_utils
 
 import numpy as np
 from astropy.io import fits
@@ -239,5 +238,4 @@ def convert_extension_datatypes(hdu_list: fits.HDUList, extension_datatypes: dic
     """
     for hdu in hdu_list:
         if hdu.name in extension_datatypes:
-            data_type_object = import_utils.import_attribute(extension_datatypes.get(hdu.name))
-            hdu.data = data_type_object(hdu.data)
+            hdu.data = hdu.data.astype(extension_datatypes[hdu.name])
