@@ -399,7 +399,7 @@ class LCOFrameFactory(FrameFactory):
                     if len(hdu.data.shape) > 2:
                         hdu_list += self._munge_data_cube(hdu)
                     if hdu.data.dtype == np.uint16:
-                        hdu.data = hdu.data.astype(np.float32)
+                        hdu.data = hdu.data.astype(np.float64)
                     # check if we need to propagate any header keywords from the primary header
                     if primary_hdu is not None:
                         for keyword in self.primary_header_keys_to_propagate:

@@ -174,6 +174,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         fits_utils.reorder_hdus(hdu_list_to_write, self.hdu_order)
         if not isinstance(hdu_list_to_write[0], fits.PrimaryHDU):
             hdu_list_to_write[0] = fits.PrimaryHDU(data=hdu_list_to_write[0].data, header=hdu_list_to_write[0].header)
+        fits_utils.convert_extension_datatypes(hdu_list_to_write, context.REDUCED_DATA_EXTENSION_TYPES)
         if context.fpack:
             hdu_list_to_write = fits_utils.pack(hdu_list_to_write)
         return hdu_list_to_write

@@ -57,6 +57,21 @@ def test_calibration_to_fits_reorder_no_fpack():
     assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == ['SCI', 'BPM', 'ERR']
 
 
+def test_all_datatypes_wrong():
+    hdu_list = [FakeCCDData(data=np.ones((2,2), dtype=np.float64),meta={'EXTNAME':'SCI'}),
+                FakeCCDData(data=np.ones((2,2), dtype=np.float64), meta={'EXTNAME':'BPM'}),
+                FakeCCDData(data=np.ones((2,2), dtype=np.float64), meta={'EXTNAME':'ERR'})]
+    test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
+    test_frame.hdu_order = ['SCI', 'BPM', 'ERR']
+    context = FakeContext()
+    context.fpack = False
+    output_hdu_list = test_frame.to_fits(context)
+
+    assert output_hdu_list['SCI'].data.dtype == np.float32
+    assert output_hdu_list['BPM'].data.dtype == np.uint8
+    assert output_hdu_list['ERR'].data.dtype == np.float32
+
+
 def test_subtract():
     test_data = FakeCCDData(image_multiplier=4, uncertainty=3)
     test_data -= 1

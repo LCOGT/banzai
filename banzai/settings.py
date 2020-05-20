@@ -125,6 +125,11 @@ REDUCED_DATA_EXTENSION_ORDERING = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                    'SKYFLAT': ['SCI', 'BPM', 'ERR'],
                                    'EXPOSE': ['SCI', 'CAT', 'BPM', 'ERR'],
                                    'STANDARD': ['SCI', 'CAT', 'BPM', 'ERR']}
+
 MASTER_CALIBRATION_EXTENSION_ORDER = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                       'DARK': ['SCI', 'BPM', 'ERR'],
                                       'SKYFLAT': ['SCI', 'BPM', 'ERR']}
+
+REDUCED_DATA_EXTENSION_TYPES = {'SCI': 'float32',
+                                'ERR': 'float32',
+                                'BPM': 'uint8'}
