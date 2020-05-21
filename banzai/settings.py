@@ -44,7 +44,7 @@ CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'binning'],
                             'BPM': ['configuration_mode', 'binning']}
 
 LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
-              'DARK': 'banzai.bias.BiasSubtractor', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
+              'DARK': 'banzai.bias.PoissonInitializer', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
               'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None}
 
 EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
