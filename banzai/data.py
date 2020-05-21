@@ -134,6 +134,7 @@ class CCDData(Data):
         return self.trim(trim_section=section)
 
     def __imul__(self, value):
+        # TODO: Handle the case where this is an array. Add SATURATE and GAIN handling when array.
         self.data *= value
         self.uncertainty *= value
         self.meta['SATURATE'] *= value
@@ -145,10 +146,7 @@ class CCDData(Data):
         if isinstance(value, CCDData):
             self.uncertainty = np.abs(self.data / value.data) * \
                                np.sqrt((self.uncertainty / self.data) ** 2 + (value.uncertainty / value.data) ** 2)
-            self.data = np.divide(self.data, value.data)
-            self.meta['SATURATE'] /= value.meta['SATURATE']
-            self.meta['GAIN'] /= value.meta['GAIN']
-            self.meta['MAXLIN'] /= value.meta['MAXLIN']
+            self.data /= value.data
             self.mask |= value.mask
         else:
             self.__imul__(1.0 / value)
