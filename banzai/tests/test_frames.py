@@ -81,13 +81,11 @@ def test_subtract():
 
 
 def test_uncertainty_propagation_on_divide():
-    data1 = FakeCCDData(data=np.array([2, 2]), uncertainty=np.array([2, 2]), meta={'SATURATE': 6, 'GAIN': 4, 'MAXLIN': 2})
-    data2 = FakeCCDData(data=np.array([1, 1]), uncertainty=np.array([2, 2]), meta={'SATURATE': 3, 'GAIN': 2, 'MAXLIN': 1})
+    data1 = FakeCCDData(data=np.array([4.0, 4.0]), uncertainty=np.array([2.0, 2.0]), meta={'SATURATE': 6, 'GAIN': 4, 'MAXLIN': 2})
+    data2 = FakeCCDData(data=np.array([2.0, 2.0]), uncertainty=np.array([2.0, 2.0]), meta={'SATURATE': 3, 'GAIN': 2, 'MAXLIN': 1})
     data1 /= data2
-    assert np.allclose(data1.data, 2)
-    assert np.allclose(data1.uncertainty, 2*np.sqrt(5))
-    for key in ['SATURATE', 'GAIN', 'MAXLIN']:
-        assert np.isclose(data1.meta[key], 2)
+    assert np.allclose(data1.data, 2.0)
+    assert np.allclose(data1.uncertainty, np.sqrt(5))
 
 
 def test_uncertainty_propagation_on_subtract():
