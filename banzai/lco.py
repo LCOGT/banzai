@@ -22,7 +22,7 @@ class LCOObservationFrame(ObservationFrame):
     def get_output_filename(self, runtime_context):
         # TODO add a mode for AWS filenames
         output_directory = os.path.join(runtime_context.processed_path, self.instrument.site,
-                                        self.instrument.name, self.epoch, 'processed')
+                                        self.instrument.camera, self.epoch, 'processed')
         output_filename = self._file_path.replace('00.fits', '{:02d}.fits'.format(int(runtime_context.reduction_level)))
         output_filename = os.path.join(output_directory, os.path.basename(output_filename))
         if runtime_context.fpack and not output_filename.endswith('.fz'):

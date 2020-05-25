@@ -142,18 +142,18 @@ def parse_configdb(configdb_address):
         for enc in site['enclosure_set']:
             for tel in enc['telescope_set']:
                 for ins in tel['instrument_set']:
-                    sci_cam = ins.get('science_camera')
-                    if sci_cam is not None:
-                        instrument = {'site': site['code'],
-                                      'camera': sci_cam['code'],
-                                      'name': ins.get('code'),
-                                      'type': sci_cam['camera_type']['code']}
-                        # hotfix for configdb
-                        if not instrument['name']:
-                            instrument['name'] = instrument['camera']
-                        if instrument['name'] in CAMERAS_FOR_INSTRUMENTS:
-                            instrument['camera'] = CAMERAS_FOR_INSTRUMENTS[instrument['name']]
-                        instruments.append(instrument)
+                    for sci_cam in ins['science_camera']:
+                        if sci_cam is not None:
+                            instrument = {'site': site['code'],
+                                          'camera': sci_cam['code'],
+                                          'name': ins.get('code'),
+                                          'type': sci_cam['camera_type']['code']}
+                            # hotfix for configdb
+                            if not instrument['name']:
+                                instrument['name'] = instrument['camera']
+                            if instrument['name'] in CAMERAS_FOR_INSTRUMENTS:
+                                instrument['camera'] = CAMERAS_FOR_INSTRUMENTS[instrument['name']]
+                            instruments.append(instrument)
     return sites, instruments
 
 
