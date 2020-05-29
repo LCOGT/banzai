@@ -305,6 +305,42 @@
                       "acquire_exposure_time": 0.0
                     }
                   },
+                  "__str__": "coj.clma.0m4a.kb98-kb98"
+                }
+              ],
+              "__str__": "coj.clma.0m4a"
+            },
+            {
+              "id": 19,
+              "name": "0.4 meter",
+              "code": "0m4b",
+              "active": true,
+              "lat": -31.272932,
+              "long": 149.070648,
+              "enclosure": "http://configdb.lco.gtn/enclosures/3/?format=json",
+              "horizon": 25.0,
+              "ha_limit_pos": 4.4666667,
+              "ha_limit_neg": -4.533333,
+              "instrument_set": [
+                {
+                  "id": 56,
+                  "state": "DISABLED",
+                  "telescope": "http://configdb.lco.gtn/telescopes/19/?format=json",
+                  "science_camera": {
+                    "id": 59,
+                    "code": "kb84",
+                    "camera_type": {
+                      "id": 9,
+                      "size": "29.2x19.5",
+                      "pscale": 0.571,
+                      "name": "0.4 meter SBIG",
+                      "code": "0m4-SciCam-SBIG",
+                      "fixed_overhead_per_exposure": 1.0,
+                      "front_padding": 90.0,
+                      "config_change_time": 0.0,
+                      "acquire_exposure_time": 0.0
+                    }
+                  },
                   "autoguider_camera": {
                     "id": 59,
                     "code": "kb84",
@@ -889,6 +925,63 @@
                       "acquire_exposure_time": 0.0
                     }
                   },
+                  "__str__": "coj.domb.1m0a.fl11-ef10"
+                }
+              ],
+              "__str__": "coj.domb.1m0a"
+            }
+          ],
+          "__str__": "coj.domb"
+        }
+      ],
+      "__str__": "coj"
+    },
+    {
+      "id": 3,
+      "name": "Sutherland, South Africa",
+      "code": "cpt",
+      "active": true,
+      "timezone": 2,
+      "elevation": 1804,
+      "enclosure_set": [
+        {
+          "id": 6,
+          "name": "Dome A",
+          "code": "doma",
+          "active": true,
+          "site": "http://configdb.lco.gtn/sites/3/?format=json",
+          "telescope_set": [
+            {
+              "id": 6,
+              "name": "1 Meter",
+              "code": "1m0a",
+              "active": true,
+              "lat": -32.3805542,
+              "long": 20.8101815,
+              "enclosure": "http://configdb.lco.gtn/enclosures/6/?format=json",
+              "horizon": 15.0,
+              "ha_limit_pos": 4.6,
+              "ha_limit_neg": -4.6,
+              "instrument_set": [
+                {
+                  "id": 18,
+                  "state": "ENABLED",
+                  "telescope": "http://configdb.lco.gtn/telescopes/6/?format=json",
+                  "science_camera": {
+                    "id": 2,
+                    "code": "ef02",
+                    "camera_type": {
+                      "id": 1,
+                      "size": "5.7x5.7",
+                      "pscale": 0.335,
+                      "name": "Autoguider",
+                      "code": "Autoguider",
+                      "fixed_overhead_per_exposure": 1.0,
+                      "front_padding": 90.0,
+                      "config_change_time": 0.0,
+                      "acquire_exposure_time": 0.0
+                    }
+                  },
                   "autoguider_camera": {
                     "id": 2,
                     "code": "ef02",
@@ -1204,6 +1297,28 @@
                       "front_padding": 90.0,
                       "config_change_time": 0.0,
                       "acquire_exposure_time": 0.0
+                    }
+                  },
+                  "__str__": "cpt.domc.1m0a.kb12-kb12"
+                },
+                {
+                  "id": 25,
+                  "state": "SCHEDULABLE",
+                  "telescope": "http://configdb.lco.gtn/telescopes/8/?format=json",
+                  "science_camera": {
+                    "id": 55,
+                    "code": "fa06",
+                    "camera_type": {
+                      "id": 3,
+                      "size": "26.4x26.4",
+                      "pscale": 0.389,
+                      "name": "1.0 meter Sinistro",
+                      "code": "1m0-SciCam-Sinistro",
+                      "fixed_overhead_per_exposure": 1.0,
+                      "front_padding": 90.0,
+                      "config_change_time": 0.0,
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 4,
@@ -1449,6 +1564,7 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
+                      "name": "ContextCam",
                       "code": "ContextCam",
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
@@ -1465,6 +1581,27 @@
                       "pscale": 4.641,
                       "name": "ContextCam",
                       "code": "ContextCam",
+                      "fixed_overhead_per_exposure": 1.0,
+                      "front_padding": 90.0,
+                      "config_change_time": 0.0,
+                      "acquire_exposure_time": 0.0
+                    }
+                  },
+                  "__str__": "lsc.doma.1m0a.kb10-kb10"
+                },
+                {
+                  "id": 62,
+                  "state": "DISABLED",
+                  "telescope": "http://configdb.lco.gtn/telescopes/10/?format=json",
+                  "science_camera": {
+                    "id": 65,
+                    "code": "kb69",
+                    "camera_type": {
+                      "id": 14,
+                      "size": "15.8x15.8",
+                      "pscale": 0.232,
+                      "name": "1.0 meter SBIG",
+                      "code": "1m0-SciCam-SBIG",
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
                       "config_change_time": 0.0,
@@ -2302,6 +2439,27 @@
                       "id": 10,
                       "size": "7.1x4.8",
                       "pscale": 0.28,
+                      "name": "0.8 meter SciCam AG",
+                      "code": "0m8-SciCam-AG",
+                      "fixed_overhead_per_exposure": 1.0,
+                      "front_padding": 90.0,
+                      "config_change_time": 0.0,
+                      "acquire_exposure_time": 0.0
+                    }
+                  },
+                  "__str__": "sqa.doma.0m8a.kb31-kb31"
+                },
+                {
+                  "id": 47,
+                  "state": "ENABLED",
+                  "telescope": "http://configdb.lco.gtn/telescopes/15/?format=json",
+                  "science_camera": {
+                    "id": 36,
+                    "code": "kb35",
+                    "camera_type": {
+                      "id": 12,
+                      "size": "15.6x10.4",
+                      "pscale": 0.612,
                       "name": "NRES Autoguider",
                       "code": "NRES-Autoguider",
                       "fixed_overhead_per_exposure": 1.0,
