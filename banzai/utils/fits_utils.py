@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 import requests
+from collections import OrderedDict
 
 from banzai import logs
 
@@ -221,20 +222,12 @@ def reorder_hdus(hdu_list: fits.HDUList, extensions: list):
     :param hdu_list: Astropy fits.HDUList
     :param extensions: Ordered list of extensions by EXTNAME
     """
-    extensions = extensions.copy()
     if extensions is None:
         extensions = []
-    for idx, extension_name in enumerate(extensions):
-        if hdu_list[idx].name != extension_name:
-            try:
-                hdu = hdu_list[extension_name]
-            except KeyError:
-                # If the extension is not present in the HDUList, do not try and re-order it.
-                logger.warning(f"Extension {extension_name} not present in HDUList.")
-                extensions.remove(extension_name)
-                continue
-            hdu_list.remove(hdu)
-            hdu_list.insert(idx, hdu)
+    extensions += [hdu.name for hdu in hdu_list]
+    # Use an ordered dict to get unique elements
+    extensions = list(OrderedDict.fromkeys(extensions))
+    hdu_list.sort(key=lambda x: extensions.index(x.name))
 
 
 def convert_extension_datatypes(hdu_list: fits.HDUList, extension_datatypes: dict):
