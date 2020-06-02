@@ -225,7 +225,13 @@ def reorder_hdus(hdu_list: fits.HDUList, extensions: list):
         extensions = []
     for idx, extension_name in enumerate(extensions):
         if hdu_list[idx].name != extension_name:
-            hdu = hdu_list[extension_name]
+            try:
+                hdu = hdu_list[extension_name]
+            except KeyError:
+                # If the extension is not present in the HDUList, do not try and re-order it.
+                logger.warning(f"Extension {extension_name} not present in HDUList.")
+                extensions.remove(extension_name)
+                continue
             hdu_list.remove(hdu)
             hdu_list.insert(idx, hdu)
 
