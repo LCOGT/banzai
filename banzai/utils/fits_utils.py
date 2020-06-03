@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 import requests
+from collections import OrderedDict
 
 from banzai import logs
 
@@ -223,11 +224,10 @@ def reorder_hdus(hdu_list: fits.HDUList, extensions: list):
     """
     if extensions is None:
         extensions = []
-    for idx, extension_name in enumerate(extensions):
-        if hdu_list[idx].name != extension_name:
-            hdu = hdu_list[extension_name]
-            hdu_list.remove(hdu)
-            hdu_list.insert(idx, hdu)
+    extensions += [hdu.name for hdu in hdu_list]
+    # Use an ordered dict to get unique elements
+    extensions = list(OrderedDict.fromkeys(extensions))
+    hdu_list.sort(key=lambda x: extensions.index(x.name))
 
 
 def convert_extension_datatypes(hdu_list: fits.HDUList, extension_datatypes: dict):
