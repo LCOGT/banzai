@@ -80,7 +80,7 @@ class CalibrationStacker(CalibrationMaker):
                 if images[0].shape[1] % N == 0:
                     break
                 # Otherwise, don't forget to do the last %mod sized section
-                x_stop = images[1].shape[0]
+                x_stop = images[0].shape[1]
             else:
                 x_stop = (i + 1) * x_step
 
