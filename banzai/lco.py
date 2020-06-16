@@ -398,6 +398,9 @@ class LCOFrameFactory(FrameFactory):
                             associated_data[associated_extension['NAME']] = None
                     if len(hdu.data.shape) > 2:
                         hdu_list += self._munge_data_cube(hdu)
+                    # update datasec/trimsec for fs01
+                    if hdu.meta['INSTRUME'] == 'fs01':
+                        self._update_spectral_sections(hdu)
                     if hdu.data.dtype == np.uint16:
                         hdu.data = hdu.data.astype(np.float64)
                     # check if we need to propagate any header keywords from the primary header
@@ -484,6 +487,18 @@ class LCOFrameFactory(FrameFactory):
             logger.error('The SATURATE keyword was not valid and there are no defaults in banzai for this camera.',
                          image=image)
             raise MissingSaturate
+
+    @staticmethod
+    def _update_spectral_sections(hdu):
+        """
+        Manually update data and trim sections for fs01 spectral camera
+        :param hdu: BANZAI CCDData object
+        """
+        section_keywords = {'TRIMSEC': '[2:2046,3:2015]',
+                            'DATASEC': '[10:2056,16:2032]'}
+
+        for key in section_keywords:
+            hdu.meta[key] = section_keywords[key]
 
     @staticmethod
     def _init_detector_sections(image):
