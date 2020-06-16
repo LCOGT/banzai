@@ -399,7 +399,7 @@ class LCOFrameFactory(FrameFactory):
                     if len(hdu.data.shape) > 2:
                         hdu_list += self._munge_data_cube(hdu)
                     # update datasec/trimsec for fs01
-                    if hdu.meta['INSTRUME'] == 'fs01':
+                    if hdu.header.get('INSTRUME') == 'fs01':
                         self._update_spectral_sections(hdu)
                     if hdu.data.dtype == np.uint16:
                         hdu.data = hdu.data.astype(np.float64)
@@ -492,13 +492,13 @@ class LCOFrameFactory(FrameFactory):
     def _update_spectral_sections(hdu):
         """
         Manually update data and trim sections for fs01 spectral camera
-        :param hdu: BANZAI CCDData object
+        :param hdu: Astropy ImageHDU
         """
         section_keywords = {'TRIMSEC': '[2:2046,3:2015]',
                             'DATASEC': '[10:2056,16:2032]'}
 
         for key in section_keywords:
-            hdu.meta[key] = section_keywords[key]
+            hdu.header[key] = section_keywords[key]
 
     @staticmethod
     def _init_detector_sections(image):

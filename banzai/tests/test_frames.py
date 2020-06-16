@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from astropy.table import Table
+from astropy.io.fits import ImageHDU, Header
 
 from banzai.utils.image_utils import Section
 from banzai.data import CCDData, DataTable
@@ -16,13 +17,14 @@ def set_random_seed():
 
 
 def test_update_trimsec_fs01():
-    test_hdu = FakeCCDData(meta={'TRIMSEC': '[11:2055,19:2031]',
-                                 'DATASEC': '[1:2048,1:2048]',
-                                 'INSTRUME': 'fs01'})
+    test_header = Header({'TRIMSEC': '[11:2055,19:2031]',
+                          'DATASEC': '[1:2048,1:2048]',
+                          'INSTRUME': 'fs01'})
+    test_hdu = ImageHDU(data=np.ones(10), header=test_header)
     LCOFrameFactory._update_spectral_sections(test_hdu)
 
-    assert test_hdu.meta.get('TRIMSEC') == '[2:2046,3:2015]'
-    assert test_hdu.meta.get('DATASEC') == '[10:2056,16:2032]'
+    assert test_hdu.header.get('TRIMSEC') == '[2:2046,3:2015]'
+    assert test_hdu.header.get('DATASEC') == '[10:2056,16:2032]'
 
 
 def test_ccd_data_to_fits():
