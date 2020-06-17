@@ -496,7 +496,7 @@ class LCOFrameFactory(FrameFactory):
         """
         old_section_keywords = {'TRIMSEC': '[11:2055,19:2031]',
                                 'DATASEC': '[1:2048,1:2048]'}
-        new_section_keywords = {'TRIMSEC': '[2:2046,3:2015]',
+        new_section_keywords = {'TRIMSEC': '[2:2046,4:2016]',
                                 'DATASEC': '[10:2056,16:2032]'}
 
         for key in old_section_keywords:
