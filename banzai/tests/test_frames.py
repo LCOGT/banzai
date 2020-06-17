@@ -1,10 +1,12 @@
 import pytest
 import numpy as np
 from astropy.table import Table
+from astropy.io.fits import ImageHDU, Header
 
 from banzai.utils.image_utils import Section
 from banzai.data import CCDData, DataTable
 from banzai.tests.utils import FakeCCDData, FakeLCOObservationFrame, FakeContext
+from banzai.lco import LCOFrameFactory
 
 pytestmark = pytest.mark.frames
 
@@ -12,6 +14,17 @@ pytestmark = pytest.mark.frames
 @pytest.fixture(scope='module')
 def set_random_seed():
     np.random.seed(10031312)
+
+
+def test_update_trimsec_fs01():
+    test_header = Header({'TRIMSEC': '[11:2055,19:2031]',
+                          'DATASEC': '[1:2048,1:2048]',
+                          'INSTRUME': 'fs01'})
+    test_hdu = ImageHDU(data=np.ones(10), header=test_header)
+    LCOFrameFactory._update_fs01_sections(test_hdu)
+
+    assert test_hdu.header.get('TRIMSEC') == '[2:2046,3:2015]'
+    assert test_hdu.header.get('DATASEC') == '[10:2056,16:2032]'
 
 
 def test_ccd_data_to_fits():
