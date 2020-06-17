@@ -400,7 +400,7 @@ class LCOFrameFactory(FrameFactory):
                         hdu_list += self._munge_data_cube(hdu)
                     # update datasec/trimsec for fs01
                     if hdu.header.get('INSTRUME') == 'fs01':
-                        self._update_spectral_sections(hdu)
+                        self._update_fs01_sections(hdu)
                     if hdu.data.dtype == np.uint16:
                         hdu.data = hdu.data.astype(np.float64)
                     # check if we need to propagate any header keywords from the primary header
@@ -489,16 +489,19 @@ class LCOFrameFactory(FrameFactory):
             raise MissingSaturate
 
     @staticmethod
-    def _update_spectral_sections(hdu):
+    def _update_fs01_sections(hdu):
         """
         Manually update data and trim sections for fs01 spectral camera
         :param hdu: Astropy ImageHDU
         """
-        section_keywords = {'TRIMSEC': '[2:2046,3:2015]',
-                            'DATASEC': '[10:2056,16:2032]'}
+        old_section_keywords = {'TRIMSEC': '[11:2055,19:2031]',
+                                'DATASEC': '[1:2048,1:2048]'}
+        new_section_keywords = {'TRIMSEC': '[2:2046,3:2015]',
+                                'DATASEC': '[10:2056,16:2032]'}
 
-        for key in section_keywords:
-            hdu.header[key] = section_keywords[key]
+        for key in old_section_keywords:
+            if hdu.header[key] == old_section_keywords[key]:
+                hdu.header[key] = new_section_keywords[key]
 
     @staticmethod
     def _init_detector_sections(image):
