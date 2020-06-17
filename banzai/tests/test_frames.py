@@ -23,7 +23,7 @@ def test_update_trimsec_fs01():
     test_hdu = ImageHDU(data=np.ones(10), header=test_header)
     LCOFrameFactory._update_fs01_sections(test_hdu)
 
-    assert test_hdu.header.get('TRIMSEC') == '[3:2046,4:2016]'
+    assert test_hdu.header.get('TRIMSEC') == '[2:2046,4:2016]'
     assert test_hdu.header.get('DATASEC') == '[10:2056,16:2032]'
 
 
