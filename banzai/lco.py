@@ -513,10 +513,9 @@ class LCOFrameFactory(FrameFactory):
                 # DETSEC missing?
                 binning = hdu.meta.get('CCDSUM', image.primary_hdu.meta.get('CCDSUM', '1 1'))
                 if hdu.data_section is not None:
-                    detector_section = Section(1,
-                                               max(hdu.data_section.x_start, hdu.data_section.x_stop) * int(binning[0]),
-                                               1,
-                                               max(hdu.data_section.y_start, hdu.data_section.y_stop) * int(binning[2]))
+                    # use binning from FITS header, bin_x is index 0, bin_y is index 2.
+                    detector_section = Section(1, max(hdu.data_section.x_start, hdu.data_section.x_stop) * int(binning[0]),
+                                               1, max(hdu.data_section.y_start, hdu.data_section.y_stop) * int(binning[2]))
                     hdu.detector_section = detector_section
                 else:
                     logger.warning("Data and detector sections are both undefined for image.", image=image)
