@@ -408,6 +408,9 @@ class LCOFrameFactory(FrameFactory):
                         for keyword in self.primary_header_keys_to_propagate:
                             if keyword in primary_hdu.header and keyword not in hdu.header:
                                 hdu.header[keyword] = primary_hdu.header[keyword]
+                    # For master frames without uncertainties, set to all zeros
+                    if hdu.header.get('ISMASTER', False) and associated_data['uncertainty'] is None:
+                        associated_data['uncertainty'] = np.zeros(hdu.data.shape, dtype=hdu.data.dtype)
                     hdu_list.append(self.data_class(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME'),
                                                     **associated_data))
                 else:
