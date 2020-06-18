@@ -29,7 +29,8 @@ class SourceDetector(Stage):
             sep.set_extract_pixstack(int(nx * ny * 0.05))
 
             data = image.data.copy()
-            error = image.uncertainty
+            # TODO: Use image uncertainty for this once we have primed all master calibrations
+            error = (np.abs(data) + image.read_noise ** 2.0) ** 0.5
             mask = image.mask > 0
 
             # Fits can be backwards byte order, so fix that if need be and subtract
