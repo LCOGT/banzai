@@ -242,10 +242,11 @@ def add_site():
     parser.add_argument("--longitude", help='Longitude (deg)', required=True)
     parser.add_argument("--latitude", help='Latitude (deg)', required=True)
     parser.add_argument("--timezone", help="Time zone relative to UTC", required=True)
+    parser.add_argument("--elevation", help="Elevation of site (m)", required=True)
     parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
                         help='Database address: Should be in SQLAlchemy format')
     args = parser.parse_args()
-    site = {'id': args.site,
+    site = {'code': args.site,
             'longitude': args.longitude,
             'latitude': args.latitude,
             'elevation': args.elevation,
