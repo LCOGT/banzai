@@ -30,3 +30,6 @@ logger = logging.getLogger('banzai')
 handler = logging.StreamHandler(stream=sys.stdout)
 handler.setFormatter(LCOGTFormatter())
 logger.addHandler(handler)
+
+# Default the logger to INFO so that we actually get messages by default.
+logger.setLevel('INFO')

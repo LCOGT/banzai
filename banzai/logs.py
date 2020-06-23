@@ -37,7 +37,7 @@ def _create_logging_tags_dictionary(kwargs):
 def _image_to_tags(image):
     instrument = getattr(image, 'instrument', None)
     tags = {'filename': os.path.basename(getattr(image, 'filename', '')),
-            'site': getattr(image, 'site', ''),
+            'site': getattr(instrument, 'site', ''),
             'instrument': getattr(instrument, 'name', ''),
             'epoch': date_utils.epoch_date_to_string(getattr(image, 'epoch', '-')),
             'request_num': getattr(image, 'request_number', '-'),

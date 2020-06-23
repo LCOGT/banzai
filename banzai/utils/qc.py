@@ -13,10 +13,7 @@ def format_qc_results(qc_results, image):
                        'instrument': image.camera,
                        'dayobs': image.epoch,
                        'request_number': image.request_number,
-                       'block_id': image.block_id,
-                       'molecule_id': image.molecule_id,
                        'obstype': image.obstype,
-                       'filter': image.filter,
                        '@timestamp': image.dateobs}
     for key, value in qc_results.items():
         # Elasticsearch does not like numpy.bool_ types
@@ -37,7 +34,7 @@ def save_qc_results(runtime_context, qc_results, image, **kwargs):
                       Context instance with runtime values
     qc_results : dict
                  Dictionary of key value pairs to be saved to ElasticSearch
-    image : banzai.images.Image
+    image : banzai.frames.ObservationFrame
             Image that should be linked
 
     Notes

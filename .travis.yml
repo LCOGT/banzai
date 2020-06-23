@@ -109,6 +109,7 @@ matrix:
 
 before_install:
     - pip uninstall -y numpy
+    - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ulimit -n 1024; fi
 
 install:
 

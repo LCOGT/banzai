@@ -1,8 +1,10 @@
 import numpy as np
 from astropy.table import Table
+import pytest
 
 from banzai.utils import array_utils
 
+pytestmark = pytest.mark.array_utils
 
 def test_pruning_nans():
     a = np.arange(100, dtype=float)

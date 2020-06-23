@@ -41,49 +41,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 10,
@@ -92,49 +56,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "bpl.doma.1m0a.ef12-ef12"
                 },
@@ -149,37 +77,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 30,
@@ -188,37 +92,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "bpl.doma.1m0a.kb20-kb20"
                 },
@@ -233,31 +113,13 @@
                       "id": 3,
                       "size": "26.4x26.4",
                       "pscale": 0.389,
-                      "default_mode": {
-                        "id": 8,
-                        "binning": 1,
-                        "overhead": 46000,
-                        "readout": 37.0
-                      },
                       "name": "1.0 meter Sinistro",
                       "code": "1m0-SciCam-Sinistro",
-                      "mode_set": [
-                        {
-                          "id": 8,
-                          "binning": 1,
-                          "overhead": 46000,
-                          "readout": 37.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 11,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ha,al,l3,r3,g3,b3,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 10,
@@ -266,49 +128,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "bpl.doma.1m0a.fl11-ef12"
                 }
@@ -348,49 +174,13 @@
                       "id": 16,
                       "size": "8.5x8.5",
                       "pscale": 0.508,
-                      "default_mode": {
-                        "id": 33,
-                        "binning": 1,
-                        "overhead": 80,
-                        "readout": 0.0
-                      },
                       "name": "LIHSP Luca",
                       "code": "LIHSP-Luca",
-                      "mode_set": [
-                        {
-                          "id": 33,
-                          "binning": 1,
-                          "overhead": 80,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 34,
-                          "binning": 2,
-                          "overhead": 80,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 35,
-                          "binning": 3,
-                          "overhead": 80,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 36,
-                          "binning": 4,
-                          "overhead": 80,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 12,
-                    "filters": "150um-Pinhole,I,R,U,air,V,B,Blank-off-plate"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 54,
@@ -399,49 +189,13 @@
                       "id": 16,
                       "size": "8.5x8.5",
                       "pscale": 0.508,
-                      "default_mode": {
-                        "id": 33,
-                        "binning": 1,
-                        "overhead": 80,
-                        "readout": 0.0
-                      },
                       "name": "LIHSP Luca",
                       "code": "LIHSP-Luca",
-                      "mode_set": [
-                        {
-                          "id": 33,
-                          "binning": 1,
-                          "overhead": 80,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 34,
-                          "binning": 2,
-                          "overhead": 80,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 35,
-                          "binning": 3,
-                          "overhead": 80,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 36,
-                          "binning": 4,
-                          "overhead": 80,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 12,
-                    "filters": "150um-Pinhole,I,R,U,air,V,B,Blank-off-plate"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "bpl.aqwa.0m4a.tn22-tn22"
                 },
@@ -456,31 +210,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 7,
-                    "filters": "opaque,Ha,w,up,air,rp,ip,gp,zs,V,B,pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 48,
@@ -489,31 +225,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 7,
-                    "filters": "opaque,Ha,w,up,air,rp,ip,gp,zs,V,B,pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "bpl.aqwa.0m4a.kb80-kb80"
                 }
@@ -564,31 +282,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 71,
@@ -597,31 +297,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.clma.0m4a.kb98-kb98"
                 }
@@ -651,31 +333,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 59,
@@ -684,31 +348,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.clma.0m4b.kb84-kb84"
                 },
@@ -723,31 +369,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 63,
@@ -756,31 +384,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.clma.0m4b.kb94-kb94"
                 }
@@ -810,37 +420,13 @@
                       "id": 5,
                       "size": "10.5x10.5",
                       "pscale": 0.154,
-                      "default_mode": {
-                        "id": 11,
-                        "binning": 2,
-                        "overhead": 42000,
-                        "readout": 10.5
-                      },
                       "name": "2.0 meter Spectral",
                       "code": "2m0-SciCam-Spectral",
-                      "mode_set": [
-                        {
-                          "id": 11,
-                          "binning": 2,
-                          "overhead": 42000,
-                          "readout": 10.5
-                        },
-                        {
-                          "id": 10,
-                          "binning": 1,
-                          "overhead": 42000,
-                          "readout": 42.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 12.0,
                       "front_padding": 240.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 15,
-                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 35,
@@ -849,37 +435,13 @@
                       "id": 11,
                       "size": "2.40x1.60",
                       "pscale": 0.092,
-                      "default_mode": {
-                        "id": 23,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter Spectral AG",
                       "code": "2m0-Spectral-AG",
-                      "mode_set": [
-                        {
-                          "id": 23,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 24,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.clma.2m0a.fs03-kb34"
                 },
@@ -894,37 +456,13 @@
                       "id": 11,
                       "size": "2.40x1.60",
                       "pscale": 0.092,
-                      "default_mode": {
-                        "id": 23,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter Spectral AG",
                       "code": "2m0-Spectral-AG",
-                      "mode_set": [
-                        {
-                          "id": 23,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 24,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 35,
@@ -933,37 +471,13 @@
                       "id": 11,
                       "size": "2.40x1.60",
                       "pscale": 0.092,
-                      "default_mode": {
-                        "id": 23,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter Spectral AG",
                       "code": "2m0-Spectral-AG",
-                      "mode_set": [
-                        {
-                          "id": 23,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 24,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.clma.2m0a.kb34-kb34"
                 },
@@ -978,37 +492,13 @@
                       "id": 13,
                       "size": "6.40x4.30",
                       "pscale": 0.244,
-                      "default_mode": {
-                        "id": 27,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter FLOYDS AG",
                       "code": "2m0-FLOYDS-AG",
-                      "mode_set": [
-                        {
-                          "id": 27,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 28,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 37,
@@ -1017,37 +507,13 @@
                       "id": 13,
                       "size": "6.40x4.30",
                       "pscale": 0.244,
-                      "default_mode": {
-                        "id": 27,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter FLOYDS AG",
                       "code": "2m0-FLOYDS-AG",
-                      "mode_set": [
-                        {
-                          "id": 27,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 28,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.clma.2m0a.kb37-kb37"
                 },
@@ -1062,31 +528,13 @@
                       "id": 4,
                       "size": "0.33x0.03",
                       "pscale": 0.139,
-                      "default_mode": {
-                        "id": 9,
-                        "binning": 1,
-                        "overhead": 25000,
-                        "readout": 25.0
-                      },
                       "name": "2.0 meter FLOYDS",
                       "code": "2m0-FLOYDS-SciCam",
-                      "mode_set": [
-                        {
-                          "id": 9,
-                          "binning": 1,
-                          "overhead": 25000,
-                          "readout": 25.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 0.5,
                       "front_padding": 240.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 30.0,
-                      "acquire_exposure_time": 30.0,
-                      "acquire_processing_time": 60.0
-                    },
-                    "filter_wheel": 5,
-                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as,floyds_slit_default,floyds_slit_xl,floyds_slit_l,floyds_slit_m,floyds_slit_s"
+                      "acquire_exposure_time": 30.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 37,
@@ -1095,37 +543,13 @@
                       "id": 13,
                       "size": "6.40x4.30",
                       "pscale": 0.244,
-                      "default_mode": {
-                        "id": 27,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter FLOYDS AG",
                       "code": "2m0-FLOYDS-AG",
-                      "mode_set": [
-                        {
-                          "id": 27,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 28,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.clma.2m0a.floyds02-kb37"
                 },
@@ -1140,37 +564,13 @@
                       "id": 5,
                       "size": "10.5x10.5",
                       "pscale": 0.154,
-                      "default_mode": {
-                        "id": 11,
-                        "binning": 2,
-                        "overhead": 42000,
-                        "readout": 10.5
-                      },
                       "name": "2.0 meter Spectral",
                       "code": "2m0-SciCam-Spectral",
-                      "mode_set": [
-                        {
-                          "id": 11,
-                          "binning": 2,
-                          "overhead": 42000,
-                          "readout": 10.5
-                        },
-                        {
-                          "id": 10,
-                          "binning": 1,
-                          "overhead": 42000,
-                          "readout": 42.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 12.0,
                       "front_padding": 240.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 15,
-                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 35,
@@ -1179,37 +579,13 @@
                       "id": 11,
                       "size": "2.40x1.60",
                       "pscale": 0.092,
-                      "default_mode": {
-                        "id": 23,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter Spectral AG",
                       "code": "2m0-Spectral-AG",
-                      "mode_set": [
-                        {
-                          "id": 23,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 24,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.clma.2m0a.fs01-kb34"
                 }
@@ -1249,31 +625,13 @@
                       "id": 3,
                       "size": "26.4x26.4",
                       "pscale": 0.389,
-                      "default_mode": {
-                        "id": 8,
-                        "binning": 1,
-                        "overhead": 46000,
-                        "readout": 37.0
-                      },
                       "name": "1.0 meter Sinistro",
                       "code": "1m0-SciCam-Sinistro",
-                      "mode_set": [
-                        {
-                          "id": 8,
-                          "binning": 1,
-                          "overhead": 46000,
-                          "readout": 37.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 11,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ha,al,l3,r3,g3,b3,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 8,
@@ -1282,49 +640,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.doma.1m0a.fl08-ef09"
                 },
@@ -1339,49 +661,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 8,
@@ -1390,49 +676,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.doma.1m0a.ef09-ef09"
                 },
@@ -1447,37 +697,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 29,
@@ -1486,37 +712,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.doma.1m0a.kb18-kb18"
                 },
@@ -1531,31 +733,13 @@
                       "id": 3,
                       "size": "26.4x26.4",
                       "pscale": 0.389,
-                      "default_mode": {
-                        "id": 8,
-                        "binning": 1,
-                        "overhead": 46000,
-                        "readout": 37.0
-                      },
                       "name": "1.0 meter Sinistro",
                       "code": "1m0-SciCam-Sinistro",
-                      "mode_set": [
-                        {
-                          "id": 8,
-                          "binning": 1,
-                          "overhead": 46000,
-                          "readout": 37.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 11,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ha,al,l3,r3,g3,b3,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 8,
@@ -1564,49 +748,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.doma.1m0a.fl12-ef09"
                 }
@@ -1646,49 +794,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 9,
@@ -1697,49 +809,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.domb.1m0a.ef10-ef10"
                 },
@@ -1754,37 +830,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 40,
@@ -1793,37 +845,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.domb.1m0a.kb47-kb47"
                 },
@@ -1838,43 +866,13 @@
                       "id": 14,
                       "size": "15.8x15.8",
                       "pscale": 0.232,
-                      "default_mode": {
-                        "id": 30,
-                        "binning": 2,
-                        "overhead": 60000,
-                        "readout": 14.5
-                      },
                       "name": "1.0 meter SBIG",
                       "code": "1m0-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 31,
-                          "binning": 3,
-                          "overhead": 60000,
-                          "readout": 11.5
-                        },
-                        {
-                          "id": 30,
-                          "binning": 2,
-                          "overhead": 60000,
-                          "readout": 14.5
-                        },
-                        {
-                          "id": 29,
-                          "binning": 1,
-                          "overhead": 60000,
-                          "readout": 35.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 22,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 9,
@@ -1883,49 +881,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.domb.1m0a.kb77-ef10"
                 },
@@ -1940,31 +902,13 @@
                       "id": 3,
                       "size": "26.4x26.4",
                       "pscale": 0.389,
-                      "default_mode": {
-                        "id": 8,
-                        "binning": 1,
-                        "overhead": 46000,
-                        "readout": 37.0
-                      },
                       "name": "1.0 meter Sinistro",
                       "code": "1m0-SciCam-Sinistro",
-                      "mode_set": [
-                        {
-                          "id": 8,
-                          "binning": 1,
-                          "overhead": 46000,
-                          "readout": 37.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 11,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ha,al,l3,r3,g3,b3,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 9,
@@ -1973,49 +917,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "coj.domb.1m0a.fl11-ef10"
                 }
@@ -2066,49 +974,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 2,
@@ -2117,49 +989,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "cpt.doma.1m0a.ef02-ef02"
                 },
@@ -2174,37 +1010,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 31,
@@ -2213,37 +1025,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "cpt.doma.1m0a.kb21-kb21"
                 },
@@ -2258,31 +1046,13 @@
                       "id": 3,
                       "size": "26.4x26.4",
                       "pscale": 0.389,
-                      "default_mode": {
-                        "id": 8,
-                        "binning": 1,
-                        "overhead": 46000,
-                        "readout": 37.0
-                      },
                       "name": "1.0 meter Sinistro",
                       "code": "1m0-SciCam-Sinistro",
-                      "mode_set": [
-                        {
-                          "id": 8,
-                          "binning": 1,
-                          "overhead": 46000,
-                          "readout": 37.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 1,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 2,
@@ -2291,49 +1061,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "cpt.doma.1m0a.fl16-ef02"
                 }
@@ -2373,49 +1107,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 3,
@@ -2424,49 +1122,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "cpt.domb.1m0a.ef03-ef03"
                 },
@@ -2481,37 +1143,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 26,
@@ -2520,37 +1158,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "cpt.domb.1m0a.kb14-kb14"
                 },
@@ -2565,31 +1179,13 @@
                       "id": 3,
                       "size": "26.4x26.4",
                       "pscale": 0.389,
-                      "default_mode": {
-                        "id": 8,
-                        "binning": 1,
-                        "overhead": 46000,
-                        "readout": 37.0
-                      },
                       "name": "1.0 meter Sinistro",
                       "code": "1m0-SciCam-Sinistro",
-                      "mode_set": [
-                        {
-                          "id": 8,
-                          "binning": 1,
-                          "overhead": 46000,
-                          "readout": 37.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 14,
-                    "filters": "H-Beta,H-Alpha,I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 3,
@@ -2598,49 +1194,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "cpt.domb.1m0a.fl14-ef03"
                 }
@@ -2680,49 +1240,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 4,
@@ -2731,49 +1255,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "cpt.domc.1m0a.ef04-ef04"
                 },
@@ -2788,37 +1276,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 25,
@@ -2827,37 +1291,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "cpt.domc.1m0a.kb12-kb12"
                 },
@@ -2872,31 +1312,13 @@
                       "id": 3,
                       "size": "26.4x26.4",
                       "pscale": 0.389,
-                      "default_mode": {
-                        "id": 8,
-                        "binning": 1,
-                        "overhead": 46000,
-                        "readout": 37.0
-                      },
                       "name": "1.0 meter Sinistro",
                       "code": "1m0-SciCam-Sinistro",
-                      "mode_set": [
-                        {
-                          "id": 8,
-                          "binning": 1,
-                          "overhead": 46000,
-                          "readout": 37.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 1,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 4,
@@ -2905,49 +1327,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "cpt.domc.1m0a.fa06-ef04"
                 }
@@ -2998,49 +1384,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 1,
@@ -3049,49 +1399,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "elp.doma.1m0a.ef01-ef01"
                 },
@@ -3106,37 +1420,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 32,
@@ -3145,37 +1435,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "elp.doma.1m0a.kb22-kb22"
                 },
@@ -3190,31 +1456,13 @@
                       "id": 3,
                       "size": "26.4x26.4",
                       "pscale": 0.389,
-                      "default_mode": {
-                        "id": 8,
-                        "binning": 1,
-                        "overhead": 46000,
-                        "readout": 37.0
-                      },
                       "name": "1.0 meter Sinistro",
                       "code": "1m0-SciCam-Sinistro",
-                      "mode_set": [
-                        {
-                          "id": 8,
-                          "binning": 1,
-                          "overhead": 46000,
-                          "readout": 37.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 16,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,B*ND,V*ND,R*ND,I*ND,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 1,
@@ -3223,49 +1471,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "elp.doma.1m0a.fl05-ef01"
                 }
@@ -3316,49 +1528,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 5,
@@ -3367,49 +1543,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "lsc.doma.1m0a.ef06-ef06"
                 },
@@ -3424,37 +1564,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 23,
@@ -3463,37 +1579,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "lsc.doma.1m0a.kb10-kb10"
                 },
@@ -3508,43 +1600,13 @@
                       "id": 14,
                       "size": "15.8x15.8",
                       "pscale": 0.232,
-                      "default_mode": {
-                        "id": 30,
-                        "binning": 2,
-                        "overhead": 60000,
-                        "readout": 14.5
-                      },
                       "name": "1.0 meter SBIG",
                       "code": "1m0-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 31,
-                          "binning": 3,
-                          "overhead": 60000,
-                          "readout": 11.5
-                        },
-                        {
-                          "id": 30,
-                          "binning": 2,
-                          "overhead": 60000,
-                          "readout": 14.5
-                        },
-                        {
-                          "id": 29,
-                          "binning": 1,
-                          "overhead": 60000,
-                          "readout": 35.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 19,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 5,
@@ -3553,49 +1615,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "lsc.doma.1m0a.kb69-ef06"
                 },
@@ -3610,31 +1636,13 @@
                       "id": 3,
                       "size": "26.4x26.4",
                       "pscale": 0.389,
-                      "default_mode": {
-                        "id": 8,
-                        "binning": 1,
-                        "overhead": 46000,
-                        "readout": 37.0
-                      },
                       "name": "1.0 meter Sinistro",
                       "code": "1m0-SciCam-Sinistro",
-                      "mode_set": [
-                        {
-                          "id": 8,
-                          "binning": 1,
-                          "overhead": 46000,
-                          "readout": 37.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 19,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 5,
@@ -3643,49 +1651,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "lsc.doma.1m0a.fl15-ef06"
                 }
@@ -3725,49 +1697,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 6,
@@ -3776,49 +1712,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "lsc.domb.1m0a.ef07-ef07"
                 },
@@ -3833,37 +1733,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 24,
@@ -3872,37 +1748,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "lsc.domb.1m0a.kb11-kb11"
                 },
@@ -3917,31 +1769,13 @@
                       "id": 3,
                       "size": "26.4x26.4",
                       "pscale": 0.389,
-                      "default_mode": {
-                        "id": 8,
-                        "binning": 1,
-                        "overhead": 46000,
-                        "readout": 37.0
-                      },
                       "name": "1.0 meter Sinistro",
                       "code": "1m0-SciCam-Sinistro",
-                      "mode_set": [
-                        {
-                          "id": 8,
-                          "binning": 1,
-                          "overhead": 46000,
-                          "readout": 37.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 14,
-                    "filters": "H-Beta,H-Alpha,I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 6,
@@ -3950,49 +1784,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "lsc.domb.1m0a.fl03-ef07"
                 }
@@ -4032,31 +1830,13 @@
                       "id": 3,
                       "size": "26.4x26.4",
                       "pscale": 0.389,
-                      "default_mode": {
-                        "id": 8,
-                        "binning": 1,
-                        "overhead": 46000,
-                        "readout": 37.0
-                      },
                       "name": "1.0 meter Sinistro",
                       "code": "1m0-SciCam-Sinistro",
-                      "mode_set": [
-                        {
-                          "id": 8,
-                          "binning": 1,
-                          "overhead": 46000,
-                          "readout": 37.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 1,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 7,
@@ -4065,49 +1845,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "lsc.domc.1m0a.fa03-ef08"
                 },
@@ -4122,37 +1866,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 27,
@@ -4161,37 +1881,13 @@
                       "id": 7,
                       "size": "237.6x158.4",
                       "pscale": 4.641,
-                      "default_mode": {
-                        "id": 14,
-                        "binning": 1,
-                        "overhead": 32000,
-                        "readout": 0.0
-                      },
                       "name": "ContextCam",
                       "code": "ContextCam",
-                      "mode_set": [
-                        {
-                          "id": 14,
-                          "binning": 1,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 15,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 3,
-                    "filters": "rp,ip,V,B,zp"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "lsc.domc.1m0a.kb15-kb15"
                 },
@@ -4206,49 +1902,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 7,
@@ -4257,49 +1917,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "lsc.domc.1m0a.ef08-ef08"
                 }
@@ -4374,31 +1998,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 61,
@@ -4407,31 +2013,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "ogg.clma.0m4c.kb82-kb82"
                 }
@@ -4461,31 +2049,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 60,
@@ -4494,31 +2064,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "ogg.clma.0m4b.kb27-kb27"
                 }
@@ -4548,31 +2100,13 @@
                       "id": 4,
                       "size": "0.33x0.03",
                       "pscale": 0.139,
-                      "default_mode": {
-                        "id": 9,
-                        "binning": 1,
-                        "overhead": 25000,
-                        "readout": 25.0
-                      },
                       "name": "2.0 meter FLOYDS",
                       "code": "2m0-FLOYDS-SciCam",
-                      "mode_set": [
-                        {
-                          "id": 9,
-                          "binning": 1,
-                          "overhead": 25000,
-                          "readout": 25.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 0.5,
                       "front_padding": 240.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 30.0,
-                      "acquire_exposure_time": 30.0,
-                      "acquire_processing_time": 60.0
-                    },
-                    "filter_wheel": 5,
-                    "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as,floyds_slit_default,floyds_slit_xl,floyds_slit_l,floyds_slit_m,floyds_slit_s"
+                      "acquire_exposure_time": 30.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 39,
@@ -4581,37 +2115,13 @@
                       "id": 13,
                       "size": "6.40x4.30",
                       "pscale": 0.244,
-                      "default_mode": {
-                        "id": 27,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter FLOYDS AG",
                       "code": "2m0-FLOYDS-AG",
-                      "mode_set": [
-                        {
-                          "id": 27,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 28,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "ogg.clma.2m0a.floyds01-kb42"
                 },
@@ -4626,37 +2136,13 @@
                       "id": 6,
                       "size": "2.55x1.72",
                       "pscale": 0.07,
-                      "default_mode": {
-                        "id": 13,
-                        "binning": 2,
-                        "overhead": 4000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter Merope AG",
                       "code": "2m0-Merope-AG",
-                      "mode_set": [
-                        {
-                          "id": 12,
-                          "binning": 1,
-                          "overhead": 4000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 13,
-                          "binning": 2,
-                          "overhead": 4000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 18,
-                    "filters": "I,R,air,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 22,
@@ -4665,37 +2151,13 @@
                       "id": 6,
                       "size": "2.55x1.72",
                       "pscale": 0.07,
-                      "default_mode": {
-                        "id": 13,
-                        "binning": 2,
-                        "overhead": 4000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter Merope AG",
                       "code": "2m0-Merope-AG",
-                      "mode_set": [
-                        {
-                          "id": 12,
-                          "binning": 1,
-                          "overhead": 4000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 13,
-                          "binning": 2,
-                          "overhead": 4000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 18,
-                    "filters": "I,R,air,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "ogg.clma.2m0a.kb01-kb01"
                 },
@@ -4710,37 +2172,13 @@
                       "id": 13,
                       "size": "6.40x4.30",
                       "pscale": 0.244,
-                      "default_mode": {
-                        "id": 27,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter FLOYDS AG",
                       "code": "2m0-FLOYDS-AG",
-                      "mode_set": [
-                        {
-                          "id": 27,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 28,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 39,
@@ -4749,37 +2187,13 @@
                       "id": 13,
                       "size": "6.40x4.30",
                       "pscale": 0.244,
-                      "default_mode": {
-                        "id": 27,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter FLOYDS AG",
                       "code": "2m0-FLOYDS-AG",
-                      "mode_set": [
-                        {
-                          "id": 27,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 28,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "ogg.clma.2m0a.kb42-kb42"
                 },
@@ -4794,37 +2208,13 @@
                       "id": 2,
                       "size": "4.7x4.7",
                       "pscale": 0.139,
-                      "default_mode": {
-                        "id": 6,
-                        "binning": 2,
-                        "overhead": 68000,
-                        "readout": 17.0
-                      },
                       "name": "2.0 meter Merope",
                       "code": "2m0-SciCam-Merope",
-                      "mode_set": [
-                        {
-                          "id": 6,
-                          "binning": 2,
-                          "overhead": 68000,
-                          "readout": 17.0
-                        },
-                        {
-                          "id": 5,
-                          "binning": 1,
-                          "overhead": 68000,
-                          "readout": 68.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 12.0,
                       "front_padding": 240.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 2,
-                    "filters": "Skymapper-VS,solar,I,R,Y,up,air,rp,ip,gp,zs,V,B,CR,C3,CN,NH2,C2,OH"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 22,
@@ -4833,37 +2223,13 @@
                       "id": 6,
                       "size": "2.55x1.72",
                       "pscale": 0.07,
-                      "default_mode": {
-                        "id": 13,
-                        "binning": 2,
-                        "overhead": 4000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter Merope AG",
                       "code": "2m0-Merope-AG",
-                      "mode_set": [
-                        {
-                          "id": 12,
-                          "binning": 1,
-                          "overhead": 4000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 13,
-                          "binning": 2,
-                          "overhead": 4000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 18,
-                    "filters": "I,R,air,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "ogg.clma.2m0a.em01-kb01"
                 },
@@ -4878,37 +2244,13 @@
                       "id": 5,
                       "size": "10.5x10.5",
                       "pscale": 0.154,
-                      "default_mode": {
-                        "id": 11,
-                        "binning": 2,
-                        "overhead": 42000,
-                        "readout": 10.5
-                      },
                       "name": "2.0 meter Spectral",
                       "code": "2m0-SciCam-Spectral",
-                      "mode_set": [
-                        {
-                          "id": 11,
-                          "binning": 2,
-                          "overhead": 42000,
-                          "readout": 10.5
-                        },
-                        {
-                          "id": 10,
-                          "binning": 1,
-                          "overhead": 42000,
-                          "readout": 42.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 12.0,
                       "front_padding": 240.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 15,
-                    "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 38,
@@ -4917,37 +2259,13 @@
                       "id": 11,
                       "size": "2.40x1.60",
                       "pscale": 0.092,
-                      "default_mode": {
-                        "id": 23,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter Spectral AG",
                       "code": "2m0-Spectral-AG",
-                      "mode_set": [
-                        {
-                          "id": 23,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 24,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "ogg.clma.2m0a.fs02-kb40"
                 },
@@ -4962,37 +2280,13 @@
                       "id": 11,
                       "size": "2.40x1.60",
                       "pscale": 0.092,
-                      "default_mode": {
-                        "id": 23,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter Spectral AG",
                       "code": "2m0-Spectral-AG",
-                      "mode_set": [
-                        {
-                          "id": 23,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 24,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 38,
@@ -5001,37 +2295,13 @@
                       "id": 11,
                       "size": "2.40x1.60",
                       "pscale": 0.092,
-                      "default_mode": {
-                        "id": 23,
-                        "binning": 1,
-                        "overhead": 3000,
-                        "readout": 0.0
-                      },
                       "name": "2.0 meter Spectral AG",
                       "code": "2m0-Spectral-AG",
-                      "mode_set": [
-                        {
-                          "id": 23,
-                          "binning": 1,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 24,
-                          "binning": 2,
-                          "overhead": 3000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 17,
-                    "filters": "air"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "ogg.clma.2m0a.kb40-kb40"
                 }
@@ -5082,37 +2352,13 @@
                       "id": 8,
                       "size": "14.3x9.5",
                       "pscale": 0.28,
-                      "default_mode": {
-                        "id": 17,
-                        "binning": 2,
-                        "overhead": 36000,
-                        "readout": 8.5
-                      },
                       "name": "0.8 meter SBIG",
                       "code": "0m8-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 17,
-                          "binning": 2,
-                          "overhead": 36000,
-                          "readout": 8.5
-                        },
-                        {
-                          "id": 16,
-                          "binning": 1,
-                          "overhead": 36000,
-                          "readout": 21.5
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 4,
-                    "filters": "Ha,rp,ip,gp,V,B,clear"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 34,
@@ -5121,37 +2367,13 @@
                       "id": 10,
                       "size": "7.1x4.8",
                       "pscale": 0.28,
-                      "default_mode": {
-                        "id": 21,
-                        "binning": 1,
-                        "overhead": 10000,
-                        "readout": 0.0
-                      },
                       "name": "0.8 meter SciCam AG",
                       "code": "0m8-SciCam-AG",
-                      "mode_set": [
-                        {
-                          "id": 21,
-                          "binning": 1,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 22,
-                          "binning": 2,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 21,
-                    "filters": "air,Luminance,Green,Blue"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "sqa.doma.0m8a.kb16-kb31"
                 },
@@ -5166,31 +2388,13 @@
                       "id": 15,
                       "size": "0.045x0.045",
                       "pscale": 0.5,
-                      "default_mode": {
-                        "id": 32,
-                        "binning": 1,
-                        "overhead": 20000,
-                        "readout": 6.0
-                      },
                       "name": "0.8 meter NRES",
                       "code": "0m8-NRES-SciCam",
-                      "mode_set": [
-                        {
-                          "id": 32,
-                          "binning": 1,
-                          "overhead": 20000,
-                          "readout": 6.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 0.5,
                       "front_padding": 240.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 30.0,
-                      "acquire_exposure_time": 30.0,
-                      "acquire_processing_time": 60.0
-                    },
-                    "filter_wheel": 13,
-                    "filters": "slit_1.6as"
+                      "acquire_exposure_time": 30.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 36,
@@ -5199,37 +2403,13 @@
                       "id": 12,
                       "size": "15.6x10.4",
                       "pscale": 0.612,
-                      "default_mode": {
-                        "id": 26,
-                        "binning": 2,
-                        "overhead": 10000,
-                        "readout": 0.0
-                      },
                       "name": "NRES Autoguider",
                       "code": "NRES-Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 25,
-                          "binning": 1,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 26,
-                          "binning": 2,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 21,
-                    "filters": "air,Luminance,Green,Blue"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "sqa.doma.0m8a.nres-kb35"
                 },
@@ -5244,37 +2424,13 @@
                       "id": 10,
                       "size": "7.1x4.8",
                       "pscale": 0.28,
-                      "default_mode": {
-                        "id": 21,
-                        "binning": 1,
-                        "overhead": 10000,
-                        "readout": 0.0
-                      },
                       "name": "0.8 meter SciCam AG",
                       "code": "0m8-SciCam-AG",
-                      "mode_set": [
-                        {
-                          "id": 21,
-                          "binning": 1,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 22,
-                          "binning": 2,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 21,
-                    "filters": "air,Luminance,Green,Blue"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 34,
@@ -5283,37 +2439,13 @@
                       "id": 10,
                       "size": "7.1x4.8",
                       "pscale": 0.28,
-                      "default_mode": {
-                        "id": 21,
-                        "binning": 1,
-                        "overhead": 10000,
-                        "readout": 0.0
-                      },
                       "name": "0.8 meter SciCam AG",
                       "code": "0m8-SciCam-AG",
-                      "mode_set": [
-                        {
-                          "id": 21,
-                          "binning": 1,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 22,
-                          "binning": 2,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 21,
-                    "filters": "air,Luminance,Green,Blue"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "sqa.doma.0m8a.kb31-kb31"
                 },
@@ -5328,37 +2460,13 @@
                       "id": 12,
                       "size": "15.6x10.4",
                       "pscale": 0.612,
-                      "default_mode": {
-                        "id": 26,
-                        "binning": 2,
-                        "overhead": 10000,
-                        "readout": 0.0
-                      },
                       "name": "NRES Autoguider",
                       "code": "NRES-Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 25,
-                          "binning": 1,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 26,
-                          "binning": 2,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 21,
-                    "filters": "air,Luminance,Green,Blue"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 36,
@@ -5367,37 +2475,13 @@
                       "id": 12,
                       "size": "15.6x10.4",
                       "pscale": 0.612,
-                      "default_mode": {
-                        "id": 26,
-                        "binning": 2,
-                        "overhead": 10000,
-                        "readout": 0.0
-                      },
                       "name": "NRES Autoguider",
                       "code": "NRES-Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 25,
-                          "binning": 1,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 26,
-                          "binning": 2,
-                          "overhead": 10000,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 21,
-                    "filters": "air,Luminance,Green,Blue"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "sqa.doma.0m8a.kb35-kb35"
                 }
@@ -5448,31 +2532,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 50,
@@ -5481,31 +2547,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "tfn.aqwa.0m4b.kb88-kb88"
                 }
@@ -5535,31 +2583,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 33,
@@ -5568,31 +2598,13 @@
                       "id": 9,
                       "size": "29.2x19.5",
                       "pscale": 0.571,
-                      "default_mode": {
-                        "id": 19,
-                        "binning": 2,
-                        "overhead": 32000,
-                        "readout": 13.0
-                      },
                       "name": "0.4 meter SBIG",
                       "code": "0m4-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 19,
-                          "binning": 2,
-                          "overhead": 32000,
-                          "readout": 13.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 8,
-                    "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "tfn.aqwa.0m4a.kb29-kb29"
                 }
@@ -5643,43 +2655,13 @@
                       "id": 14,
                       "size": "15.8x15.8",
                       "pscale": 0.232,
-                      "default_mode": {
-                        "id": 30,
-                        "binning": 2,
-                        "overhead": 60000,
-                        "readout": 14.5
-                      },
                       "name": "1.0 meter SBIG",
                       "code": "1m0-SciCam-SBIG",
-                      "mode_set": [
-                        {
-                          "id": 31,
-                          "binning": 3,
-                          "overhead": 60000,
-                          "readout": 11.5
-                        },
-                        {
-                          "id": 30,
-                          "binning": 2,
-                          "overhead": 60000,
-                          "readout": 14.5
-                        },
-                        {
-                          "id": 29,
-                          "binning": 1,
-                          "overhead": 60000,
-                          "readout": 35.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 2.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 1,
-                    "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 11,
@@ -5688,49 +2670,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "tst.doma.1m0a.kbXX-efXX"
                 },
@@ -5745,49 +2691,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "autoguider_camera": {
                     "id": 11,
@@ -5796,49 +2706,13 @@
                       "id": 1,
                       "size": "5.7x5.7",
                       "pscale": 0.335,
-                      "default_mode": {
-                        "id": 1,
-                        "binning": 1,
-                        "overhead": 115,
-                        "readout": 0.0
-                      },
                       "name": "Autoguider",
                       "code": "Autoguider",
-                      "mode_set": [
-                        {
-                          "id": 1,
-                          "binning": 1,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 2,
-                          "binning": 2,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 3,
-                          "binning": 3,
-                          "overhead": 115,
-                          "readout": 0.0
-                        },
-                        {
-                          "id": 4,
-                          "binning": 4,
-                          "overhead": 114,
-                          "readout": 0.0
-                        }
-                      ],
                       "fixed_overhead_per_exposure": 1.0,
                       "front_padding": 90.0,
-                      "filter_change_time": 0.0,
                       "config_change_time": 0.0,
-                      "acquire_exposure_time": 0.0,
-                      "acquire_processing_time": 0.0
-                    },
-                    "filter_wheel": 10,
-                    "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B"
+                      "acquire_exposure_time": 0.0
+                    }
                   },
                   "__str__": "tst.doma.1m0a.efXX-efXX"
                 }

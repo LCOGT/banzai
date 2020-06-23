@@ -1,6 +1,9 @@
 from argparse import Namespace
+import pytest
 
 from banzai.context import Context
+
+pytestmark = pytest.mark.runtime_context
 
 
 def test_context_gets_arguments_from_argparse():

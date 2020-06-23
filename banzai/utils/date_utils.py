@@ -104,7 +104,7 @@ def date_obs_to_string(date_obs):
 
 def mean_date(dates):
     time_offsets = np.array([d - min(dates) for d in dates])
-    average_offset = total_seconds(time_offsets.sum())/ time_offsets.size
+    average_offset = total_seconds(time_offsets.sum()) / time_offsets.size
     return min(dates) + datetime.timedelta(seconds=average_offset)
 
 
@@ -132,12 +132,12 @@ def validate_date(s):
     return s
 
 
-def get_min_and_max_dates_for_calibration_scheduling(timezone: int) -> (str, str):
+def get_stacking_date_range(timezone: int, lookback_days: float = 0.5) -> (str, str):
     # Gets next midnight relative to date of observation
     current_date = get_dayobs(timezone)
     current_date = datetime.datetime.strptime(current_date, '%Y%m%d')
     current_date = current_date.replace(hour=12)
     utc_noon_at_site = current_date - datetime.timedelta(hours=timezone)
-    min_date = utc_noon_at_site - datetime.timedelta(days=0.5)
+    min_date = utc_noon_at_site - datetime.timedelta(days=lookback_days)
     max_date = utc_noon_at_site + datetime.timedelta(days=0.5)
     return min_date.strftime(TIMESTAMP_FORMAT), max_date.strftime(TIMESTAMP_FORMAT)

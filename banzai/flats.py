@@ -5,7 +5,7 @@ import numpy as np
 
 from banzai.utils import stats
 from banzai.stages import Stage
-from banzai.calibrations import CalibrationStacker, ApplyCalibration, CalibrationComparer
+from banzai.calibrations import CalibrationStacker, CalibrationUser, CalibrationComparer
 
 logger = logging.getLogger('banzai')
 
@@ -16,9 +16,9 @@ class FlatNormalizer(Stage):
 
     def do_stage(self, image):
         # Get the sigma clipped mean of the central 25% of the image
-        flat_normalization = stats.sigma_clipped_mean(image.get_inner_image_section(), 3.5)
-        image.data /= flat_normalization
-        image.header['FLATLVL'] = flat_normalization
+        flat_normalization = stats.sigma_clipped_mean(image.primary_hdu.get_inner_image_section(), 3.5)
+        image /= flat_normalization
+        image.meta['FLATLVL'] = flat_normalization
         logger.info('Calculate flat normalization', image=image,
                     extra_tags={'flat_normalization': flat_normalization})
         return image
@@ -34,12 +34,14 @@ class FlatMaker(CalibrationStacker):
 
     def make_master_calibration_frame(self, images):
         master_image = super(FlatMaker, self).make_master_calibration_frame(images)
-        master_image.bpm = np.logical_or(master_image.bpm, master_image.data < 0.2)
-        master_image.data[master_image.bpm] = 1.0
+        occulted_mask = np.zeros(master_image.shape, dtype=np.uint8)
+        occulted_mask[master_image.data < 0.2] = 4
+        master_image.mask |= occulted_mask
+        master_image.data[master_image.mask > 0] = 1.0
         return master_image
 
 
-class FlatDivider(ApplyCalibration):
+class FlatDivider(CalibrationUser):
     def __init__(self, runtime_context):
 
         super(FlatDivider, self).__init__(runtime_context)
@@ -51,14 +53,13 @@ class FlatDivider(ApplyCalibration):
     def apply_master_calibration(self, image, master_calibration_image):
 
         master_flat_filename = master_calibration_image.filename
-        master_flat_data = master_calibration_image.data
         logging_tags = {'master_flat': os.path.basename(master_calibration_image.filename)}
         logger.info('Flattening image', image=image, extra_tags=logging_tags)
-        image.data /= master_flat_data
-        image.bpm |= master_calibration_image.bpm
+        image /= master_calibration_image
+        image.mask |= master_calibration_image.mask
         master_flat_filename = os.path.basename(master_flat_filename)
-        image.header['L1IDFLAT'] = (master_flat_filename, 'ID of flat frame')
-        image.header['L1STATFL'] = (1, 'Status flag for flat field correction')
+        image.meta['L1IDFLAT'] = (master_flat_filename, 'ID of flat frame')
+        image.meta['L1STATFL'] = (1, 'Status flag for flat field correction')
 
         return image
 
@@ -76,7 +77,7 @@ class FlatComparer(CalibrationComparer):
         return False
 
     def noise_model(self, image):
-        flat_normalization = float(image.header['FLATLVL'])
+        flat_normalization = float(image.meta['FLATLVL'])
         poisson_noise = np.where(image.data > 0, image.data * flat_normalization, 0.0)
         noise = (image.readnoise ** 2.0 + poisson_noise) ** 0.5
         noise /= flat_normalization

@@ -4,6 +4,7 @@ from numpy import ma
 
 from banzai.utils import stats
 
+pytestmark = pytest.mark.stats
 
 @pytest.fixture(scope='module')
 def set_random_seed():
@@ -669,14 +670,3 @@ def test_mad_3d_axis_2_mask(set_random_seed):
         expected = ma.median(ma.array(np.abs(a - np.expand_dims(ma.median(a_masked, axis=2), axis=2)), dtype=np.float32, mask=mask), axis=2)
         actual = stats.median_absolute_deviation(a, mask=mask, axis=2)
         np.testing.assert_allclose(actual, expected.astype(np.float32), atol=1e-9)
-
-
-# def test_rstd_axis_none_mask_none():
-#     for i in range(1000):
-#         size = np.random.randint(1, 10000)
-#         mean = np.random.uniform(-1000, 1000)
-#         sigma = np.random.uniform(0, 1000)
-#         a = np.random.normal(mean, sigma, size)
-#         expected = np.std(a)
-#         actual = stats.robust_standard_deviation(a)
-#         np.testing.assert_allclose(actual, np.float32(expected), atol= sigma / (size ** 0.5))

@@ -6,26 +6,23 @@ from dateutil.parser import parse
 from celery import Celery
 
 from banzai import dbs, calibrations, logs
-from banzai.utils import date_utils, realtime_utils, observation_utils
-from banzai.utils.fits_utils import get_filename_from_info
-from banzai.utils.stage_utils import run
+from banzai.utils import date_utils, realtime_utils, stage_utils
 from celery.signals import setup_logging, worker_process_init
 from banzai.context import Context
+from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
+from banzai.utils.date_utils import get_stacking_date_range
 
-app = Celery('banzai')
-app.config_from_object('banzai.celeryconfig')
-app.conf.update(broker_url=os.getenv('REDIS_HOST', 'redis://localhost:6379/0'))
-# Increase broker timeout to avoid re-scheduling tasks that aren't completed within an hour
-app.conf.broker_transport_options = {'visibility_timeout': 86400}
 
 logger = logging.getLogger('banzai')
 
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 
 
+# Celery sets up a logger on its own, which messes up the LCOGTFormatter that I want to use.
+# Using this disables celery's logging setup.
 @setup_logging.connect
-def setup_loggers(*args, **kwargs):
-    logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
+def setup_celery_logging(**kwargs):
+    pass
 
 
 @worker_process_init.connect
@@ -36,87 +33,126 @@ def configure_workers(**kwargs):
     reload(metric_wrappers)
 
 
+app = Celery('banzai')
+app.config_from_object('banzai.celeryconfig')
+app.conf.update(broker_url=os.getenv('TASK_HOST', 'redis://localhost:6379/0'))
+# Increase broker timeout to avoid re-scheduling tasks that aren't completed within an hour
+app.conf.broker_transport_options = {'visibility_timeout': 86400}
+
+logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
+# Calling setup() uses setup_celery_logging. Use redirect to get more celery logs to our logger.
+app.log.setup()
+app.log.redirect_stdouts_to_logger(logger, 'INFO')
+
+
 @app.task(name='celery.schedule_calibration_stacking')
 def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=None, max_date=None, frame_types=None):
-    runtime_context = Context(runtime_context)
-    if min_date is None or max_date is None:
-        timezone_for_site = dbs.get_timezone(site, db_address=runtime_context.db_address)
-        min_date, max_date = date_utils.get_min_and_max_dates_for_calibration_scheduling(timezone_for_site)
+    logger.info('Scheduling when to stack frames.', extra_tags={'site': site})
+    try:
+        runtime_context = Context(runtime_context)
 
-    calibration_blocks = observation_utils.get_calibration_blocks_for_time_range(site, max_date, min_date)
+        if min_date is None or max_date is None:
+            timezone_for_site = dbs.get_timezone(site, db_address=runtime_context.db_address)
+            max_lookback = max(runtime_context.CALIBRATION_LOOKBACK.values())
 
-    if frame_types is None:
-        frame_types = runtime_context.CALIBRATION_IMAGE_TYPES
+            block_min_date, block_max_date = date_utils.get_stacking_date_range(timezone_for_site,
+                                                                                lookback_days=max_lookback)
+        else:
+            block_min_date = min_date
+            block_max_date = max_date
 
-    for frame_type in frame_types:
-        logger.info('Scheduling stacking', extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,
-                                                       'frame_type': frame_type})
+        calibration_blocks = get_calibration_blocks_for_time_range(site, block_max_date, block_min_date, runtime_context)
 
-        instruments = dbs.get_instruments_at_site(site=site, db_address=runtime_context.db_address)
-        for instrument in instruments:
-            logger.info('Checking for scheduled calibration blocks', extra_tags={'site': site, 'min_date': min_date,
-                                                                                 'max_date': max_date,
-                                                                                 'instrument': instrument.camera,
-                                                                                 'frame_type': frame_type})
-            blocks_for_calibration = observation_utils.filter_calibration_blocks_for_type(instrument, frame_type,
-                                                                                          calibration_blocks)
-            if len(blocks_for_calibration) > 0:
-                # block_end should be the latest block end time
-                calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(
-                    tzinfo=None)
-                stack_delay = timedelta(seconds=runtime_context.CALIBRATION_STACK_DELAYS[frame_type.upper()])
-                now = datetime.utcnow().replace(microsecond=0)
-                message_delay = calibration_end_time - now + stack_delay
-                if message_delay.days < 0:
-                    message_delay_in_seconds = 0  # Remove delay if block end is in the past
-                else:
-                    message_delay_in_seconds = message_delay.seconds
+        if frame_types is None:
+            frame_types = list(runtime_context.CALIBRATION_STACKER_STAGES.keys())
 
-                schedule_time = now + timedelta(seconds=message_delay_in_seconds)
-                logger.info('Scheduling stacking at {}'.format(schedule_time.strftime(date_utils.TIMESTAMP_FORMAT)),
-                            extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,
-                                        'instrument': instrument.camera, 'frame_type': frame_type})
-                stack_calibrations.apply_async(args=(min_date, max_date, instrument.id, frame_type,
-                                                     vars(runtime_context), blocks_for_calibration),
-                                               countdown=message_delay_in_seconds)
+        for frame_type in frame_types:
+            if min_date is None or max_date is None:
+                lookback = runtime_context.CALIBRATION_LOOKBACK[frame_type]
+                stacking_min_date, stacking_max_date = get_stacking_date_range(timezone_for_site,
+                                                                               lookback_days=lookback)
             else:
-                logger.warning('No scheduled calibration blocks found.',
-                               extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,
-                                           'instrument': instrument.name, 'frame_type': frame_type})
+                stacking_min_date = min_date
+                stacking_max_date = max_date
+            logger.info('Scheduling stacking', extra_tags={'site': site, 'min_date': stacking_min_date,
+                                                           'max_date': stacking_max_date, 'frame_type': frame_type})
+
+            instruments = dbs.get_instruments_at_site(site=site, db_address=runtime_context.db_address)
+            for instrument in instruments:
+                logger.info('Checking for scheduled calibration blocks', extra_tags={'site': site,
+                                                                                     'min_date': stacking_min_date,
+                                                                                     'max_date': stacking_max_date,
+                                                                                     'instrument': instrument.camera,
+                                                                                     'frame_type': frame_type})
+                blocks_for_calibration = filter_calibration_blocks_for_type(instrument, frame_type,
+                                                                            calibration_blocks, runtime_context,
+                                                                            stacking_min_date, stacking_max_date)
+                if len(blocks_for_calibration) > 0:
+                    # Set the delay to after the latest block end
+                    calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)
+                    stack_delay = timedelta(seconds=runtime_context.CALIBRATION_STACK_DELAYS[frame_type.upper()])
+                    now = datetime.utcnow().replace(microsecond=0)
+                    message_delay = calibration_end_time - now + stack_delay
+                    if message_delay.days < 0:
+                        message_delay_in_seconds = 0  # Remove delay if block end is in the past
+                    else:
+                        message_delay_in_seconds = message_delay.seconds
+
+                    schedule_time = now + timedelta(seconds=message_delay_in_seconds)
+                    logger.info('Scheduling stacking at {}'.format(schedule_time.strftime(date_utils.TIMESTAMP_FORMAT)),
+                                extra_tags={'site': site, 'min_date': stacking_min_date, 'max_date': stacking_max_date,
+                                            'instrument': instrument.camera, 'frame_type': frame_type})
+                    stack_calibrations.apply_async(args=(stacking_min_date, stacking_max_date, instrument.id, frame_type,
+                                                         vars(runtime_context), blocks_for_calibration),
+                                                   countdown=message_delay_in_seconds)
+                else:
+                    logger.warning('No scheduled calibration blocks found.',
+                                   extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,
+                                               'instrument': instrument.name, 'frame_type': frame_type})
+    except Exception:
+        logger.error("Exception scheduling stacking: {error}".format(error=logs.format_exception()),
+                     extra_tags={'site': site})
 
 
 @app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY)
 def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, frame_type: str,
                        runtime_context: dict, observations: list):
-    runtime_context = Context(runtime_context)
-    instrument = dbs.get_instrument_by_id(instrument_id, db_address=runtime_context.db_address)
-    logger.info('Checking if we are ready to stack',
-                extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
-                            'instrument': instrument.camera, 'frame_type': frame_type})
-
-    completed_image_count = len(dbs.get_individual_calibration_image_records(instrument, frame_type,
-                                                                             min_date, max_date,
-                                                                             include_bad_frames=True,
-                                                                             db_address=runtime_context.db_address))
-    expected_image_count = 0
-    for observation in observations:
-        for configuration in observation['request']['configurations']:
-            if frame_type.upper() == configuration['type']:
-                for instrument_config in configuration['instrument_configs']:
-                    expected_image_count += instrument_config['exposure_count']
-    logger.info('expected image count: {0}, completed image count: {1}'.format(str(expected_image_count),
-                                                                               str(completed_image_count)))
-    if completed_image_count < expected_image_count and self.request.retries < 3:
-        logger.info('Number of processed images less than expected. '
-                    'Expected: {}, Completed: {}'.format(expected_image_count, completed_image_count),
+    try:
+        runtime_context = Context(runtime_context)
+        instrument = dbs.get_instrument_by_id(instrument_id, db_address=runtime_context.db_address)
+        logger.info('Checking if we are ready to stack',
                     extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
-                                'instrument': instrument.camera, 'frame_type': frame_type})
+                                'instrument': instrument.name, 'frame_type': frame_type})
+
+        completed_image_count = len(dbs.get_individual_cal_frames(instrument, frame_type,
+                                                                  min_date, max_date, include_bad_frames=True,
+                                                                  db_address=runtime_context.db_address))
+        expected_image_count = 0
+        for observation in observations:
+            for configuration in observation['request']['configurations']:
+                if frame_type.upper() == configuration['type']:
+                    for instrument_config in configuration['instrument_configs']:
+                        expected_image_count += instrument_config['exposure_count']
+        logger.info('expected image count: {0}, completed image count: {1}'.format(str(expected_image_count), str(completed_image_count)))
+        if completed_image_count < expected_image_count and self.request.retries < 3:
+            logger.info('Number of processed images less than expected. '
+                        'Expected: {}, Completed: {}'.format(expected_image_count, completed_image_count),
+                        extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
+                                    'instrument': instrument.camera, 'frame_type': frame_type})
+            retry = True
+        else:
+            logger.info('Starting to stack', extra_tags={'site': instrument.site, 'min_date': min_date,
+                                                          'max_date': max_date, 'instrument': instrument.camera,
+                                                          'frame_type': frame_type})
+            calibrations.make_master_calibrations(instrument, frame_type, min_date, max_date, runtime_context)
+            retry = False
+    except Exception:
+        logger.error("Exception making master frames: {error}".format(error=logs.format_exception()),
+                     extra_tags={'frame_type': frame_type, 'instrument_id': instrument_id})
+        retry = False
+
+    if retry:
         raise self.retry()
-    else:
-        logger.info('Starting to stack', extra_tags={'site': instrument.site, 'min_date': min_date,
-                                                     'max_date': max_date, 'instrument': instrument.camera,
-                                                     'frame_type': frame_type})
-        calibrations.process_master_maker(instrument, frame_type, min_date, max_date, runtime_context)
 
 
 @app.task(name='celery.process_image')
@@ -126,15 +162,17 @@ def process_image(file_info: dict, runtime_context: dict):
     :param runtime_context: Context object with runtime environment info
     """
     runtime_context = Context(runtime_context)
-    logger.info('Running process image.')
-    filename = get_filename_from_info(file_info)
     try:
         if realtime_utils.need_to_process_image(file_info, runtime_context):
+            if 'path' in file_info:
+                filename = os.path.basename(file_info['path'])
+            else:
+                filename = file_info.get('filename')
             logger.info('Reducing frame', extra_tags={'filename': filename})
             # Increment the number of tries for this file
             realtime_utils.increment_try_number(filename, db_address=runtime_context.db_address)
-            run(file_info, runtime_context)
+            stage_utils.run_pipeline_stages([file_info], runtime_context)
             realtime_utils.set_file_as_processed(filename, db_address=runtime_context.db_address)
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
-                     extra_tags={'filename': filename})
+                     extra_tags={'file_info': file_info})

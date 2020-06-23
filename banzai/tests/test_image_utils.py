@@ -1,34 +1,39 @@
 import pytest
 
+from banzai.tests.utils import FakeLCOObservationFrame, FakeContext, FakeInstrument, FakeCCDData
 from banzai.utils import image_utils
-from banzai.tests.utils import FakeImage
+
+pytestmark = pytest.mark.image_utils
 
 
-def throws_inhomogeneous_set_exception(image1, image2,  keyword, additional_group_by_attributes=None):
-    with pytest.raises(image_utils.InhomogeneousSetException) as exception_info:
-        image_utils.check_image_homogeneity([image1, image2], additional_group_by_attributes)
-    assert 'Images have different {0}s'.format(keyword) == str(exception_info.value)
+def test_image_can_be_processed_known_obstype():
+    image = FakeLCOObservationFrame([FakeCCDData(meta={'OBSTYPE': 'BIAS'})])
+
+    assert image_utils.image_can_be_processed(image, FakeContext())
 
 
-def test_raises_exception_if_nx_are_different():
-    throws_inhomogeneous_set_exception(FakeImage(nx=101), FakeImage(nx=102), 'nx')
+def test_image_cannot_be_processed_unknown_obstype():
+    image = FakeLCOObservationFrame([FakeCCDData(meta={'OBSTYPE': 'FOO'})])
+
+    assert not image_utils.image_can_be_processed(image, FakeContext())
 
 
-def test_raises_exception_if_ny_are_different():
-    throws_inhomogeneous_set_exception(FakeImage(ny=103), FakeImage(ny=104), 'ny')
+def test_sinistro_image_can_be_processed():
+    image = FakeLCOObservationFrame([FakeCCDData(meta={'OBSTYPE': 'BIAS'})])
+    image.instrument = FakeInstrument(type='1m0-SciCam-Sinistro')
+
+    assert image_utils.image_can_be_processed(image, FakeContext())
 
 
-def test_raises_exception_if_sites_are_different():
-    throws_inhomogeneous_set_exception(FakeImage(site='elp'), FakeImage(site='ogg'), 'site')
+def test_nres_image_cannot_be_processed():
+    image = FakeLCOObservationFrame([FakeCCDData(meta={'OBSTYPE': 'BIAS'})])
+    image.instrument = FakeInstrument(type='1m0-NRES-SciCam')
+
+    assert not image_utils.image_can_be_processed(image, FakeContext())
 
 
-def test_raises_exception_if_cameras_are_different():
-    throws_inhomogeneous_set_exception(FakeImage(camera='kb76'), FakeImage(camera='kb77'), 'camera')
+def test_floyds_image_cannot_be_processed():
+    image = FakeLCOObservationFrame([FakeCCDData(meta={'OBSTYPE': 'BIAS'})])
+    image.instrument = FakeInstrument(type='2m0-FLOYDS-SciCam')
 
-
-def test_raises_exception_if_ccdsums_are_different():
-    throws_inhomogeneous_set_exception(FakeImage(ccdsum='1 1'), FakeImage(ccdsum='2 2'), 'ccdsum', ['ccdsum'])
-
-
-def test_raises_exception_if_filters_are_different():
-    throws_inhomogeneous_set_exception(FakeImage(filter='w'), FakeImage(filter='V'), 'filter', ['filter'])
+    assert not image_utils.image_can_be_processed(image, FakeContext())

@@ -10,8 +10,10 @@ from banzai.utils import qc
 
 logger = logging.getLogger('banzai')
 
+class HeaderSanity:
+    pass
 
-class HeaderSanity(Stage):
+class HeaderChecker(Stage):
     """
     Stage to validate important header keywords.
     """
@@ -22,12 +24,11 @@ class HeaderSanity(Stage):
     DEC_MAX = 90.0
 
     def __init__(self, runtime_context):
-        super(HeaderSanity, self).__init__(runtime_context)
+        super(HeaderChecker, self).__init__(runtime_context)
 
         self.expected_header_keywords = ['RA', 'DEC', 'CAT-RA', 'CAT-DEC',
                                          'OFST-RA', 'OFST-DEC', 'TPT-RA',
-                                         'TPT-DEC', 'PM-RA', 'PM-DEC',
-                                         'CRVAL1', 'CRVAL2', 'CRPIX1',
+                                         'TPT-DEC', 'CRVAL1', 'CRVAL2', 'CRPIX1',
                                          'CRPIX2', 'EXPTIME']
 
     def do_stage(self, image):
@@ -76,11 +77,11 @@ class HeaderSanity(Stage):
         missing_keywords = []
         na_keywords = []
         for keyword in self.expected_header_keywords:
-            if keyword not in image.header:
+            if keyword not in image.meta:
                 sentence = 'The header key {0} is not in image header!'.format(keyword)
                 logger.error(sentence, image=image)
                 missing_keywords.append(keyword)
-            elif image.header[keyword] == 'N/A':
+            elif image.meta[keyword] == 'N/A':
                 sentence = 'The header key {0} got the unexpected value : N/A'.format(keyword)
                 logger.error(sentence, image=image)
                 na_keywords.append(keyword)
@@ -111,7 +112,7 @@ class HeaderSanity(Stage):
         if bad_keywords is None:
             bad_keywords = []
         if 'CRVAL1' not in bad_keywords:
-            ra_value = image.header['CRVAL1']
+            ra_value = image.meta['CRVAL1']
             is_bad_ra_value = (ra_value > self.RA_MAX) | (ra_value < self.RA_MIN)
             if is_bad_ra_value:
                 sentence = 'The header CRVAL1 key got the unexpected value : {0}'.format(ra_value)
@@ -136,7 +137,7 @@ class HeaderSanity(Stage):
         if bad_keywords is None:
             bad_keywords = []
         if 'CRVAL2' not in bad_keywords:
-            dec_value = image.header['CRVAL2']
+            dec_value = image.meta['CRVAL2']
             is_bad_dec_value = (dec_value > self.DEC_MAX) | (dec_value < self.DEC_MIN)
             if is_bad_dec_value:
                 sentence = 'The header CRVAL2 key got the unexpected value : {0}'.format(dec_value)
@@ -159,9 +160,9 @@ class HeaderSanity(Stage):
         if bad_keywords is None:
             bad_keywords = []
         if 'EXPTIME' not in bad_keywords and 'OBSTYPE' not in bad_keywords:
-            exptime_value = image.header['EXPTIME']
+            exptime_value = image.meta['EXPTIME']
             qc_results = {"header.exptime.value": exptime_value}
-            if image.header['OBSTYPE'] != 'BIAS':
+            if image.meta['OBSTYPE'] != 'BIAS':
                 is_exptime_null = exptime_value <= 0.0
                 if is_exptime_null:
                     sentence = 'The header EXPTIME key got the unexpected value {0}:' \

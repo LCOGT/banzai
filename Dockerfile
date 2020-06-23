@@ -11,7 +11,7 @@ RUN conda install -y numpy==1.17.4 pip scipy astropy pytest mock requests ipytho
         && conda clean -y --all
 
 RUN pip install --no-cache-dir cython logutils lcogt_logging python-dateutil sqlalchemy\>=1.3.0b1 psycopg2-binary celery[redis]==4.3.0 \
-        apscheduler
+        apscheduler lco-ingester tenacity amqp==2.4.2
 
 RUN pip install --no-cache-dir  git+https://github.com/kbarbary/sep.git@master
 

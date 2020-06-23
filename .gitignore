@@ -73,3 +73,5 @@ distribute-*.tar.gz
 *.xml
 
 *.iml
+
+.coverage.subprocess
