@@ -177,8 +177,8 @@ def add_instrument(instrument, db_address):
 
 def add_site(site, db_address):
     with get_session(db_address=db_address) as db_session:
-        equivalence_criteria = {'id': site['id']}
-        record_attributes = {'id': site['id'],
+        equivalence_criteria = {'id': site['code']}
+        record_attributes = {'id': site['code'],
                              'timezone': site['timezone'],
                              'longitude': site['longitude'],
                              'latitude': site['latitude'],
