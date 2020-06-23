@@ -16,11 +16,10 @@ import numpy as np
 import requests
 from sqlalchemy import create_engine, pool, type_coerce, cast
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
-from banzai.utils import file_utils
 
 Base = declarative_base()
 
@@ -102,6 +101,9 @@ class Site(Base):
     __tablename__ = 'sites'
     id = Column(String(15), primary_key=True)
     timezone = Column(Integer)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    elevation = Column(Float)
 
 
 class ProcessedImage(Base):
@@ -138,7 +140,8 @@ def parse_configdb(configdb_address):
                                'floyds01': 'en06', 'floyds02': 'en12'}
     # end of hotfix
     for site in results:
-        sites.append({'code': site['code'], 'timezone': site['timezone']})
+        sites.append({'code': site['code'], 'timezone': site['timezone'],
+                      'longitude': site['lon'], 'latitude': site['lat'], 'elevation': site['elevation']})
         for enc in site['enclosure_set']:
             for tel in enc['telescope_set']:
                 for ins in tel['instrument_set']:
@@ -166,6 +169,20 @@ def add_instrument(instrument, db_address):
                              'camera': instrument['camera'],
                              'name': instrument['name'],
                              'type': instrument['type']}
+
+        instrument_record = add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
+        db_session.commit()
+    return instrument_record
+
+
+def add_site(site, db_address):
+    with get_session(db_address=db_address) as db_session:
+        equivalence_criteria = {'id': site['id']}
+        record_attributes = {'id': site['id'],
+                             'timezone': site['timezone'],
+                             'longitude': site['longitude'],
+                             'latitude': site['latitude'],
+                             'elevation': site['elevation']}
 
         instrument_record = add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
         db_session.commit()
