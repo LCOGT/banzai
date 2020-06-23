@@ -1,3 +1,7 @@
+1.0.0 (2020-06-23)
+-------------------
+- Bump to new major version. Reduced images now include uncertainties.
+
 0.29.0 (2020-03)
 -------------------
 - Refactored Image class. Cleaned up a lot of plumbing code
