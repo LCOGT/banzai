@@ -184,7 +184,7 @@ def add_site(site, db_address):
                              'latitude': site['latitude'],
                              'elevation': site['elevation']}
 
-        site_record = add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
+        site_record = add_or_update_record(db_session, Site, equivalence_criteria, record_attributes)
         db_session.commit()
     return site_record
 
