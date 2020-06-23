@@ -141,7 +141,7 @@ def parse_configdb(configdb_address):
     # end of hotfix
     for site in results:
         sites.append({'code': site['code'], 'timezone': site['timezone'],
-                      'longitude': site['lon'], 'latitude': site['lat'], 'elevation': site['elevation']})
+                      'longitude': site['long'], 'latitude': site['lat'], 'elevation': site['elevation']})
         for enc in site['enclosure_set']:
             for tel in enc['telescope_set']:
                 for ins in tel['instrument_set']:
@@ -184,9 +184,9 @@ def add_site(site, db_address):
                              'latitude': site['latitude'],
                              'elevation': site['elevation']}
 
-        instrument_record = add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
+        site_record = add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
         db_session.commit()
-    return instrument_record
+    return site_record
 
 
 def add_or_update_record(db_session, table_model, equivalence_criteria, record_attributes):
@@ -446,8 +446,6 @@ def populate_instrument_tables(db_address, configdb_address):
     sites, instruments = parse_configdb(configdb_address=configdb_address)
     with get_session(db_address=db_address) as db_session:
         for site in sites:
-            add_or_update_record(db_session, Site, {'id': site['code']},
-                                 {'id': site['code'], 'timezone': site['timezone']})
-
+            add_site(site, db_address)
     for instrument in instruments:
         add_instrument(instrument, db_address)
