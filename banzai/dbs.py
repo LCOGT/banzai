@@ -11,7 +11,7 @@ import os.path
 import logging
 import datetime
 from dateutil.parser import parse
-
+import copy
 import numpy as np
 import requests
 from sqlalchemy import create_engine, pool, type_coerce, cast
@@ -36,8 +36,10 @@ def get_session(db_address):
     session: SQLAlchemy Database Session
     """
     # Build a new engine for each session. This makes things thread safe.
-    engine = create_engine(db_address, poolclass=pool.NullPool)
-    Base.metadata.bind = engine
+    engine = create_engine(db_address)
+    # Copy the metadata object to stop engine collisions. This may be not how sqlalchemy is intended to be used.
+    metadata = copy.deepcopy(Base.metadata)
+    metadata.bind = engine
 
     # We don't use autoflush typically. I have run into issues where SQLAlchemy would try to flush
     # incomplete records causing a crash. None of the queries here are large, so it should be ok.
@@ -294,11 +296,8 @@ def save_processed_image(path, md5, db_address):
 
 
 def get_timezone(site, db_address):
-    with get_session(db_address=db_address) as db_session:
-        site_list = db_session.query(Site).filter(Site.id == site).all()
-    if len(site_list) == 0:
-        raise SiteMissingException
-    return site_list[0].timezone
+    site = get_site(site, db_address)
+    return site.timezone
 
 
 def get_instruments_at_site(site, db_address):
@@ -312,6 +311,14 @@ def get_instrument_by_id(id, db_address):
     with get_session(db_address=db_address) as db_session:
         instrument = db_session.query(Instrument).filter(Instrument.id==id).first()
     return instrument
+
+
+def get_site(site_id, db_address):
+    with get_session(db_address=db_address) as db_session:
+        site_list = db_session.query(Site).filter(Site.id == site_id).all()
+    if len(site_list) == 0:
+        raise SiteMissingException
+    return site_list[0]
 
 
 def cal_record_to_file_info(record):
