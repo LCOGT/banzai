@@ -11,16 +11,15 @@ import os.path
 import logging
 import datetime
 from dateutil.parser import parse
-
+import copy
 import numpy as np
 import requests
 from sqlalchemy import create_engine, pool, type_coerce, cast
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
-from banzai.utils import file_utils
 
 Base = declarative_base()
 
@@ -37,8 +36,10 @@ def get_session(db_address):
     session: SQLAlchemy Database Session
     """
     # Build a new engine for each session. This makes things thread safe.
-    engine = create_engine(db_address, poolclass=pool.NullPool)
-    Base.metadata.bind = engine
+    engine = create_engine(db_address)
+    # Copy the metadata object to stop engine collisions. This may be not how sqlalchemy is intended to be used.
+    metadata = copy.deepcopy(Base.metadata)
+    metadata.bind = engine
 
     # We don't use autoflush typically. I have run into issues where SQLAlchemy would try to flush
     # incomplete records causing a crash. None of the queries here are large, so it should be ok.
@@ -102,6 +103,9 @@ class Site(Base):
     __tablename__ = 'sites'
     id = Column(String(15), primary_key=True)
     timezone = Column(Integer)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    elevation = Column(Float)
 
 
 class ProcessedImage(Base):
@@ -138,7 +142,8 @@ def parse_configdb(configdb_address):
                                'floyds01': 'en06', 'floyds02': 'en12'}
     # end of hotfix
     for site in results:
-        sites.append({'code': site['code'], 'timezone': site['timezone']})
+        sites.append({'code': site['code'], 'timezone': site['timezone'],
+                      'longitude': site['long'], 'latitude': site['lat'], 'elevation': site['elevation']})
         for enc in site['enclosure_set']:
             for tel in enc['telescope_set']:
                 for ins in tel['instrument_set']:
@@ -170,6 +175,20 @@ def add_instrument(instrument, db_address):
         instrument_record = add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
         db_session.commit()
     return instrument_record
+
+
+def add_site(site, db_address):
+    with get_session(db_address=db_address) as db_session:
+        equivalence_criteria = {'id': site['code']}
+        record_attributes = {'id': site['code'],
+                             'timezone': site['timezone'],
+                             'longitude': site['longitude'],
+                             'latitude': site['latitude'],
+                             'elevation': site['elevation']}
+
+        site_record = add_or_update_record(db_session, Site, equivalence_criteria, record_attributes)
+        db_session.commit()
+    return site_record
 
 
 def add_or_update_record(db_session, table_model, equivalence_criteria, record_attributes):
@@ -277,11 +296,8 @@ def save_processed_image(path, md5, db_address):
 
 
 def get_timezone(site, db_address):
-    with get_session(db_address=db_address) as db_session:
-        site_list = db_session.query(Site).filter(Site.id == site).all()
-    if len(site_list) == 0:
-        raise SiteMissingException
-    return site_list[0].timezone
+    site = get_site(site, db_address)
+    return site.timezone
 
 
 def get_instruments_at_site(site, db_address):
@@ -295,6 +311,14 @@ def get_instrument_by_id(id, db_address):
     with get_session(db_address=db_address) as db_session:
         instrument = db_session.query(Instrument).filter(Instrument.id==id).first()
     return instrument
+
+
+def get_site(site_id, db_address):
+    with get_session(db_address=db_address) as db_session:
+        site_list = db_session.query(Site).filter(Site.id == site_id).all()
+    if len(site_list) == 0:
+        raise SiteMissingException
+    return site_list[0]
 
 
 def cal_record_to_file_info(record):
@@ -429,8 +453,6 @@ def populate_instrument_tables(db_address, configdb_address):
     sites, instruments = parse_configdb(configdb_address=configdb_address)
     with get_session(db_address=db_address) as db_session:
         for site in sites:
-            add_or_update_record(db_session, Site, {'id': site['code']},
-                                 {'id': site['code'], 'timezone': site['timezone']})
-
+            add_site(site, db_address)
     for instrument in instruments:
         add_instrument(instrument, db_address)
