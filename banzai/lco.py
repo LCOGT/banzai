@@ -21,8 +21,7 @@ class LCOObservationFrame(ObservationFrame):
     # TODO: Add gain validation
     def get_output_filename(self, runtime_context):
         # TODO add a mode for AWS filenames
-        output_directory = os.path.join(runtime_context.processed_path, self.instrument.site,
-                                        self.instrument.camera, self.epoch, 'processed')
+        output_directory = self.get_output_directory(runtime_context)
         output_filename = self._file_path.replace('00.fits', '{:02d}.fits'.format(int(runtime_context.reduction_level)))
         output_filename = os.path.join(output_directory, os.path.basename(output_filename))
         if runtime_context.fpack and not output_filename.endswith('.fz'):
@@ -30,6 +29,10 @@ class LCOObservationFrame(ObservationFrame):
         if not runtime_context.fpack and output_filename.endswith('.fz'):
             output_filename = output_filename[:-3]
         return output_filename
+
+    def get_output_directory(self, runtime_context) -> str:
+        return os.path.join(runtime_context.processed_path, self.instrument.site,
+                            self.instrument.camera, self.epoch, 'processed')
 
     @property
     def n_amps(self):
