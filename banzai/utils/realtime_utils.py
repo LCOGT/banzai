@@ -87,7 +87,10 @@ def need_to_process_image(file_info, context):
             factory = import_utils.import_attribute(context.FRAME_FACTORY)()
             test_image = factory.observation_frame_class(hdu_list=[HeaderOnly(file_info)], file_path=file_info['filename'])
             test_image.instrument = factory.get_instrument_from_header(file_info, db_address=context.db_address)
-            if test_image.instrument is None:
+            if image_utils.get_reduction_level(test_image.meta) != '00':
+                logger.error('Image has nonzero reduction level. Aborting.', extra_tags={'filename': filename})
+                need_to_process = False
+            elif test_image.instrument is None:
                 logger.error('This queue message has an instrument that is not currently in the DB. Aborting:',
                              extra_tags={'filename': filename})
                 need_to_process = False

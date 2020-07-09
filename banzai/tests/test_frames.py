@@ -1,10 +1,12 @@
 import pytest
 import numpy as np
 from astropy.table import Table
+from astropy.io.fits import ImageHDU, Header
 
 from banzai.utils.image_utils import Section
 from banzai.data import CCDData, DataTable
 from banzai.tests.utils import FakeCCDData, FakeLCOObservationFrame, FakeContext
+from banzai.lco import LCOFrameFactory
 
 pytestmark = pytest.mark.frames
 
@@ -12,6 +14,17 @@ pytestmark = pytest.mark.frames
 @pytest.fixture(scope='module')
 def set_random_seed():
     np.random.seed(10031312)
+
+
+def test_update_trimsec_fs01():
+    test_header = Header({'TRIMSEC': '[11:2055,19:2031]',
+                          'DATASEC': '[1:2048,1:2048]',
+                          'INSTRUME': 'fs01'})
+    test_hdu = ImageHDU(data=np.ones(10), header=test_header)
+    LCOFrameFactory._update_fs01_sections(test_hdu)
+
+    assert test_hdu.header.get('TRIMSEC') == '[2:2046,4:2016]'
+    assert test_hdu.header.get('DATASEC') == '[10:2056,16:2032]'
 
 
 def test_ccd_data_to_fits():
@@ -29,6 +42,14 @@ def test_exposure_to_fits_reorder_fpack():
     context = FakeContext()
     context.fpack = True
     assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == [None, 'SCI', 'CAT', 'BPM', 'ERR']
+
+
+def test_exposure_to_fits_reorder_fpack_missing_cat():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'})]
+    test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
+    context = FakeContext()
+    context.fpack = True
+    assert [hdu.header.get('EXTNAME') for hdu in test_frame.to_fits(context)] == [None, 'SCI', 'BPM', 'ERR']
 
 
 def test_exposure_to_fits_reorder_no_fpack():
@@ -81,13 +102,11 @@ def test_subtract():
 
 
 def test_uncertainty_propagation_on_divide():
-    data1 = FakeCCDData(data=np.array([2, 2]), uncertainty=np.array([2, 2]), meta={'SATURATE': 6, 'GAIN': 4, 'MAXLIN': 2})
-    data2 = FakeCCDData(data=np.array([1, 1]), uncertainty=np.array([2, 2]), meta={'SATURATE': 3, 'GAIN': 2, 'MAXLIN': 1})
+    data1 = FakeCCDData(data=np.array([4.0, 4.0]), uncertainty=np.array([2.0, 2.0]), meta={'SATURATE': 6, 'GAIN': 4, 'MAXLIN': 2})
+    data2 = FakeCCDData(data=np.array([2.0, 2.0]), uncertainty=np.array([2.0, 2.0]), meta={'SATURATE': 3, 'GAIN': 2, 'MAXLIN': 1})
     data1 /= data2
-    assert np.allclose(data1.data, 2)
-    assert np.allclose(data1.uncertainty, 2*np.sqrt(5))
-    for key in ['SATURATE', 'GAIN', 'MAXLIN']:
-        assert np.isclose(data1.meta[key], 2)
+    assert np.allclose(data1.data, 2.0)
+    assert np.allclose(data1.uncertainty, np.sqrt(5))
 
 
 def test_uncertainty_propagation_on_subtract():

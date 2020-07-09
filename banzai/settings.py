@@ -44,15 +44,16 @@ CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'binning'],
                             'BPM': ['configuration_mode', 'binning']}
 
 LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
-              'DARK': 'banzai.bias.BiasSubtractor', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
-              'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None}
+              'DARK': 'banzai.uncertainty.PoissonInitializer', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
+              'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None, 'EXPERIMENTAL': None}
 
 EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
                 'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkComparer'],
                 'SKYFLAT': ['banzai.flats.FlatNormalizer', 'banzai.qc.PatternNoiseDetector',
                             'banzai.flats.FlatComparer'],
                 'STANDARD': None,
-                'EXPOSE': None}
+                'EXPOSE': None,
+                'EXPERIMENTAL': None}
 
 CALIBRATION_STACKER_STAGES = {'BIAS': ['banzai.bias.BiasMaker'],
                               'DARK': ['banzai.dark.DarkMaker'],
@@ -118,13 +119,14 @@ DATA_RELEASE_DELAY = 365
 # Proposal ids for data that should be public instantly. Should all be lowercase
 PUBLIC_PROPOSALS = ['calibrate', 'standard', '*epo*', 'pointing']
 
-SUPPORTED_FRAME_TYPES = ['BPM', 'BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'EXPERIMENTAL']
+SUPPORTED_FRAME_TYPES = ['BPM', 'BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD']
 
 REDUCED_DATA_EXTENSION_ORDERING = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                    'DARK': ['SCI', 'BPM', 'ERR'],
                                    'SKYFLAT': ['SCI', 'BPM', 'ERR'],
                                    'EXPOSE': ['SCI', 'CAT', 'BPM', 'ERR'],
-                                   'STANDARD': ['SCI', 'CAT', 'BPM', 'ERR']}
+                                   'STANDARD': ['SCI', 'CAT', 'BPM', 'ERR'],
+                                   'EXPERIMENTAL': ['SCI', 'CAT', 'BPM', 'ERR']}
 
 MASTER_CALIBRATION_EXTENSION_ORDER = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                       'DARK': ['SCI', 'BPM', 'ERR'],

@@ -164,3 +164,7 @@ class FakeCalImage:
         self.frameid = 1234
         self.filepath = '/tmp/'
         self.filename = 'test.fits'
+
+
+class FakeImage(FakeCalImage):
+    pass

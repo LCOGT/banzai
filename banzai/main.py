@@ -224,16 +224,34 @@ def add_instrument():
     parser.add_argument("--site", help='Site code (e.g. ogg)', required=True)
     parser.add_argument("--camera", help='Camera (e.g. kb95)', required=True)
     parser.add_argument("--name", help='Instrument name (e.g kb05, nres03)', required=True)
-    parser.add_argument("--camera-type", dest='camera_type',
-                        help="Camera type (e.g. 1m0-SciCam-Sinistro)", required=True)
+    parser.add_argument("--instrument-type", dest='instrument_type',
+                        help="Instrument type (e.g. 1m0-SciCam-Sinistro)", required=True)
     parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
                         help='Database address: Should be in SQLAlchemy format')
     args = parser.parse_args()
     instrument = {'site': args.site,
                   'camera': args.camera,
-                  'type': args.camera_type,
+                  'type': args.instrument_type,
                   'name': args.name}
     dbs.add_instrument(instrument, args.db_address)
+
+
+def add_site():
+    parser = argparse.ArgumentParser(description="Add a new site to the database")
+    parser.add_argument("--site", help='Site code (e.g. ogg)', required=True)
+    parser.add_argument("--longitude", help='Longitude (deg)', required=True)
+    parser.add_argument("--latitude", help='Latitude (deg)', required=True)
+    parser.add_argument("--timezone", help="Time zone relative to UTC", required=True)
+    parser.add_argument("--elevation", help="Elevation of site (m)", required=True)
+    parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
+                        help='Database address: Should be in SQLAlchemy format')
+    args = parser.parse_args()
+    site = {'code': args.site,
+            'longitude': args.longitude,
+            'latitude': args.latitude,
+            'elevation': args.elevation,
+            'timezone': args.timezone}
+    dbs.add_site(site, args.db_address)
 
 
 def mark_frame_as_good():

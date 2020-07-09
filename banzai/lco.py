@@ -398,6 +398,9 @@ class LCOFrameFactory(FrameFactory):
                             associated_data[associated_extension['NAME']] = None
                     if len(hdu.data.shape) > 2:
                         hdu_list += self._munge_data_cube(hdu)
+                    # update datasec/trimsec for fs01
+                    if hdu.header.get('INSTRUME') == 'fs01':
+                        self._update_fs01_sections(hdu)
                     if hdu.data.dtype == np.uint16:
                         hdu.data = hdu.data.astype(np.float64)
                     # check if we need to propagate any header keywords from the primary header
@@ -405,6 +408,9 @@ class LCOFrameFactory(FrameFactory):
                         for keyword in self.primary_header_keys_to_propagate:
                             if keyword in primary_hdu.header and keyword not in hdu.header:
                                 hdu.header[keyword] = primary_hdu.header[keyword]
+                    # For master frames without uncertainties, set to all zeros
+                    if hdu.header.get('ISMASTER', False) and associated_data['uncertainty'] is None:
+                        associated_data['uncertainty'] = np.zeros(hdu.data.shape, dtype=hdu.data.dtype)
                     hdu_list.append(self.data_class(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME'),
                                                     **associated_data))
                 else:
@@ -463,9 +469,9 @@ class LCOFrameFactory(FrameFactory):
                     '0m8': 64000.0 / 4 * 0.851, '0m4': 64000.0 / 4, 'spectral': 125000.0}
 
         default_unbinned_saturation = None
-        for camera_type in defaults:
-            if camera_type in image.instrument.type.lower():
-                default_unbinned_saturation = defaults[camera_type]
+        for instrument_type in defaults:
+            if instrument_type in image.instrument.type.lower():
+                default_unbinned_saturation = defaults[instrument_type]
                 break
 
         for hdu in image.ccd_hdus:
@@ -486,16 +492,33 @@ class LCOFrameFactory(FrameFactory):
             raise MissingSaturate
 
     @staticmethod
+    def _update_fs01_sections(hdu):
+        """
+        Manually update data and trim sections for fs01 spectral camera
+        :param hdu: Astropy ImageHDU
+        """
+        old_section_keywords = {'TRIMSEC': '[11:2055,19:2031]',
+                                'DATASEC': '[1:2048,1:2048]'}
+        new_section_keywords = {'TRIMSEC': '[2:2046,4:2016]',
+                                'DATASEC': '[10:2056,16:2032]'}
+
+        for key in old_section_keywords:
+            if hdu.header[key] == old_section_keywords[key]:
+                hdu.header[key] = new_section_keywords[key]
+
+    @staticmethod
     def _init_detector_sections(image):
         for hdu in image.ccd_hdus:
             if hdu.meta.get('DETSEC', 'UNKNOWN') in ['UNKNOWN', 'N/A']:
                 # DETSEC missing?
                 binning = hdu.meta.get('CCDSUM', image.primary_hdu.meta.get('CCDSUM', '1 1'))
-                detector_section = Section(1,
-                                           max(hdu.data_section.x_start, hdu.data_section.x_stop) * int(binning[0]),
-                                           1,
-                                           max(hdu.data_section.y_start, hdu.data_section.y_stop) * int(binning[2]))
-                hdu.detector_section = detector_section
+                if hdu.data_section is not None:
+                    # use binning from FITS header, bin_x is index 0, bin_y is index 2.
+                    detector_section = Section(1, max(hdu.data_section.x_start, hdu.data_section.x_stop) * int(binning[0]),
+                                               1, max(hdu.data_section.y_start, hdu.data_section.y_stop) * int(binning[2]))
+                    hdu.detector_section = detector_section
+                else:
+                    logger.warning("Data and detector sections are both undefined for image.", image=image)
 
     @staticmethod
     def _init_crosstalk(image):
