@@ -726,7 +726,7 @@
                   "id": 10,
                   "state": "ENABLED",
                   "telescope": "http://configdb.lco.gtn/telescopes/4/?format=json",
-                  "camera_type": {
+                  "instrument_type": {
                     "id": 1,
                     "name": "Autoguider",
                     "code": "Autoguider",
