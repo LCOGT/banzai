@@ -1,3 +1,7 @@
+1.0.2 (2020-07-13)
+-------------------
+- Fix for sqlalchemy DB connections not getting cleaned up
+
 1.0.1 (2020-07-13)
 -------------------
 - Add latitude, longitude and elevation to site database model.
