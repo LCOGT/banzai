@@ -107,6 +107,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def get_output_filename(self, runtime_context) -> str:
         pass
 
+    @abc.abstractmethod
+    def get_output_directory(self, runtime_context) -> str:
+        pass
+
     @property
     @abc.abstractmethod
     def obstype(self):

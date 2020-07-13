@@ -7,7 +7,7 @@ from banzai.stages import Stage
 
 ES_URL = 'http://elasticsearch.lco.gtn:9200'
 
-
+#TODO: Update these to use new FakeLCOObservationFrame
 class FakeElasticsearchContext(FakeContext):
     def __init__(self, *args, **kwargs):
         super(FakeContext, self).__init__(*args, **kwargs)
