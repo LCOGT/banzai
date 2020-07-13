@@ -51,7 +51,6 @@ def get_session(db_address):
         raise
     finally:
         session.close()
-        engine.dispose()
 
 
 class CalibrationImage(Base):
