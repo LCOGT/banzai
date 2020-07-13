@@ -1,3 +1,7 @@
+1.0.1 (2020-07-13)
+-------------------
+- Add latitude, longitude and elevation to site database model.
+
 1.0.0 (2020-06-23)
 -------------------
 - Bump to new major version. Reduced images now include uncertainties.
