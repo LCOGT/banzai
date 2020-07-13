@@ -1,3 +1,8 @@
+1.0.3 (2020-07-13)
+-------------------
+- Adjust to new ConfigDB structure which uses multiple science cameras
+per instrument.
+
 1.0.2 (2020-07-13)
 -------------------
 - Fix for sqlalchemy DB connections not getting cleaned up
