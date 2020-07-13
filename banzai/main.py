@@ -236,6 +236,24 @@ def add_instrument():
     dbs.add_instrument(instrument, args.db_address)
 
 
+def add_site():
+    parser = argparse.ArgumentParser(description="Add a new site to the database")
+    parser.add_argument("--site", help='Site code (e.g. ogg)', required=True)
+    parser.add_argument("--longitude", help='Longitude (deg)', required=True)
+    parser.add_argument("--latitude", help='Latitude (deg)', required=True)
+    parser.add_argument("--timezone", help="Time zone relative to UTC", required=True)
+    parser.add_argument("--elevation", help="Elevation of site (m)", required=True)
+    parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
+                        help='Database address: Should be in SQLAlchemy format')
+    args = parser.parse_args()
+    site = {'code': args.site,
+            'longitude': args.longitude,
+            'latitude': args.latitude,
+            'elevation': args.elevation,
+            'timezone': args.timezone}
+    dbs.add_site(site, args.db_address)
+
+
 def mark_frame_as_good():
     mark_frame("good")
 
