@@ -13,5 +13,4 @@ class GainNormalizer(Stage):
         logger.info('Multiplying by gain', image=image)
         for data in image.ccd_hdus:
             data *= data.gain
-            data.gain /= data.gain
         return image
