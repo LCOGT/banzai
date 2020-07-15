@@ -36,10 +36,8 @@ def get_session(db_address):
     session: SQLAlchemy Database Session
     """
     # Build a new engine for each session. This makes things thread safe.
-    engine = create_engine(db_address)
-    # Copy the metadata object to stop engine collisions. This may be not how sqlalchemy is intended to be used.
-    metadata = copy.deepcopy(Base.metadata)
-    metadata.bind = engine
+    engine = create_engine(db_address, poolclass=pool.NullPool)
+    Base.metadata.bind = engine
 
     # We don't use autoflush typically. I have run into issues where SQLAlchemy would try to flush
     # incomplete records causing a crash. None of the queries here are large, so it should be ok.
@@ -147,18 +145,18 @@ def parse_configdb(configdb_address):
         for enc in site['enclosure_set']:
             for tel in enc['telescope_set']:
                 for ins in tel['instrument_set']:
-                    sci_cam = ins.get('science_camera')
-                    if sci_cam is not None:
-                        instrument = {'site': site['code'],
-                                      'camera': sci_cam['code'],
-                                      'name': ins.get('code'),
-                                      'type': sci_cam['camera_type']['code']}
-                        # hotfix for configdb
-                        if not instrument['name']:
-                            instrument['name'] = instrument['camera']
-                        if instrument['name'] in CAMERAS_FOR_INSTRUMENTS:
-                            instrument['camera'] = CAMERAS_FOR_INSTRUMENTS[instrument['name']]
-                        instruments.append(instrument)
+                    for sci_cam in ins['science_cameras']:
+                        if sci_cam is not None:
+                            instrument = {'site': site['code'],
+                                          'camera': sci_cam['code'],
+                                          'name': ins.get('code'),
+                                          'type': ins['instrument_type']['code']}
+                            # hotfix for configdb
+                            if not instrument['name']:
+                                instrument['name'] = instrument['camera']
+                            if instrument['name'] in CAMERAS_FOR_INSTRUMENTS:
+                                instrument['camera'] = CAMERAS_FOR_INSTRUMENTS[instrument['name']]
+                            instruments.append(instrument)
     return sites, instruments
 
 
