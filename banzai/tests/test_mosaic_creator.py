@@ -7,11 +7,12 @@ from banzai.tests.utils import FakeLCOObservationFrame, FakeCCDData
 
 pytestmark = pytest.mark.mosaic_creator
 
-extension_headers = [{'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[1025:2048,3072:2049]', 'CCDSUM': '2 2'},
-                     {'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[1025:2048,1025:2048]', 'CCDSUM': '2 2'},
-                     {'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,1025:2048]', 'CCDSUM': '2 2'},
-                     {'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,3072:2049]', 'CCDSUM': '2 2'}]
+extension_headers = [{'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[1025:2048,3072:2049]', 'CCDSUM': '2 2', 'OVERSCAN': 8000},
+                     {'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[1025:2048,1025:2048]', 'CCDSUM': '2 2', 'OVERSCAN': 8100},
+                     {'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,1025:2048]', 'CCDSUM': '2 2', 'OVERSCAN': 8050},
+                     {'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,3072:2049]', 'CCDSUM': '2 2', 'OVERSCAN': 8235}]
 
+expected_overscan = ('8000, 8100, 8050, 8235', 'Overscan value that was subtracted')
 
 @pytest.fixture(scope='module')
 def set_random_seed():
@@ -74,7 +75,7 @@ def test_mosaic_maker(set_random_seed):
         bpm_arrays.append(extension_masks)
 
         hdu_list = [FakeCCDData(data=data.copy(),
-                                meta={'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0},
+                                meta={'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'OVERSCAN': 8100},
                                 mask=mask.copy(), memmap=False) for data, mask in zip(extension_data, extension_masks)]
 
         for j in range(4):
@@ -111,6 +112,8 @@ def test_mosaic_maker_for_binned_windowed_mode():
     mosaiced_image = mosaic_creator.do_stage(image)
 
     assert mosaiced_image.data.shape == (1024, 1024)
+    assert mosaiced_image.meta['OVERSCAN'] == expected_overscan
+
     for j, s in enumerate(expected_quad_slices):
         np.testing.assert_allclose(mosaiced_image.data[s], extension_data[j])
         np.testing.assert_allclose(mosaiced_image.mask[s], extension_masks[j])

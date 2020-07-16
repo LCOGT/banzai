@@ -22,13 +22,6 @@ def test_null_input_image():
     assert image is None
 
 
-def test_gain_header_0():
-    gain_normalizer = GainNormalizer(FakeContext())
-    image = gain_normalizer.do_stage(FakeLCOObservationFrame(hdu_list=[FakeCCDData(meta=test_header, gain=0.0)]))
-    for hdu in image.ccd_hdus:
-        assert (hdu.data == np.zeros(hdu.data.shape)).all()
-
-
 def test_gain_1d(set_random_seed):
     nx, ny = 101, 103
     saturation = 65536

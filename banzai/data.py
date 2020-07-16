@@ -138,7 +138,7 @@ class CCDData(Data):
         self.data *= value
         self.uncertainty *= value
         self.meta['SATURATE'] *= value
-        self.meta['GAIN'] *= value
+        self.meta['GAIN'] /= value
         self.meta['MAXLIN'] *= value
         return self
 

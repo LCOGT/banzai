@@ -43,4 +43,4 @@ def test_dark_normalization_is_reasonable(set_random_seed):
     np.testing.assert_allclose(image.primary_hdu.uncertainty, uncertainty / image.exptime, 1e-5)
     assert image.meta['SATURATE'] == saturation_level / image.exptime
     assert image.meta['MAXLIN'] == saturation_level / image.exptime
-    assert image.meta['GAIN'] == gain / image.exptime
+    assert image.meta['GAIN'] == gain * image.exptime

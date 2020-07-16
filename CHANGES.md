@@ -1,3 +1,10 @@
+1.0.4 (2020-07-16)
+-------------------
+- Add MuSCAT Data to end-to-end tests
+- Fix gain normalization bug, where the gain header keywird was not adjusted properly upon image
+normalization.
+- Fix bug which caused OVERSCAN keyword to be discarded for multi-amplifier frames.
+
 1.0.3 (2020-07-13)
 -------------------
 - Adjust to new ConfigDB structure which uses multiple science cameras
