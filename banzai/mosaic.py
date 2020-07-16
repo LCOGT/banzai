@@ -27,6 +27,11 @@ class MosaicCreator(Stage):
         mosaiced_data.saturate = np.min([data.saturate for data in image.ccd_hdus])
         mosaiced_data.max_linearity = np.min([data.max_linearity for data in image.ccd_hdus])
 
+        # Store Overscan to header for each amplifier
+        mosaiced_data.meta['L1STATOV'] = '1' if all([data.meta.get('L1STATOV', '0') for data in image.ccd_hdus]) \
+                                             else '0', 'Status flag for overscan correction'
+        mosaiced_data.meta['OVERSCAN'] = ', '.join([str(data.meta['OVERSCAN']) for data in image.ccd_hdus]), 'Overscan value that was subtracted'
+
         for data in image.ccd_hdus:
             mosaiced_data.copy_in(data)
             image.remove(data)
