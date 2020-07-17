@@ -12,7 +12,8 @@ extension_headers = [{'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC'
                      {'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,1025:2048]', 'CCDSUM': '2 2', 'OVERSCAN': 8050},
                      {'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,3072:2049]', 'CCDSUM': '2 2', 'OVERSCAN': 8235}]
 
-expected_overscan = ('8000, 8100, 8050, 8235', 'Overscan value that was subtracted')
+expected_overscans = [(i, 'Overscan value that was subtracted') for i in ['8000.00', '8100.00', '8050.00', '8235.00']]
+
 
 @pytest.fixture(scope='module')
 def set_random_seed():
@@ -107,12 +108,12 @@ def test_mosaic_maker_for_binned_windowed_mode():
     expected_quad_slices = [(slice(1023, 511, -1), slice(0, 512)), (slice(0, 512), slice(0, 512)),
                             (slice(0, 512), slice(1023, 511, -1)), (slice(1023, 511, -1), slice(1023, 511, -1))]
 
-
     mosaic_creator = MosaicCreator(None)
     mosaiced_image = mosaic_creator.do_stage(image)
 
     assert mosaiced_image.data.shape == (1024, 1024)
-    assert mosaiced_image.meta['OVERSCAN'] == expected_overscan
+    for i in range(4):
+        assert mosaiced_image.meta[f'OVERSCN{i + 1}'] == expected_overscans[i]
 
     for j, s in enumerate(expected_quad_slices):
         np.testing.assert_allclose(mosaiced_image.data[s], extension_data[j])

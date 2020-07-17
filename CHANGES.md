@@ -1,3 +1,7 @@
+1.0.5 (2020-07-17)
+-------------------
+- Changed format of multi-amplifier OVERSCAN keyword to be more FITS compliant
+
 1.0.4 (2020-07-16)
 -------------------
 - Add MuSCAT Data to end-to-end tests
