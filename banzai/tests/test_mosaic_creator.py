@@ -12,7 +12,7 @@ extension_headers = [{'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC'
                      {'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,1025:2048]', 'CCDSUM': '2 2', 'OVERSCAN': 8050},
                      {'SATURATE': 35000, 'MAXLIN': 35000, 'GAIN': 1.0, 'DATASEC': '[1:512,1:512]', 'DETSEC': '[3072:2049,3072:2049]', 'CCDSUM': '2 2', 'OVERSCAN': 8235}]
 
-expected_overscan = ('8000, 8100, 8050, 8235', 'Overscan value that was subtracted')
+expected_overscan = ('[8000.00,8100.00,8050.00,8235.00]', 'Overscan value that was subtracted')
 
 @pytest.fixture(scope='module')
 def set_random_seed():

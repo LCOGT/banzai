@@ -30,7 +30,8 @@ class MosaicCreator(Stage):
         # Store Overscan to header for each amplifier
         mosaiced_data.meta['L1STATOV'] = '1' if all([data.meta.get('L1STATOV', '0') for data in image.ccd_hdus]) \
                                              else '0', 'Status flag for overscan correction'
-        mosaiced_data.meta['OVERSCAN'] = ', '.join([str(data.meta['OVERSCAN']) for data in image.ccd_hdus]), 'Overscan value that was subtracted'
+        overscans = ['{:0.2f}'.format(data.meta.get('OVERSCAN', 0.0)) for data in image.ccd_hdus]
+        mosaiced_data.meta['OVERSCAN'] = f"[{','.join(overscans)}]", 'Overscan value that was subtracted'
 
         for data in image.ccd_hdus:
             mosaiced_data.copy_in(data)
