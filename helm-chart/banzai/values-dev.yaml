@@ -1,0 +1,81 @@
+# Default values for banzai.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Automatically manage worker count within the configured limits. More workers
+# will be started when the CPU usage rises above the configured threshold.
+horizontalPodAutoscaler:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 50
+
+image:
+  repository: docker.lco.global/banzai
+  tag: latest
+  pullPolicy: IfNotPresent
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+CALIBRATE_PROPOSAL_ID: calibrate
+
+OBSERVATION_PORTAL_URL: http://internal-observation-portal.lco.gtn/api/observations/
+
+API_ROOT: "http://archiveapi-dev.dev/"
+
+BUCKET: archivetest2.lco.global
+
+BANZAI_WORKER_LOGLEVEL: "debug"
+
+RAW_DATA_FRAME_URL: "http://archiveapi-internal.prod/frames"
+
+INGESTER_PROCESS_NAME: "banzai-dev"
+
+NO_METRICS: true
+
+OPENTSDB_HOSTNAME: opentsdb.lco.gtn
+
+BOSUN_HOSTNAME: alerts.lco.gtn
+
+FITS_BROKER: rabbitmq.lco.gtn
+
+FITS_EXCHANGE: archived_fits
+
+useDockerizedDatabase: true
+
+postgresql:
+  hostname: "db.example.com"
+  postgresqlUsername: "banzai"
+  postgresqlDatabase: "banzai"
+  existingSecret: "banzai-secrets"
+  service:
+    port: "5432"
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1
+      memory: 512Mi
+
+useDockerizedRabbitMQ: true
+
+rabbitmq:
+  rabbitmq:
+    username: "user"
+    existingPasswordSecret: "banzai-secrets"
+  vhost: ""
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
+
+configdb_url: "http://configdb.lco.gtn/sites/"

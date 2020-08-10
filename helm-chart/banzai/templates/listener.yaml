@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "banzai-nres.fullname" . -}} -listener
+  labels:
+{{ include "banzai-nres.labels" . | indent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "banzai-nres.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "banzai-nres.name" . }}
+        app.kubernetes.io/instance: "{{ .Release.Name }}"
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      containers:
+        - name: 'banzai-nres-listener'
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_nres_run_realtime_pipeline"
+            - "--post-to-archive"
+            - "--post-to-elasticsearch"
+            - "--fpack"
+            - "--rlevel=91"
+            - "--db-address=$(DB_ADDRESS)"
+            - "--broker-url=$(FITS_BROKER)"
+            - "--no-file-cache"
+          env:
+            {{- include "banzai-nres.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+        - name: 'banzai-nres-scheduler'
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_nres_start_stacking_scheduler"
+            - "--post-to-archive"
+            - "--post-to-elasticsearch"
+            - "--fpack"
+            - "--rlevel=91"
+            - "--db-address=$(DB_ADDRESS)"
+            - "--log-level=info"
+            - "--no-file-cache"
+          env:
+            {{- include "banzai-nres.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

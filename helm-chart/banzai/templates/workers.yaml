@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "banzai-nres.fullname" . -}} -workers
+  labels:
+{{ include "banzai-nres.labels" . | indent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "banzai-nres.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "banzai-nres.name" . }}
+        app.kubernetes.io/instance: "{{ .Release.Name }}"
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{ if .Values.useDockerizedDatabase }}
+      initContainers:
+        # Create the db if it doesn't exist
+        - name: banzai-nres-db-init
+          image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy}}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_create_db"
+            - "--db-address=$(DB_ADDRESS)"
+          # Populate the instruments table
+          env:
+            {{- include "banzai-nres.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+        # Populate the bpms that are in the archive
+        - name: banzai-nres-instrument-init
+          image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy}}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_update_db"
+            - "--db-address=$(DB_ADDRESS)"
+            - "--configdb-address={{ .Values.configdb_url }}"
+          #create the db if it doesn't exist and populate the bpms in the db.
+          env:
+            {{- include "banzai-nres.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+        - name: banzai-nres-bpm-init
+          image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy}}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_nres_populate_bpms"
+            - "--db-address=$(DB_ADDRESS)"
+          # create the db if it doesn't exist and populate the bpms in the db.
+          env:
+            {{- include "banzai-nres.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+    {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "celery"
+            - "-A"
+            - "banzai"
+            - "worker"
+            - "--concurrency"
+            - "1"
+            - "-l"
+            - "info"
+          env:
+            - name: OMP_NUM_THREADS
+              value: "2"
+            {{- include "banzai-nres.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.3"
+              memory: "1Gi"
+            limits:
+              cpu: "3"
+              memory: "4Gi"
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
