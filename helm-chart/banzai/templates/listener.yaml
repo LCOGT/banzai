@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "banzai-nres.fullname" . -}} -listener
+  name: {{ include "banzai.fullname" . -}} -listener
   labels:
-{{ include "banzai-nres.labels" . | indent 4 }}
+{{ include "banzai.labels" . | indent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "banzai-nres.name" . }}
+      app.kubernetes.io/name: {{ include "banzai.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "banzai-nres.name" . }}
+        app.kubernetes.io/name: {{ include "banzai.name" . }}
         app.kubernetes.io/instance: "{{ .Release.Name }}"
     spec:
     {{- with .Values.imagePullSecrets }}
@@ -21,14 +21,14 @@ spec:
         {{- toYaml . | nindent 8 }}
     {{- end }}
       containers:
-        - name: 'banzai-nres-listener'
+        - name: 'banzai-listener'
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
             runAsUser: 10087
             runAsGroup: 10000
           command:
-            - "banzai_nres_run_realtime_pipeline"
+            - "banzai_run_realtime_pipeline"
             - "--post-to-archive"
             - "--post-to-elasticsearch"
             - "--fpack"
@@ -37,7 +37,7 @@ spec:
             - "--broker-url=$(FITS_BROKER)"
             - "--no-file-cache"
           env:
-            {{- include "banzai-nres.Env" . | nindent 12 }}
+            {{- include "banzai.Env" . | nindent 12 }}
           resources:
             requests:
               cpu: "0.1"
@@ -45,14 +45,14 @@ spec:
             limits:
               cpu: "1"
               memory: "1Gi"
-        - name: 'banzai-nres-scheduler'
+        - name: 'banzai-calibration-scheduler'
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
             runAsUser: 10087
             runAsGroup: 10000
           command:
-            - "banzai_nres_start_stacking_scheduler"
+            - "banzai_automate_stack_calibrations"
             - "--post-to-archive"
             - "--post-to-elasticsearch"
             - "--fpack"
@@ -61,7 +61,7 @@ spec:
             - "--log-level=info"
             - "--no-file-cache"
           env:
-            {{- include "banzai-nres.Env" . | nindent 12 }}
+            {{- include "banzai.Env" . | nindent 12 }}
           resources:
             requests:
               cpu: "0.1"

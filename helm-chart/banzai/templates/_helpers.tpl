@@ -35,8 +35,8 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "banzai.labels" -}}
-app.kubernetes.io/name: {{ include "banzai-nres.name" . }}
-helm.sh/chart: {{ include "banzai-nres.chart" . }}
+app.kubernetes.io/name: {{ include "banzai.name" . }}
+helm.sh/chart: {{ include "banzai.chart" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}

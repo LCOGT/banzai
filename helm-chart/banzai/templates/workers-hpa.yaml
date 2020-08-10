@@ -2,9 +2,9 @@
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "banzai-nres.fullname" . -}} -workers
+  name: {{ include "banzai.fullname" . -}} -workers
   labels:
-{{ include "banzai-nres.labels" . | indent 4 }}
+{{ include "banzai.labels" . | indent 4 }}
 spec:
 {{- with .Values.horizontalPodAutoscaler }}
   minReplicas: {{ .minReplicas }}
@@ -14,5 +14,5 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "banzai-nres.fullname" . -}} -workers
+    name: {{ include "banzai.fullname" . -}} -workers
 {{- end }}
