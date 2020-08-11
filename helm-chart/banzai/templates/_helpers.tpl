@@ -127,6 +127,8 @@ Define shared environment variables
   value: {{ .Values.FITS_BROKER | quote }}
 - name: FITS_EXCHANGE
   value: {{ .Values.FITS_EXCHANGE | quote }}
+- name: QUEUE_NAME
+  value: {{ .Values.QUEUE_NAME | quote }}
 - name: INGESTER_PROCESS_NAME
   value: {{ .Values.INGESTER_PROCESS_NAME | quote }}
 - name: POSTPROCESS_FILES

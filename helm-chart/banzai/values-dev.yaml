@@ -45,6 +45,8 @@ FITS_BROKER: rabbitmq.lco.gtn
 
 FITS_EXCHANGE: archived_fits
 
+QUEUE_NAME: banzai_dev_pipeline
+
 useDockerizedDatabase: true
 
 postgresql:
