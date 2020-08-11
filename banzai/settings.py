@@ -96,7 +96,7 @@ ARCHIVE_AUTH_TOKEN = {'Authorization': f'Token {os.getenv("AUTH_TOKEN")}'}
 FITS_EXCHANGE = os.getenv('FITS_EXCHANGE', 'archived_fits')
 
 RAW_DATA_FRAME_URL = os.getenv('RAW_DATA_FRAME_URL', ARCHIVE_FRAME_URL)
-RAW_DATA_AUTH_TOKEN = os.getenv('RAW_DATA_AUTH_TOKEN', ARCHIVE_AUTH_TOKEN)
+RAW_DATA_AUTH_TOKEN = {'Authorization' : f'Token {os.getenv("RAW_DATA_AUTH_TOKEN", ARCHIVE_AUTH_TOKEN)}'}
 
 CALIBRATE_PROPOSAL_ID = os.getenv('CALIBRATE_PROPOSAL_ID', 'calibrate')
 
