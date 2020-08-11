@@ -69,7 +69,7 @@ spec:
             runAsUser: 10087
             runAsGroup: 10000
           command:
-            - "add_bpms_from_archive"
+            - "banzai_populate_bpms"
             - "--db-address=$(DB_ADDRESS)"
           # create the db if it doesn't exist and populate the bpms in the db.
           env:
