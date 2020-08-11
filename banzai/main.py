@@ -319,10 +319,14 @@ def add_bpms_from_archive():
     frame_factory = import_utils.import_attribute(settings.FRAME_FACTORY)()
     for frame in results:
         frame['frameid'] = frame['id']
-        bpm_image = frame_factory.open(frame, args)
-        if bpm_image is not None:
-            bpm_image.is_master = True
-            dbs.save_calibration_info(frame['filename'], bpm_image, args.db_address)
+        try:
+            bpm_image = frame_factory.open(frame, args)
+            if bpm_image is not None:
+                bpm_image.is_master = True
+                dbs.save_calibration_info(frame['filename'], bpm_image, args.db_address)
+        except Exception:
+            logger.error(f"BPM not added to database: {logs.format_exception()}", extra_tags={'filename': frame.get('filename')})
+
 
 
 def create_db():
