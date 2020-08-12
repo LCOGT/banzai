@@ -20,6 +20,69 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+    {{ if .Values.useDockerizedDatabase }}
+      initContainers:
+        # Create the db if it doesn't exist
+        - name: banzai-db-init
+          image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy}}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_create_db"
+            - "--db-address=$(DB_ADDRESS)"
+          # Populate the instruments table
+          env:
+            {{- include "banzai.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+        # Populate the bpms that are in the archive
+        - name: banzai-instrument-init
+          image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy}}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_update_db"
+            - "--db-address=$(DB_ADDRESS)"
+            - "--configdb-address={{ .Values.configdb_url }}"
+          #create the db if it doesn't exist and populate the bpms in the db.
+          env:
+            {{- include "banzai.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+        - name: banzai-bpm-init
+          image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy}}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_populate_bpms"
+            - "--db-address=$(DB_ADDRESS)"
+          # create the db if it doesn't exist and populate the bpms in the db.
+          env:
+            {{- include "banzai.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+    {{- end }}
       containers:
         - name: 'banzai-listener'
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
