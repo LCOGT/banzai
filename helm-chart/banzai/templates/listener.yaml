@@ -1,0 +1,147 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "banzai.fullname" . -}} -listener
+  labels:
+{{ include "banzai.labels" . | indent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "banzai.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "banzai.name" . }}
+        app.kubernetes.io/instance: "{{ .Release.Name }}"
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{ if .Values.useDockerizedDatabase }}
+      initContainers:
+        # Create the db if it doesn't exist
+        - name: banzai-db-init
+          image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy}}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_create_db"
+            - "--db-address=$(DB_ADDRESS)"
+          # Populate the instruments table
+          env:
+            {{- include "banzai.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+        # Populate the bpms that are in the archive
+        - name: banzai-instrument-init
+          image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy}}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_update_db"
+            - "--db-address=$(DB_ADDRESS)"
+            - "--configdb-address={{ .Values.configdb_url }}"
+          #create the db if it doesn't exist and populate the bpms in the db.
+          env:
+            {{- include "banzai.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+        - name: banzai-bpm-init
+          image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy}}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_populate_bpms"
+            - "--db-address=$(DB_ADDRESS)"
+          # create the db if it doesn't exist and populate the bpms in the db.
+          env:
+            {{- include "banzai.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+    {{- end }}
+      containers:
+        - name: 'banzai-listener'
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_run_realtime_pipeline"
+            - "--post-to-archive"
+            - "--post-to-elasticsearch"
+            - "--fpack"
+            - "--rlevel=91"
+            - "--db-address=$(DB_ADDRESS)"
+            - "--broker-url=$(FITS_BROKER)"
+            - "--queue-name=$(QUEUE_NAME)"
+            - "--no-file-cache"
+          env:
+            {{- include "banzai.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+        - name: 'banzai-calibration-scheduler'
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsUser: 10087
+            runAsGroup: 10000
+          command:
+            - "banzai_automate_stack_calibrations"
+            - "--post-to-archive"
+            - "--post-to-elasticsearch"
+            - "--fpack"
+            - "--rlevel=91"
+            - "--db-address=$(DB_ADDRESS)"
+            - "--log-level=info"
+            - "--no-file-cache"
+          env:
+            {{- include "banzai.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "128M"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
