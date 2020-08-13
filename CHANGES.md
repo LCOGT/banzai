@@ -1,4 +1,4 @@
-1.0.5 (2020-08-13)
+1.0.6 (2020-08-13)
 -------------------
 - Add helm chart and development kubernetes deployment
 
