@@ -1,3 +1,7 @@
+1.0.5 (2020-08-13)
+-------------------
+- Add helm chart and development kubernetes deployment
+
 1.0.5 (2020-07-17)
 -------------------
 - Changed format of multi-amplifier OVERSCAN keyword to be more FITS compliant
