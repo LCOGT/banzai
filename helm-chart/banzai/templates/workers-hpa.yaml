@@ -1,0 +1,18 @@
+{{- if .Values.horizontalPodAutoscaler.enabled -}}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "banzai.fullname" . -}} -workers
+  labels:
+{{ include "banzai.labels" . | indent 4 }}
+spec:
+{{- with .Values.horizontalPodAutoscaler }}
+  minReplicas: {{ .minReplicas }}
+  maxReplicas: {{ .maxReplicas }}
+  targetCPUUtilizationPercentage: {{ .targetCPUUtilizationPercentage }}
+{{- end }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "banzai.fullname" . -}} -workers
+{{- end }}

@@ -1,0 +1,7 @@
+This chart deploys the BANZAI pipeline. This can deploy to dev or prod depending on which values file is used.
+
+This creates one listener/beats scheduler pod and a set of celery worker pods.
+
+See https://github.com/lcogt/banzai for the code and documentation.
+
+Contact Curtis McCully (cmccully@lco.global) with issues.
