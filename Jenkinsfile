@@ -46,7 +46,7 @@ pipeline {
 		stage('DeployDevStack') {
 			when {
 				anyOf {
-				branch 'feature/helm-deployment'
+				branch 'dev'
 				}
 			}
 		    steps {
