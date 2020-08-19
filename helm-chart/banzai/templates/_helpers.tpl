@@ -97,18 +97,18 @@ Define shared environment variables
 - name: RETRY_DELAY
   value: "600000"
 - name: CALIBRATE_PROPOSAL_ID
-  value: {{ .Values.CALIBRATE_PROPOSAL_ID | quote }}
+  value: {{ .Values.calibrateProposalId | quote }}
 - name: OBSERVATION_PORTAL_URL
-  value: {{ .Values.OBSERVATION_PORTAL_URL | quote }}
+  value: {{ .Values.observationPortalUrl | quote }}
 - name: API_ROOT
-  value:  {{ .Values.API_ROOT | quote }}
+  value:  {{ .Values.apiRoot | quote }}
 - name: AUTH_TOKEN
   valueFrom:
     secretKeyRef:
       name: banzai-secrets
       key: AUTH_TOKEN
 - name: BUCKET
-  value: {{ .Values.BUCKET | quote }}
+  value: {{ .Values.s3Bucket | quote }}
 - name: AWS_ACCESS_KEY_ID
   valueFrom:
     secretKeyRef:
@@ -120,23 +120,23 @@ Define shared environment variables
       name: banzai-secrets
       key: AWS_SECRET_ACCESS_KEY
 - name: OPENTSDB_HOSTNAME
-  value: {{ .Values.OPENTSDB_HOSTNAME | quote }}
+  value: {{ .Values.opentsdbHostname | quote }}
 - name: BOSUN_HOSTNAME
-  value: {{ .Values.BOSUN_HOSTNAME | quote }}
+  value: {{ .Values.bosunHostname | quote }}
 - name: FITS_BROKER
-  value: {{ .Values.FITS_BROKER | quote }}
+  value: {{ .Values.fitsBroker |  quote }}
 - name: FITS_EXCHANGE
-  value: {{ .Values.FITS_EXCHANGE | quote }}
+  value: {{ .Values.fitsExchange | quote }}
 - name: QUEUE_NAME
-  value: {{ .Values.QUEUE_NAME | quote }}
+  value: {{ .Values.queueName | quote }}
 - name: INGESTER_PROCESS_NAME
-  value: {{ .Values.INGESTER_PROCESS_NAME | quote }}
+  value: {{ .Values.ingesterProcessName | quote }}
 - name: POSTPROCESS_FILES
   value: "False"
 - name: BANZAI_WORKER_LOGLEVEL
-  value: {{ .Values.BANZAI_WORKER_LOGLEVEL | quote }}
+  value: {{ .Values.banzaiWorkerLogLevel | quote }}
 - name: RAW_DATA_FRAME_URL
-  value: {{ .Values.RAW_DATA_FRAME_URL | quote }}
+  value: {{ .Values.rawDataFrameUrl | quote }}
 - name: RAW_DATA_AUTH_TOKEN
   valueFrom:
     secretKeyRef:
