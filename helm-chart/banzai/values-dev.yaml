@@ -49,6 +49,10 @@ QUEUE_NAME: banzai_dev_pipeline
 
 useDockerizedDatabase: true
 
+# cron job to periodically update instrument table in BANZAI DB
+cronjob:
+  schedule: "*/5 * * * *"
+
 postgresql:
   hostname: "db.example.com"
   postgresqlUsername: "banzai"

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: CronJob
+metadata:
+  name: {{ include "banzai.fullname" . }}-db-instrument-update
+  labels:
+{{ include "banzai.labels" . | indent 4 }}
+    app.kubernetes.io/component: "cronjob"
+spec:
+  concurrencyPolicy: "Forbid"
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 3
+  startingDeadlineSeconds: 120
+  schedule: "{{ .Values.cronjob.schedule }}"
+  jobTemplate:
+    metadata:
+      labels:
+{{ include "banzai.labels" . | indent 8 }}
+        app.kubernetes.io/component: "cronjob"
+    spec:
+      activeDeadlineSeconds: 3600
+      template:
+        metadata:
+          labels:
+{{ include "banzai.labels" . | indent 12 }}
+            app.kubernetes.io/component: "cronjob"
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: {{ .Chart.Name }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              env:
+                {{- include "banzai.Env" . | nindent 12 }}
+              resources:
+                requests:
+                  cpu: "0.1"
+                  memory: "128M"
+                limits:
+                  cpu: "1"
+                  memory: "1Gi"
+              command:
+                - "banzai_update_db"
+                - "--db-address=$(DB_ADDRESS)"
+                - "--configdb-address={{ .Values.configdb_url }}"
+        {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 16 }}
+        {{- end }}
+        {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 16 }}
+        {{- end }}
+        {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 16 }}
+        {{- end }}
