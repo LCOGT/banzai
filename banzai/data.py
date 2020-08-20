@@ -31,15 +31,15 @@ class Data(metaclass=abc.ABCMeta):
                 raise ValueError('Mask has different number of dimensions from the data.')
 
     def _init_array(self, array: np.array = None, dtype: Type = None):
-        if not self.memmap:
+        if not self.memmap and array is not None:
             return array
-        file_handle = tempfile.NamedTemporaryFile('w+b')
         if array is None:
-            shape = self.data.shape
+            shape = np.array(self.data).shape
             if dtype is None:
                 dtype = self.data.dtype
             array = np.zeros(shape, dtype=dtype)
-        if array.size > 0:
+        if array.size > 0 and self.memmap:
+            file_handle = tempfile.NamedTemporaryFile('w+b')
             memory_mapped_array = np.memmap(file_handle, shape=array.shape, dtype=array.dtype, mode='readwrite')
             memory_mapped_array.ravel()[:] = array.ravel()[:]
             self._file_handles.append(file_handle)
