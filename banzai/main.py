@@ -17,7 +17,7 @@ from types import ModuleType
 
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
-from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils
+from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
 from banzai.celery import process_image, app, schedule_calibration_stacking
 from celery.schedules import crontab
 import celery
@@ -296,9 +296,22 @@ def add_bpm():
     add_settings_to_context(args, settings)
     logs.set_log_level(args.log_level)
     frame_factory = import_utils.import_attribute(settings.FRAME_FACTORY)()
-    bpm_image = frame_factory.open({'path': args.filename}, args)
-    bpm_image.is_master = True
-    dbs.save_calibration_info(args.filename, bpm_image, args.db_address)
+    try:
+        bpm_image = frame_factory.open({'path': args.filename}, args)
+    except Exception:
+        logger.error(f"BPM not able to be opened by BANZAI. Aborting... {logs.format_exception()}", extra_tags={'filename': args.filename})
+        bpm_image = None
+
+    # upload BPM via ingester
+    if bpm_image is not None:
+        with open(args.filename) as f:
+            logger.debug("Posting BPM to s3 archive")
+            ingester_response = file_utils.post_to_ingester(f, bpm_image, args.filename)
+
+        logger.debug("File posted to s3 archive. Saving to database.", extra_tags={'frameid': ingester_response['frameid']})
+        bpm_image.frame_id = ingester_response['frameid']
+        bpm_image.is_bad = False
+        dbs.save_calibration_info(args.filename, bpm_image, args.db_address)
 
 
 def add_bpms_from_archive():
