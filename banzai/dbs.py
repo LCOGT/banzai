@@ -36,7 +36,7 @@ def get_session(db_address):
     session: SQLAlchemy Database Session
     """
     # Build a new engine for each session. This makes things thread safe.
-    engine = create_engine(db_address, poolclass=pool.NullPool)
+    engine = create_engine(db_address, poolclass=pool.NullPool, connect_args={'timeout': 30})
     Base.metadata.bind = engine
 
     # We don't use autoflush typically. I have run into issues where SQLAlchemy would try to flush
