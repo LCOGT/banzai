@@ -560,7 +560,7 @@ class LCOFrameFactory(FrameFactory):
         primary_hdu_gain = hdu.header['GAIN']
         gain_comment = hdu.header.comments['GAIN']
         hdu.header.remove('GAIN')
-        hdu_list = [HeaderOnly(meta=hdu.header)]
+        hdu_list = [HeaderOnly(meta=fits_utils.sanitize_header(hdu.header))]
         # We need to properly set the datasec and detsec keywords in case we didn't read out the
         # middle row (the "Missing Row Problem").
         sinistro_datasecs = {'missing': ['[1:2048,1:2048]', '[1:2048,1:2048]',

@@ -11,7 +11,6 @@ import os.path
 import logging
 import datetime
 from dateutil.parser import parse
-import copy
 import numpy as np
 import requests
 from sqlalchemy import create_engine, pool, type_coerce, cast
@@ -36,7 +35,10 @@ def get_session(db_address):
     session: SQLAlchemy Database Session
     """
     # Build a new engine for each session. This makes things thread safe.
-    engine = create_engine(db_address, poolclass=pool.NullPool, connect_args={'timeout': 30})
+    if 'sqlite' in db_address:
+        engine = create_engine(db_address, poolclass=pool.NullPool, connect_args={'timeout': 30})
+    else:
+        engine = create_engine(db_address)
     Base.metadata.bind = engine
 
     # We don't use autoflush typically. I have run into issues where SQLAlchemy would try to flush
@@ -449,8 +451,7 @@ def populate_instrument_tables(db_address, configdb_address):
     added to the network.
     """
     sites, instruments = parse_configdb(configdb_address=configdb_address)
-    with get_session(db_address=db_address) as db_session:
-        for site in sites:
-            add_site(site, db_address)
+    for site in sites:
+        add_site(site, db_address)
     for instrument in instruments:
         add_instrument(instrument, db_address)
