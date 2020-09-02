@@ -304,8 +304,7 @@ def add_bpm():
 
     # upload BPM via ingester
     if bpm_image is not None:
-        with open(args.filename) as f:
-            f.seek(0)
+        with open(args.filename, 'rb') as f:
             logger.debug("Posting BPM to s3 archive")
             ingester_response = file_utils.post_to_ingester(f, bpm_image, args.filename)
 
