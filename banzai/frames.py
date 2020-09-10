@@ -17,7 +17,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def __init__(self, hdu_list: list, file_path: str, frame_id: int = None, hdu_order: list = None):
         self._hdus = hdu_list
         self._file_path = file_path
-        self.ra, self.dec = fits_utils.parse_ra_dec(hdu_list[0].meta)
+        self.ra, self.dec = self.parse_ra_dec()
         self.instrument = None
         self.frame_id = frame_id
         self.hdu_order = hdu_order
@@ -150,6 +150,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         else:
             float_or_int = 'int'
         return getattr(np, f'{float_or_int}{size}')
+
+    @abc.abstractmethod
+    def parse_ra_dec(self):
+        pass
 
     def write(self, runtime_context):
         output_filename = self.get_output_filename(runtime_context)

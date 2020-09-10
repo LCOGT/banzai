@@ -8,6 +8,8 @@ from astropy.io import fits
 
 from astropy.time import Time
 from astropy.table import Table
+from astropy.coordinates import SkyCoord
+from astropy import units
 
 from banzai import dbs
 from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData
@@ -112,6 +114,29 @@ class LCOObservationFrame(ObservationFrame):
     @property
     def exptime(self):
         return self.primary_hdu.meta.get('EXPTIME', 0.0)
+
+    def parse_ra_dec(self):
+        try:
+            coord = SkyCoord(self.meta.get('CRVAl1'), self.meta.get('CRVAL2'), unit=(units.degree, units.degree))
+            ra = coord.ra.deg
+            dec = coord.dec.deg
+        except (ValueError, TypeError):
+            # Fallback to RA and DEC
+            try:
+                coord = SkyCoord(self.meta.get('RA'), self.meta.get('DEC'), unit=(units.hourangle, units.degree))
+                ra = coord.ra.deg
+                dec = coord.dec.deg
+            except (ValueError, TypeError):
+                # Fallback to Cat-RA and CAT-DEC
+                try:
+                    coord = SkyCoord(self.meta.get('CAT-RA'), self.meta.get('CAT-DEC'), unit=(units.hourangle, units.degree))
+                    ra = coord.ra.deg
+                    dec = coord.dec.deg
+                except (ValueError, TypeError) as e:
+                    logger.error('Could not get initial pointing guess. {0}'.format(e),
+                                 extra_tags={'filename': self.meta.get('ORIGNAME')})
+                    ra, dec = np.nan, np.nan
+            return ra, dec
 
     def save_processing_metadata(self, context):
         datecreated = datetime.datetime.utcnow()
