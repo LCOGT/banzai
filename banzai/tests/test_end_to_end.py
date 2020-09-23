@@ -6,6 +6,7 @@ import pytest
 import mock
 import time
 from datetime import datetime
+
 from dateutil.parser import parse
 
 from banzai import settings
@@ -14,6 +15,7 @@ from banzai.celery import app, schedule_calibration_stacking
 from banzai.dbs import get_session, CalibrationImage, get_timezone, populate_instrument_tables
 from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
+from banzai.main import add_bpm
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.utils.data import get_pkg_data_filename
 
@@ -163,13 +165,16 @@ def observation_portal_side_effect(*args, **kwargs):
 
 @pytest.mark.e2e
 @pytest.fixture(scope='module')
+@mock.patch('banzai.main.argparse.ArgumentParser.parse_args')
+@mock.patch('banzai.main.file_utils.post_to_ingester', return_value={'frameid': None})
 @mock.patch('banzai.dbs.requests.get', return_value=FakeResponse(CONFIGDB_FILENAME))
-def init(configdb):
+def init(configdb, mock_ingester, mock_args):
     os.system(f'banzai_create_db --db-address={os.environ["DB_ADDRESS"]}')
     populate_instrument_tables(db_address=os.environ["DB_ADDRESS"], configdb_address='http://fakeconfigdb')
     for instrument in INSTRUMENTS:
-        for bpm_filename in glob(os.path.join(DATA_ROOT, instrument, 'bpm/*bpm*')):
-            os.system(f'banzai_add_bpm --filename {bpm_filename} --db-address={os.environ["DB_ADDRESS"]}')
+        for bpm_filepath in glob(os.path.join(DATA_ROOT, instrument, 'bpm/*bpm*')):
+            mock_args.return_value = argparse.Namespace(filepath=bpm_filepath, db_address=os.environ['DB_ADDRESS'], log_level='debug')
+            add_bpm()
 
 
 @pytest.mark.e2e
