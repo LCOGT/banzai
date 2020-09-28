@@ -39,6 +39,7 @@ def _image_to_tags(image):
     tags = {'filename': os.path.basename(getattr(image, 'filename', '')),
             'site': getattr(instrument, 'site', ''),
             'instrument': getattr(instrument, 'name', ''),
+            'camera': getattr(instrument, 'camera', ''),
             'epoch': date_utils.epoch_date_to_string(getattr(image, 'epoch', '-')),
             'request_num': getattr(image, 'request_number', '-'),
             'obstype': getattr(image, 'obstype', ''),
