@@ -21,7 +21,7 @@ RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
 
 COPY --chown=10087:10000 . /lco/banzai
 
-RUN pip install --global-option=build_ext /lco/banzai/ --no-cache-dir
+RUN pip install -e /lco/banzai/ --no-cache-dir
 
 USER archive
 

@@ -67,7 +67,7 @@ def run_end_to_end_tests():
     parser.add_argument('--code-path', dest='code_path', help='Path to directory with setup.py')
     args = parser.parse_args()
     os.chdir(args.code_path)
-    command = 'python setup.py test -a "--durations=0 --junitxml={junit_file} -m {marker}"'
+    command = 'pytest --durations=0 --junitxml={junit_file} -m {marker}'
 
     # Bitshift by 8 because Python encodes exit status in the leftmost 8 bits
     return os.system(command.format(junit_file=args.junit_file, marker=args.marker)) >> 8
