@@ -38,7 +38,7 @@ env:
         # The latter can be used for example to pass arguments to pytest.
         - TOXENV='test'
         - TOXARGS='-v'
-        - TOXPOSARGS='-m not e2e'
+        - TOXPOSARGS=''
 
         # The following is needed to avoid issues if e.g. Matplotlib tries
         # to open a GUI window.
@@ -75,7 +75,7 @@ matrix:
           python: 3.8
           name: Documentation build
           stage: Comprehensive tests
-          env: TOXENV=build_docs TOXPOSARGS=''
+          env: TOXENV=build_docs
 
         # Now try Astropy dev with the latest Python
         - os: linux
@@ -131,7 +131,7 @@ matrix:
           python: 3.8
           name: Code style checks
           stage: Initial tests
-          env: TOXENV=codestyle TOXPOSARGS=''
+          env: TOXENV=codestyle
 
 before_install:
     - pip uninstall -y numpy
@@ -151,7 +151,7 @@ install:
 
 script:
     - pip install tox
-    - tox $TOXARGS -- $TOXPOSARGS
+    - tox $TOXARGS -- $TOXPOSARGS -m 'not e2e'
 
 after_success:
     # If coveralls.io is set up for this package, uncomment the line below.
