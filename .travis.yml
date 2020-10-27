@@ -38,7 +38,7 @@ env:
         # The latter can be used for example to pass arguments to pytest.
         - TOXENV='test'
         - TOXARGS='-v'
-        - TOXPOSARGS="-m 'not e2e'"
+        - TOXPOSARGS='-m not e2e'
 
         # The following is needed to avoid issues if e.g. Matplotlib tries
         # to open a GUI window.
