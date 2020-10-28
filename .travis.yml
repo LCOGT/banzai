@@ -39,14 +39,8 @@ env:
         - TOXENV='test'
         - TOXARGS='-v'
         - TOXPOSARGS=''
-        - PYTHON_VERSION=3.8
-
-        # The following is needed to avoid issues if e.g. Matplotlib tries
-        # to open a GUI window.
-        - SETUP_XVFB=True
 
 matrix:
-
     # Don't wait for allowed failures
     fast_finish: true
 
@@ -59,29 +53,29 @@ matrix:
           name: Python 3.7 with required dependencies
           env: PYTHON_VERSION=3.7 TOXENV=py37-test
 
-        # Do a regular build on Linux with Python 3.8, with cov
+        # Do a regular build on Linux with Python 3.7, with cov
         # For Linux we use language: python to avoid using conda.
         - os: linux
-          python: 3.8
+          python: 3.7
           name: Python 3.8 with required dependencies and measure coverage
           env: TOXENV=py38-test-cov
                CFLAGS='-ftest-coverage'
 
-        # Run test with Python 3.8 and developer dependencies of numpy, astropy
+        # Run test with Python 3.7 and developer dependencies of numpy, astropy
         - os: linux
-          python: 3.8
-          name: Python 3.8 latest developer version of key dependencies
-          env: TOXENV=py38-test-devdeps
+          python: 3.7
+          name: Python 3.7 latest developer version of key dependencies
+          env: TOXENV=py37-test-devdeps
 
         # Check for sphinx doc build warnings
         - os: linux
-          python: 3.8
+          python: 3.7
           name: Documentation build
           env: TOXENV=build_docs
 
         # Do a code style check
         - os: linux
-          python: 3.8
+          python: 3.7
           name: Code style checks
           env: TOXENV=codestyle
 
