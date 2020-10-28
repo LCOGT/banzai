@@ -27,11 +27,11 @@ Please cite the following DOI if you are using processed LCOGT data.
 
 Installation
 ------------
-BANZAI can be installed in the usual way, by running
+BANZAI can be installed using pip, by running from the top-level directory containing `setup.py`.
 
 .. code-block:: bash
-
-    python setup.py install
+    pip install --upgrade pip
+    pip install .
 
 This will automatically install the dependencies from PyPi, so it is recommended to install
 BANZAI in a virtual environment.
@@ -42,7 +42,7 @@ BANZAI has a variety of console entry points:
 
 * `banzai_reduce_individual_frame`: Process a single frame
 * `banzai_reduce_directory`: Process all frames in a directory
-* `banzai_stack_calibrations`: Make a master calibration frame by stacking previously processed individual calibration frames.
+* `banzai_make_master_calibrations`: Make a master calibration frame by stacking previously processed individual calibration frames.
 * `banzai_e2e_stack_calibrations`: Convenience script for stacking calibration frames in the end-to-end tests
 * `banzai_automate_stack_calibrations`: Start the scheduler that sets when to create master calibration frames
 * `banzai_run_realtime_pipeline`: Start the listener to detect and process incoming frames
@@ -52,6 +52,9 @@ BANZAI has a variety of console entry points:
 * `banzai_run_end_to_end_tests`: A wrapper to run the end-to-end tests
 * `banzai_migrate_db`: Migrate data from a database from before 0.16.0 to the current database format
 * `banzai_add_instrument`: Add an instrument to the database
+* `banzai_add_site`: Add a site to the database
+* `banzai_add_bpm`: Add a BPM to the database
+* `banzai_create_db`: Initialize a database to be used when running the pipeline
 
 You can see more about the parameters the commands take by adding a `--help` to any command of interest.
 
@@ -94,16 +97,13 @@ See the `docker-compose.yml` file for details on this setup.
 
 Tests
 -----
-BANZAI uses the astropy helpers package that wrap pytest to run both of its unit
-tests and end-to-end tests. You can specify the full suite of pytest options by using the
-`-a` option after `python setup.py test`.
-
-The end-to-end tests require more setup, so to run only the unit tests locally
-run:
+Unit tests can be run using the tox test automation tool, which will automatically build and install
+the required dependencies in a virtual environment, then run the tests.
+The end-to-end tests require more setup, so to run only the unit tests locally run:
 
 .. code-block:: bash
 
-    python setup.py test -a "-m 'not e2e'"
+    tox -e test -- -m 'not e2e'
 
 The `-m` is short for marker. The following markers are defined if you only want to run a subset of the tests:
 
@@ -122,16 +122,13 @@ In the code directory run:
 
     export MINICONDA_VERSION=4.5.11
     export DOCKER_IMG=banzai
-    docker build -t $DOCKER_IMG .
+    docker build --build-arg MINICONDA_VERSION=${MINICONDA_VERSION} -t $DOCKER_IMG .
     docker-compose up
 
 After all of the containers are up, run
 
 .. code-block:: bash
-
-    docker exec -it banzai-listener /bin/bash
-    cd /lco/banzai
-    python setup.py test -a "-m e2e"
+    docker exec banzai-listener pytest --pyargs banzai.tests "-m e2e"
 
 License
 -------
