@@ -39,6 +39,7 @@ env:
         - TOXENV='test'
         - TOXARGS='-v'
         - TOXPOSARGS=''
+        - EVENT_TYPE='pull_request push'
 
 matrix:
     # Don't wait for allowed failures
@@ -56,26 +57,25 @@ matrix:
         # Do a regular build on Linux with Python 3.7, with cov
         # For Linux we use language: python to avoid using conda.
         - os: linux
-          python: 3.7
-          name: Python 3.8 with required dependencies and measure coverage
-          env: TOXENV=py38-test-cov
-               CFLAGS='-ftest-coverage'
+          python: "3.7"
+          name: Python 3.7 with required dependencies and measure coverage
+          env: TOXENV=py37-test-cov
 
         # Run test with Python 3.7 and developer dependencies of numpy, astropy
         - os: linux
-          python: 3.7
+          python: "3.7"
           name: Python 3.7 latest developer version of key dependencies
           env: TOXENV=py37-test-devdeps
 
         # Check for sphinx doc build warnings
         - os: linux
-          python: 3.7
+          python: "3.7"
           name: Documentation build
           env: TOXENV=build_docs
 
         # Do a code style check
         - os: linux
-          python: 3.7
+          python: "3.7"
           name: Code style checks
           env: TOXENV=codestyle
 
