@@ -39,7 +39,7 @@ pipeline {
 		stage('Unit Tests') {
 			steps {
 				script {
-					sh 'docker run --rm -w=/lco/banzai/banzai/tests "${DOCKER_IMG}" pytest -m \'not e2e\''
+					sh 'docker run --rm "${DOCKER_IMG}" pytest --pyargs banzai.tests -m \'not e2e\''
 				}
 			}
 		}
