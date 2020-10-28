@@ -56,7 +56,7 @@ matrix:
         - os: osx
           language: c
           name: Python 3.7 with required dependencies
-          env: TOXENV=py37-test-numpy117
+          env: PYTHON_VERSION=3.7 TOXENV=py37-test
 
         # Do a regular build on Linux with Python 3.8, with cov
         # For Linux we use language: python to avoid using conda.
