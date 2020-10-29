@@ -92,7 +92,6 @@ install:
       fi
 
 script:
-    - echo (which python)
     - pip install tox
     - tox $TOXARGS -- $TOXPOSARGS -m 'not e2e'
 
