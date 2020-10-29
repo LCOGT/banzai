@@ -57,11 +57,11 @@ jobs:
           name: Python 3.7 with required dependencies and measure coverage
           env: TOXENV=py37-test-cov
 
-        # Run test with Python 3.7 and developer dependencies of numpy, astropy
+        # Run test with Python 3.8 and developer dependencies of numpy, astropy
         - os: linux
-          python: "3.7"
-          name: Python 3.7 latest developer version of key dependencies
-          env: TOXENV=py37-test-devdeps
+          python: "3.8"
+          name: Python 3.8 latest developer version of key dependencies
+          env: TOXENV=py38-test-devdeps
 
         # Check for sphinx doc build warnings
         - os: linux
