@@ -37,7 +37,7 @@ env:
         - TOXPOSARGS=''
         - EVENT_TYPE='pull_request push'
 
-matrix:
+jobs:
     # Don't wait for allowed failures
     fast_finish: true
 
@@ -92,6 +92,7 @@ install:
       fi
 
 script:
+    - echo (which python)
     - pip install tox
     - tox $TOXARGS -- $TOXPOSARGS -m 'not e2e'
 
