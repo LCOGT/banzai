@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   name: {{ include "banzai.fullname" . }}-db-instrument-update
@@ -30,7 +30,7 @@ spec:
               image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
               imagePullPolicy: {{ .Values.image.pullPolicy }}
               env:
-                {{- include "banzai.Env" . | nindent 12 }}
+                {{- include "banzai.Env" . | nindent 16 }}
               resources:
                 requests:
                   cpu: "0.1"
