@@ -13,8 +13,8 @@ Please cite the following DOI if you are using processed LCOGT data.
     :target: https://zenodo.org/badge/latestdoi/26836413
     :alt: Zenodo DOI
 
-.. image:: https://travis-ci.org/LCOGT/banzai.png?branch=master
-    :target: https://travis-ci.org/LCOGT/banzai
+.. image:: https://travis-ci.com/LCOGT/banzai.png?branch=master
+    :target: https://travis-ci.com/LCOGT/banzai
     :alt: Travis Status
 
 .. image:: https://coveralls.io/repos/github/LCOGT/banzai/badge.svg
@@ -29,8 +29,10 @@ Installation
 ------------
 BANZAI can be installed using pip, by running from the top-level directory containing `setup.py`.
 
+Note that `pip>=19.3.1` is required to build and install BANZAI.
+
 .. code-block:: bash
-    pip install --upgrade pip
+
     pip install .
 
 This will automatically install the dependencies from PyPi, so it is recommended to install
@@ -128,6 +130,7 @@ In the code directory run:
 After all of the containers are up, run
 
 .. code-block:: bash
+
     docker exec banzai-listener pytest --pyargs banzai.tests "-m e2e"
 
 License

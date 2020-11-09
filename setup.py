@@ -1,10 +1,12 @@
 # #!/usr/bin/env python
 import os
 import sys
+from extension_helpers import get_extensions
+
+__requires__ = ['pip >= 19.3.1']
 
 from setuptools import setup
 
-from extension_helpers import get_extensions
 # First provide helpful messages if contributors try and run legacy commands
 # for tests or docs.
 
