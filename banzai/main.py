@@ -311,6 +311,7 @@ def add_bpm():
         logger.debug("File posted to s3 archive. Saving to database.", extra_tags={'frameid': ingester_response['frameid']})
         bpm_image.frame_id = ingester_response['frameid']
         bpm_image.is_bad = False
+        bpm_image.is_master = True
         dbs.save_calibration_info(args.filepath, bpm_image, args.db_address)
 
 
