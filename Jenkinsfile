@@ -39,7 +39,7 @@ pipeline {
 		stage('Unit Tests') {
 			steps {
 				script {
-					sh 'docker run --rm -w=/lco/banzai/ "${DOCKER_IMG}" python setup.py test -a "-m \'not e2e\'"'
+					sh 'docker run --rm "${DOCKER_IMG}" pytest --pyargs banzai.tests -m \'not e2e\''
 				}
 			}
 		}
@@ -89,7 +89,7 @@ pipeline {
 			}
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_bias --junit-file=/archive/engineering/pytest-master-bias.xml --code-path=/lco/banzai')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_bias --junit-file=/archive/engineering/pytest-master-bias.xml')
 				}
 			}
 			post {
@@ -110,7 +110,7 @@ pipeline {
 			}
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_dark --junit-file=/archive/engineering/pytest-master-dark.xml --code-path=/lco/banzai')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_dark --junit-file=/archive/engineering/pytest-master-dark.xml')
 				}
 			}
 			post {
@@ -131,7 +131,7 @@ pipeline {
 			}
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_flat --junit-file=/archive/engineering/pytest-master-flat.xml --code-path=/lco/banzai')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=master_flat --junit-file=/archive/engineering/pytest-master-flat.xml')
 				}
 			}
 			post {
@@ -152,7 +152,7 @@ pipeline {
 			}
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=science_files --junit-file=/archive/engineering/pytest-science-files.xml --code-path=/lco/banzai')
+					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- banzai_run_end_to_end_tests --marker=science_files --junit-file=/archive/engineering/pytest-science-files.xml')
 				}
 			}
 			post {

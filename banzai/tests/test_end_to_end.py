@@ -66,10 +66,8 @@ def run_end_to_end_tests():
     parser = argparse.ArgumentParser()
     parser.add_argument('--marker', dest='marker', help='PyTest marker to run')
     parser.add_argument('--junit-file', dest='junit_file', help='Path to junit xml file with results')
-    parser.add_argument('--code-path', dest='code_path', help='Path to directory with setup.py')
     args = parser.parse_args()
-    os.chdir(args.code_path)
-    command = 'python setup.py test -a "--durations=0 --junitxml={junit_file} -m {marker}"'
+    command = 'pytest --pyargs banzai.tests --durations=0 --junitxml={junit_file} -m {marker}'
 
     # Bitshift by 8 because Python encodes exit status in the leftmost 8 bits
     return os.system(command.format(junit_file=args.junit_file, marker=args.marker)) >> 8
