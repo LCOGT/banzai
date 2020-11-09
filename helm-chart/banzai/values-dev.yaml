@@ -15,6 +15,21 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 
+podSecurityContext:
+  fsGroup: 10000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  # Preserve compatibility with archive.lco.gtn uid/gid
+  # LCO SBA LDAP uid/username: 10087/archive
+  # LCO SBA LDAP gid/group: 10000/Domain Users
+  runAsUser: 10087
+  runAsGroup: 10000
+
 nodeSelector: {}
 
 tolerations: []

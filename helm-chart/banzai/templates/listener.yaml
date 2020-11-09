@@ -20,6 +20,8 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
     {{ if .Values.useDockerizedDatabase }}
       initContainers:
         # Create the db if it doesn't exist
@@ -27,8 +29,7 @@ spec:
           image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy}}
           securityContext:
-            runAsUser: 10087
-            runAsGroup: 10000
+            {{- toYaml .Values.securityContext | nindent 12 }}
           command:
             - "banzai_create_db"
             - "--db-address=$(DB_ADDRESS)"
@@ -47,8 +48,7 @@ spec:
           image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy}}
           securityContext:
-            runAsUser: 10087
-            runAsGroup: 10000
+            {{- toYaml .Values.securityContext | nindent 12 }}
           command:
             - "banzai_update_db"
             - "--db-address=$(DB_ADDRESS)"
@@ -67,8 +67,7 @@ spec:
           image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy}}
           securityContext:
-            runAsUser: 10087
-            runAsGroup: 10000
+            {{- toYaml .Values.securityContext | nindent 12 }}
           command:
             - "banzai_populate_bpms"
             - "--db-address=$(DB_ADDRESS)"
@@ -88,8 +87,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
-            runAsUser: 10087
-            runAsGroup: 10000
+            {{- toYaml .Values.securityContext | nindent 12 }}
           command:
             - "banzai_run_realtime_pipeline"
             - "--post-to-archive"
@@ -109,12 +107,16 @@ spec:
             limits:
               cpu: "1"
               memory: "1Gi"
+          volumeMounts:
+            - name: listener-tmp
+              mountPath: /tmp
+              readOnly: false
+
         - name: 'banzai-calibration-scheduler'
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
-            runAsUser: 10087
-            runAsGroup: 10000
+            {{- toYaml .Values.securityContext | nindent 12 }}
           command:
             - "banzai_automate_stack_calibrations"
             - "--post-to-archive"
@@ -133,6 +135,19 @@ spec:
             limits:
               cpu: "1"
               memory: "1Gi"
+          volumeMounts:
+            - name: scheduler-tmp
+              mountPath: /tmp
+              readOnly: false
+
+      volumes:
+        - name: listener-tmp
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: scheduler-tmp
+          emptyDir:
+            sizeLimit: 1Gi
+
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
