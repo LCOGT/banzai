@@ -73,41 +73,41 @@ Define shared environment variables
 */}}
 {{- define "banzai.Env" -}}
 - name: ASTROMETRY_SERVICE_URL
-  value: {{ .Values.astrometryServiceUrl }}
-
-# If using a dockerized database, construct the URL from secrets.
+  value: {{ .Values.astrometryServiceUrl | quote }}
+- name: CONFIGDB_URL
+  value: {{ .Values.configDbUrl | quote }}
 {{- if .Values.useDockerizedDatabase -}}
-    - name: DB_HOST
-      value: {{ include "banzai.dbhost" . | quote }}
-    - name: DB_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: banzai-secrets
-          key: postgresqlPassword
-    - name: DB_USER
-      value: {{ .Values.postgresql.postgresqlUsername | quote }}
-    - name: DB_NAME
-      value: {{ .Values.postgresql.postgresqlDatabase | quote }}
-    - name: DB_ADDRESS
-      value: postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST)/$(DB_NAME)
-{{- else -}}
-    - name DB_ADDRESS
-      value: {{ .Values.databaseUrl }}
-{{- end -}}
-{{- if .Values.useDockerizedDatabase -}}
-    - name: RABBITMQ_HOST
-      value: {{ include "banzai.rabbitmq" . | quote }}
-    - name: RABBITMQ_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: banzai-secrets
-          key: rabbitmq-password
-    - name: TASK_HOST
-      value: amqp://{{ .Values.rabbitmq.rabbitmq.username }}:$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST)/{{ .Values.rabbitmq.vhost }}
-{{- else -}}
-    - name: TASK_HOST
-      value: {{ .Values.taskHost }}
-{{- end -}}
+- name: DB_HOST
+  value: {{ include "banzai.dbhost" . | quote }}
+- name: DB_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: banzai-secrets
+      key: postgresqlPassword
+- name: DB_USER
+  value: {{ .Values.postgresql.postgresqlUsername | quote }}
+- name: DB_NAME
+  value: {{ .Values.postgresql.postgresqlDatabase | quote }}
+- name: DB_ADDRESS
+  value: postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST)/$(DB_NAME)
+{{ else }}
+- name: DB_ADDRESS
+  value: {{ .Values.databaseUrl | quote }}
+{{- end }}
+{{- if .Values.useDockerizedRabbitMQ }}
+- name: RABBITMQ_HOST
+  value: {{ include "banzai.rabbitmq" . | quote }}
+- name: RABBITMQ_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: banzai-secrets
+      key: rabbitmq-password
+- name: TASK_HOST
+  value: amqp://{{ .Values.rabbitmq.rabbitmq.username }}:$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST)/{{ .Values.rabbitmq.vhost }}
+{{- else }}
+- name: TASK_HOST
+  value: {{ .Values.taskHost | quote}}
+{{- end }}
 - name: RETRY_DELAY
   value: "600000"
 - name: CALIBRATE_PROPOSAL_ID
@@ -115,13 +115,13 @@ Define shared environment variables
 - name: OBSERVATION_PORTAL_URL
   value: {{ .Values.observationPortalUrl | quote }}
 - name: API_ROOT
-  value:  {{ .Values.apiRoot | quote }}
+  value: {{ .Values.apiRoot | quote }}
 - name: AUTH_TOKEN
-  value:  {{ .Values.archiveAuthToken | quote }}
+  value: {{ .Values.archiveAuthToken | quote }}
 - name: RAW_DATA_FRAME_URL
   value: {{ .Values.rawDataFrameUrl | quote }}
 - name: RAW_DATA_AUTH_TOKEN
-  value:  {{ .Values.rawDataAuthToken | quote }}
+  value: {{ .Values.rawDataAuthToken | quote }}
 - name: BUCKET
   value: {{ .Values.s3Bucket | quote }}
 - name: AWS_ACCESS_KEY_ID
@@ -133,7 +133,7 @@ Define shared environment variables
 - name: BOSUN_HOSTNAME
   value: {{ .Values.bosunHostname | quote }}
 - name: FITS_BROKER
-  value: {{ .Values.fitsBroker |  quote }}
+  value: {{ .Values.fitsBroker | quote }}
 - name: FITS_EXCHANGE
   value: {{ .Values.fitsExchange | quote }}
 - name: QUEUE_NAME
@@ -144,7 +144,7 @@ Define shared environment variables
   value: "False"
 - name: BANZAI_WORKER_LOGLEVEL
   value: {{ .Values.banzaiWorkerLogLevel | quote }}
-{{ if .Values.noMetrics }}
+{{- if .Values.noMetrics }}
 - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
   value: "1"
 {{- end -}}
