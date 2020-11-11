@@ -109,7 +109,9 @@ Define shared environment variables
   value: {{ .Values.taskHost | quote}}
 {{- end }}
 - name: RETRY_DELAY
-  value: "600000"
+  value: "600"
+- name: OPENTSDB_PORT
+  value: "80"
 - name: CALIBRATE_PROPOSAL_ID
   value: {{ .Values.calibrateProposalId | quote }}
 - name: OBSERVATION_PORTAL_URL

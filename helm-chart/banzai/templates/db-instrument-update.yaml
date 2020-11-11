@@ -41,7 +41,7 @@ spec:
               command:
                 - "banzai_update_db"
                 - "--db-address=$(DB_ADDRESS)"
-                - "--configdb-address={{ .Values.configdb_url }}"
+                - "--configdb-address=$(CONFIGDB_URL)"
         {{- with .Values.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 16 }}
