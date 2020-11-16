@@ -43,23 +43,6 @@ pipeline {
 				}
 			}
 		}
-		stage('DeployDevStack') {
-			when {
-				anyOf {
-				branch 'dev'
-				}
-			}
-		    steps {
-	            script {
-                    withKubeConfig([credentialsId: "dev-kube-config"]) {
-                        sh('helm repo update && helm dependency update helm-chart/banzai/ '+
-                                '&& helm upgrade --install banzai-dev helm-chart/banzai ' +
-                                '--set image.tag="${GIT_DESCRIPTION}" --values=helm-chart/banzai/values-dev.yaml ' +
-                                '--force --wait --timeout=3600')
-                    }
-                 }
-		    }
-		}
 		stage('DeployTestStack') {
 			when {
 				anyOf {
