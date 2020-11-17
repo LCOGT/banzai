@@ -77,14 +77,15 @@ def run_end_to_end_tests():
 @retry(wait=wait_exponential(multiplier=2, min=10, max=30), stop=stop_after_attempt(4), reraise=True)
 def run_reduce_individual_frames(raw_filenames):
     logger.info('Reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
+    filenames = glob(os.path.join(DATA_ROOT, '*', '*', 'raw', '*'))
+    if len(filenames) == 0:
+        logger.error("No raw files found.",
+                     extra_tags={'attempt_number': run_reduce_individual_frames.retry.statistics['attempt_number'],
+                                 'path': DATA_ROOT})
+        raise Exception("No raw files found.")
     for day_obs in DAYS_OBS:
         raw_path = os.path.join(DATA_ROOT, day_obs, 'raw')
-        filenames = glob(os.path.join(raw_path, raw_filenames))
-        if len(filenames) == 0:
-            logger.error("No raw files found.", extra_tags={'attempt_number': run_reduce_individual_frames.retry.statistics['attempt_number'],
-                                                            'path': DATA_ROOT})
-            raise Exception("No raw files found.")
-        for filename in filenames:
+        for filename in glob(os.path.join(raw_path, raw_filenames)):
             file_utils.post_to_archive_queue(filename, os.getenv('FITS_BROKER'), exchange_name=os.getenv('FITS_EXCHANGE'))
     celery_join()
     logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
