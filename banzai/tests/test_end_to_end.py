@@ -77,7 +77,7 @@ def run_end_to_end_tests():
 @retry(wait=wait_exponential(multiplier=2, min=10, max=30), stop=stop_after_attempt(4), reraise=True)
 def run_reduce_individual_frames(raw_filenames):
     logger.info('Reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
-    filenames = glob(os.path.join(DATA_ROOT, '*', '*', 'raw', '*'))
+    filenames = glob(os.path.join(DATA_ROOT, '*', '*', '*', 'raw', '*'))
     if len(filenames) == 0:
         logger.error("No raw files found.",
                      extra_tags={'attempt_number': run_reduce_individual_frames.retry.statistics['attempt_number'],
