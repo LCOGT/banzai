@@ -74,7 +74,7 @@ def run_end_to_end_tests():
     return os.system(command.format(junit_file=args.junit_file, marker=args.marker)) >> 8
 
 
-@retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
+@retry(wait=wait_exponential(multiplier=2, min=10, max=30), stop=stop_after_attempt(4), reraise=True)
 def run_reduce_individual_frames(raw_filenames):
     logger.info('Reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
     for day_obs in DAYS_OBS:
