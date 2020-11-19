@@ -98,6 +98,18 @@ spec:
         - "4"
         - -l
         - "debug"
+      readinessProbe:
+        exec:
+          command:
+            - celery
+            - -A
+            - banzai
+            - status
+            - |
+            - grep
+            - "banzai-celery-worker:.*OK"
+        initialDelaySeconds: 10
+        periodSeconds: 5
       resources:
         requests:
           cpu: 2
