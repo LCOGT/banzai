@@ -15,39 +15,58 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 
+podSecurityContext:
+  fsGroup: 10000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  # Preserve compatibility with archive.lco.gtn uid/gid
+  # LCO SBA LDAP uid/username: 10087/archive
+  # LCO SBA LDAP gid/group: 10000/Domain Users
+  runAsUser: 10087
+  runAsGroup: 10000
+
 nodeSelector: {}
 
 tolerations: []
 
 affinity: {}
 
-CALIBRATE_PROPOSAL_ID: calibrate
+calibrateProposalId: calibrate
 
-OBSERVATION_PORTAL_URL: http://internal-observation-portal.lco.gtn/api/observations/
+observationPortalUrl: http://internal-observation-portal.lco.gtn/api/observations/
 
-API_ROOT: "http://archiveapi-dev.dev/"
+apiRoot: "http://archiveapi-dev.dev/"
 
-BUCKET: archivetest2.lco.global
+s3Bucket: archivetest2.lco.global
 
-BANZAI_WORKER_LOGLEVEL: "debug"
+banzaiWorkerLogLevel: "debug"
 
-RAW_DATA_FRAME_URL: "http://archiveapi-internal.prod/frames"
+rawDataFrameUrl: "http://archiveapi-internal.prod/frames"
 
-INGESTER_PROCESS_NAME: "banzai-dev"
+ingesterProcessName: "banzai-dev"
 
-NO_METRICS: true
+noMetrics: true
 
-OPENTSDB_HOSTNAME: opentsdb.lco.gtn
+opentsdbHostname: opentsdb.lco.gtn
 
-BOSUN_HOSTNAME: alerts.lco.gtn
+bosunHostname: alerts.lco.gtn
 
-FITS_BROKER: rabbitmq.lco.gtn
+fitsBroker: rabbitmq.lco.gtn
 
-FITS_EXCHANGE: archived_fits
+fitsExchange: archived_fits
 
-QUEUE_NAME: banzai_dev_pipeline
+queueName: banzai_dev_pipeline
 
 useDockerizedDatabase: true
+
+# cron job to periodically update instrument table in BANZAI DB
+cronjob:
+  schedule: "*/5 * * * *"
 
 postgresql:
   hostname: "db.example.com"

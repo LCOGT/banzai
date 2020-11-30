@@ -49,6 +49,16 @@ spec:
         limits:
           cpu: 1
           memory: 1Gi
+      readinessProbe:
+        exec:
+          command:
+            - redis-cli
+            - ping
+            - |
+            - grep
+            - "PONG"
+        initialDelaySeconds: 5
+        periodSeconds: 1
     - name: banzai-fits-exchange
       image: rabbitmq:3.7.9
       imagePullPolicy: IfNotPresent
@@ -59,6 +69,13 @@ spec:
         limits:
           cpu: 1
           memory: 1Gi
+      readinessProbe:
+        exec:
+          command:
+            - rabbitmqctl
+            - node_health_check
+        initialDelaySeconds: 5
+        periodSeconds: 1
     - name: banzai-celery-workers
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
@@ -98,6 +115,18 @@ spec:
         - "4"
         - -l
         - "debug"
+      readinessProbe:
+        exec:
+          command:
+            - celery
+            - -A
+            - banzai
+            - status
+            - |
+            - grep
+            - "banzai-celery-worker:.*OK"
+        initialDelaySeconds: 5
+        periodSeconds: 1
       resources:
         requests:
           cpu: 2

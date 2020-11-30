@@ -17,7 +17,7 @@ from types import ModuleType
 
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
-from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils
+from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
 from banzai.celery import process_image, app, schedule_calibration_stacking
 from celery.schedules import crontab
 import celery
@@ -165,7 +165,7 @@ def start_stacking_scheduler():
 
     beat = celery.bin.beat.beat(app=app)
     logger.info('Starting celery beat')
-    beat.run()
+    beat.run(schedule='/tmp/celerybeat-schedule', pidfile='/tmp/celerybeat.pid', working_directory='/tmp')
 
 
 def run_realtime_pipeline():
@@ -286,7 +286,7 @@ def update_db():
 
 def add_bpm():
     parser = argparse.ArgumentParser(description="Add a bad pixel mask to the db.")
-    parser.add_argument('--filename', help='Full path to Bad Pixel Mask file')
+    parser.add_argument('filepath', help='Full path to Bad Pixel Mask file')
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--db-address', dest='db_address',
@@ -296,9 +296,23 @@ def add_bpm():
     add_settings_to_context(args, settings)
     logs.set_log_level(args.log_level)
     frame_factory = import_utils.import_attribute(settings.FRAME_FACTORY)()
-    bpm_image = frame_factory.open({'path': args.filename}, args)
-    bpm_image.is_master = True
-    dbs.save_calibration_info(args.filename, bpm_image, args.db_address)
+    try:
+        bpm_image = frame_factory.open({'path': args.filepath}, args)
+    except Exception:
+        logger.error(f"BPM not able to be opened by BANZAI. Aborting... {logs.format_exception()}", extra_tags={'filename': args.filepath})
+        bpm_image = None
+
+    # upload BPM via ingester
+    if bpm_image is not None:
+        with open(args.filepath, 'rb') as f:
+            logger.debug("Posting BPM to s3 archive")
+            ingester_response = file_utils.post_to_ingester(f, bpm_image, args.filepath)
+
+        logger.debug("File posted to s3 archive. Saving to database.", extra_tags={'frameid': ingester_response['frameid']})
+        bpm_image.frame_id = ingester_response['frameid']
+        bpm_image.is_bad = False
+        bpm_image.is_master = True
+        dbs.save_calibration_info(args.filepath, bpm_image, args.db_address)
 
 
 def add_bpms_from_archive():
