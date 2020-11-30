@@ -52,12 +52,10 @@ spec:
             - name: tmp
               mountPath: /tmp
               readOnly: false
-
       volumes:
         - name: tmp
           emptyDir:
-            sizeLimit: 4Gi
-
+            sizeLimit: 20Gi
     {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

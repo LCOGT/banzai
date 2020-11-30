@@ -124,6 +124,7 @@ spec:
             - "--fpack"
             - "--rlevel=91"
             - "--db-address=$(DB_ADDRESS)"
+            - "--broker-url=$(FITS_BROKER)"
             - "--log-level=info"
             - "--no-file-cache"
           env:
@@ -131,7 +132,7 @@ spec:
           resources:
             requests:
               cpu: "0.1"
-              memory: "128M"
+              memory: "512M"
             limits:
               cpu: "1"
               memory: "1Gi"

@@ -165,7 +165,7 @@ def start_stacking_scheduler():
 
     beat = celery.bin.beat.beat(app=app)
     logger.info('Starting celery beat')
-    beat.run(schedule='/tmp/celerybeat-schedule', pidfile='/tmp/celerybeat.pid')
+    beat.run(schedule='/tmp/celerybeat-schedule', pidfile='/tmp/celerybeat.pid', working_directory='/tmp')
 
 
 def run_realtime_pipeline():
