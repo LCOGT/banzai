@@ -1,3 +1,8 @@
+1.1.0 (2020-11-30)
+-------------------
+- Remove dependence on astropy-helpers for building and packaging
+- Changes for AWS deployment of BANZAI-Imaging
+
 1.0.6 (2020-08-13)
 -------------------
 - Add helm chart and development kubernetes deployment
