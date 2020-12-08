@@ -99,11 +99,11 @@ def download_from_s3(file_info, context, is_raw_frame=False):
 
     if is_raw_frame:
         url = f'{context.RAW_DATA_FRAME_URL}/{frame_id}'
-        archive_auth_token = context.RAW_DATA_AUTH_TOKEN
+        archive_auth_header = context.RAW_DATA_AUTH_HEADER
     else:
         url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}'
-        archive_auth_token = context.ARCHIVE_AUTH_TOKEN
-    response = requests.get(url, headers=archive_auth_token).json()
+        archive_auth_header = context.ARCHIVE_AUTH_HEADER
+    response = requests.get(url, headers=archive_auth_header).json()
     buffer = io.BytesIO()
     buffer.write(requests.get(response['url'], stream=True).content)
     buffer.seek(0)

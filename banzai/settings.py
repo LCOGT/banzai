@@ -90,15 +90,19 @@ TELESCOPE_FILENAME_FUNCTION = 'banzai.utils.file_utils.telescope_to_filename'
 OBSERVATION_PORTAL_URL = os.getenv('OBSERVATION_PORTAL_URL',
                                    'http://internal-observation-portal.lco.gtn/api/observations/')
 
+# Specify different sources of raw and processed data, if needed.
 ARCHIVE_API_ROOT = os.getenv('API_ROOT')
+ARCHIVE_AUTH_TOKEN = os.getenv('AUTH_TOKEN')
 ARCHIVE_FRAME_URL = f'{ARCHIVE_API_ROOT}frames'
-ARCHIVE_AUTH_TOKEN = {'Authorization': f'Token {os.getenv("AUTH_TOKEN")}'}
-FITS_EXCHANGE = os.getenv('FITS_EXCHANGE', 'archived_fits')
+ARCHIVE_AUTH_HEADER = {'Authorization': f'Token {ARCHIVE_AUTH_TOKEN}'}
 
-RAW_DATA_FRAME_URL = os.getenv('RAW_DATA_FRAME_URL', ARCHIVE_FRAME_URL)
-RAW_DATA_AUTH_TOKEN = {'Authorization' : f'Token {os.getenv("RAW_DATA_AUTH_TOKEN", ARCHIVE_AUTH_TOKEN)}'}
+RAW_DATA_AUTH_TOKEN = os.getenv('RAW_DATA_AUTH_TOKEN', ARCHIVE_AUTH_TOKEN)
+RAW_DATA_API_ROOT = os.getenv('RAW_DATA_API_ROOT', ARCHIVE_API_ROOT)
+RAW_DATA_FRAME_URL = f'{ARCHIVE_API_ROOT}frames'
+RAW_DATA_AUTH_HEADER = {'Authorization' : f'Token {RAW_DATA_AUTH_TOKEN}'}
 
 CALIBRATE_PROPOSAL_ID = os.getenv('CALIBRATE_PROPOSAL_ID', 'calibrate')
+FITS_EXCHANGE = os.getenv('FITS_EXCHANGE', 'archived_fits')
 
 CONFIGDB_URL = os.getenv('CONFIGDB_URL', 'http://configdb.lco.gtn/sites/')
 
