@@ -1,73 +1,41 @@
-# Default values for banzai.
+# Development deployment values for banzai.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
-
-# Automatically manage worker count within the configured limits. More workers
-# will be started when the CPU usage rises above the configured threshold.
-horizontalPodAutoscaler:
-  enabled: true
-  minReplicas: 1
-  maxReplicas: 4
-  targetCPUUtilizationPercentage: 50
-
 image:
   repository: docker.lco.global/banzai
-  tag: latest
+  tag: ""
   pullPolicy: IfNotPresent
 
-podSecurityContext:
-  fsGroup: 10000
+# Values for the OCS Ingester library, used by BANZAI.
+ingester:
+  apiRoot: http://archiveapi-dev.dev/
+  s3Bucket: archivetest2.lco.global
+  ingesterProcessName: banzai-dev
+  opentsdbHostname: opentsdb.lco.gtn
+  opentsdbPort: 80
+  postProcessFiles: false
+  noMetrics: true
 
-securityContext:
-  capabilities:
-    drop:
-    - ALL
-  readOnlyRootFilesystem: true
-  runAsNonRoot: true
-  # Preserve compatibility with archive.lco.gtn uid/gid
-  # LCO SBA LDAP uid/username: 10087/archive
-  # LCO SBA LDAP gid/group: 10000/Domain Users
-  runAsUser: 10087
-  runAsGroup: 10000
+# Values specific to the BANZAI pipeline
+banzai:
+  astrometryServiceUrl: http://astrometry.lco.gtn/catalog
+  useDifferentArchiveSources: false
+  calibrateProposalId: calibrate
+  observationPortalUrl: http://internal-observation-portal.lco.gtn/api/observations/
+  configdbUrl: http://configdb.lco.gtn/sites/
+  banzaiWorkerLogLevel: debug
+  rawDataApiRoot: http://archiveapi-internal.prod/
+  bosunHostname: alerts.lco.gtn
+  fitsBroker: rabbitmq.lco.gtn
+  fitsExchange: archived_fits
+  queueName: banzai_dev_pipeline
+  useDockerizedDatabase: true
 
-nodeSelector: {}
-
-tolerations: []
-
-affinity: {}
-
-calibrateProposalId: calibrate
-
-observationPortalUrl: http://internal-observation-portal.lco.gtn/api/observations/
-
-apiRoot: "http://archiveapi-dev.dev/"
-
-s3Bucket: archivetest2.lco.global
-
-banzaiWorkerLogLevel: "debug"
-
-rawDataFrameUrl: "http://archiveapi-internal.prod/frames"
-
-ingesterProcessName: "banzai-dev"
-
-noMetrics: true
-
-opentsdbHostname: opentsdb.lco.gtn
-
-bosunHostname: alerts.lco.gtn
-
-fitsBroker: rabbitmq.lco.gtn
-
-fitsExchange: archived_fits
-
-queueName: banzai_dev_pipeline
-
-useDockerizedDatabase: true
-
-# cron job to periodically update instrument table in BANZAI DB
-cronjob:
+# CronJob configuration to periodically update instrument table in BANZAI DB
+instrumentTableCronjob:
   schedule: "*/5 * * * *"
 
+useDockerizedDatabase: true
 postgresql:
   hostname: "db.example.com"
   postgresqlUsername: "banzai"
@@ -84,7 +52,6 @@ postgresql:
       memory: 512Mi
 
 useDockerizedRabbitMQ: true
-
 rabbitmq:
   rabbitmq:
     username: "user"
@@ -97,6 +64,3 @@ rabbitmq:
     limits:
       cpu: 1
       memory: 1Gi
-
-
-configdb_url: "http://configdb.lco.gtn/sites/"
