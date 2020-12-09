@@ -91,15 +91,16 @@ Ingester environment variables
   value: {{ .Values.ingester.apiRoot | quote }}
 - name: BUCKET
   value: {{ .Values.ingester.s3Bucket | quote }}
-- name: INGESTER_PROCESS_NAME
-  value: {{ .Values.ingester.ingesterProcessName | quote }}
-- name: OPENTSDB_HOSTNAME
-  value: {{ .Values.ingester.opentsdbHostname | quote }}
-- name: OPENTSDB_PORT
-  value: {{ .Values.ingester.opentsdbPort | quote }}
 {{- if .Values.ingester.noMetrics }}
 - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
   value: "1"
+{{- else }}
+- name: INGESTER_PROCESS_NAME
+  value: {{ required "ingester.ingesterProcessName must be defined if noMetrics is false" .Values.ingester.ingesterProcessName | quote }}
+- name: OPENTSDB_HOSTNAME
+  value: {{ required "ingester.opentsdbHostname must be defined if noMetrics is false" .Values.ingester.opentsdbHostname | quote }}
+- name: OPENTSDB_PORT
+  value: {{ required "ingester.opentsdbPort must be defined if noMetrics is false" .Values.ingester.opentsdbPort | quote }}
 {{- end }}
 - name: POSTPROCESS_FILES
 {{- if .Values.ingester.postProcessFiles }}
