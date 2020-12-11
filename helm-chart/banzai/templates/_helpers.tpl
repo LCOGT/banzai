@@ -167,8 +167,6 @@ Celery task queue configuration
   value: "600"
 - name: CALIBRATE_PROPOSAL_ID
   value: {{ .Values.banzai.calibrateProposalId | quote }}
-- name: BOSUN_HOSTNAME
-  value: {{ .Values.banzai.bosunHostname | quote }}
 - name: FITS_BROKER
   value: {{ .Values.banzai.fitsBroker | quote }}
 - name: FITS_EXCHANGE
