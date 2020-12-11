@@ -14,7 +14,7 @@ ingester:
   opentsdbHostname: opentsdb.lco.gtn
   opentsdbPort: 80
   postProcessFiles: false
-  noMetrics: false
+  noMetrics: true
 
 # Values specific to the BANZAI pipeline
 banzai:
@@ -28,7 +28,6 @@ banzai:
   fitsBroker: rabbitmq.lco.gtn
   fitsExchange: archived_fits
   queueName: banzai_dev_pipeline
-  useDockerizedDatabase: true
 
 # CronJob configuration to periodically update instrument table in BANZAI DB
 instrumentTableCronjob:
