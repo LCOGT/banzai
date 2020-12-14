@@ -1,0 +1,57 @@
+# Production deployment values for banzai.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Automatically manage worker count within the configured limits. More workers
+# will be started when the CPU usage rises above the configured threshold.
+horizontalPodAutoscaler:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
+
+image:
+  repository: docker.lco.global/banzai
+  tag: "1.1.0"
+  pullPolicy: IfNotPresent
+
+# Values for the OCS Ingester library, used by BANZAI.
+ingester:
+  apiRoot: http://archiveapi-internal.prod/
+  s3Bucket: archive-lco-global
+  ingesterProcessName: banzai_imaging
+  opentsdbHostname: opentsdb.lco.gtn
+  opentsdbPort: 80
+  postProcessFiles: false
+  noMetrics: false
+
+# Values specific to the BANZAI pipeline
+banzai:
+  astrometryServiceUrl: http://astrometry.lco.gtn/catalog
+  configdbUrl: http://configdb.lco.gtn/sites/
+  observationPortalUrl: http://internal-observation-portal.lco.gtn/api/observations/
+  useDifferentArchiveSources: false
+  calibrateProposalId: calibrate
+  banzaiWorkerLogLevel: info
+  rawDataApiRoot: http://archiveapi-internal.prod/
+  fitsBroker: rabbitmq.lco.gtn
+  fitsExchange: archived_fits
+  queueName: banzai_pipeline
+
+# CronJob configuration to periodically update instrument table in BANZAI DB
+instrumentTableCronjob:
+  schedule: "*/5 * * * *"
+
+useDockerizedDatabase: false
+useDockerizedRabbitMQ: false
+
+postgresql:
+  hostname: postgres1-cluster.cluster-cple9sjsskrf.us-west-2.rds.amazonaws.com
+  postgresqlUsername: banzai
+  postgresqlDatabase: banzai
+
+rabbitmq:
+  hostname: rabbitmq-ha.prod.svc.cluster.local.
+  rabbitmq:
+    username: banzai
+  vhost: banzai
