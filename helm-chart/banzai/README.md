@@ -9,7 +9,7 @@ This chart installs the following applications into a Kubernetes cluster.
 To install the chart with the release name `banzai`:
 
 ```
-$ helm install --name banzai banzai/
+$ helm install --name banzai banzai/ -f /path/to/values.yaml
 ```
 
 ## Uninstalling the Chart
@@ -144,3 +144,53 @@ Environment Variable | Description | Secret | Key
 #### Using a Dockerized RabbitMQ
 
 See values-dev for a working example of using a dockerized RabbitMQ
+
+## Appendix: Secrets
+
+Below is an example YAML file, which specifies a Kubernetes secret, `banzai-secrets`.
+See Kubernetes secrets documentation [here](https://kubernetes.io/docs/concepts/configuration/secret/) 
+
+```yaml
+apiVersion: v1
+data:
+  archive-auth-token:
+  # raw-data-auth-token key only needed if .Values.useDifferentArchiveSources is true
+  raw-data-auth-token:
+  aws-access-key-id:
+  aws-secret-access-key:
+  postgresql-password:
+  rabbitmq-password:
+kind: Secret
+metadata:
+  name: banzai-secrets
+  namespace: 
+type: Opaque
+```
+
+Data stored in a Kubernetes secret is usually stored as a base64-encoded string. To properly store a secret value, 
+first encode it as base64.
+
+If my `postgresql-password` is `secret_password`, I will need to encode it before creating the secret.
+
+```bash
+echo -n secret_password | base64
+c2VjcmV0X3Bhc3N3b3Jk
+```
+
+Enter the base64-encoded string into the proper place in the above template.
+
+```yaml
+data:
+...
+  postgresql-password: c2VjcmV0X3Bhc3N3b3Jk
+...
+```
+
+Finally, be sure to set the kubernetes namespace name inside the `metadata` section. The secret will exist only in
+that namespace. This is the namespace you intend to deploy the application.
+
+Once all required values have been set, create the secret in your namespace by:
+
+```bash
+kubectl apply -f banzai-secrets.yaml
+```
