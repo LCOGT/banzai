@@ -17,16 +17,6 @@ horizontalPodAutoscaler:
 podSecurityContext:
   fsGroup: 10000
 
-ingester:
-  noMetrics: true
-  postProcessFiles: false
-
-banzai:
-  useDifferentArchiveSources: false
-
-useDockerizedDatabase: false
-useDockerizedRabbitMQ: false
-
 securityContext:
   capabilities:
     drop:
@@ -38,6 +28,16 @@ securityContext:
   # LCO SBA LDAP gid/group: 10000/Domain Users
   runAsUser: 10087
   runAsGroup: 10000
+
+ingester:
+  noMetrics: true
+  postProcessFiles: false
+
+banzai:
+  useDifferentArchiveSources: false
+
+useDockerizedDatabase: false
+useDockerizedRabbitMQ: false
 
 nodeSelector: {}
 tolerations: []
