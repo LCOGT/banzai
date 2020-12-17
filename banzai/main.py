@@ -324,8 +324,8 @@ def add_bpms_from_archive():
     add_settings_to_context(args, settings)
     # Query the archive for all bpm files
     url = f'{settings.ARCHIVE_FRAME_URL}/?OBSTYPE=BPM&limit=1000'
-    archive_auth_token = settings.ARCHIVE_AUTH_TOKEN
-    response = requests.get(url, headers=archive_auth_token)
+    archive_auth_header = settings.ARCHIVE_AUTH_HEADER
+    response = requests.get(url, headers=archive_auth_header)
     response.raise_for_status()
     results = response.json()['results']
 

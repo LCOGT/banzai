@@ -10,7 +10,7 @@ spec:
   failedJobsHistoryLimit: 1
   successfulJobsHistoryLimit: 3
   startingDeadlineSeconds: 120
-  schedule: "{{ .Values.cronjob.schedule }}"
+  schedule: "{{ .Values.instrumentTableCronjob.schedule }}"
   jobTemplate:
     metadata:
       labels:
