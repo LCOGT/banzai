@@ -1,3 +1,9 @@
+1.1.1 (2020-12-17)
+-------------------
+- Add documentation and example configuration to helm chart
+- Fix bug where raw data settings would not properly default if 
+  environment variables were not set
+
 1.1.0 (2020-11-30)
 -------------------
 - Remove dependence on astropy-helpers for building and packaging
