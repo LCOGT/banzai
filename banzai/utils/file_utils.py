@@ -2,8 +2,8 @@ import hashlib
 import logging
 from time import sleep
 
-from lco_ingester import ingester
-from lco_ingester.exceptions import RetryError, DoNotRetryError, BackoffRetryError, NonFatalDoNotRetryError
+from ocs_ingester import ingester
+from ocs_ingester.exceptions import RetryError, DoNotRetryError, BackoffRetryError, NonFatalDoNotRetryError
 
 from kombu import Connection, Exchange
 from banzai.utils import import_utils
