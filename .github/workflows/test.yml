@@ -3,10 +3,6 @@ name: Build/Test
 on:
   # Run this workflow for pushes on all branches
   push:
-    branches:
-      - '**'
-  # Run this workflow when a tag or branch is created
-  create:
 
 env:
   TOXENV:'test'
