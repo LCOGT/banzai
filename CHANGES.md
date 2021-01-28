@@ -1,3 +1,7 @@
+1.1.2 (2020-01-14)
+-------------------
+- Update to use OCS Ingester version 2.2.5
+
 1.1.1 (2020-12-17)
 -------------------
 - Add documentation and example configuration to helm chart
