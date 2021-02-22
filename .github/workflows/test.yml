@@ -5,9 +5,9 @@ on:
   push:
 
 env:
-  TOXENV:'test'
-  TOXARGS:'-v'
-  TOXPOSARGS:''
+  - TOXENV:'test'
+  - TOXARGS:'-v'
+  - TOXPOSARGS:''
 
 jobs:
   tests:
