@@ -4,11 +4,12 @@ on:
   # Run this workflow for pushes on all branches
   push:
 
+env:
+  TOXENV: 'test'
+  TOXARGS: '-v'
+  TOXPOSARGS: ''
+
 jobs:
-  env:
-    TOXENV:'test'
-    TOXARGS:'-v'
-    TOXPOSARGS:''
   tests:
     name: ${{ matrix.name }} (${{ matrix.os }}, ${{ matrix.toxenv }})
     runs-on: ${{ matrix.os }}
