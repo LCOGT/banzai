@@ -1,3 +1,7 @@
+1.1.3 (2020-02-23)
+-------------------
+- Move public CI from Travis to GitHub Actions
+
 1.1.2 (2020-01-14)
 -------------------
 - Update to use OCS Ingester version 2.2.5
