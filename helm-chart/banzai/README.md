@@ -76,9 +76,9 @@ Parameter | Description | Default
 `banzai.observationPortalUrl` | URL for LCO Observation Portal | **_Not set (required)_**
 `banzai.calibrateProposalId` | Proposal ID for LCO Calibration requests | **_Not set (required)_**
 `banzai.banzaiWorkerLogLevel` | Log level for BANZAI worker processes | **_Not set (required)_**
-`fitsBroker` | Hostname for FITS files queue | **_Not set (required)_**
-`fitsExchange` | Exchange name for FITS files queue | **_Not set (required)_**
-`queueName` | BANZAI file queue name (fanout from fitsExchange) | **_Not set (required)_**
+`banzai.fitsBroker` | Hostname for FITS files queue | **_Not set (required)_**
+`banzai.fitsExchange` | Exchange name for FITS files queue | **_Not set (required)_**
+`banzai.queueName` | BANZAI file queue name (fanout from fitsExchange) | **_Not set (required)_**
 
 #### Optional separate raw and processed archive sources
 During development, it is sometimes necessary to pull raw data from a "production" science archive, and push/pull processed
