@@ -1,3 +1,7 @@
+1.1.4 (2020-03-23)
+-------------------
+- Update to use OCS Ingester 2.2.6, with fixes for NRES data products.
+
 1.1.3 (2020-02-23)
 -------------------
 - Move public CI from Travis to GitHub Actions
