@@ -5,6 +5,7 @@ from astropy.io import fits
 import pytest
 
 from banzai.utils import fits_utils
+from banzai.tests.utils import FakeContext
 
 pytestmark = pytest.mark.fits_utils
 
@@ -74,6 +75,25 @@ def test_get_configuration_mode_central_2k():
     configuration_mode = fits_utils.get_configuration_mode(header)
 
     assert configuration_mode == 'central_2k_2x2'
+
+
+def test_pack_all_extensions_compressed():
+    expected_fpacked_extensions = ['SCI', 'BPM', 'ERR']
+    hdu_list = fits.HDUList([fits.ImageHDU(data=np.zeros(100), header=Header({'EXTNAME': 'SCI'})),
+                             fits.ImageHDU(data=np.zeros(100), header=Header({'EXTNAME': 'BPM'})),
+                             fits.ImageHDU(data=np.zeros(100), header=Header({'EXTNAME': 'ERR'}))])
+
+    fpacked_hdulist = fits_utils.pack(hdu_list, FakeContext())
+    for extname in expected_fpacked_extensions:
+        assert isinstance(fpacked_hdulist[extname], fits.CompImageHDU)
+
+def test_pack_some_extensions_compressed():
+    hdu_list = fits.HDUList([fits.ImageHDU(data=np.zeros(100), header=Header({'EXTNAME': 'SCI'})),
+                             fits.ImageHDU(data=np.zeros(100), header=Header({'EXTNAME': 'BPM'})),
+                             fits.ImageHDU(data=np.zeros(100), header=Header({'EXTNAME': 'TEST'}))])
+
+    fpacked_hdulist = fits_utils.pack(hdu_list, FakeContext())
+    assert isinstance(fpacked_hdulist['TEST'], fits.ImageHDU)
 
 
 def test_open_image():

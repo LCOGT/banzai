@@ -13,6 +13,8 @@ from tenacity import retry, wait_exponential, stop_after_attempt
 import io
 import os
 
+from banzai.context import Context
+
 logger = logging.getLogger('banzai')
 
 FITS_MANDATORY_KEYWORDS = ['SIMPLE', 'BITPIX', 'NAXIS', 'EXTEND', 'COMMENT', 'CHECKSUM', 'DATASUM']
@@ -185,7 +187,7 @@ def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
     return fits.HDUList(hdulist)
 
 
-def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
+def pack(uncompressed_hdulist: fits.HDUList, runtime_context: Context) -> fits.HDUList:
     if uncompressed_hdulist[0].data is None:
         primary_hdu = fits.PrimaryHDU(header=uncompressed_hdulist[0].header)
         hdulist = [primary_hdu]
@@ -197,7 +199,7 @@ def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
         hdulist = [primary_hdu, compressed_hdu]
 
     for hdu in uncompressed_hdulist[1:]:
-        if isinstance(hdu, fits.ImageHDU):
+        if isinstance(hdu, fits.ImageHDU) and hdu.header.get('EXTNAME') in runtime_context.EXTENSIONS_TO_COMPRESS:
             compressed_hdu = fits.CompImageHDU(data=np.ascontiguousarray(hdu.data), header=hdu.header,
                                                quantize_level=64, quantize_method=1)
             hdulist.append(compressed_hdu)

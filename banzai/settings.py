@@ -132,6 +132,8 @@ REDUCED_DATA_EXTENSION_ORDERING = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                    'STANDARD': ['SCI', 'CAT', 'BPM', 'ERR'],
                                    'EXPERIMENTAL': ['SCI', 'CAT', 'BPM', 'ERR']}
 
+EXTENSIONS_TO_COMPRESS = ['SCI', 'CAT', 'BPM', 'ERR']
+
 MASTER_CALIBRATION_EXTENSION_ORDER = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                       'DARK': ['SCI', 'BPM', 'ERR'],
                                       'SKYFLAT': ['SCI', 'BPM', 'ERR']}
