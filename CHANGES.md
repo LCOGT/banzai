@@ -1,3 +1,7 @@
+1.2.0 (2021-04-04)
+------------------
+- Added the option to losslessly compress fits extensions.
+
 1.1.0 (2020-11-30)
 -------------------
 - Remove dependence on astropy-helpers for building and packaging
