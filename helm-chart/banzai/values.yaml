@@ -1,0 +1,45 @@
+# Default values for banzai.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+image:
+  repository: docker.lco.global/banzai
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Automatically manage worker count within the configured limits. More workers
+# will be started when the CPU usage rises above the configured threshold.
+horizontalPodAutoscaler:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 50
+
+podSecurityContext:
+  fsGroup: 10000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  # Preserve compatibility with archive.lco.gtn uid/gid
+  # LCO SBA LDAP uid/username: 10087/archive
+  # LCO SBA LDAP gid/group: 10000/Domain Users
+  runAsUser: 10087
+  runAsGroup: 10000
+
+ingester:
+  noMetrics: true
+  postProcessFiles: false
+
+banzai:
+  useDifferentArchiveSources: false
+
+useDockerizedDatabase: false
+useDockerizedRabbitMQ: false
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
