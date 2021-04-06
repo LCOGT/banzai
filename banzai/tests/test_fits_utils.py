@@ -3,6 +3,7 @@ from astropy.io.fits import Header
 from astropy.table import Table
 from astropy.io import fits
 import pytest
+import io
 
 from banzai.utils import fits_utils
 
@@ -14,7 +15,7 @@ def test_table_to_fits():
     b = np.random.normal(size=100)
     c = np.random.normal(size=100)
 
-    t = Table([a,b,c], names=('a', 'b', 'c'))
+    t = Table([a, b, c], names=('a', 'b', 'c'))
 
     t['a'].description = 'Column a'
     t['b'].description = 'Column b'
@@ -74,6 +75,22 @@ def test_get_configuration_mode_central_2k():
     configuration_mode = fits_utils.get_configuration_mode(header)
 
     assert configuration_mode == 'central_2k_2x2'
+
+
+def test_lossless_compression():
+    uncompressed_error = np.random.uniform(size=(1001, 1003))
+
+    hdu_list = fits.HDUList([fits.ImageHDU(data=np.zeros((1001, 1003)), header=Header({'EXTNAME': 'SCI'})),
+                             fits.ImageHDU(data=uncompressed_error.copy(), header=Header({'EXTNAME': 'ERR'}))])
+
+    fpacked_hdulist = fits_utils.pack(hdu_list, ['ERR'])
+    # Write to a bytes stream to make sure there is no lazy compressing/caching
+    # funny business
+    buffer = io.BytesIO()
+    fpacked_hdulist.writeto(buffer)
+    buffer.seek(0)
+    packed_hdu = fits.open(buffer, memmap=False)
+    np.testing.assert_allclose(uncompressed_error, packed_hdu['ERR'].data, atol=1e-9)
 
 
 def test_open_image():

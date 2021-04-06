@@ -139,3 +139,5 @@ MASTER_CALIBRATION_EXTENSION_ORDER = {'BIAS': ['SCI', 'BPM', 'ERR'],
 REDUCED_DATA_EXTENSION_TYPES = {'SCI': 'float32',
                                 'ERR': 'float32',
                                 'BPM': 'uint8'}
+
+LOSSLESS_EXTENSIONS = []
