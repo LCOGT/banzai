@@ -1,3 +1,25 @@
+1.2.0 (2021-04-04)
+------------------
+- Added the option to losslessly compress fits extensions.
+
+1.1.4 (2020-03-23)
+-------------------
+- Update to use OCS Ingester 2.2.6, with fixes for NRES data products.
+
+1.1.3 (2020-02-23)
+-------------------
+- Move public CI from Travis to GitHub Actions
+
+1.1.2 (2020-01-14)
+-------------------
+- Update to use OCS Ingester version 2.2.5
+
+1.1.1 (2020-12-17)
+-------------------
+- Add documentation and example configuration to helm chart
+- Fix bug where raw data settings would not properly default if 
+  environment variables were not set
+
 1.1.0 (2020-11-30)
 -------------------
 - Remove dependence on astropy-helpers for building and packaging

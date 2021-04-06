@@ -58,6 +58,9 @@ Generate the PostgreSQL DB hostname
 {{- end -}}
 {{- end -}}
 
+{{/*
+Generate the RabbitMQ queue hostname
+*/}}
 {{- define "banzai.rabbitmq" -}}
 {{- if .Values.rabbitmq.fullnameOverride -}}
 {{- .Values.rabbitmq.fullnameOverride | trunc 63 | trimSuffix "-" -}}
@@ -72,29 +75,85 @@ Generate the PostgreSQL DB hostname
 Define shared environment variables
 */}}
 {{- define "banzai.Env" -}}
+{{/*
+External service URLS
+*/ -}}
 - name: ASTROMETRY_SERVICE_URL
-  value: {{ .Values.astrometryServiceUrl | quote }}
+  value: {{ .Values.banzai.astrometryServiceUrl | quote }}
 - name: CONFIGDB_URL
-  value: {{ .Values.configDbUrl | quote }}
-{{- if .Values.useDockerizedDatabase -}}
+  value: {{ .Values.banzai.configdbUrl | quote }}
+- name: OBSERVATION_PORTAL_URL
+  value: {{ .Values.banzai.observationPortalUrl | quote }}
+{{/*
+Ingester environment variables
+*/ -}}
+- name: API_ROOT
+  value: {{ .Values.ingester.apiRoot | quote }}
+- name: BUCKET
+  value: {{ .Values.ingester.s3Bucket | quote }}
+{{- if .Values.ingester.noMetrics }}
+- name: OPENTSDB_PYTHON_METRICS_TEST_MODE
+  value: "1"
+{{- else }}
+- name: INGESTER_PROCESS_NAME
+  value: {{ required "ingester.ingesterProcessName must be defined if noMetrics is false" .Values.ingester.ingesterProcessName | quote }}
+- name: OPENTSDB_HOSTNAME
+  value: {{ required "ingester.opentsdbHostname must be defined if noMetrics is false" .Values.ingester.opentsdbHostname | quote }}
+- name: OPENTSDB_PORT
+  value: {{ required "ingester.opentsdbPort must be defined if noMetrics is false" .Values.ingester.opentsdbPort | quote }}
+{{- end }}
+- name: POSTPROCESS_FILES
+{{- if .Values.ingester.postProcessFiles }}
+  value: "True"
+{{- else }}
+  value: "False"
+{{- end }}
+- name: AUTH_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: banzai-secrets
+      key: archive-auth-token
+- name: AWS_ACCESS_KEY_ID
+  valueFrom:
+    secretKeyRef:
+      name: banzai-secrets
+      key: aws-access-key-id
+- name: AWS_SECRET_ACCESS_KEY
+  valueFrom:
+    secretKeyRef:
+      name: banzai-secrets
+      key: aws-secret-access-key
+{{- /*
+Optional raw data source environment variables
+*/}}
+{{- if .Values.banzai.useDifferentArchiveSources }}
+- name: RAW_DATA_API_ROOT
+  value: {{ required "banzai.rawDataApiRoot is required if banzai.useDifferentArchiveSources is specified." .Values.banzai.rawDataApiRoot | quote }}
+- name: RAW_DATA_AUTH_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: banzai-secrets
+      key: raw-data-auth-token
+{{- end -}}
+{{/*
+BANZAI DB Configuration
+*/}}
 - name: DB_HOST
   value: {{ include "banzai.dbhost" . | quote }}
 - name: DB_PASSWORD
   valueFrom:
     secretKeyRef:
       name: banzai-secrets
-      key: postgresqlPassword
+      key: postgresql-password
 - name: DB_USER
   value: {{ .Values.postgresql.postgresqlUsername | quote }}
 - name: DB_NAME
   value: {{ .Values.postgresql.postgresqlDatabase | quote }}
 - name: DB_ADDRESS
-  value: postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST)/$(DB_NAME)
-{{ else }}
-- name: DB_ADDRESS
-  value: {{ .Values.databaseUrl | quote }}
-{{- end }}
-{{- if .Values.useDockerizedRabbitMQ }}
+  value: postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST)/$(DB_NAME)
+{{/*
+Celery task queue configuration
+*/ -}}
 - name: RABBITMQ_HOST
   value: {{ include "banzai.rabbitmq" . | quote }}
 - name: RABBITMQ_PASSWORD
@@ -104,51 +163,16 @@ Define shared environment variables
       key: rabbitmq-password
 - name: TASK_HOST
   value: amqp://{{ .Values.rabbitmq.rabbitmq.username }}:$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST)/{{ .Values.rabbitmq.vhost }}
-{{- else }}
-- name: TASK_HOST
-  value: {{ .Values.taskHost | quote}}
-{{- end }}
 - name: RETRY_DELAY
   value: "600"
-- name: OPENTSDB_PORT
-  value: "80"
 - name: CALIBRATE_PROPOSAL_ID
-  value: {{ .Values.calibrateProposalId | quote }}
-- name: OBSERVATION_PORTAL_URL
-  value: {{ .Values.observationPortalUrl | quote }}
-- name: API_ROOT
-  value: {{ .Values.apiRoot | quote }}
-- name: AUTH_TOKEN
-  value: {{ .Values.archiveAuthToken | quote }}
-- name: RAW_DATA_FRAME_URL
-  value: {{ .Values.rawDataFrameUrl | quote }}
-- name: RAW_DATA_AUTH_TOKEN
-  value: {{ .Values.rawDataAuthToken | quote }}
-- name: BUCKET
-  value: {{ .Values.s3Bucket | quote }}
-- name: AWS_ACCESS_KEY_ID
-  value: {{ .Values.awsAccessKeyId | quote }}
-- name: AWS_SECRET_ACCESS_KEY
-  value: {{ .Values.awsSecretAccessKey | quote }}
-- name: OPENTSDB_HOSTNAME
-  value: {{ .Values.opentsdbHostname | quote }}
-- name: BOSUN_HOSTNAME
-  value: {{ .Values.bosunHostname | quote }}
+  value: {{ .Values.banzai.calibrateProposalId | quote }}
 - name: FITS_BROKER
-  value: {{ .Values.fitsBroker | quote }}
+  value: {{ .Values.banzai.fitsBroker | quote }}
 - name: FITS_EXCHANGE
-  value: {{ .Values.fitsExchange | quote }}
+  value: {{ .Values.banzai.fitsExchange | quote }}
 - name: QUEUE_NAME
-  value: {{ .Values.queueName | quote }}
-- name: INGESTER_PROCESS_NAME
-  value: {{ .Values.ingesterProcessName | quote }}
-- name: POSTPROCESS_FILES
-  value: "False"
+  value: {{ .Values.banzai.queueName | quote }}
 - name: BANZAI_WORKER_LOGLEVEL
-  value: {{ .Values.banzaiWorkerLogLevel | quote }}
-{{- if .Values.noMetrics }}
-- name: OPENTSDB_PYTHON_METRICS_TEST_MODE
-  value: "1"
-{{- end -}}
-
+  value: {{ .Values.banzai.banzaiWorkerLogLevel | quote }}
 {{- end -}}
