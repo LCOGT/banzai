@@ -61,4 +61,4 @@ jobs:
       if: "endsWith(matrix.toxenv, 'build_docs')"
       run: sudo apt-get -y install graphviz
     - name: Run tests
-      run: tox $TOXARGS -- $TOXPOSARGS -m 'not e2e'
+      run: tox $TOXARGS -- $TOXPOSARGS
