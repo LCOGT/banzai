@@ -1,9 +1,10 @@
 import logging
 from typing import Optional
 import requests
-from collections import OrderedDict
+from collections import OrderedDict, Iterable
 
 from banzai import logs
+from banzai.context import Context
 
 import numpy as np
 from astropy.io import fits
@@ -185,21 +186,29 @@ def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
     return fits.HDUList(hdulist)
 
 
-def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
+def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: Iterable) -> fits.HDUList:
     if uncompressed_hdulist[0].data is None:
         primary_hdu = fits.PrimaryHDU(header=uncompressed_hdulist[0].header)
         hdulist = [primary_hdu]
     else:
         primary_hdu = fits.PrimaryHDU()
+        if uncompressed_hdulist[0].header['EXTNAME'] in lossless_extensions:
+            quantize_level = 1e9
+        else:
+            quantize_level = 64
         compressed_hdu = fits.CompImageHDU(data=np.ascontiguousarray(uncompressed_hdulist[0].data),
-                                           header=uncompressed_hdulist[0].header, quantize_level=64,
-                                           dither_seed=2048, quantize_method=1)
+                                           header=uncompressed_hdulist[0].header, quantize_level=quantize_level,
+                                           quantize_method=1)
         hdulist = [primary_hdu, compressed_hdu]
 
     for hdu in uncompressed_hdulist[1:]:
         if isinstance(hdu, fits.ImageHDU):
+            if hdu.header['EXTNAME'] in lossless_extensions:
+                quantize_level = 1e9
+            else:
+                quantize_level = 64
             compressed_hdu = fits.CompImageHDU(data=np.ascontiguousarray(hdu.data), header=hdu.header,
-                                               quantize_level=64, quantize_method=1)
+                                               quantize_level=quantize_level, quantize_method=1)
             hdulist.append(compressed_hdu)
         else:
             hdulist.append(hdu)

@@ -98,7 +98,7 @@ ARCHIVE_AUTH_HEADER = {'Authorization': f'Token {ARCHIVE_AUTH_TOKEN}'}
 
 RAW_DATA_AUTH_TOKEN = os.getenv('RAW_DATA_AUTH_TOKEN', ARCHIVE_AUTH_TOKEN)
 RAW_DATA_API_ROOT = os.getenv('RAW_DATA_API_ROOT', ARCHIVE_API_ROOT)
-RAW_DATA_FRAME_URL = f'{ARCHIVE_API_ROOT}frames'
+RAW_DATA_FRAME_URL = f'{RAW_DATA_API_ROOT}frames'
 RAW_DATA_AUTH_HEADER = {'Authorization' : f'Token {RAW_DATA_AUTH_TOKEN}'}
 
 CALIBRATE_PROPOSAL_ID = os.getenv('CALIBRATE_PROPOSAL_ID', 'calibrate')
@@ -139,3 +139,5 @@ MASTER_CALIBRATION_EXTENSION_ORDER = {'BIAS': ['SCI', 'BPM', 'ERR'],
 REDUCED_DATA_EXTENSION_TYPES = {'SCI': 'float32',
                                 'ERR': 'float32',
                                 'BPM': 'uint8'}
+
+LOSSLESS_EXTENSIONS = []
