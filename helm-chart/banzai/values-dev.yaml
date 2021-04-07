@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 image:
   repository: docker.lco.global/banzai
-  tag: "1.1.4"
+  tag: "1.2.0"
   pullPolicy: IfNotPresent
 
 # Values for the OCS Ingester library, used by BANZAI.
