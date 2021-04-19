@@ -221,8 +221,7 @@ class SourceDetector(Stage):
                 seeing = np.median(catalog['fwhm'][good_objects]) * image.pixel_scale
                 image.meta['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
 
-                mean_ellipticity = stats.sigma_clipped_mean(catalog['ellipticity'][good_objects],
-                                                            3.0)
+                mean_ellipticity = stats.sigma_clipped_mean(catalog['ellipticity'][good_objects], 3.0)
                 image.meta['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
 
                 mean_position_angle = stats.sigma_clipped_mean(catalog['theta'][good_objects], 3.0)
@@ -234,7 +233,7 @@ class SourceDetector(Stage):
 
             logger.info('Extracted sources', image=image, extra_tags=logging_tags)
             # adding catalog (a data table) to the appropriate images attribute.
-            image.catalog = DataTable(catalog, name='CAT')
+            image['catalog'] = DataTable(catalog, name='CAT')
         except Exception:
             logger.error(logs.format_exception(), image=image)
         return image

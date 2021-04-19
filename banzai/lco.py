@@ -2,34 +2,23 @@ import datetime
 import os
 from fnmatch import fnmatch
 from typing import Optional
+from io import BytesIO
 
 import numpy as np
 from astropy.io import fits
 
 from astropy.time import Time
 from astropy.table import Table
+import hashlib
 
 from banzai import dbs
-from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData
+from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData, DataProduct
 from banzai.frames import ObservationFrame, CalibrationFrame, logger, FrameFactory
-from banzai.utils import date_utils, fits_utils, image_utils
+from banzai.utils import date_utils, fits_utils, image_utils, file_utils
 from banzai.utils.image_utils import Section
 
 
 class LCOObservationFrame(ObservationFrame):
-    # TODO: Set all status check keywords to bad if they are not already set
-    # TODO: Add gain validation
-    def get_output_filename(self, runtime_context):
-        # TODO add a mode for AWS filenames
-        output_directory = self.get_output_directory(runtime_context)
-        output_filename = self._file_path.replace('00.fits', '{:02d}.fits'.format(int(runtime_context.reduction_level)))
-        output_filename = os.path.join(output_directory, os.path.basename(output_filename))
-        if runtime_context.fpack and not output_filename.endswith('.fz'):
-            output_filename += '.fz'
-        if not runtime_context.fpack and output_filename.endswith('.fz'):
-            output_filename = output_filename[:-3]
-        return output_filename
-
     def get_output_directory(self, runtime_context) -> str:
         return os.path.join(runtime_context.processed_path, self.instrument.site,
                             self.instrument.camera, self.epoch, 'processed')
@@ -73,14 +62,6 @@ class LCOObservationFrame(ObservationFrame):
     @property
     def datecreated(self):
         return Time(self.primary_hdu.meta.get('DATE'), scale='utc').datetime
-
-    @property
-    def catalog(self):
-        return next((hdu.data for hdu in self._hdus if hdu.name == 'CAT'), None)
-
-    @catalog.setter
-    def catalog(self, value: DataTable):
-        self._hdus.append(value)
 
     @property
     def configuration_mode(self):
@@ -128,12 +109,64 @@ class LCOObservationFrame(ObservationFrame):
             next_year = date_observed + datetime.timedelta(days=context.DATA_RELEASE_DELAY)
             self.meta['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year), '[UTC] Date the frame becomes public')
 
+    def get_output_filename(self, runtime_context):
+        output_filename = self.filename.replace('00.fits', '{:02d}.fits'.format(int(runtime_context.reduction_level)))
+        if runtime_context.fpack and not output_filename.endswith('.fz'):
+            output_filename += '.fz'
+        if not runtime_context.fpack and output_filename.endswith('.fz'):
+            output_filename = output_filename[:-3]
+        return output_filename
+
+    def get_output_data_products(self, runtime_context):
+        output_filename = self.get_output_filename(runtime_context)
+        output_fits = self.to_fits(runtime_context)
+        buffer = BytesIO()
+        output_fits.writeto(buffer)
+        buffer.seek(0)
+        output_product = DataProduct(buffer, output_filename, filepath=self.get_output_directory(runtime_context))
+        return [output_product]
+
+    def write(self, runtime_context):
+        self.save_processing_metadata(runtime_context)
+        output_products = self.get_output_data_products(runtime_context)
+        for data_product in output_products:
+            if runtime_context.post_to_archive:
+                archived_image_info = file_utils.post_to_ingester(data_product.file_buffer, self,
+                                                                  data_product.filename, meta=data_product.meta)
+                self.frame_id = archived_image_info.get('frameid')
+
+            if not runtime_context.no_file_cache:
+                os.makedirs(self.get_output_directory(runtime_context), exist_ok=True)
+                data_product.file_buffer.seek(0)
+                with open(os.path.join(data_product.filepath, data_product.filename), 'wb') as f:
+                    f.write(data_product.file_buffer.read())
+
+            data_product.file_buffer.seek(0)
+            md5 = hashlib.md5(data_product.file_buffer.read()).hexdigest()
+            dbs.save_processed_image(data_product.filename, md5, db_address=runtime_context.db_address)
+        return output_products
+
 
 class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
     def __init__(self, hdu_list: list, file_path: str, frame_id: int = None, grouping_criteria: list = None,
                  hdu_order: list = None):
         CalibrationFrame.__init__(self, grouping_criteria=grouping_criteria)
         LCOObservationFrame.__init__(self, hdu_list, file_path, frame_id=frame_id, hdu_order=hdu_order)
+
+    def to_db_record(self, output_product):
+        record_attributes = {'type': self.obstype.upper(),
+                             'filename': output_product.filename,
+                             'filepath': output_product.filepath,
+                             'dateobs': self.dateobs,
+                             'datecreated': self.datecreated,
+                             'instrument_id': self.instrument.id,
+                             'is_master': self.is_master,
+                             'is_bad': self.is_bad,
+                             'frameid': self.frame_id,
+                             'attributes': {}}
+        for attribute in self.grouping_criteria:
+            record_attributes['attributes'][attribute] = str(getattr(self, attribute))
+        return dbs.CalibrationImage(**record_attributes)
 
     @property
     def is_master(self):
@@ -144,8 +177,9 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
         self.meta['ISMASTER'] = value
 
     def write(self, runtime_context):
-        LCOObservationFrame.write(self, runtime_context)
-        CalibrationFrame.write(self, runtime_context)
+        output_products = LCOObservationFrame.write(self, runtime_context)
+        # We need to get the output data products somehow. maybe return from write?
+        CalibrationFrame.write(self, output_products, runtime_context)
 
     @classmethod
     def init_master_frame(cls, images: list, file_path: str, frame_id: int = None,

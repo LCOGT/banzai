@@ -8,6 +8,17 @@ from astropy.table import Table
 
 from banzai.utils.image_utils import Section
 from banzai.utils import fits_utils, stats
+from io import BytesIO
+
+
+class DataProduct:
+    def __init__(self, file_buffer: BytesIO, filename: str, filepath: str = None,
+                 meta: dict = None, frame_id: int = None):
+        self.file_buffer = file_buffer
+        self.filename = filename
+        self.filepath = filepath
+        self.meta = meta
+        self.frame_id = frame_id
 
 
 class Data(metaclass=abc.ABCMeta):

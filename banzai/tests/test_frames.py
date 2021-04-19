@@ -143,7 +143,7 @@ def test_get_output_filename():
     test_context = FakeContext(frame_class=FakeLCOObservationFrame)
     filename = test_frame.get_output_filename(test_context)
 
-    assert filename == '/tmp/cpt/fa16/20160101/processed/test_image_91.fits.fz'
+    assert filename == 'test_image_91.fits.fz'
 
 
 def test_section_transformation():
