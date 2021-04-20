@@ -201,10 +201,14 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         return self._hdus[self._hdu_keys[item]]
 
     def __setitem__(self, key, value):
-        self._hdus.append(value)
-        i = len(self._hdus) - 1
-        self._hdu_keys[key] = i
-        self._hdu_keys[self._hdus[-1].name] = i
+        if not key in self._hdu_keys:
+            self._hdus.append(value)
+            i = len(self._hdus) - 1
+            self._hdu_keys[key] = i
+            self._hdu_keys[self._hdus[-1].name] = i
+        else:
+            self._hdus.remove(self._hdu_keys[key])
+            self._hdus.insert(value, self._hdu_keys[key])
 
 
 class CalibrationFrame(metaclass=abc.ABCMeta):

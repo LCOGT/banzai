@@ -120,10 +120,7 @@ class LCOObservationFrame(ObservationFrame):
     def get_output_data_products(self, runtime_context):
         output_filename = self.get_output_filename(runtime_context)
         output_fits = self.to_fits(runtime_context)
-        buffer = BytesIO()
-        output_fits.writeto(buffer)
-        buffer.seek(0)
-        output_product = DataProduct(buffer, output_filename, filepath=self.get_output_directory(runtime_context))
+        output_product = DataProduct.from_fits(output_fits, output_filename, self.get_output_directory(runtime_context))
         return [output_product]
 
     def write(self, runtime_context):
@@ -178,7 +175,6 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
 
     def write(self, runtime_context):
         output_products = LCOObservationFrame.write(self, runtime_context)
-        # We need to get the output data products somehow. maybe return from write?
         CalibrationFrame.write(self, output_products, runtime_context)
 
     @classmethod

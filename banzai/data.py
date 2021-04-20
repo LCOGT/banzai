@@ -20,6 +20,13 @@ class DataProduct:
         self.meta = meta
         self.frame_id = frame_id
 
+    @classmethod
+    def from_fits(cls, hdu: fits.HDUList, filename: str, file_path: str):
+        buffer = BytesIO()
+        hdu.writeto(buffer)
+        buffer.seek(0)
+        return cls(buffer, filename, filepath=file_path)
+
 
 class Data(metaclass=abc.ABCMeta):
     _file_handles = []
