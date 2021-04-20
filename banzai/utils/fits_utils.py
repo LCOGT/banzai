@@ -1,10 +1,10 @@
 import logging
 from typing import Optional
 import requests
-from collections import OrderedDict, Iterable
+from collections.abc import Iterable
+from collections import OrderedDict
 
 from banzai import logs
-from banzai.context import Context
 
 import numpy as np
 from astropy.io import fits
