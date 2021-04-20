@@ -314,8 +314,9 @@ def add_bpm():
         bpm_image.frame_id = ingester_response['frameid']
         bpm_image.is_bad = False
         bpm_image.is_master = True
-        dbs.save_calibration_info(bpm_image.to_db_record([DataProduct(None, filename=os.path.basename(args.filepath),
-                                                                      filepath=os.path.dirname(args.filepath))]), args.db_address)
+        dbs.save_calibration_info(bpm_image.to_db_record(DataProduct(None, filename=os.path.basename(args.filepath),
+                                                                     filepath=os.path.dirname(args.filepath))),
+                                  args.db_address)
 
 
 def add_bpms_from_archive():
@@ -340,7 +341,9 @@ def add_bpms_from_archive():
             bpm_image = frame_factory.open(frame, args)
             if bpm_image is not None:
                 bpm_image.is_master = True
-                dbs.save_calibration_info(bpm_image.to_db_record([DataProduct(None, filename=bpm_image.filename, filepath=None)]), args.db_address)
+                dbs.save_calibration_info(bpm_image.to_db_record(DataProduct(None, filename=bpm_image.filename,
+                                                                             filepath=None)),
+                                          args.db_address)
         except Exception:
             logger.error(f"BPM not added to database: {logs.format_exception()}", extra_tags={'filename': frame.get('filename')})
 
