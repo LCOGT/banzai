@@ -207,8 +207,8 @@ class ObservationFrame(metaclass=abc.ABCMeta):
             self._hdu_keys[key] = i
             self._hdu_keys[self._hdus[-1].name] = i
         else:
-            self._hdus.remove(self._hdu_keys[key])
-            self._hdus.insert(value, self._hdu_keys[key])
+            del self._hdus[self._hdu_keys[key]]
+            self._hdus.insert(self._hdu_keys[key], value)
 
 
 class CalibrationFrame(metaclass=abc.ABCMeta):
