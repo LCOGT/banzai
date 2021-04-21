@@ -125,7 +125,9 @@ class DataTable(Data):
 
 
 class ArrayData(Data):
-    def __init__(self, data, meta, name, memmap=True):
+    def __init__(self, data, name, meta=None, memmap=True):
+        if meta is None:
+            meta = fits.Header({})
         super().__init__(data, meta, name=name, memmap=memmap)
 
     def to_fits(self, context) -> Union[fits.HDUList, list]:
