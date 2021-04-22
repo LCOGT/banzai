@@ -128,10 +128,11 @@ class ArrayData(Data):
     def __init__(self, data, name, meta=None, memmap=True):
         if meta is None:
             meta = fits.Header({})
+
         super().__init__(data, meta, name=name, memmap=memmap)
 
     def to_fits(self, context) -> Union[fits.HDUList, list]:
-        return [fits.ImageHDU(data=self.data, header=self.meta)]
+        return [fits.ImageHDU(data=self.data, header=self.meta, name=self.name)]
 
 
 class CCDData(Data):
