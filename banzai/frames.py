@@ -197,6 +197,9 @@ class ObservationFrame(metaclass=abc.ABCMeta):
             self.primary_hdu.__itruediv__(other)
         return self
 
+    def __contains__(self, key):
+        return key in self._hdu_keys
+
     def __getitem__(self, item):
         return self._hdus[self._hdu_keys[item]]
 

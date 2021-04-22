@@ -46,12 +46,21 @@ def test_frame_setitem_duplicate_replaces_hdu():
     assert len(test_frame._hdus) == 2
     assert test_frame['SCI'] == hdu_list[0]
 
+
 def test_frame_setitem_name_mismatch_raises_error():
     hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='SCI'), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
     test_frame = LCOObservationFrame(hdu_list=hdu_list, file_path='/foo/bar')
 
     with pytest.raises(KeyError):
         test_frame['SCI'] = FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='FOO')
+
+
+def test_frame_contains_does_not_exist():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='SCI'), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+    test_frame = LCOObservationFrame(hdu_list=hdu_list, file_path='/foo/bar')
+
+    assert not 'FOO' in test_frame
+
 
 def test_frame_to_db_record():
     hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 
