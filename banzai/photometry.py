@@ -233,7 +233,7 @@ class SourceDetector(Stage):
 
             logger.info('Extracted sources', image=image, extra_tags=logging_tags)
             # adding catalog (a data table) to the appropriate images attribute.
-            image['catalog'] = DataTable(catalog, name='CAT')
+            image['CAT'] = DataTable(catalog, name='CAT')
         except Exception:
             logger.error(logs.format_exception(), image=image)
         return image

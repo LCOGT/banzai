@@ -28,7 +28,7 @@ class WCSSolver(Stage):
             image.meta['WCSERR'] = FAILED_WCS
             return image
 
-        image_catalog = image['catalog'].data
+        image_catalog = image['CAT'].data
 
         # Short circuit
         if image_catalog is None:
