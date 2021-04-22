@@ -68,7 +68,7 @@ def test_frame_to_db_record():
 
 
 def test_ccd_data_to_fits():
-    test_data = FakeCCDData(meta={'EXTNAME': 'SCI'})
+    test_data = FakeCCDData(meta={}, name='SCI')
     hdu_list = test_data.to_fits(FakeContext())
     assert len(hdu_list) == 3
     assert hdu_list[0].header['EXTNAME'] == 'SCI'
@@ -77,7 +77,7 @@ def test_ccd_data_to_fits():
 
 
 def test_exposure_to_fits_reorder_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+    hdu_list = [FakeCCDData(meta={'OBSTYPE': 'EXPOSE'}, name='SCI'), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = True
@@ -85,7 +85,7 @@ def test_exposure_to_fits_reorder_fpack():
 
 
 def test_exposure_to_fits_reorder_fpack_missing_cat():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'})]
+    hdu_list = [FakeCCDData(meta={'OBSTYPE': 'EXPOSE'}, name='SCI')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = True
@@ -93,7 +93,7 @@ def test_exposure_to_fits_reorder_fpack_missing_cat():
 
 
 def test_exposure_to_fits_reorder_no_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+    hdu_list = [FakeCCDData(meta={'OBSTYPE': 'EXPOSE'}, name='SCI'), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = False
@@ -101,7 +101,7 @@ def test_exposure_to_fits_reorder_no_fpack():
 
 
 def test_calibration_to_fits_reorder_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'BIAS'})]
+    hdu_list = [FakeCCDData(meta={'OBSTYPE': 'BIAS'}, name='SCI')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     test_frame.hdu_order = ['SCI', 'BPM', 'ERR']
     context = FakeContext()
@@ -110,7 +110,7 @@ def test_calibration_to_fits_reorder_fpack():
 
 
 def test_calibration_to_fits_reorder_no_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'BIAS'})]
+    hdu_list = [FakeCCDData(meta={'OBSTYPE': 'BIAS'}, name='SCI')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     test_frame.hdu_order = ['SCI', 'BPM', 'ERR']
     context = FakeContext()
@@ -119,9 +119,9 @@ def test_calibration_to_fits_reorder_no_fpack():
 
 
 def test_all_datatypes_wrong():
-    hdu_list = [FakeCCDData(data=np.ones((2,2), dtype=np.float64),meta={'EXTNAME':'SCI'}),
-                FakeCCDData(data=np.ones((2,2), dtype=np.float64), meta={'EXTNAME':'BPM'}),
-                FakeCCDData(data=np.ones((2,2), dtype=np.float64), meta={'EXTNAME':'ERR'})]
+    hdu_list = [FakeCCDData(data=np.ones((2,2), dtype=np.float64), name='SCI'),
+                FakeCCDData(data=np.ones((2,2), dtype=np.float64), name='BPM'),
+                FakeCCDData(data=np.ones((2,2), dtype=np.float64), name='ERR')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     test_frame.hdu_order = ['SCI', 'BPM', 'ERR']
     context = FakeContext()

@@ -75,14 +75,6 @@ class Data(metaclass=abc.ABCMeta):
         del self.data
         del self.mask
 
-    @property
-    def extension_name(self):
-        return self.meta.get('EXTNAME')
-
-    @extension_name.setter
-    def extension_name(self, value):
-        self.meta['EXTNAME'] = value
-
     @classmethod
     def from_fits(cls, hdu: Union[fits.ImageHDU, fits.TableHDU, fits.BinTableHDU]):
         return cls(hdu.data, hdu.header, name=hdu.header.get('EXTNAME'))
@@ -175,9 +167,9 @@ class CCDData(Data):
 
     def to_fits(self, context):
         data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta), name=self.name)
-        bpm_hdu = fits_utils.to_fits_image_extension(self.mask, self.extension_name, 'BPM', context,
+        bpm_hdu = fits_utils.to_fits_image_extension(self.mask, self.name, 'BPM', context,
                                                      extension_version=self.meta.get('EXTVER'))
-        uncertainty_hdu = fits_utils.to_fits_image_extension(self.uncertainty, self.extension_name, 'ERR', context,
+        uncertainty_hdu = fits_utils.to_fits_image_extension(self.uncertainty, self.name, 'ERR', context,
                                                              extension_version=self.meta.get('EXTVER'))
         hdulist = fits.HDUList([data_hdu, bpm_hdu, uncertainty_hdu])
         return hdulist
