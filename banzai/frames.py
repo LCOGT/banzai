@@ -201,6 +201,8 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         return self._hdus[self._hdu_keys[item]]
 
     def __setitem__(self, key, value):
+        if key != value.name:
+            raise KeyError("Key and extension name do not match.")
         if not key in self._hdu_keys:
             self._hdus.append(value)
             i = len(self._hdus) - 1
