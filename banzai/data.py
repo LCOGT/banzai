@@ -174,7 +174,7 @@ class CCDData(Data):
         return self
 
     def to_fits(self, context):
-        data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta))
+        data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta), name=self.name)
         bpm_hdu = fits_utils.to_fits_image_extension(self.mask, self.extension_name, 'BPM', context,
                                                      extension_version=self.meta.get('EXTVER'))
         uncertainty_hdu = fits_utils.to_fits_image_extension(self.uncertainty, self.extension_name, 'ERR', context,
