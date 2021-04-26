@@ -29,30 +29,22 @@ def test_update_trimsec_fs01():
     assert test_hdu.header.get('DATASEC') == '[10:2056,16:2032]'
 
 
-def test_frame_setitem_adds_hdu():
+def test_frame_append_adds_hdu():
     hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
     test_frame = LCOObservationFrame(hdu_list=hdu_list, file_path='/foo/bar')
-    test_frame['FOO'] = FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='FOO')
+    test_frame.append(FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='FOO'))
     
     assert len(test_frame._hdus) == 3
     assert test_frame['FOO'].name == 'FOO'
 
 
-def test_frame_setitem_duplicate_replaces_hdu():
+def test_frame_append_duplicate_replaces_hdu():
     hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='SCI'), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
     test_frame = LCOObservationFrame(hdu_list=hdu_list, file_path='/foo/bar')
-    test_frame['SCI'] = FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='SCI')
+    test_frame.append(FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='SCI'))
 
     assert len(test_frame._hdus) == 2
     assert test_frame['SCI'] == hdu_list[0]
-
-
-def test_frame_setitem_name_mismatch_raises_error():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='SCI'), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
-    test_frame = LCOObservationFrame(hdu_list=hdu_list, file_path='/foo/bar')
-
-    with pytest.raises(KeyError):
-        test_frame['SCI'] = FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='FOO')
 
 
 def test_frame_contains_does_not_exist():
