@@ -2,11 +2,13 @@ import pytest
 import numpy as np
 from astropy.table import Table
 from astropy.io.fits import ImageHDU, Header
+from mock import MagicMock
 
 from banzai.utils.image_utils import Section
 from banzai.data import CCDData, DataTable
+from banzai.dbs import CalibrationImage
 from banzai.tests.utils import FakeCCDData, FakeLCOObservationFrame, FakeContext
-from banzai.lco import LCOFrameFactory
+from banzai.lco import LCOFrameFactory, LCOObservationFrame, LCOCalibrationFrame
 
 pytestmark = pytest.mark.frames
 
@@ -27,8 +29,53 @@ def test_update_trimsec_fs01():
     assert test_hdu.header.get('DATASEC') == '[10:2056,16:2032]'
 
 
+def test_frame_add_hdu():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+    test_frame = LCOObservationFrame(hdu_list=hdu_list, file_path='/foo/bar')
+    test_frame.add_or_update(FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='FOO'))
+    
+    assert len(test_frame._hdus) == 3
+    assert test_frame['FOO'].name == 'FOO'
+
+
+def test_frame_duplicate_replaces_hdu():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='SCI'), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+    test_frame = LCOObservationFrame(hdu_list=hdu_list, file_path='/foo/bar')
+    test_frame.add_or_update(FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='SCI'))
+
+    assert len(test_frame._hdus) == 2
+    assert test_frame['SCI'] == hdu_list[0]
+
+
+def test_frame_contains_does_not_exist():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='SCI'), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+    test_frame = LCOObservationFrame(hdu_list=hdu_list, file_path='/foo/bar')
+
+    assert not 'FOO' in test_frame
+
+
+def test_frame_to_db_record():
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 
+                                  'OBSTYPE': 'BIAS', 
+                                  'DATE-OBS': '2021-04-20T00:00:00.000', 
+                                  'DATE': '2021-04-20T00:00:00.000',
+                                  'CCDSUM': '1 1',
+                                  'CONFMODE': 'full_frame'}, name='SCI')]
+    test_frame = LCOCalibrationFrame(hdu_list=hdu_list, file_path='/foo/bar')
+    test_frame.is_bad = False
+    test_frame.frame_id = 1234
+    test_frame.instrument = MagicMock(id=7)
+    mock_data_product = MagicMock(filename='test.fits.fz', filepath='/path/to/test/test.fits.fz')
+    db_record = test_frame.to_db_record(mock_data_product)
+
+    assert type(db_record) == CalibrationImage
+    assert db_record.is_master == False
+    assert db_record.type == 'BIAS'
+    assert db_record.frameid == 1234
+
+
 def test_ccd_data_to_fits():
-    test_data = FakeCCDData(meta={'EXTNAME': 'SCI'})
+    test_data = FakeCCDData(meta={}, name='SCI')
     hdu_list = test_data.to_fits(FakeContext())
     assert len(hdu_list) == 3
     assert hdu_list[0].header['EXTNAME'] == 'SCI'
@@ -37,7 +84,7 @@ def test_ccd_data_to_fits():
 
 
 def test_exposure_to_fits_reorder_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+    hdu_list = [FakeCCDData(meta={'OBSTYPE': 'EXPOSE'}, name='SCI'), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = True
@@ -45,7 +92,7 @@ def test_exposure_to_fits_reorder_fpack():
 
 
 def test_exposure_to_fits_reorder_fpack_missing_cat():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'})]
+    hdu_list = [FakeCCDData(meta={'OBSTYPE': 'EXPOSE'}, name='SCI')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = True
@@ -53,7 +100,7 @@ def test_exposure_to_fits_reorder_fpack_missing_cat():
 
 
 def test_exposure_to_fits_reorder_no_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
+    hdu_list = [FakeCCDData(meta={'OBSTYPE': 'EXPOSE'}, name='SCI'), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     context = FakeContext()
     context.fpack = False
@@ -61,7 +108,7 @@ def test_exposure_to_fits_reorder_no_fpack():
 
 
 def test_calibration_to_fits_reorder_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'BIAS'})]
+    hdu_list = [FakeCCDData(meta={'OBSTYPE': 'BIAS'}, name='SCI')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     test_frame.hdu_order = ['SCI', 'BPM', 'ERR']
     context = FakeContext()
@@ -70,7 +117,7 @@ def test_calibration_to_fits_reorder_fpack():
 
 
 def test_calibration_to_fits_reorder_no_fpack():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'BIAS'})]
+    hdu_list = [FakeCCDData(meta={'OBSTYPE': 'BIAS'}, name='SCI')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     test_frame.hdu_order = ['SCI', 'BPM', 'ERR']
     context = FakeContext()
@@ -79,9 +126,9 @@ def test_calibration_to_fits_reorder_no_fpack():
 
 
 def test_all_datatypes_wrong():
-    hdu_list = [FakeCCDData(data=np.ones((2,2), dtype=np.float64),meta={'EXTNAME':'SCI'}),
-                FakeCCDData(data=np.ones((2,2), dtype=np.float64), meta={'EXTNAME':'BPM'}),
-                FakeCCDData(data=np.ones((2,2), dtype=np.float64), meta={'EXTNAME':'ERR'})]
+    hdu_list = [FakeCCDData(data=np.ones((2,2), dtype=np.float64), name='SCI'),
+                FakeCCDData(data=np.ones((2,2), dtype=np.float64), name='BPM'),
+                FakeCCDData(data=np.ones((2,2), dtype=np.float64), name='ERR')]
     test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
     test_frame.hdu_order = ['SCI', 'BPM', 'ERR']
     context = FakeContext()
@@ -143,7 +190,7 @@ def test_get_output_filename():
     test_context = FakeContext(frame_class=FakeLCOObservationFrame)
     filename = test_frame.get_output_filename(test_context)
 
-    assert filename == '/tmp/cpt/fa16/20160101/processed/test_image_91.fits.fz'
+    assert filename == 'test_image_91.fits.fz'
 
 
 def test_section_transformation():

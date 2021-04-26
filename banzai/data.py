@@ -8,6 +8,24 @@ from astropy.table import Table
 
 from banzai.utils.image_utils import Section
 from banzai.utils import fits_utils, stats
+from io import BytesIO
+
+
+class DataProduct:
+    def __init__(self, file_buffer: BytesIO, filename: str, filepath: str = None,
+                 meta: dict = None, frame_id: int = None):
+        self.file_buffer = file_buffer
+        self.filename = filename
+        self.filepath = filepath
+        self.meta = meta
+        self.frame_id = frame_id
+
+    @classmethod
+    def from_fits(cls, hdu: fits.HDUList, filename: str, file_path: str):
+        buffer = BytesIO()
+        hdu.writeto(buffer)
+        buffer.seek(0)
+        return cls(buffer, filename, filepath=file_path)
 
 
 class Data(metaclass=abc.ABCMeta):
@@ -57,14 +75,6 @@ class Data(metaclass=abc.ABCMeta):
         del self.data
         del self.mask
 
-    @property
-    def extension_name(self):
-        return self.meta.get('EXTNAME')
-
-    @extension_name.setter
-    def extension_name(self, value):
-        self.meta['EXTNAME'] = value
-
     @classmethod
     def from_fits(cls, hdu: Union[fits.ImageHDU, fits.TableHDU, fits.BinTableHDU]):
         return cls(hdu.data, hdu.header, name=hdu.header.get('EXTNAME'))
@@ -107,11 +117,14 @@ class DataTable(Data):
 
 
 class ArrayData(Data):
-    def __init__(self, data, meta, name, memmap=True):
+    def __init__(self, data, name, meta=None, memmap=True):
+        if meta is None:
+            meta = fits.Header({})
+
         super().__init__(data, meta, name=name, memmap=memmap)
 
     def to_fits(self, context) -> Union[fits.HDUList, list]:
-        return [fits.ImageHDU(data=self.data, header=self.meta)]
+        return [fits.ImageHDU(data=self.data, header=fits.Header(self.meta), name=self.name)]
 
 
 class CCDData(Data):
@@ -153,10 +166,10 @@ class CCDData(Data):
         return self
 
     def to_fits(self, context):
-        data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta))
-        bpm_hdu = fits_utils.to_fits_image_extension(self.mask, self.extension_name, 'BPM', context,
+        data_hdu = fits.ImageHDU(data=self.data, header=fits.Header(self.meta), name=self.name)
+        bpm_hdu = fits_utils.to_fits_image_extension(self.mask, self.name, 'BPM', context,
                                                      extension_version=self.meta.get('EXTVER'))
-        uncertainty_hdu = fits_utils.to_fits_image_extension(self.uncertainty, self.extension_name, 'ERR', context,
+        uncertainty_hdu = fits_utils.to_fits_image_extension(self.uncertainty, self.name, 'ERR', context,
                                                              extension_version=self.meta.get('EXTVER'))
         hdulist = fits.HDUList([data_hdu, bpm_hdu, uncertainty_hdu])
         return hdulist

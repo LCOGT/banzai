@@ -1,3 +1,12 @@
+1.3.0 (2021-04-26)
+------------------
+- Upgraded infrastructure on how data products are saved/stored for downstream users.
+
+1.2.1 (2021-04-08)
+------------------
+- Upgrade to ocs-ingester 2.3.0, which adds the ability to ingest data products of 
+  arbitrary type to an OCS Science Archive
+
 1.2.0 (2021-04-04)
 ------------------
 - Added the option to losslessly compress fits extensions.

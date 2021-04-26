@@ -6,9 +6,7 @@ import numpy as np
 from astropy.io import fits
 import abc
 import os
-from io import BytesIO
 from typing import Optional
-import hashlib
 
 logger = logging.getLogger('banzai')
 
@@ -21,6 +19,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         self.instrument = None
         self.frame_id = frame_id
         self.hdu_order = hdu_order
+        self._hdu_mapping = {hdu.name: i for i, hdu in enumerate(hdu_list)}
 
     @property
     def primary_hdu(self):
@@ -93,8 +92,14 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def bias_level(self, value):
         pass
 
-    def append(self, hdu):
-        self._hdus.append(hdu)
+    def add_or_update(self, hdu):
+        if hdu.name not in self._hdu_mapping:
+            self._hdus.append(hdu)
+            i = len(self._hdus) - 1
+            self._hdu_mapping[hdu.name] = i
+        else:
+            del self._hdus[self._hdu_mapping[hdu.name]]
+            self._hdus.insert(self._hdu_mapping[hdu.name], hdu)
 
     def remove(self, hdu):
         self._hdus.remove(hdu)
@@ -102,10 +107,6 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def replace(self, old_data, new_data):
         self._hdus.insert(self._hdus.index(old_data), new_data)
         self._hdus.remove(old_data)
-
-    @abc.abstractmethod
-    def get_output_filename(self, runtime_context) -> str:
-        pass
 
     @abc.abstractmethod
     def get_output_directory(self, runtime_context) -> str:
@@ -151,25 +152,9 @@ class ObservationFrame(metaclass=abc.ABCMeta):
             float_or_int = 'int'
         return getattr(np, f'{float_or_int}{size}')
 
+    @abc.abstractmethod
     def write(self, runtime_context):
-        output_filename = self.get_output_filename(runtime_context)
-        self.save_processing_metadata(runtime_context)
-        with BytesIO() as buffer:
-            self.to_fits(runtime_context).writeto(buffer, overwrite=True, output_verify='silentfix')
-            buffer.seek(0)
-            if runtime_context.post_to_archive:
-                archived_image_info = file_utils.post_to_ingester(buffer, self, output_filename)
-                # update file info from ingester response
-                self.frame_id = archived_image_info.get('frameid')
-                buffer.seek(0)
-            if not runtime_context.no_file_cache:
-                os.makedirs(os.path.dirname(output_filename), exist_ok=True)
-                with open(output_filename, 'wb') as f:
-                    f.write(buffer.read())
-                buffer.seek(0)
-            md5 = hashlib.md5(buffer.read()).hexdigest()
-
-        dbs.save_processed_image(output_filename, md5, db_address=runtime_context.db_address)
+        pass
 
     def to_fits(self, context):
         hdu_list_to_write = fits.HDUList([])
@@ -218,12 +203,14 @@ class ObservationFrame(metaclass=abc.ABCMeta):
             self.primary_hdu.__itruediv__(other)
         return self
 
+    def __contains__(self, key):
+        return key in self._hdu_mapping
+
+    def __getitem__(self, item):
+        return self._hdus[self._hdu_mapping[item]]
+
 
 class CalibrationFrame(metaclass=abc.ABCMeta):
-    @abc.abstractmethod
-    def get_output_filename(self, runtime_context) -> str:
-        pass
-
     def __init__(self, grouping_criteria: list = None):
         self.is_bad = False
         if grouping_criteria is None:
@@ -240,8 +227,13 @@ class CalibrationFrame(metaclass=abc.ABCMeta):
     def is_master(self, value):
         pass
 
-    def write(self, runtime_context):
-        dbs.save_calibration_info(self.get_output_filename(runtime_context), self, runtime_context.db_address)
+    @abc.abstractmethod
+    def to_db_record(self, output_product):
+        pass
+
+    def write(self, data_products, runtime_context):
+        for product in data_products:
+            dbs.save_calibration_info(self.to_db_record(product), runtime_context.db_address)
 
 
 class FrameFactory:

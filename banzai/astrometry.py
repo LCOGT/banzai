@@ -28,7 +28,7 @@ class WCSSolver(Stage):
             image.meta['WCSERR'] = FAILED_WCS
             return image
 
-        image_catalog = image.catalog
+        image_catalog = image['CAT'].data
 
         # Short circuit
         if image_catalog is None:
@@ -92,7 +92,7 @@ class WCSSolver(Stage):
 
 def add_ra_dec_to_catalog(image):
     image_wcs = WCS(image.meta)
-    image_catalog = image.catalog
+    image_catalog = image['CAT'].data
     ras, decs = image_wcs.all_pix2world(image_catalog['x'], image_catalog['y'], 1)
 
     image_catalog['ra'] = ras
