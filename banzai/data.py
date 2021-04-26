@@ -147,20 +147,35 @@ class CCDData(Data):
         return self.trim(trim_section=section)
 
     def __imul__(self, value):
-        # TODO: Handle the case where this is an array. Add SATURATE and GAIN handling when array.
-        self.data *= value
-        self.uncertainty *= value
-        self.meta['SATURATE'] *= value
-        self.meta['GAIN'] /= value
-        self.meta['MAXLIN'] *= value
+        # Note: For array inputs, we need the arrays to be normalized around 1 for the saturate and gain keywords to
+        # make sense.
+        if isinstance(value, CCDData):
+            self.uncertainty = np.abs(self.data * value.data) * \
+                               np.sqrt((self.uncertainty / self.data) ** 2 + (value.uncertainty / value.data) ** 2)
+            self.data *= value.data
+            self.mask |= value.mask
+        elif isinstance(value, np.ndarray):
+            self.uncertainty = np.abs(self.uncertainty * value)
+            self.data *= value
+        else:
+            self.data *= value
+            self.uncertainty *= value
+            self.meta['SATURATE'] *= value
+            self.meta['GAIN'] /= value
+            self.meta['MAXLIN'] *= value
         return self
 
     def __itruediv__(self, value):
+        # Note: For array inputs, we need the arrays to be normalized around 1 for the saturate and gain keywords to
+        # make sense.
         if isinstance(value, CCDData):
             self.uncertainty = np.abs(self.data / value.data) * \
                                np.sqrt((self.uncertainty / self.data) ** 2 + (value.uncertainty / value.data) ** 2)
             self.data /= value.data
             self.mask |= value.mask
+        elif isinstance(value, np.ndarray):
+            self.uncertainty = np.abs(self.uncertainty / value)
+            self.data /= value
         else:
             self.__imul__(1.0 / value)
         return self
