@@ -19,7 +19,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         self.instrument = None
         self.frame_id = frame_id
         self.hdu_order = hdu_order
-        self._hdu_keys = {hdu.name: i for i, hdu in enumerate(hdu_list)}
+        self._hdu_mapping = {hdu.name: i for i, hdu in enumerate(hdu_list)}
 
     @property
     def primary_hdu(self):
@@ -93,7 +93,13 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         pass
 
     def append(self, hdu):
-        self._hdus.append(hdu)
+        if hdu.name not in self._hdu_mapping:
+            self._hdus.append(hdu)
+            i = len(self._hdus) - 1
+            self._hdu_mapping[hdu.name] = i
+        else:
+            del self._hdus[self._hdu_mapping[hdu.name]]
+            self._hdus.insert(self._hdu_mapping[hdu.name], hdu)
 
     def remove(self, hdu):
         self._hdus.remove(hdu)
@@ -198,22 +204,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         return self
 
     def __contains__(self, key):
-        return key in self._hdu_keys
+        return key in self._hdu_mapping
 
     def __getitem__(self, item):
-        return self._hdus[self._hdu_keys[item]]
-
-    def __setitem__(self, key, value):
-        if key != value.name:
-            raise KeyError("Key and extension name do not match.")
-        if not key in self._hdu_keys:
-            self._hdus.append(value)
-            i = len(self._hdus) - 1
-            self._hdu_keys[key] = i
-            self._hdu_keys[self._hdus[-1].name] = i
-        else:
-            del self._hdus[self._hdu_keys[key]]
-            self._hdus.insert(self._hdu_keys[key], value)
+        return self._hdus[self._hdu_mapping[item]]
 
 
 class CalibrationFrame(metaclass=abc.ABCMeta):

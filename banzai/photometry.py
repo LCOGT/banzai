@@ -229,11 +229,11 @@ class SourceDetector(Stage):
                                             '[deg] PA of mean image ellipticity')
 
             logging_tags = {key: float(image.meta[key]) for key in ['L1MEAN', 'L1MEDIAN', 'L1SIGMA',
-                                                                      'L1FWHM', 'L1ELLIP', 'L1ELLIPA']}
+                                                                    'L1FWHM', 'L1ELLIP', 'L1ELLIPA']}
 
             logger.info('Extracted sources', image=image, extra_tags=logging_tags)
             # adding catalog (a data table) to the appropriate images attribute.
-            image['CAT'] = DataTable(catalog, name='CAT')
+            image.append(DataTable(catalog, name='CAT'))
         except Exception:
             logger.error(logs.format_exception(), image=image)
         return image
