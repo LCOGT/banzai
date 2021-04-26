@@ -1,10 +1,10 @@
 import logging
 from typing import Optional
 import requests
-from collections import OrderedDict, Iterable
+from collections.abc import Iterable
+from collections import OrderedDict
 
 from banzai import logs
-from banzai.context import Context
 
 import numpy as np
 from astropy.io import fits
@@ -218,6 +218,8 @@ def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: Iterable) -> f
 def to_fits_image_extension(data, master_extension_name, extension_name, context, extension_version=None):
     extension_name = master_extension_name + extension_name
     for extname_to_condense in context.EXTENSION_NAMES_TO_CONDENSE:
+        if extension_name == extname_to_condense:
+            continue
         extension_name = extension_name.replace(extname_to_condense, '')
     header = fits.Header({'EXTNAME': extension_name})
     if extension_version is not None:

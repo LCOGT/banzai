@@ -11,7 +11,6 @@ import os.path
 import logging
 import datetime
 from dateutil.parser import parse
-import copy
 import numpy as np
 import requests
 from sqlalchemy import create_engine, pool, type_coerce, cast
@@ -246,26 +245,14 @@ def query_for_instrument(db_address, site, camera, name=None):
     return instrument
 
 
-def save_calibration_info(output_file, image, db_address):
-    # Store the information into the calibration table
-    # Check and see if the bias file is already in the database
+def save_calibration_info(calibration_image: CalibrationImage, db_address):
+    record_attributes = vars(calibration_image)
+    # There is not a clean way to back a dict object from a calibration image object without this instance state
+    # parameter. Gross.
+    record_attributes.pop('_sa_instance_state')
     with get_session(db_address=db_address) as db_session:
-        output_filename = os.path.basename(output_file)
-        record_attributes = {'type': image.obstype.upper(),
-                             'filename': output_filename,
-                             'filepath': os.path.dirname(output_file),
-                             'dateobs': image.dateobs,
-                             'datecreated': image.datecreated,
-                             'instrument_id': image.instrument.id,
-                             'is_master': image.is_master,
-                             'is_bad': image.is_bad,
-                             'frameid': image.frame_id,
-                             'attributes': {}}
-        for attribute in image.grouping_criteria:
-            record_attributes['attributes'][attribute] = str(getattr(image, attribute))
-
-        add_or_update_record(db_session, CalibrationImage, {'filename': output_filename}, record_attributes)
-
+        add_or_update_record(db_session, CalibrationImage, {'filename': record_attributes['filename']},
+                             record_attributes)
         db_session.commit()
 
 

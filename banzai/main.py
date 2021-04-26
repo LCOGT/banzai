@@ -9,6 +9,7 @@ October 2015
 """
 import argparse
 import logging
+import os.path
 
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
@@ -19,6 +20,7 @@ from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
 from banzai.celery import process_image, app, schedule_calibration_stacking
+from banzai.data import DataProduct
 from celery.schedules import crontab
 import celery
 import celery.bin.beat
@@ -312,7 +314,9 @@ def add_bpm():
         bpm_image.frame_id = ingester_response['frameid']
         bpm_image.is_bad = False
         bpm_image.is_master = True
-        dbs.save_calibration_info(args.filepath, bpm_image, args.db_address)
+        dbs.save_calibration_info(bpm_image.to_db_record(DataProduct(None, filename=os.path.basename(args.filepath),
+                                                                     filepath=os.path.dirname(args.filepath))),
+                                  args.db_address)
 
 
 def add_bpms_from_archive():
@@ -337,10 +341,11 @@ def add_bpms_from_archive():
             bpm_image = frame_factory.open(frame, args)
             if bpm_image is not None:
                 bpm_image.is_master = True
-                dbs.save_calibration_info(frame['filename'], bpm_image, args.db_address)
+                dbs.save_calibration_info(bpm_image.to_db_record(DataProduct(None, filename=bpm_image.filename,
+                                                                             filepath=None)),
+                                          args.db_address)
         except Exception:
             logger.error(f"BPM not added to database: {logs.format_exception()}", extra_tags={'filename': frame.get('filename')})
-
 
 
 def create_db():
