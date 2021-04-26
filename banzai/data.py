@@ -45,19 +45,19 @@ class Data(metaclass=abc.ABCMeta):
 
     def _validate_mask(self, mask):
         if mask is not None:
-            if mask.shape != self.data.shape:
-                raise ValueError('Mask must have the same dimensions as the data')
+            if len(mask.shape) != len(self.data.shape):
+                raise ValueError('Mask has different number of dimensions from the data.')
 
     def _init_array(self, array: np.array = None, dtype: Type = None):
-        if not self.memmap:
+        if not self.memmap and array is not None:
             return array
-        file_handle = tempfile.NamedTemporaryFile('w+b')
         if array is None:
-            shape = self.data.shape
+            shape = np.array(self.data).shape
             if dtype is None:
                 dtype = self.data.dtype
             array = np.zeros(shape, dtype=dtype)
-        if array.size > 0:
+        if array.size > 0 and self.memmap:
+            file_handle = tempfile.NamedTemporaryFile('w+b')
             memory_mapped_array = np.memmap(file_handle, shape=array.shape, dtype=array.dtype, mode='readwrite')
             memory_mapped_array.ravel()[:] = array.ravel()[:]
             self._file_handles.append(file_handle)
@@ -67,7 +67,10 @@ class Data(metaclass=abc.ABCMeta):
 
     def add_mask(self, mask: np.array):
         self._validate_mask(mask)
-        self.mask = self._init_array(mask)
+        self.mask = self._init_array(dtype=np.uint8)
+        overlap_region = tuple(slice(None, min(mask_shape, data_shape), 1)
+                               for mask_shape, data_shape in zip(mask.shape, self.data.shape))
+        self.mask[overlap_region] = mask[overlap_region]
 
     def __del__(self):
         for handle in self._file_handles:

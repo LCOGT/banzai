@@ -397,6 +397,9 @@ class LCOFrameFactory(FrameFactory):
             for hdu in fits_hdu_list:
                 if hdu.data is None:
                     hdu_list.append(HeaderOnly(meta=hdu.header))
+                elif len(hdu.data.shape) > 2:
+                    for munged_hdu in self._munge_data_cube(hdu):
+                        hdu_list.append(munged_hdu)
                 else:
                     hdu_list.append(self.data_class(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
         else:
@@ -431,6 +434,7 @@ class LCOFrameFactory(FrameFactory):
                             associated_data[associated_extension['NAME']] = None
                     if len(hdu.data.shape) > 2:
                         hdu_list += self._munge_data_cube(hdu)
+                        break
                     # update datasec/trimsec for fs01
                     if hdu.header.get('INSTRUME') == 'fs01':
                         self._update_fs01_sections(hdu)
@@ -583,8 +587,10 @@ class LCOFrameFactory(FrameFactory):
         :return: List CCDData objects
         """
         # The first extension gets to be a header only object
-        hdu_list = [HeaderOnly(meta=hdu.header)]
-
+        primary_hdu_gain = hdu.header['GAIN']
+        gain_comment = hdu.header.comments['GAIN']
+        hdu.header.remove('GAIN')
+        hdu_list = [HeaderOnly(meta=fits_utils.sanitize_header(hdu.header))]
         # We need to properly set the datasec and detsec keywords in case we didn't read out the
         # middle row (the "Missing Row Problem").
         sinistro_datasecs = {'missing': ['[1:2048,1:2048]', '[1:2048,1:2048]',
@@ -596,18 +602,24 @@ class LCOFrameFactory(FrameFactory):
                             'full': ['[1:2048,1:2048]', '[4096:2049,1:2048]',
                                      '[4096:2049,4096:2049]', '[1:2048,4096:2049]']}
         for i in range(hdu.data.shape[0]):
-            gain = eval(hdu.header['GAIN'])[i]
+            if isinstance(primary_hdu_gain, str):
+                gain = eval(primary_hdu_gain)[i]
+            else:
+                gain = primary_hdu_gain
             if hdu.data.shape[1] > 2048:
                 mode = 'full'
             else:
                 mode = 'missing'
             datasec = sinistro_datasecs[mode][i]
             detsec = sinistro_detsecs[mode][i]
-            header = {'BIASSEC': ('[2055:2080,1:2048]', '[binned pixel] Overscan Region'),
-                      'GAIN': (gain, hdu.header.comments['GAIN']),
-                      'DATASEC': (datasec, '[binned pixel] Data section'),
-                      'DETSEC': (detsec, '[unbinned pixel] Detector section'),
-                      'CCDSUM': (hdu.header['CCDSUM'], hdu.header.comments['CCDSUM'])}
+            header = fits.Header()
+            if hdu.data is not None and hdu.data.dtype == np.uint16:
+                hdu.data = hdu.data.astype(np.float64)
+            for keyword, value in {'BIASSEC': ('[2055:2080,1:2048]', '[binned pixel] Overscan Region'),
+                                   'GAIN': (gain, gain_comment),
+                                   'DATASEC': (datasec, '[binned pixel] Data section'),
+                                   'DETSEC': (detsec, '[unbinned pixel] Detector section'),
+                                   'CCDSUM': (hdu.header['CCDSUM'], hdu.header.comments['CCDSUM'])}.items():
+                header[keyword] = value
             hdu_list.append(CCDData(data=hdu.data[i], meta=fits.Header(header)))
-        # We have to split the gain keyword for each extension
         return hdu_list
