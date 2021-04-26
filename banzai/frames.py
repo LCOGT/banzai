@@ -92,7 +92,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def bias_level(self, value):
         pass
 
-    def append(self, hdu):
+    def add_or_update(self, hdu):
         if hdu.name not in self._hdu_mapping:
             self._hdus.append(hdu)
             i = len(self._hdus) - 1
