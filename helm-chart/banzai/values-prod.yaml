@@ -37,6 +37,7 @@ banzai:
   fitsBroker: rabbitmq.lco.gtn
   fitsExchange: archived_fits
   queueName: banzai_pipeline
+  celeryTaskQueue: banzai_imaging
 
 # CronJob configuration to periodically update instrument table in BANZAI DB
 instrumentTableCronjob:
