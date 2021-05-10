@@ -39,8 +39,11 @@ app.config_from_object('banzai.celeryconfig')
 app.conf.update(broker_url=os.getenv('TASK_HOST', 'redis://localhost:6379/0'))
 celery_task_queue = os.getenv('CELERY_TASK_QUEUE', 'celery')
 app.conf.task_queues = (
-    Queue(celery_task_queue,    routing_key=f'{celery_task_queue}.#'),
+    Queue(celery_task_queue, routing_key=f'{celery_task_queue}.#')
 )
+app.conf.task_default_exchange = 'tasks'
+app.conf.task_default_exchange_type = 'topic'
+app.conf.task_default_routing_key = 'task.default'
 # Increase broker timeout to avoid re-scheduling tasks that aren't completed within an hour
 app.conf.broker_transport_options = {'visibility_timeout': 86400}
 
