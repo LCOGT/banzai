@@ -141,3 +141,6 @@ REDUCED_DATA_EXTENSION_TYPES = {'SCI': 'float32',
                                 'BPM': 'uint8'}
 
 LOSSLESS_EXTENSIONS = []
+
+CELERY_TASK_QUEUE = os.getenv('CELERY_TASK_QUEUE', 'celery')
+CELERY_TASK_ROUTING_KEY = f'{CELERY_TASK_QUEUE}.#'

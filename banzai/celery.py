@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse
 
 from celery import Celery
+from kombu import Queue
 
 from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, stage_utils
@@ -37,6 +38,9 @@ app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
 app.conf.update(broker_url=os.getenv('TASK_HOST', 'redis://localhost:6379/0'))
 celery_task_queue = os.getenv('CELERY_TASK_QUEUE', 'celery')
+app.conf.task_queues = (
+    Queue(celery_task_queue,    routing_key=f'{celery_task_queue}.#'),
+)
 # Increase broker timeout to avoid re-scheduling tasks that aren't completed within an hour
 app.conf.broker_transport_options = {'visibility_timeout': 86400}
 
@@ -46,7 +50,7 @@ app.log.setup()
 app.log.redirect_stdouts_to_logger(logger, 'INFO')
 
 
-@app.task(name='celery.schedule_calibration_stacking', queue=celery_task_queue)
+@app.task(name='celery.schedule_calibration_stacking')
 def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=None, max_date=None, frame_types=None):
     logger.info('Scheduling when to stack frames.', extra_tags={'site': site})
     try:
@@ -115,7 +119,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                      extra_tags={'site': site})
 
 
-@app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY, queue=celery_task_queue)
+@app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY)
 def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, frame_type: str,
                        runtime_context: dict, observations: list):
     try:
@@ -156,7 +160,7 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
         raise self.retry()
 
 
-@app.task(name='celery.process_image', queue=celery_task_queue)
+@app.task(name='celery.process_image')
 def process_image(file_info: dict, runtime_context: dict):
     """
     :param file_info: Body of queue message: dict
