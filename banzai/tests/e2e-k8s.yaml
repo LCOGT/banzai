@@ -103,6 +103,8 @@ spec:
           value: "fits_files"
         - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
           value: "1"
+        - name: CELERY_TASK_QUEUE
+          value: "e2e_task_queue"
 
       command:
         - celery
