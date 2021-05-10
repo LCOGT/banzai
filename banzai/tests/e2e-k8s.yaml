@@ -115,6 +115,8 @@ spec:
         - "4"
         - -l
         - "debug"
+        - "-Q"
+        - "$(CELERY_TASK_QUEUE)"
       readinessProbe:
         exec:
           command:
@@ -149,6 +151,8 @@ spec:
           value: "0"
         - name: TASK_HOST
           value: "redis://localhost:6379/0"
+        - name: CELERY_TASK_QUEUE
+          value: "e2e_task_queue"
       command:
         - banzai_automate_stack_calibrations
       resources:
