@@ -46,10 +46,8 @@ class RealtimeModeListener(ConsumerMixin):
         return [consumer]
 
     def on_message(self, body, message):
-        celery_task_queue = os.getenv('CELERY_TASK_QUEUE', 'celery')
         process_image.apply_async(args=(body, vars(self.runtime_context)), 
-                                  queue=self.runtime_context.CELERY_TASK_QUEUE,
-                                  routing_key=self.runtime_context.CELERY_TASK_ROUTING_KEY)
+                                  queue=self.runtime_context.CELERY_TASK_QUEUE_NAME)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
@@ -167,8 +165,7 @@ def start_stacking_scheduler():
     for site, entry in runtime_context.SCHEDULE_STACKING_CRON_ENTRIES.items():
         app.add_periodic_task(crontab(minute=entry['minute'], hour=entry['hour']),
                               schedule_calibration_stacking.s(site=site, runtime_context=vars(runtime_context)),
-                              queue=runtime_context.CELERY_TASK_QUEUE,
-                              routing_key=runtime_context.CELERY_TASK_ROUTING_KEY)
+                              queue=runtime_context.CELERY_TASK_QUEUE_NAME)
 
     beat = celery.bin.beat.beat(app=app)
     logger.info('Starting celery beat')
