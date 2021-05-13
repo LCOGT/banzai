@@ -46,6 +46,7 @@ class RealtimeModeListener(ConsumerMixin):
         return [consumer]
 
     def on_message(self, body, message):
+        logger.error(f"Got message! {body}")
         process_image.apply_async(args=(body, vars(self.runtime_context)), 
                                   queue=self.runtime_context.CELERY_TASK_QUEUE_NAME)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
