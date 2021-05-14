@@ -141,5 +141,3 @@ REDUCED_DATA_EXTENSION_TYPES = {'SCI': 'float32',
                                 'BPM': 'uint8'}
 
 LOSSLESS_EXTENSIONS = []
-
-SEP_SUB_OBJECT_LIMIT = int(os.getenv('SEP_SUB_OBJECT_LIMIT', 1024))

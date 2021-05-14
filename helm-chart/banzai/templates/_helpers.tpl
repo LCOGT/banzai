@@ -175,6 +175,4 @@ Celery task queue configuration
   value: {{ .Values.banzai.queueName | quote }}
 - name: BANZAI_WORKER_LOGLEVEL
   value: {{ .Values.banzai.banzaiWorkerLogLevel | quote }}
-- name: SEP_SUB_OBJECT_LIMIT
-  value: {{ .Values.banzai.sepSubObjectLimit | quote }}
 {{- end -}}

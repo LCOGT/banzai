@@ -181,8 +181,6 @@ spec:
           value: "fits_files"
         - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
           value: "1"
-        - name: SEP_SUB_OBJECT_LIMIT
-          value: "2048"
           
       command:
         - banzai_run_realtime_pipeline
