@@ -28,10 +28,9 @@ class WCSSolver(Stage):
             image.meta['WCSERR'] = FAILED_WCS
             return image
 
-        image_catalog = image['CAT'].data
-
-        # Short circuit
-        if image_catalog is None:
+        try:
+            image_catalog = image['CAT'].data
+        except KeyError:
             logger.warning('Not attempting WCS solve because no catalog exists', image=image)
             image.meta['WCSERR'] = FAILED_WCS
             return image

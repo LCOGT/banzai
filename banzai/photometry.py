@@ -49,7 +49,6 @@ class SourceDetector(Stage):
                                       err=error, deblend_cont=0.005)
             except Exception:
                 logger.error(logs.format_exception(), image=image)
-                image['CAT'] = None
                 return image
 
             # Convert the detections into a table
