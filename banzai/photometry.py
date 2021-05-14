@@ -41,6 +41,8 @@ class SourceDetector(Stage):
                 bkg = sep.Background(data, mask=mask, bw=32, bh=32, fw=3, fh=3)
             bkg.subfrom(data)
 
+            sep.set_sub_object_limit(self.runtime_context.SEP_SUB_OBJECT_LIMIT)            
+
             # Do an initial source detection
             sources = sep.extract(data, self.threshold, mask=mask, minarea=self.min_area,
                                   err=error, deblend_cont=0.005)

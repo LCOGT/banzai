@@ -37,6 +37,7 @@ banzai:
   fitsBroker: rabbitmq.lco.gtn
   fitsExchange: archived_fits
   queueName: banzai_pipeline
+  sepSubObjectLimit: 2048
 
 # CronJob configuration to periodically update instrument table in BANZAI DB
 instrumentTableCronjob:
