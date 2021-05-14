@@ -44,8 +44,13 @@ class SourceDetector(Stage):
             sep.set_sub_object_limit(self.runtime_context.SEP_SUB_OBJECT_LIMIT)            
 
             # Do an initial source detection
-            sources = sep.extract(data, self.threshold, mask=mask, minarea=self.min_area,
-                                  err=error, deblend_cont=0.005)
+            try:
+                sources = sep.extract(data, self.threshold, mask=mask, minarea=self.min_area,
+                                      err=error, deblend_cont=0.005)
+            except Exception:
+                logger.error(logs.format_exception(), image=image)
+                image['CAT'] = None
+                return image
 
             # Convert the detections into a table
             sources = Table(sources)
