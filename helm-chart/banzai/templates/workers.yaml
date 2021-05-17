@@ -38,7 +38,7 @@ spec:
             - "-l"
             - "info"
             - "-Q"
-            - "$(CELERY_TASK_QUEUE)"
+            - "$(CELERY_TASK_QUEUE_NAME)"
           env:
             - name: OMP_NUM_THREADS
               value: "2"
