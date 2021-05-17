@@ -11,7 +11,7 @@ from dateutil.parser import parse
 
 from banzai import settings
 from types import ModuleType
-from banzai.celery import schedule_calibration_stacking
+from banzai.celery import app, schedule_calibration_stacking
 from banzai.dbs import get_session, CalibrationImage, get_timezone, populate_instrument_tables
 from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
@@ -58,7 +58,7 @@ def celery_join():
         if 'celery@banzai-celery-worker' not in queue_names:
             logger.warning('No valid celery queues were detected, retrying...', extra_tags={'queues': queues})
             # Reset the celery connection
-            celery_inspector = app.control.inspect()
+            celery_inspector = inspect('banzai')
             continue
         if all(queue is None or len(queue['celery@banzai-celery-worker']) == 0 for queue in queues):
             break
