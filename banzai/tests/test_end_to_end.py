@@ -1,11 +1,11 @@
 import os
 from glob import glob
 import argparse
-from datetime import datetime
 
 import pytest
 import mock
 import time
+from datetime import datetime
 
 from dateutil.parser import parse
 
@@ -18,7 +18,6 @@ from banzai.utils import fits_utils, file_utils
 from banzai.main import add_bpm
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.utils.data import get_pkg_data_filename
-from celery.task.control import inspect
 
 import logging
 
@@ -42,7 +41,7 @@ CONFIGDB_FILENAME = get_pkg_data_filename('data/configdb_example.json', TEST_PAC
 
 
 def celery_join():
-    celery_inspector = inspect('banzai')
+    celery_inspector = app.control.inspect()
     log_counter = 0
     while True:
         queues = [celery_inspector.active(), celery_inspector.scheduled(), celery_inspector.reserved()]
@@ -58,7 +57,7 @@ def celery_join():
         if 'celery@banzai-celery-worker' not in queue_names:
             logger.warning('No valid celery queues were detected, retrying...', extra_tags={'queues': queues})
             # Reset the celery connection
-            celery_inspector = inspect('banzai')
+            celery_inspector = app.control.inspect()
             continue
         if all(queue is None or len(queue['celery@banzai-celery-worker']) == 0 for queue in queues):
             break
