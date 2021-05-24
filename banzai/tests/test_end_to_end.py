@@ -45,7 +45,6 @@ def celery_join():
     log_counter = 0
     while True:
         queues = [celery_inspector.active(), celery_inspector.scheduled(), celery_inspector.reserved()]
-        logger.error(f"Queues: {queues}")
         time.sleep(1)
         log_counter += 1
         if log_counter % 30 == 0:
