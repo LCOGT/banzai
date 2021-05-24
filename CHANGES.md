@@ -1,3 +1,7 @@
+1.3.1 (2021-05-24)
+------------------
+- Fix bug where reduction would fail if image catalog did not exist.
+
 1.3.0 (2021-04-26)
 ------------------
 - Upgraded infrastructure on how data products are saved/stored for downstream users.

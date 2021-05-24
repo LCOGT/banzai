@@ -42,8 +42,12 @@ class SourceDetector(Stage):
             bkg.subfrom(data)
 
             # Do an initial source detection
-            sources = sep.extract(data, self.threshold, mask=mask, minarea=self.min_area,
-                                  err=error, deblend_cont=0.005)
+            try:
+                sources = sep.extract(data, self.threshold, mask=mask, minarea=self.min_area,
+                                      err=error, deblend_cont=0.005)
+            except Exception:
+                logger.error(logs.format_exception(), image=image)
+                return image
 
             # Convert the detections into a table
             sources = Table(sources)
