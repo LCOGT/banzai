@@ -1,3 +1,11 @@
+1.3.3 (2021-05-26)
+------------------
+- Add EXPERIMENTAL obstype to list of supported obstypes.
+
+1.3.2 (2021-05-24)
+------------------
+- Add custom celery task queue routing. 
+
 1.3.1 (2021-05-24)
 ------------------
 - Fix bug where reduction would fail if image catalog did not exist.
