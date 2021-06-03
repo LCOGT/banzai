@@ -49,10 +49,6 @@ def post_to_ingester(file_object, image, output_filename, meta=None):
                 sleep(5 ** try_counter)
                 retry = True
                 try_counter += 1
-        except Exception as exc:
-            logger.fatal('Unexpected exception: {0} Will retry.'.format(exc), image=image)
-            retry = True
-            try_counter += 1
     return ingester_response
 
 
