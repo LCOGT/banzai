@@ -175,6 +175,8 @@ Celery task queue configuration
   value: {{ .Values.banzai.queueName | quote }}
 - name: CELERY_TASK_QUEUE_NAME
   value: {{ .Values.banzai.celeryTaskQueueName | quote }}
+- name: CELERY_STACK_QUEUE_NAME
+  value: {{ .Values.banzai.celeryStackQueueName | quote }}
 - name: BANZAI_WORKER_LOGLEVEL
   value: {{ .Values.banzai.banzaiWorkerLogLevel | quote }}
 {{- end -}}
