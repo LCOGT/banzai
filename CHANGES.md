@@ -1,3 +1,7 @@
+1.3.4 (2021-06-21)
+------------------
+- Restriped arrays to be accessed in row-major order when stacking to improve performance.
+
 1.3.3 (2021-05-26)
 ------------------
 - Add EXPERIMENTAL obstype to list of supported obstypes.
