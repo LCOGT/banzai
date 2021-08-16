@@ -3,8 +3,10 @@ import logging
 import numpy as np
 from astropy.table import Table
 import sep
+from requests import HTTPError
 
 from banzai.utils import stats, array_utils
+from banzai.utils.photometry_utils import get_reference_sources, match_catalogs, to_magnitude, fit_photometry
 from banzai.stages import Stage
 from banzai.data import DataTable
 from banzai import logs
@@ -240,4 +242,40 @@ class SourceDetector(Stage):
             image.add_or_update(DataTable(catalog, name='CAT'))
         except Exception:
             logger.error(logs.format_exception(), image=image)
+        return image
+
+
+class PhotometricCalibrator(Stage):
+    color_to_fit = {'gp': 'g-r', 'rp': 'r-i', 'ip': 'r-i', 'zs': 'i-z'}
+
+    def __init__(self, runtime_context):
+        super(PhotometricCalibrator, self).__init__(runtime_context)
+
+    def do_stage(self, image):
+        if image.filter not in ['gp', 'rp', 'ip', 'zs']:
+            return image
+
+        try:
+            # Get the sources in the frame
+            reference_catalog = get_reference_sources(image.meta, self.runtime_context.REFERENCE_CATALOG_URL)
+        except HTTPError as e:
+            logger.error(f'Error retrieving photometric reference catalog: {e}', image=image)
+            return image
+
+        # Match the catalog to the detected sources
+        matched_catalog = match_catalogs(image.catalog, reference_catalog)
+
+        # catalog_mag = instrumental_mag + zeropoint + color_coefficient * color
+        # Fit the zeropoint and color_coefficient rejecting outliers
+        zeropoint, zeropoint_error, color_coefficient, color_coefficient_error = \
+            fit_photometry(matched_catalog, image.filter, self.color_to_fit[image.filter], image.exptime)
+        # Save the zeropoint, color coefficient and errors to header
+        image.meta['L1ZP'] = zeropoint, "Instrumental zeropoint [mag]"
+        image.meta['L1ZPERR'] = zeropoint_error, "Error on Instrumental zeropoint [mag]"
+        image.meta['L1COLORU'] = self.color_to_fit[image.filter], "Color used for calibration"
+        image.meta['L1COLOR'] = color_coefficient, "Color coefficient [mag]"
+        image.meta['L1COLERR'] = color_coefficient_error, "Error on color coefficient [mag]"
+        # Calculate the mag of each of the items in the catalog (without the color term) saving them
+        image.catalog['mag'], image.catalog['magerr'] = to_magnitude(image.catalog['flux'], image.catalog['flux_error'],
+                                                                     zeropoint, image.exptime)
         return image
