@@ -267,8 +267,9 @@ class PhotometricCalibrator(Stage):
 
         # catalog_mag = instrumental_mag + zeropoint + color_coefficient * color
         # Fit the zeropoint and color_coefficient rejecting outliers
+        # Note the zero index here in the filter name is because we only store teh first letter of the filter name
         zeropoint, zeropoint_error, color_coefficient, color_coefficient_error = \
-            fit_photometry(matched_catalog, image.filter, self.color_to_fit[image.filter], image.exptime)
+            fit_photometry(matched_catalog, image.filter[0], self.color_to_fit[image.filter], image.exptime)
         # Save the zeropoint, color coefficient and errors to header
         image.meta['L1ZP'] = zeropoint, "Instrumental zeropoint [mag]"
         image.meta['L1ZPERR'] = zeropoint_error, "Error on Instrumental zeropoint [mag]"

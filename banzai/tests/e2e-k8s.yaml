@@ -105,6 +105,8 @@ spec:
           value: "1"
         - name: CELERY_TASK_QUEUE_NAME
           value: "e2e_task_queue"
+        - name: REFERENCE_CATALOG_URL
+          value: "http://phot-catalog.lco.gtn/"
 
       command:
         - celery
@@ -189,6 +191,8 @@ spec:
           value: "1"
         - name: CELERY_TASK_QUEUE_NAME
           value: "e2e_task_queue"
+        - name: REFERENCE_CATALOG_URL
+          value: "http://phot-catalog.lco.gtn/"
       command:
         - banzai_run_realtime_pipeline
         - "--db-address=sqlite:////archive/engineering/test.db"

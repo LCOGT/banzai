@@ -44,12 +44,12 @@ def match_catalogs(input_catalog, reference_catalog, match_threshold=1.0) -> Tab
     match_indexes, offsets, _ = input_coordinates.match_to_catalog_sky(reference_coordinates)
 
     matched_catalog = Table()
-    good_matches = offsets <= match_threshold * units.arcsec
+    good_matches = offsets <= (match_threshold * units.arcsec)
     for colname in input_catalog.colnames:
         matched_catalog[colname] = input_catalog[colname][good_matches]
 
     for colname in reference_catalog.colnames:
-        matched_catalog[colname] = reference_catalog[match_indexes][good_matches]
+        matched_catalog[colname] = reference_catalog[colname][match_indexes][good_matches]
 
     return matched_catalog
 
