@@ -9,7 +9,9 @@ from banzai.utils.stats import robust_standard_deviation
 
 
 def get_reference_sources(header, reference_catalog_url):
-    response = requests.post(reference_catalog_url, json=header)
+    # We need to covert to a dict instead of a fits header here. We also need to drop any comment and history cards
+    # so we just do this dict comprehension because oddly enough astropy.io.fits does not seem to have this.
+    response = requests.post(reference_catalog_url, json={key: header[key] for key in header})
     response.raise_for_status()
     return response.json()
 
