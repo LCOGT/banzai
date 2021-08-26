@@ -64,7 +64,7 @@ def log_zeropoint_likelihood(theta, mags, mag_errors, catalog_mags, catalog_erro
 
 
 def fit_photometry(matched_catalog, image_filter, color_to_fit, exptime):
-    mags, mag_errors = to_magnitude(matched_catalog['flux'], matched_catalog['flux_error'], 0.0, exptime)
+    mags, mag_errors = to_magnitude(matched_catalog['flux'], matched_catalog['fluxerr'], 0.0, exptime)
     catalog_mags, catalog_errors = matched_catalog[f'{image_filter}mag'], matched_catalog[f'{image_filter}magerr']
 
     colors = matched_catalog[f'{color_to_fit.split("-")[0]}mag'] - matched_catalog[f'{color_to_fit.split("-")[1]}mag']
@@ -87,18 +87,19 @@ def fit_photometry(matched_catalog, image_filter, color_to_fit, exptime):
                         method='Nelder-Mead')
 
     nwalkers, ndim = 10, 3
-    walker_starting_points = best_fit.x.T + np.array([np.random.uniform(-0.3, 0.3, size=nwalkers),
-                                                      np.random.uniform(-0.1, 0.1, size=nwalkers),
-                                                      np.random.uniform(-best_fit.x[-1], 0.5)])
+    walker_starting_points = np.atleast_2d(best_fit.x).T + \
+        np.array([np.random.uniform(-0.3, 0.3, size=nwalkers),
+                  np.random.uniform(-0.1, 0.1, size=nwalkers),
+                  np.random.uniform(-best_fit.x[-1], 0.5, size=nwalkers)])
 
     sampler = emcee.EnsembleSampler(nwalkers, ndim, log_zeropoint_likelihood,
                                     args=(mags, mag_errors, catalog_mags, catalog_errors, colors, color_errors))
     sampler.run_mcmc(walker_starting_points.T, 5000, progress=False)
-    flattened_samples = sampler.get_chain(discard=100, thin=15, flat=True)
+    flattened_samples = sampler.get_chain(discard=100, thin=15, flat=True).T
     zeropoint = np.median(flattened_samples[0])
-    zeropoint_error = np.percentile(flattened_samples[0], 84) - np.percentile(flattened_samples[0], 16)
+    zeropoint_error = (np.percentile(flattened_samples[0], 84) - np.percentile(flattened_samples[0], 16)) / 2.0
     color_term = np.median(flattened_samples[1])
-    color_error = np.percentile(flattened_samples[1], 84) - np.percentile(flattened_samples[1], 16)
+    color_error = (np.percentile(flattened_samples[1], 84) - np.percentile(flattened_samples[1], 16)) / 2.0
 
     return zeropoint, zeropoint_error, color_term, color_error
 

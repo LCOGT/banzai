@@ -56,5 +56,5 @@ def test_photometric_calibration():
 
     ogg_catalog_filename = get_pkg_data_filename('data/ogg2m001-ep04-20201006-0097-matched-cat.fits', 'banzai.tests')
     matched_catalog = Table(fits.open(ogg_catalog_filename)[1].data)
-    zeropoint, _, _, _ = photometry_utils.fit_photometry(matched_catalog, 'i', 'r-i', 250.032)
+    zeropoint, _, _, _ = photometry_utils.fit_photometry(matched_catalog, 'g', 'g-r', 60.0)
     assert np.abs(zeropoint - 25.15) < 0.1
