@@ -6,8 +6,8 @@
 # will be started when the CPU usage rises above the configured threshold.
 horizontalPodAutoscaler:
   enabled: true
-  minReplicas: 5
-  maxReplicas: 10
+  minReplicas: 6
+  maxReplicas: 6
   targetCPUUtilizationPercentage: 50
 
 image:
