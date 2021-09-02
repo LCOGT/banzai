@@ -1,3 +1,7 @@
+1.3.5 (2021-08-02)
+------------------
+- Added new public LCO standard observation proposals to settings
+
 1.3.4 (2021-06-21)
 ------------------
 - Restriped arrays to be accessed in row-major order when stacking to improve performance.
