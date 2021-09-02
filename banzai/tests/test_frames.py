@@ -377,3 +377,31 @@ def test_data_to_detector_section_full():
                                                               'CCDSUM': '1 1'})
             requested_section = Section.parse_region_keyword(f'[{x_case["result"]},{ y_case["result"]}]')
             assert test_data.data_to_detector_section(requested_section).to_region_keyword() == f'[{x_case["request"]},{y_case["request"]}]'
+
+
+def test_propid_public():
+    proposal_ids = ['standard', 'Photometric standards', 'NRES standards', 'FLOYDS standards']
+    date_obs = '2021-09-01T00:00:00'
+    test_data = [CCDData(np.zeros((1024, 1024)), meta={'PROPID': propid,
+                                                       'DATE-OBS': date_obs}) for propid in proposal_ids]
+
+    test_frames = [LCOObservationFrame([data], file_path='/tmp') for data in test_data]
+    context = FakeContext()
+
+    for frame in test_frames:
+        frame.save_processing_metadata(context)
+
+        assert frame.meta['L1PUBDAT'] == (date_obs, '[UTC] Date the frame becomes public')
+
+
+def test_propid_not_public():
+    date_obs = '2021-09-01T00:00:00'
+    test_data = CCDData(np.zeros((1024, 1024)), meta={'PROPID': 'Non-public-proposal',
+                                                      'DATE-OBS': date_obs})
+
+    test_frame = LCOObservationFrame([test_data], file_path='/tmp')
+    context = FakeContext()
+
+    test_frame.save_processing_metadata(context)
+
+    assert test_frame.meta['L1PUBDAT'] != (date_obs, '[UTC] Date the frame becomes public')
