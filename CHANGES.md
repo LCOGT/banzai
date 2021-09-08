@@ -1,3 +1,7 @@
+1.4.0 (2021-09-08)
+------------------
+- Added photometric calibration in the g, r, i, and z filters using the ATLAS-REFCAT2 catalog.
+
 1.3.4 (2021-06-21)
 ------------------
 - Restriped arrays to be accessed in row-major order when stacking to improve performance.
