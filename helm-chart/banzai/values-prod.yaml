@@ -6,13 +6,13 @@
 # will be started when the CPU usage rises above the configured threshold.
 horizontalPodAutoscaler:
   enabled: true
-  minReplicas: 5
-  maxReplicas: 10
+  minReplicas: 6
+  maxReplicas: 6
   targetCPUUtilizationPercentage: 50
 
 image:
   repository: docker.lco.global/banzai
-  tag: "1.3.4"
+  tag: "1.3.5"
   pullPolicy: IfNotPresent
 
 # Values for the OCS Ingester library, used by BANZAI.
