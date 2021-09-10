@@ -94,6 +94,18 @@ class LCOObservationFrame(ObservationFrame):
     def exptime(self):
         return self.primary_hdu.meta.get('EXPTIME', 0.0)
 
+    @property
+    def ccd_temperature(self):
+        return int(self.primary_hdu.meta.get('CCDSTEMP', 0.0))
+
+    @property
+    def requested_ccd_temperature(self):
+        return self.primary_hdu.meta.get('CCDSTEMP', 0.0)
+
+    @property
+    def measured_ccd_temperature(self):
+        return self.primary_hdu.meta.get('CCDATEMP', 0.0)
+
     def save_processing_metadata(self, context):
         datecreated = datetime.datetime.utcnow()
         self.meta['DATE'] = (date_utils.date_obs_to_string(datecreated), '[UTC] Date this FITS file was written')

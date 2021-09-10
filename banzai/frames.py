@@ -143,6 +143,21 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         pass
 
     @property
+    @abc.abstractmethod
+    def ccd_temperature(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def requested_ccd_temperature(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def measured_ccd_temperature(self):
+        pass
+
+    @property
     def data_type(self):
         # Convert bytes to bits
         size = 8 * min([hdu.data.itemsize for hdu in self.ccd_hdus])
