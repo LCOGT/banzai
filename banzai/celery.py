@@ -116,7 +116,8 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                                             'instrument': instrument.camera, 'frame_type': frame_type})
                     stack_calibrations.apply_async(args=(stacking_min_date, stacking_max_date, instrument.id, frame_type,
                                                          vars(runtime_context), blocks_for_calibration),
-                                                   countdown=message_delay_in_seconds)
+                                                   countdown=message_delay_in_seconds,
+                                                   queue=runtime_context.CELERY_STACK_QUEUE_NAME)
                 else:
                     logger.warning('No scheduled calibration blocks found.',
                                    extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,
