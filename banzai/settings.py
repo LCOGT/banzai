@@ -40,7 +40,7 @@ CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'SKYFLAT': 5}
 
 CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'binning'],
-                            'DARK': ['configuration_mode', 'binning'],
+                            'DARK': ['configuration_mode', 'binning', 'ccd_temperature'],
                             'SKYFLAT': ['configuration_mode', 'binning', 'filter'],
                             'BPM': ['configuration_mode', 'binning']}
 
@@ -49,7 +49,8 @@ LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
               'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None, 'EXPERIMENTAL': None}
 
 EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
-                'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkComparer'],
+                'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkTemperatureChecker',
+                         'banzai.dark.DarkComparer'],
                 'SKYFLAT': ['banzai.flats.FlatNormalizer', 'banzai.qc.PatternNoiseDetector',
                             'banzai.flats.FlatComparer'],
                 'STANDARD': None,

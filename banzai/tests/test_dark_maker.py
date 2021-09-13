@@ -16,11 +16,6 @@ def test_min_images():
     assert processed_image is None
 
 
-def test_group_by_attributes():
-    maker = DarkMaker(FakeContext())
-    assert maker.group_by_attributes == ['configuration_mode', 'binning']
-
-
 @mock.patch('banzai.utils.file_utils.make_calibration_filename_function')
 def test_header_cal_type_dark(mock_namer):
     mock_namer.return_value = lambda *x: 'foo.fits'

@@ -54,3 +54,16 @@ class DarkComparer(CalibrationComparer):
     @property
     def calibration_type(self):
         return 'dark'
+
+
+class DarkTemperatureChecker(Stage):
+    def __init__(self, runtime_context):
+        super(DarkTemperatureChecker, self).__init__(runtime_context)
+
+    def do_stage(self, image):
+        temperature_matches = abs(image.requested_ccd_temperature - image.measured_ccd_temperature) < 0.5
+        if not temperature_matches:
+            image.is_bad = True
+            logger.error('Marking frame as bad because its set temperature is more than 0.5 degrees off the actual',
+                         image=image)
+        return image

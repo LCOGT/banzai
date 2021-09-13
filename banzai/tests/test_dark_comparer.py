@@ -20,11 +20,6 @@ def test_null_input_image():
     assert image is None
 
 
-def test_master_selection_criteria():
-    comparer = DarkComparer(FakeContext())
-    assert comparer.master_selection_criteria == ['configuration_mode', 'binning']
-
-
 @mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info')
 def test_flags_bad_if_no_master_calibration(mock_master_filename, set_random_seed):
     image = FakeLCOObservationFrame()
