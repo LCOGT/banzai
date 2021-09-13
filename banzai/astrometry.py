@@ -11,6 +11,7 @@ from banzai.stages import Stage
 
 logger = logging.getLogger('banzai')
 
+SOURCE_LIMIT = 200
 FAILED_WCS = (4, 'Error status of WCS fit. 0 for no error')
 SUCCESSFUL_WCS = (0, 'Error status of WCS fit. 0 for no error')
 
@@ -29,15 +30,19 @@ class WCSSolver(Stage):
             return image
 
         try:
+            # Get the image catalog and sort in order of flux
+            # with the brightest objects first
             image_catalog = image['CAT'].data
+            image_catalog.sort('flux')
+            image_catalog.reverse()
         except KeyError:
             logger.warning('Not attempting WCS solve because no catalog exists', image=image)
             image.meta['WCSERR'] = FAILED_WCS
             return image
 
-        catalog_payload = {'X': list(image_catalog['x']),
-                           'Y': list(image_catalog['y']),
-                           'FLUX': list(image_catalog['flux']),
+        catalog_payload = {'X': list(image_catalog['x'])[:SOURCE_LIMIT],
+                           'Y': list(image_catalog['y'])[:SOURCE_LIMIT],
+                           'FLUX': list(image_catalog['flux'])[:SOURCE_LIMIT],
                            'pixel_scale': image.pixel_scale,
                            'naxis': 2,
                            'naxis1': image.shape[1],
