@@ -32,7 +32,8 @@ ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   'banzai.qc.pattern_noise.PatternNoiseDetector',
                   'banzai.photometry.SourceDetector',
                   'banzai.astrometry.WCSSolver',
-                  'banzai.qc.pointing.PointingTest']
+                  'banzai.qc.pointing.PointingTest',
+                  'banzai.photometry.PhotometricCalibrator']
 
 CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,
@@ -144,3 +145,5 @@ REDUCED_DATA_EXTENSION_TYPES = {'SCI': 'float32',
 LOSSLESS_EXTENSIONS = []
 
 CELERY_TASK_QUEUE_NAME = os.getenv('CELERY_TASK_QUEUE_NAME', 'celery')
+
+REFERENCE_CATALOG_URL = os.getenv('REFERENCE_CATALOG_URL', 'http://phot-catalog.lco.gtn/')

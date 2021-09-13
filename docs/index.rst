@@ -119,6 +119,16 @@ a pixel scale, and a rotation). At worst (in the image corners), the offset betw
 coordinates with non-linear distortion terms included and those without are ~5 arcseconds.
 
 
+Photometric Calibration
+=======================
+BANZAI currently estimates a photometric zeropoint and color term for the g, r, i, and z filters. We adopt the Atlas
+All-Sky Stellar Reference Catalog (ATLAS-REFCAT2; Tonry et al. 2018, ApJ, 867, 105). We fit a color term based on the
+nearest filter to maximize the applicability for non-stellar SEDs. The following colors terms are fit: g: g-r,
+r: r-i, i: r-i, z: i-z. To estimate the uncertainties on the zeropoint and the color terms, we run MCMC using the
+``ecmee`` package (Foreman-Mackey et al., 2013, PASP, 125, 306). The magnitudes reported in the catalog extension of the
+reduced data product have no color term applied.
+
+
 Master Calibration Frames
 -------------------------
 BANZAI also contains routines to create the master bias, dark and flat frames required for the reduction of
