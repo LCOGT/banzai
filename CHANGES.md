@@ -1,3 +1,7 @@
+1.5.0 (2021-09-13)
+------------------
+- Added ccd temperature as a matching criteria for super darks.
+
 1.4.0 (2021-09-13)
 ------------------
 - Added photometric calibration in the g, r, i, and z filters using the ATLAS-REFCAT2 catalog.
