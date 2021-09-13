@@ -1,6 +1,10 @@
-1.3.5 (2021-09-13)
+1.3.6 (2021-09-13)
 ------------------
 - Added a limit to the 200 brightest sources to be sent to the astrometry service to keep the service from timing out.
+
+1.3.5 (2021-08-02)
+------------------
+- Added new public LCO standard observation proposals to settings
 
 1.3.4 (2021-06-21)
 ------------------
