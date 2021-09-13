@@ -38,6 +38,7 @@ banzai:
   fitsExchange: archived_fits
   queueName: banzai_pipeline
   celeryTaskQueueName: banzai_imaging
+  PhotometryCatalogURL: http://phot-catalog.lco.gtn/
 
 # CronJob configuration to periodically update instrument table in BANZAI DB
 instrumentTableCronjob:

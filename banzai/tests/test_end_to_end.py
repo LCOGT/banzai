@@ -161,6 +161,8 @@ def observation_portal_side_effect(*args, **kwargs):
     return FakeResponse(filename)
 
 
+# TODO: Add photometric catalog mock response
+# Note this is complicated by the fact that things are running as celery tasks.
 @pytest.mark.e2e
 @pytest.fixture(scope='module')
 @mock.patch('banzai.main.argparse.ArgumentParser.parse_args')

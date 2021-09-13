@@ -1,3 +1,7 @@
+1.4.0 (2021-09-13)
+------------------
+- Added photometric calibration in the g, r, i, and z filters using the ATLAS-REFCAT2 catalog.
+
 1.3.6 (2021-09-13)
 ------------------
 - Added a limit to the 200 brightest sources to be sent to the astrometry service to keep the service from timing out.

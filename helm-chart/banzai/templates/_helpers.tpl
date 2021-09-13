@@ -177,4 +177,6 @@ Celery task queue configuration
   value: {{ .Values.banzai.celeryTaskQueueName | quote }}
 - name: BANZAI_WORKER_LOGLEVEL
   value: {{ .Values.banzai.banzaiWorkerLogLevel | quote }}
+- name: REFERENCE_CATALOG_URL
+  value: {{ .Values.banzai.PhotometryCatalogURL | quote }}
 {{- end -}}
