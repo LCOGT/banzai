@@ -1,3 +1,7 @@
+1.3.5 (2021-09-13)
+------------------
+- Added a limit to the 200 brightest sources to be sent to the astrometry service to keep the service from timing out.
+
 1.3.4 (2021-06-21)
 ------------------
 - Restriped arrays to be accessed in row-major order when stacking to improve performance.
