@@ -29,16 +29,16 @@ class WCSSolver(Stage):
             image.meta['WCSERR'] = FAILED_WCS
             return image
 
-        try:
-            # Get the image catalog and sort in order of flux
-            # with the brightest objects first
-            image_catalog = image['CAT'].data
-            image_catalog.sort('flux')
-            image_catalog.reverse()
-        except KeyError:
+        if image['CAT'] is None:
             logger.warning('Not attempting WCS solve because no catalog exists', image=image)
             image.meta['WCSERR'] = FAILED_WCS
             return image
+
+        # Get the image catalog and sort in order of flux
+        # with the brightest objects first
+        image_catalog = image['CAT'].data
+        image_catalog.sort('flux')
+        image_catalog.reverse()
 
         catalog_payload = {'X': list(image_catalog['x'])[:SOURCE_LIMIT],
                            'Y': list(image_catalog['y'])[:SOURCE_LIMIT],

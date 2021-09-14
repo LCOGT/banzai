@@ -222,7 +222,11 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         return key in self._hdu_mapping
 
     def __getitem__(self, item):
-        return self._hdus[self._hdu_mapping[item]]
+        item_index = self._hdu_mapping.get(item)
+        if item_index is None:
+            return None
+        else:
+            return self._hdus[item_index]
 
 
 class CalibrationFrame(metaclass=abc.ABCMeta):
