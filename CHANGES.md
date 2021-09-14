@@ -1,3 +1,7 @@
+1.5.1 (2021-09-14)
+------------------
+- Fix for photometric catalog service URL
+
 1.5.0 (2021-09-13)
 ------------------
 - Added ccd temperature as a matching criteria for super darks.

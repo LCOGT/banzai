@@ -18,6 +18,7 @@ from banzai.utils import fits_utils, file_utils
 from banzai.main import add_bpm
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.utils.data import get_pkg_data_filename
+from astropy.io import fits
 
 import logging
 
@@ -241,3 +242,12 @@ class TestScienceFileCreation:
         assert len(expected_files) > 0
         for expected_file in expected_files:
             assert expected_file in created_files
+
+    def test_that_photometric_calibration_succeeded(self):
+        science_files = []
+        for day_obs in DAYS_OBS:
+            science_files += [filepath for filepath in glob(os.path.join(DATA_ROOT, day_obs, 
+                                                                         'processed', '*e91*'))]
+        zeropoints = [fits.open(file)['SCI'].header.get('L1ZP') for file in science_files]
+        # check that at least one of our images contains a zeropoint
+        assert zeropoints.count(None) != len(zeropoints)

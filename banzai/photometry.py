@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urljoin
 
 import numpy as np
 from astropy.table import Table
@@ -255,15 +256,19 @@ class PhotometricCalibrator(Stage):
         if image.filter not in ['gp', 'rp', 'ip', 'zs']:
             return image
 
+        if image['CAT'] is None:
+            logger.warning("Not photometrically calibrating image because no catalog exists", image=image)
+            return image
+
         try:
             # Get the sources in the frame
-            reference_catalog = get_reference_sources(image.meta, self.runtime_context.REFERENCE_CATALOG_URL)
+            reference_catalog = get_reference_sources(image.meta, urljoin(self.runtime_context.REFERENCE_CATALOG_URL, '/image'))
         except HTTPError as e:
             logger.error(f'Error retrieving photometric reference catalog: {e}', image=image)
             return image
 
         # Match the catalog to the detected sources
-        matched_catalog = match_catalogs(image.catalog, reference_catalog)
+        matched_catalog = match_catalogs(image['CAT'].data, reference_catalog)
 
         # catalog_mag = instrumental_mag + zeropoint + color_coefficient * color
         # Fit the zeropoint and color_coefficient rejecting outliers
@@ -277,6 +282,6 @@ class PhotometricCalibrator(Stage):
         image.meta['L1COLOR'] = color_coefficient, "Color coefficient [mag]"
         image.meta['L1COLERR'] = color_coefficient_error, "Error on color coefficient [mag]"
         # Calculate the mag of each of the items in the catalog (without the color term) saving them
-        image.catalog['mag'], image.catalog['magerr'] = to_magnitude(image.catalog['flux'], image.catalog['flux_error'],
-                                                                     zeropoint, image.exptime)
+        image['CAT'].data['mag'], image['CAT'].data['magerr'] = to_magnitude(image['CAT'].data['flux'], image['CAT'].data['fluxerr'],
+                                                                             zeropoint, image.exptime)
         return image
