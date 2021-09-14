@@ -264,7 +264,7 @@ class PhotometricCalibrator(Stage):
             return image
 
         # Match the catalog to the detected sources
-        matched_catalog = match_catalogs(image.catalog, reference_catalog)
+        matched_catalog = match_catalogs(image['CAT'].data, reference_catalog)
 
         # catalog_mag = instrumental_mag + zeropoint + color_coefficient * color
         # Fit the zeropoint and color_coefficient rejecting outliers
@@ -278,6 +278,6 @@ class PhotometricCalibrator(Stage):
         image.meta['L1COLOR'] = color_coefficient, "Color coefficient [mag]"
         image.meta['L1COLERR'] = color_coefficient_error, "Error on color coefficient [mag]"
         # Calculate the mag of each of the items in the catalog (without the color term) saving them
-        image.catalog['mag'], image.catalog['magerr'] = to_magnitude(image.catalog['flux'], image.catalog['flux_error'],
+        image.catalog['mag'], image.catalog['magerr'] = to_magnitude(image['CAT'].data['flux'], image['CAT'].data['flux_error'],
                                                                      zeropoint, image.exptime)
         return image

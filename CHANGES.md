@@ -1,4 +1,4 @@
-1.5.1 (2021-09-13)
+1.5.1 (2021-09-14)
 ------------------
 - Fix for photometric catalog service URL
 
