@@ -243,5 +243,11 @@ class TestScienceFileCreation:
         for expected_file in expected_files:
             assert expected_file in created_files
 
-        # check that one of our files was photometrically calibrated
-        assert fits.getheader(created_files[0], 'SCI').get('L1ZP') is not None
+    def test_that_photometric_calibration_succeeded(self):
+        science_files = []
+        for day_obs in DAYS_OBS:
+            science_files += [filepath for filepath in glob(os.path.join(DATA_ROOT, day_obs, 
+                                                                         'processed', '*e91*'))]
+        zeropoints = [fits.open(file)['SCI'].header.get('L1ZP') for file in science_files]
+        # check that at least one of our images contains a zeropoint
+        assert zeropoints.count(None) != len(zeropoints)
