@@ -18,6 +18,7 @@ from banzai.utils import fits_utils, file_utils
 from banzai.main import add_bpm
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.utils.data import get_pkg_data_filename
+from astropy.io import fits
 
 import logging
 
@@ -241,3 +242,6 @@ class TestScienceFileCreation:
         assert len(expected_files) > 0
         for expected_file in expected_files:
             assert expected_file in created_files
+
+        # check that one of our files was photometrically calibrated
+        assert fits.getheader(created_files[0]).get('L1PHOTZP') is not None
