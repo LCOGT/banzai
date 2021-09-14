@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urljoin
 
 import numpy as np
 from astropy.table import Table
@@ -257,7 +258,7 @@ class PhotometricCalibrator(Stage):
 
         try:
             # Get the sources in the frame
-            reference_catalog = get_reference_sources(image.meta, self.runtime_context.REFERENCE_CATALOG_URL)
+            reference_catalog = get_reference_sources(image.meta, urljoin(self.runtime_context.REFERENCE_CATALOG_URL, '/image/'))
         except HTTPError as e:
             logger.error(f'Error retrieving photometric reference catalog: {e}', image=image)
             return image
