@@ -278,6 +278,6 @@ class PhotometricCalibrator(Stage):
         image.meta['L1COLOR'] = color_coefficient, "Color coefficient [mag]"
         image.meta['L1COLERR'] = color_coefficient_error, "Error on color coefficient [mag]"
         # Calculate the mag of each of the items in the catalog (without the color term) saving them
-        image.catalog['mag'], image.catalog['magerr'] = to_magnitude(image['CAT'].data['flux'], image['CAT'].data['flux_error'],
-                                                                     zeropoint, image.exptime)
+        image['CAT'].data['mag'], image['CAT'].data['magerr'] = to_magnitude(image['CAT'].data['flux'], image['CAT'].data['flux_error'],
+                                                                             zeropoint, image.exptime)
         return image
