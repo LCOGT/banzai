@@ -258,7 +258,7 @@ class PhotometricCalibrator(Stage):
 
         try:
             # Get the sources in the frame
-            reference_catalog = get_reference_sources(image.meta, urljoin(self.runtime_context.REFERENCE_CATALOG_URL, '/image/'))
+            reference_catalog = get_reference_sources(image.meta, urljoin(self.runtime_context.REFERENCE_CATALOG_URL, '/image'))
         except HTTPError as e:
             logger.error(f'Error retrieving photometric reference catalog: {e}', image=image)
             return image
