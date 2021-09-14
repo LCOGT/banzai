@@ -256,8 +256,11 @@ class PhotometricCalibrator(Stage):
         if image.filter not in ['gp', 'rp', 'ip', 'zs']:
             return image
 
-        if image.get('CAT') is None:
-            logger.info("Not photometrically calibration image because no catalog exists")
+        try:
+            catalog = image['CAT']
+        except KeyError:
+            logger.warning("Not photometrically calibrating image because no catalog exists", image=image)
+            return image
 
         try:
             # Get the sources in the frame
