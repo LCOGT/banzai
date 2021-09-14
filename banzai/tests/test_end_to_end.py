@@ -244,4 +244,4 @@ class TestScienceFileCreation:
             assert expected_file in created_files
 
         # check that one of our files was photometrically calibrated
-        assert fits.getheader(created_files[0]).get('L1PHOTZP') is not None
+        assert fits.getheader(created_files[0], 'SCI').get('L1ZP') is not None
