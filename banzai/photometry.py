@@ -233,8 +233,7 @@ class SourceDetector(Stage):
                 image.meta['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
 
                 mean_position_angle = stats.sigma_clipped_mean(catalog['theta'][good_objects], 3.0)
-                image.meta['L1ELLIPA'] = (mean_position_angle,
-                                            '[deg] PA of mean image ellipticity')
+                image.meta['L1ELLIPA'] = (mean_position_angle,'[deg] PA of mean image ellipticity')
 
             logging_tags = {key: float(image.meta[key]) for key in ['L1MEAN', 'L1MEDIAN', 'L1SIGMA',
                                                                     'L1FWHM', 'L1ELLIP', 'L1ELLIPA']}
@@ -267,13 +266,16 @@ class PhotometricCalibrator(Stage):
 
         try:
             # Get the sources in the frame
-            reference_catalog = get_reference_sources(image.meta, urljoin(self.runtime_context.REFERENCE_CATALOG_URL, '/image'))
+            reference_catalog = get_reference_sources(image.meta,
+                                                      urljoin(self.runtime_context.REFERENCE_CATALOG_URL, '/image'),
+                                                      nx=image.shape[1], ny=image.shape[0])
         except HTTPError as e:
             logger.error(f'Error retrieving photometric reference catalog: {e}', image=image)
             return image
 
         # Match the catalog to the detected sources
-        matched_catalog = match_catalogs(image['CAT'].data, reference_catalog)
+        good_sources = np.logical_and(image['CAT'].data['flag'] == 0, image['CAT'].data['flux'] > 0.0)
+        matched_catalog = match_catalogs(image['CAT'].data[good_sources], reference_catalog)
 
         # catalog_mag = instrumental_mag + zeropoint + color_coefficient * color
         # Fit the zeropoint and color_coefficient rejecting outliers
