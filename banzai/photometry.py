@@ -7,6 +7,7 @@ import sep
 from requests import HTTPError
 
 from banzai.utils import stats, array_utils
+from banzai.astrometry import FAILED_WCS
 from banzai.utils.photometry_utils import get_reference_sources, match_catalogs, to_magnitude, fit_photometry
 from banzai.stages import Stage
 from banzai.data import DataTable
@@ -232,8 +233,7 @@ class SourceDetector(Stage):
                 image.meta['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
 
                 mean_position_angle = stats.sigma_clipped_mean(catalog['theta'][good_objects], 3.0)
-                image.meta['L1ELLIPA'] = (mean_position_angle,
-                                            '[deg] PA of mean image ellipticity')
+                image.meta['L1ELLIPA'] = (mean_position_angle,'[deg] PA of mean image ellipticity')
 
             logging_tags = {key: float(image.meta[key]) for key in ['L1MEAN', 'L1MEDIAN', 'L1SIGMA',
                                                                     'L1FWHM', 'L1ELLIP', 'L1ELLIPA']}
@@ -260,15 +260,22 @@ class PhotometricCalibrator(Stage):
             logger.warning("Not photometrically calibrating image because no catalog exists", image=image)
             return image
 
+        if image.meta['WCSERR'] == FAILED_WCS:
+            logger.warning("Not photometrically calibrating image because WCS solution failed", image=image)
+            return image
+
         try:
             # Get the sources in the frame
-            reference_catalog = get_reference_sources(image.meta, urljoin(self.runtime_context.REFERENCE_CATALOG_URL, '/image'))
+            reference_catalog = get_reference_sources(image.meta,
+                                                      urljoin(self.runtime_context.REFERENCE_CATALOG_URL, '/image'),
+                                                      nx=image.shape[1], ny=image.shape[0])
         except HTTPError as e:
             logger.error(f'Error retrieving photometric reference catalog: {e}', image=image)
             return image
 
         # Match the catalog to the detected sources
-        matched_catalog = match_catalogs(image['CAT'].data, reference_catalog)
+        good_sources = np.logical_and(image['CAT'].data['flag'] == 0, image['CAT'].data['flux'] > 0.0)
+        matched_catalog = match_catalogs(image['CAT'].data[good_sources], reference_catalog)
 
         # catalog_mag = instrumental_mag + zeropoint + color_coefficient * color
         # Fit the zeropoint and color_coefficient rejecting outliers
