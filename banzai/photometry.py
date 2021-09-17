@@ -260,7 +260,7 @@ class PhotometricCalibrator(Stage):
             logger.warning("Not photometrically calibrating image because no catalog exists", image=image)
             return image
 
-        if image.meta['WCSERR'] == FAILED_WCS:
+        if image.meta['WCSERR'] == FAILED_WCS[0]:
             logger.warning("Not photometrically calibrating image because WCS solution failed", image=image)
             return image
 
