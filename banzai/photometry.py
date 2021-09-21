@@ -7,7 +7,6 @@ import sep
 from requests import HTTPError
 
 from banzai.utils import stats, array_utils
-from banzai.astrometry import FAILED_WCS
 from banzai.utils.photometry_utils import get_reference_sources, match_catalogs, to_magnitude, fit_photometry
 from banzai.stages import Stage
 from banzai.data import DataTable
@@ -260,7 +259,7 @@ class PhotometricCalibrator(Stage):
             logger.warning("Not photometrically calibrating image because no catalog exists", image=image)
             return image
 
-        if image.meta['WCSERR'] == FAILED_WCS:
+        if image.meta['WCSERR'] > 0:
             logger.warning("Not photometrically calibrating image because WCS solution failed", image=image)
             return image
 

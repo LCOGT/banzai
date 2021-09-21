@@ -1,3 +1,7 @@
+1.5.3 (2021-09-21)
+------------------
+- Additional fixes for photometric calibrations
+
 1.5.2 (2021-09-16)
 ------------------
 - Fix for photometric calibration for images with no WCS solution
