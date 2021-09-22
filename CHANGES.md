@@ -1,3 +1,7 @@
+1.5.4 (2021-09-21)
+------------------
+- Add more granular error handling for fitting photometry
+
 1.5.3 (2021-09-21)
 ------------------
 - Additional fixes for photometric calibrations
