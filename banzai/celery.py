@@ -57,7 +57,7 @@ app.log.setup()
 app.log.redirect_stdouts_to_logger(logger, 'INFO')
 
 
-@app.task(name='celery.schedule_calibration_stacking')
+@app.task(name='celery.schedule_calibration_stacking', reject_on_worker_lost=True)
 def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=None, max_date=None, frame_types=None):
     logger.info('Scheduling when to stack frames.', extra_tags={'site': site})
     try:
@@ -126,7 +126,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                      extra_tags={'site': site})
 
 
-@app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY)
+@app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY, reject_on_worker_lost=True)
 def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, frame_type: str,
                        runtime_context: dict, observations: list):
     try:
@@ -167,7 +167,7 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
         raise self.retry()
 
 
-@app.task(name='celery.process_image')
+@app.task(name='celery.process_image', reject_on_worker_lost=True)
 def process_image(file_info: dict, runtime_context: dict):
     """
     :param file_info: Body of queue message: dict
