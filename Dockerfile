@@ -10,6 +10,8 @@ RUN conda install -y numpy pip scipy astropy pytest mock requests ipython covera
         && conda install -y -c conda-forge kombu=4.4.0 elasticsearch\<6.0.0,\>=5.0.0 pytest-astropy mysql-connector-python\
         && conda clean -y --all
 
+RUN pip3 install --upgrade pip
+
 RUN pip install --no-cache-dir cython logutils lcogt_logging python-dateutil sqlalchemy\>=1.3.0b1 psycopg2-binary celery[redis]==4.3.0 \
         apscheduler ocs-ingester tenacity amqp==2.6.0 
 
