@@ -1,3 +1,7 @@
+1.5.5 (2021-10-05)
+------------------
+- Configure celery tasks to automatically retry in-progress tasks in the case of a container failure or scale-down
+
 1.5.4 (2021-09-21)
 ------------------
 - Add more granular error handling for fitting photometry
