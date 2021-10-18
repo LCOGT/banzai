@@ -13,6 +13,7 @@ from banzai.data import DataTable
 from banzai import logs
 
 logger = logging.getLogger('banzai')
+sep.set_sub_object_limit(int(1e6))
 
 
 class SourceDetector(Stage):
@@ -29,7 +30,7 @@ class SourceDetector(Stage):
             # Set the number of source pixels to be 5% of the total. This keeps us safe from
             # satellites and airplanes.
             ny, nx = image.shape
-            sep.set_extract_pixstack(int(nx * ny * 0.05))
+            sep.set_extract_pixstack(int(nx * ny - 1))
 
             data = image.data.copy()
             error = image.uncertainty
@@ -258,6 +259,10 @@ class PhotometricCalibrator(Stage):
 
         if image['CAT'] is None:
             logger.warning("Not photometrically calibrating image because no catalog exists", image=image)
+            return image
+
+        if image.meta.get('WCSERR', 1) > 0:
+            logger.warning("Not photometrically calibrating image because WCS solution failed", image=image)
             return image
 
         try:

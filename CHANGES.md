@@ -1,3 +1,8 @@
+1.5.2 (2021-10-18)
+------------------
+- Increased the buffer size for SEP
+- Minor bugfixes
+
 1.5.1 (2021-09-14)
 ------------------
 - Fix for photometric catalog service URL
