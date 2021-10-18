@@ -27,8 +27,7 @@ class SourceDetector(Stage):
 
     def do_stage(self, image):
         try:
-            # Set the number of source pixels to be 5% of the total. This keeps us safe from
-            # satellites and airplanes.
+            # Increase the internal buffer size in sep. This is most necessary for crowded fields.
             ny, nx = image.shape
             sep.set_extract_pixstack(int(nx * ny - 1))
 
