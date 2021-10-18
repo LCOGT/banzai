@@ -1,7 +1,23 @@
-1.5.2 (2021-10-18)
+1.5.6 (2021-10-18)
 ------------------
 - Increased the buffer size for SEP
 - Minor bugfixes
+
+1.5.5 (2021-10-05)
+------------------
+- Configure celery tasks to automatically retry in-progress tasks in the case of a container failure or scale-down
+
+1.5.4 (2021-09-21)
+------------------
+- Add more granular error handling for fitting photometry
+
+1.5.3 (2021-09-21)
+------------------
+- Additional fixes for photometric calibrations
+
+1.5.2 (2021-09-16)
+------------------
+- Fix for photometric calibration for images with no WCS solution
 
 1.5.1 (2021-09-14)
 ------------------
