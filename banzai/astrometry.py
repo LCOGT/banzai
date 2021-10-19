@@ -49,7 +49,8 @@ class WCSSolver(Stage):
                            'naxis2': image.shape[0],
                            'ra': image.ra,
                            'dec': image.dec,
-                           'statistics': False}
+                           'statistics': False,
+                           'filename': image.filename}
         try:
             astrometry_response = requests.post(self.runtime_context.ASTROMETRY_SERVICE_URL, json=catalog_payload)
             astrometry_response.raise_for_status()
@@ -64,8 +65,7 @@ class WCSSolver(Stage):
             else:
                 try:
                     logger.error('Astrometry service encountered an error.', image=image,
-                                 extra_tags={'astrometry_message': astrometry_response.json().get('message', ''),
-                                             'astrometry_solve_id': astrometry_response.json().get('solve_id', 'UnknownID')})
+                                 extra_tags={'astrometry_message': astrometry_response.json().get('message', '')})
                 except:
                     logger.error('Astrometry service encountered an error.', image=image)
 
