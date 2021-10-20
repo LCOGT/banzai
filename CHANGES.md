@@ -1,3 +1,8 @@
+1.5.6 (2021-10-18)
+------------------
+- Increased the buffer size for SEP
+- Minor bugfixes
+
 1.5.5 (2021-10-05)
 ------------------
 - Configure celery tasks to automatically retry in-progress tasks in the case of a container failure or scale-down
