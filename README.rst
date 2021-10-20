@@ -122,9 +122,8 @@ In the code directory run:
 
 .. code-block:: bash
 
-    export MINICONDA_VERSION=4.5.11
     export DOCKER_IMG=banzai
-    docker build --build-arg MINICONDA_VERSION=${MINICONDA_VERSION} -t $DOCKER_IMG .
+    docker build -t $DOCKER_IMG .
     docker-compose up
 
 After all of the containers are up, run

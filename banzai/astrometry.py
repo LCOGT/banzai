@@ -11,7 +11,7 @@ from banzai.stages import Stage
 
 logger = logging.getLogger('banzai')
 
-SOURCE_LIMIT = 200
+SOURCE_LIMIT = 50
 FAILED_WCS = (4, 'Error status of WCS fit. 0 for no error')
 SUCCESSFUL_WCS = (0, 'Error status of WCS fit. 0 for no error')
 
