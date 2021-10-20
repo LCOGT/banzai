@@ -1,3 +1,9 @@
+1.5.7 (2021-10-20)
+------------------
+- Fix to work with gaia-astrometry-service version 0.6.0
+- Add filename to catalog payload
+- Remove reference to solve ID
+
 1.5.6 (2021-10-18)
 ------------------
 - Increased the buffer size for SEP
