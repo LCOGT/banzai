@@ -117,6 +117,8 @@ class SourceDetector(Stage):
             sources = sources[sources['fluxrad50'] > 0.5]
 
             # Calculate the FWHMs of the stars:
+            sources['fwhm'] = np.nan
+            sources['fwtm'] = np.nan
             # Here we estimate contours
             for source in sources[sources['flag'] == 0]:
                 for ratio, keyword in zip([0.5, 0.1], ['fwhm', 'fwtm']):
