@@ -1,3 +1,8 @@
+1.6.0 (2021-11-01)
+------------------
+- Added Full-Width Tenth Maximum statistics
+- We now calculate the FWHM using contours rather than using the shape parameters from SEP (which were strongly correlated with flux.)
+
 1.5.7 (2021-10-20)
 ------------------
 - Fix to work with gaia-astrometry-service version 0.6.0
