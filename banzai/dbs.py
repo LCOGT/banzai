@@ -316,7 +316,8 @@ def cal_record_to_file_info(record):
         path = os.path.join(record.filepath, record.filename)
     file_info = {'frameid': record.frameid,
                  'path': path,
-                 'filename': record.filename}
+                 'filename': record.filename,
+                 'dateobs': record.dateobs}
     return file_info
 
 
@@ -367,8 +368,6 @@ def get_individual_cal_records(instrument, calibration_type, min_date: str, max_
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.dateobs >= parse(min_date).replace(tzinfo=None)
     calibration_criteria &= CalibrationImage.dateobs <= parse(max_date).replace(tzinfo=None)
-    calibration_criteria &= CalibrationImage.is_master == False
-
     calibration_criteria &= CalibrationImage.is_master == False
 
     if not include_bad_frames:

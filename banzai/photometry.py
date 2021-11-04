@@ -120,15 +120,16 @@ class SourceDetector(Stage):
             sources['fwhm'] = np.nan
             sources['fwtm'] = np.nan
             # Here we estimate contours
-            for source in sources[sources['flag'] == 0]:
-                for ratio, keyword in zip([0.5, 0.1], ['fwhm', 'fwtm']):
-                    contours = measure.find_contours(data[source['ymin']: source['ymax'] + 1,
-                                                     source['xmin']: source['xmax'] + 1],
-                                                     ratio * source['peak'])
-                    if contours:
-                        # If there are multiple contours like a donut might have take the outer
-                        contour_radii = [radius_of_contour(contour, source) for contour in contours]
-                        source[keyword] = 2.0 * np.nanmax(contour_radii)
+            for source in sources:
+                if source['flag'] == 0:
+                    for ratio, keyword in zip([0.5, 0.1], ['fwhm', 'fwtm']):
+                        contours = measure.find_contours(data[source['ymin']: source['ymax'] + 1,
+                                                         source['xmin']: source['xmax'] + 1],
+                                                         ratio * source['peak'])
+                        if contours:
+                            # If there are multiple contours like a donut might have take the outer
+                            contour_radii = [radius_of_contour(contour, source) for contour in contours]
+                            source[keyword] = 2.0 * np.nanmax(contour_radii)
 
             # Calculate the windowed positions
             sig = 2.0 / 2.35 * sources['fwhm']
@@ -229,15 +230,15 @@ class SourceDetector(Stage):
             # Save some background statistics in the header
             mean_background = stats.sigma_clipped_mean(bkg.back(), 5.0)
             image.meta['L1MEAN'] = (mean_background,
-                                      '[counts] Sigma clipped mean of frame background')
+                                    '[counts] Sigma clipped mean of frame background')
 
             median_background = np.median(bkg.back())
             image.meta['L1MEDIAN'] = (median_background,
-                                        '[counts] Median of frame background')
+                                      '[counts] Median of frame background')
 
             std_background = stats.robust_standard_deviation(bkg.back())
             image.meta['L1SIGMA'] = (std_background,
-                                       '[counts] Robust std dev of frame background')
+                                     '[counts] Robust std dev of frame background')
 
             # Save some image statistics to the header
             good_objects = catalog['flag'] == 0
