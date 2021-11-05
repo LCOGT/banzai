@@ -251,9 +251,9 @@ class SourceDetector(Stage):
                 image.meta['L1ELLIP'] = ('NaN', 'Mean image ellipticity (1-B/A)')
                 image.meta['L1ELLIPA'] = ('NaN', '[deg] PA of mean image ellipticity')
             else:
-                seeing = np.median(catalog['fwhm'][good_objects]) * image.pixel_scale
+                seeing = np.nanmedian(catalog['fwhm'][good_objects]) * image.pixel_scale
                 image.meta['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
-                image.meta['L1FWTM'] = (np.median(catalog['fwtm'][good_objects] / catalog['fwhm'][good_objects]),
+                image.meta['L1FWTM'] = (np.nanmedian(catalog['fwtm'][good_objects] / catalog['fwhm'][good_objects]),
                                         'Ratio of FWHM to Full-Width Tenth Max')
 
                 mean_ellipticity = stats.sigma_clipped_mean(catalog['ellipticity'][good_objects], 3.0)
@@ -304,6 +304,9 @@ class PhotometricCalibrator(Stage):
         good_sources = np.logical_and(image['CAT'].data['flag'] == 0, image['CAT'].data['flux'] > 0.0)
         matched_catalog = match_catalogs(image['CAT'].data[good_sources], reference_catalog)
 
+        if len(matched_catalog) == 0:
+            logger.error('No matching sources found. Skipping zeropoint determination', image=image)
+            return image
         # catalog_mag = instrumental_mag + zeropoint + color_coefficient * color
         # Fit the zeropoint and color_coefficient rejecting outliers
         # Note the zero index here in the filter name is because we only store teh first letter of the filter name
