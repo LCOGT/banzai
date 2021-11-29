@@ -1,3 +1,4 @@
+import datetime
 import logging
 from typing import Optional
 import requests
@@ -121,6 +122,26 @@ def get_configuration_mode(header):
     return configuration_mode
 
 
+def basename_search_in_archive(filename, dateobs, context, is_raw_frame=False):
+    if is_raw_frame:
+        url = f'{context.RAW_DATA_FRAME_URL}/'
+        archive_auth_header = context.RAW_DATA_AUTH_HEADER
+    else:
+        url = f'{context.ARCHIVE_FRAME_URL}/'
+        archive_auth_header = context.ARCHIVE_AUTH_HEADER
+
+    basename = filename.replace('.fz', '').replace('.fits', '')
+    start = (dateobs - datetime.timedelta(days=3)).strftime('%Y-%m-%d')
+    end = (dateobs + datetime.timedelta(days=3)).strftime('%Y-%m-%d')
+    frames = requests.get(url, headers=archive_auth_header,
+                          params={'basename': basename, 'start': start, 'end': end}).json()['results']
+    if len(frames) > 0:
+        frame_id = frames[0]['id']
+    else:
+        frame_id = None
+    return frame_id
+
+
 def open_fits_file(file_info, context, is_raw_frame=False):
     if file_info.get('path') is not None and os.path.exists(file_info.get('path')):
         buffer = open(file_info.get('path'), 'rb')
@@ -130,6 +151,14 @@ def open_fits_file(file_info, context, is_raw_frame=False):
         buffer = download_from_s3(file_info, context, is_raw_frame=is_raw_frame)
         filename = file_info.get('filename')
         frame_id = file_info.get('frameid')
+    elif file_info.get('filename') is not None and file_info.get('dateobs') is not None:
+        filename = file_info.get('filename')
+        date_obs = file_info.get('dateobs')
+        frame_id = basename_search_in_archive(filename, date_obs, context, is_raw_frame=is_raw_frame)
+        if frame_id is None:
+            raise ValueError(f'No frame with the filename {filename} exists in the archive near date-obs {date_obs}')
+        file_info['frameid'] = frame_id
+        buffer = download_from_s3(file_info, context, is_raw_frame=is_raw_frame)
     else:
         raise ValueError('This file does not exist and there is no frame id to get it from S3.')
 

@@ -12,8 +12,19 @@ from banzai.stages import Stage
 from banzai.data import DataTable
 from banzai import logs
 
+from skimage import measure
+
 logger = logging.getLogger('banzai')
 sep.set_sub_object_limit(int(1e6))
+
+
+def radius_of_contour(contour, source):
+    x = contour[:, 1]
+    y = contour[:, 0]
+    x_center = (source['xmax'] - source['xmin'] + 1) / 2.0 - 0.5
+    y_center = (source['ymax'] - source['ymin'] + 1) / 2.0 - 0.5
+
+    return np.percentile(np.sqrt((x - x_center)**2.0 + (y - y_center)** 2.0), 90)
 
 
 class SourceDetector(Stage):
@@ -93,13 +104,6 @@ class SourceDetector(Stage):
                 sources['fluxerr{0}'.format(diameter)] = fluxerr
                 sources['flag'] |= flag
 
-            # Calculate the FWHMs of the stars:
-            fwhm = 2.0 * (np.log(2) * (sources['a'] ** 2.0 + sources['b'] ** 2.0)) ** 0.5
-            sources['fwhm'] = fwhm
-
-            # Cut individual bright pixels. Often cosmic rays
-            sources = sources[fwhm > 1.0]
-
             # Measure the flux profile
             flux_radii, flag = sep.flux_radius(data, sources['x'], sources['y'],
                                                6.0 * sources['a'], [0.25, 0.5, 0.75],
@@ -109,8 +113,26 @@ class SourceDetector(Stage):
             sources['fluxrad50'] = flux_radii[:, 1]
             sources['fluxrad75'] = flux_radii[:, 2]
 
+            # Cut individual bright pixels. Often cosmic rays
+            sources = sources[sources['fluxrad50'] > 0.5]
+
+            # Calculate the FWHMs of the stars:
+            sources['fwhm'] = np.nan
+            sources['fwtm'] = np.nan
+            # Here we estimate contours
+            for source in sources:
+                if source['flag'] == 0:
+                    for ratio, keyword in zip([0.5, 0.1], ['fwhm', 'fwtm']):
+                        contours = measure.find_contours(data[source['ymin']: source['ymax'] + 1,
+                                                         source['xmin']: source['xmax'] + 1],
+                                                         ratio * source['peak'])
+                        if contours:
+                            # If there are multiple contours like a donut might have take the outer
+                            contour_radii = [radius_of_contour(contour, source) for contour in contours]
+                            source[keyword] = 2.0 * np.nanmax(contour_radii)
+
             # Calculate the windowed positions
-            sig = 2.0 / 2.35 * sources['fluxrad50']
+            sig = 2.0 / 2.35 * sources['fwhm']
             xwin, ywin, flag = sep.winpos(data, sources['x'], sources['y'], sig)
             sources['flag'] |= flag
             sources['xwin'] = xwin
@@ -143,7 +165,7 @@ class SourceDetector(Stage):
                               'flux', 'fluxerr', 'peak', 'fluxaper1', 'fluxerr1',
                               'fluxaper2', 'fluxerr2', 'fluxaper3', 'fluxerr3',
                               'fluxaper4', 'fluxerr4', 'fluxaper5', 'fluxerr5',
-                              'fluxaper6', 'fluxerr6', 'background', 'fwhm',
+                              'fluxaper6', 'fluxerr6', 'background', 'fwhm', 'fwtm',
                               'a', 'b', 'theta', 'kronrad', 'ellipticity',
                               'fluxrad25', 'fluxrad50', 'fluxrad75',
                               'x2', 'y2', 'xy', 'flag']
@@ -177,6 +199,8 @@ class SourceDetector(Stage):
             catalog['background'].description = 'Average background value in the aperture'
             catalog['fwhm'].unit = 'pixel'
             catalog['fwhm'].description = 'FWHM of the object'
+            catalog['fwtm'].unit = 'pixel'
+            catalog['fwtm'].description = 'Full-Width Tenth Maximum'
             catalog['a'].unit = 'pixel'
             catalog['a'].description = 'Semi-major axis of the object'
             catalog['b'].unit = 'pixel'
@@ -206,15 +230,15 @@ class SourceDetector(Stage):
             # Save some background statistics in the header
             mean_background = stats.sigma_clipped_mean(bkg.back(), 5.0)
             image.meta['L1MEAN'] = (mean_background,
-                                      '[counts] Sigma clipped mean of frame background')
+                                    '[counts] Sigma clipped mean of frame background')
 
             median_background = np.median(bkg.back())
             image.meta['L1MEDIAN'] = (median_background,
-                                        '[counts] Median of frame background')
+                                      '[counts] Median of frame background')
 
             std_background = stats.robust_standard_deviation(bkg.back())
             image.meta['L1SIGMA'] = (std_background,
-                                       '[counts] Robust std dev of frame background')
+                                     '[counts] Robust std dev of frame background')
 
             # Save some image statistics to the header
             good_objects = catalog['flag'] == 0
@@ -222,11 +246,15 @@ class SourceDetector(Stage):
                 good_objects = np.logical_and(good_objects, np.logical_not(np.isnan(catalog[quantity])))
             if good_objects.sum() == 0:
                 image.meta['L1FWHM'] = ('NaN', '[arcsec] Frame FWHM in arcsec')
+                image.meta['L1FWTM'] = ('NaN', 'Ratio of FWHM to Full-Width Tenth Max')
+
                 image.meta['L1ELLIP'] = ('NaN', 'Mean image ellipticity (1-B/A)')
                 image.meta['L1ELLIPA'] = ('NaN', '[deg] PA of mean image ellipticity')
             else:
-                seeing = np.median(catalog['fwhm'][good_objects]) * image.pixel_scale
+                seeing = np.nanmedian(catalog['fwhm'][good_objects]) * image.pixel_scale
                 image.meta['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
+                image.meta['L1FWTM'] = (np.nanmedian(catalog['fwtm'][good_objects] / catalog['fwhm'][good_objects]),
+                                        'Ratio of FWHM to Full-Width Tenth Max')
 
                 mean_ellipticity = stats.sigma_clipped_mean(catalog['ellipticity'][good_objects], 3.0)
                 image.meta['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
@@ -276,6 +304,9 @@ class PhotometricCalibrator(Stage):
         good_sources = np.logical_and(image['CAT'].data['flag'] == 0, image['CAT'].data['flux'] > 0.0)
         matched_catalog = match_catalogs(image['CAT'].data[good_sources], reference_catalog)
 
+        if len(matched_catalog) == 0:
+            logger.error('No matching sources found. Skipping zeropoint determination', image=image)
+            return image
         # catalog_mag = instrumental_mag + zeropoint + color_coefficient * color
         # Fit the zeropoint and color_coefficient rejecting outliers
         # Note the zero index here in the filter name is because we only store teh first letter of the filter name
