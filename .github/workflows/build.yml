@@ -32,11 +32,6 @@ jobs:
             python-version: 3.8
             toxenv: py38-test-devdeps
 
-          - name: Python 3.6 astropy LTS and Numpy 1.16
-            os: ubuntu-latest
-            python-version: 3.6
-            toxenv: py36-test-astropylts-numpy116
-
           - name: Python 3.7 with older dependencies, astropy 3.0 and Numpy 1.17
             os: ubuntu-latest
             python-version: 3.7
