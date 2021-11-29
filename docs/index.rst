@@ -80,6 +80,13 @@ are divided out of every science frame. The most recent
 master flat-field image for the given telescope, filter, and binning is used. If no flat field exists,
 the data will not be reduced and an exception will be raised.
 
+Cosmic Ray Detection
+====================
+We use a convolutional neural network to detect cosmic rays in our images. Our model is packaged as Cosmic-CoNN
+and is available at https://github.com/cy-xu/cosmic-conn. We have adopted a mask threshold score of 0.5 from the network.
+This produces a false discovery rate (false positive pixels / false + true positive pixels) of 5%. At this threshold,
+our models are 94% complete for our training data. Pixels flagged as cosmic-ray contaminated are marked using the
+4 bit in the mask.
 
 Source Detection
 ================
@@ -97,6 +104,16 @@ produces approximately the same results as ``FLUX_AUTO`` from SExtractor.
 
 We set the source detection limit at 3 times the global rms of the image. ``MINAREA`` is set to 5,
 the default. This should minimize false detections, but may miss the faintest sources.
+
+To assess the image quality, we estimate the full-width half maximum (FWHM) of the stars in the image. We reject any
+sources that have a FWHM of less than a pixel to ensure that they do not bias our results. The PSFs for LCO are
+typically well sampled so this does not reject real stars even when the seeing is good. For the remaining sources,
+we estimate the pixel locations of the half-max contours using SciPy. We take the distance from the geometric center
+of the source to all points along the contour. This improves the behavior of the FWHM estimates when the PSF is
+asymmetric. For each source, we select the 90th percentile from these distances and multiply by a factor of two as our
+estimate of the FWHM. This ensures that we do not underestimate the FWHM when dealing with stigmatic images. Finally,
+we take the robust standard deviation (see below) to estimate the overall FWHM of the image. This value is recorded
+in the header under the L1FWHM keyword.
 
 
 Astrometry

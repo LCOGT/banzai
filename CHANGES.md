@@ -1,3 +1,7 @@
+1.7.0 (2021-11-29)
+------------------
+- Added cosmic ray detection to processing stages. Cosmic rays are marked as bit 4 in the masks.
+
 1.6.0 (2021-11-01)
 ------------------
 - Added Full-Width Tenth Maximum statistics
