@@ -1,6 +1,6 @@
 import logging
 from banzai.stages import Stage
-from cosmic_conn import init_model
+from cosmic_conn.inference_cr import init_model
 
 logger = logging.getLogger('banzai')
 
