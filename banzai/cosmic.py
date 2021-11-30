@@ -4,16 +4,15 @@ from cosmic_conn.inference_cr import init_model
 
 logger = logging.getLogger('banzai')
 
+# initialize a Cosmic-CoNN model
+cr_model, _ = init_model("ground_imaging")
+
 
 class CosmicRayDetector(Stage):
     def __init__(self, runtime_context):
         super(CosmicRayDetector, self).__init__(runtime_context)
 
     def do_stage(self, image):
-
-        # initialize a Cosmic-CoNN model
-        cr_model, opt = init_model("ground_imaging")
-
         # the model outputs a CR probability map in np.float32
         cr_prob = cr_model.detect_cr(image.data)
 
