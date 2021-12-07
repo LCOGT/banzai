@@ -1,3 +1,7 @@
+1.7.0 (2021-12-07)
+------------------
+- Bugfix to read in non-fpacked files
+
 1.6.0 (2021-11-01)
 ------------------
 - Added Full-Width Tenth Maximum statistics
