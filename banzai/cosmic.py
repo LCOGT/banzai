@@ -1,11 +1,11 @@
 import logging
 from banzai.stages import Stage
-from cosmic_conn.inference_cr import init_model
+from cosmic_conn import init_model
 
 logger = logging.getLogger('banzai')
 
 # initialize a Cosmic-CoNN model
-cr_model, _ = init_model("ground_imaging")
+cr_model = init_model("ground_imaging")
 
 
 class CosmicRayDetector(Stage):

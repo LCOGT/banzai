@@ -4,10 +4,8 @@ from banzai.cosmic import CosmicRayDetector
 from banzai.tests.utils import FakeContext, FakeCCDData, FakeLCOObservationFrame
 
 
-def test_bias_subtraction_is_reasonable():
-    input_bias = 1000.0
+def test_cosmic_detection_is_reasonable():
     input_readnoise = 9.0
-    input_level = 2000.0
     nx = 1001
     ny = 1003
 
@@ -28,7 +26,7 @@ def test_bias_subtraction_is_reasonable():
         imdata += gaussian2d(imdata.shape, x, y, brightness, 3.5)
 
     # Add the poisson noise
-    imdata = np.float(np.random.poisson(imdata))
+    imdata = np.random.poisson(imdata).astype(float)
 
     # Add readnoise
     imdata += np.random.normal(0.0, input_readnoise, size=(1001, 1001))
@@ -51,4 +49,4 @@ def test_bias_subtraction_is_reasonable():
     image = cosmic_stage.do_stage(image)
 
     actual_detections = (image.mask & 4) == 4
-    assert crmask == actual_detections
+    assert (crmask == actual_detections).sum() == crmask.size
