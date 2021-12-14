@@ -20,5 +20,5 @@ class CosmicRayDetector(Stage):
         # This value produces a 5% false discovery rate with 94% completeness.
         cr_mask = cr_prob > 0.5
 
-        image.mask[cr_mask] |= 4
+        image.mask[cr_mask] |= 8
         return image

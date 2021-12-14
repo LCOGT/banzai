@@ -7,6 +7,13 @@ This pipeline is designed to take raw data taken from Las Cumbres Observatory,
 and produce science quality data products. BANZAI is capable of reducing single or multi-extension
 fits files. For historical data, BANZAI can also reduce the data cubes that were produced by the Sinistro cameras.
 
+Bad Pixel Mask
+--------------
+- 1: Known bad pixel
+- 2: Saturated pixel
+- 4: Flat field does not have enough signal
+- 8: Cosmic ray
+
 Stages
 ------
 BANZAI is comprised of different stages, each corresponding to a single reduction step, which are chained together
@@ -86,7 +93,7 @@ We use a convolutional neural network to detect cosmic rays in our images. Our m
 and is available at https://github.com/cy-xu/cosmic-conn. We have adopted a mask threshold score of 0.5 from the network.
 This produces a false discovery rate (false positive pixels / false + true positive pixels) of 5%. At this threshold,
 our models are 94% complete for our training data. Pixels flagged as cosmic-ray contaminated are marked using the
-4 bit in the mask.
+8 bit in the mask.
 
 Source Detection
 ================
