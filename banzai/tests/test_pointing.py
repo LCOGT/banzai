@@ -39,4 +39,4 @@ def test_large_offset():
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(meta=image_header)])
     image = tester.do_stage(image)
 
-    np.testing.assert_allclose(image.meta.get('PNTOFST'), 10.0)
+    np.testing.assert_allclose(image.meta.get('PNTOFST'), 10.0, atol=1e-7)
