@@ -1,3 +1,7 @@
+1.7.1 (2021-01-11)
+------------------
+- Lowered the patch size to use on cosmic ray detection because it was taking too much memory
+
 1.7.0 (2021-11-29)
 ------------------
 - Added cosmic ray detection to processing stages. Cosmic rays are marked as bit 4 in the masks.
