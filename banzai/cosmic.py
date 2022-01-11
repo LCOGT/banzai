@@ -6,6 +6,7 @@ logger = logging.getLogger('banzai')
 
 # initialize a Cosmic-CoNN model
 cr_model = init_model("ground_imaging")
+cr_model.opt.crop = 256
 
 
 class CosmicRayDetector(Stage):
