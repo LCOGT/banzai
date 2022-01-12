@@ -16,6 +16,8 @@ pipeline {
 		GIT_DESCRIPTION = gitDescribe()
 		DOCKER_IMG = dockerImageName("${LCO_DOCK_REG}", "${PROJ_NAME}", "${GIT_DESCRIPTION}")
 		KUBERNETES_CREDS = credentials('jenkins-kubeconfig')
+		START_TIME = ''
+		LOGS_SINCE = ''
 	}
 	options {
 		timeout(time: 8, unit: 'HOURS')
@@ -96,14 +98,14 @@ pipeline {
 			}
 			steps {
 				script {
-					env.START_TIME = sh('date +%s')
+					START_TIME = sh('date +%s')
 					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-dark.xml -m master_dark')
 				}
 			}
 			post {
 				always {
 					script {
-						env.LOGS_SINCE = sh('expr `date +%s` - ${START_TIME}')
+						LOGS_SINCE = sh('expr `date +%s` - ${START_TIME}')
 					    sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
 						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-dark.xml pytest-master-dark.xml')
 						junit 'pytest-master-dark.xml'
@@ -120,14 +122,14 @@ pipeline {
 			}
 			steps {
 				script {
-					env.START_TIME = sh('date +%s')
+					START_TIME = sh('date +%s')
 					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-flat.xml -m master_flat')
 				}
 			}
 			post {
 				always {
 					script {
-					    env.LOGS_SINCE = sh('expr `date +%s` - ${START_TIME}')
+					    LOGS_SINCE = sh('expr `date +%s` - ${START_TIME}')
                         sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
 						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-flat.xml pytest-master-flat.xml')
 						junit 'pytest-master-flat.xml'
@@ -144,14 +146,14 @@ pipeline {
 			}
 			steps {
 				script {
-					env.START_TIME = sh('date +%s')
+					START_TIME = sh('date +%s')
 					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-science-files.xml -m science_files')
 				}
 			}
 			post {
 				always {
 					script {
-					    env.LOGS_SINCE = sh('expr `date +%s` - ${START_TIME}')
+					    LOGS_SINCE = sh('expr `date +%s` - ${START_TIME}')
 					    sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
 						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-science-files.xml pytest-science-files.xml ')
 						junit 'pytest-science-files.xml'
