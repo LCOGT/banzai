@@ -16,8 +16,6 @@ pipeline {
 		GIT_DESCRIPTION = gitDescribe()
 		DOCKER_IMG = dockerImageName("${LCO_DOCK_REG}", "${PROJ_NAME}", "${GIT_DESCRIPTION}")
 		KUBERNETES_CREDS = credentials('jenkins-kubeconfig')
-		START_TIME = ''
-		LOGS_SINCE = ''
 	}
 	options {
 		timeout(time: 8, unit: 'HOURS')
