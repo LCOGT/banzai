@@ -17,8 +17,8 @@ from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
 from banzai.main import add_bpm
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
-from astropy.utils.data import get_pkg_data_filename
 from astropy.io import fits
+import pkg_resources
 
 import logging
 
@@ -38,7 +38,7 @@ DAYS_OBS = [os.path.join(instrument, os.path.basename(dayobs_path)) for instrume
             for dayobs_path in glob(os.path.join(DATA_ROOT, instrument, '20*'))]
 
 TEST_PACKAGE = 'banzai.tests'
-CONFIGDB_FILENAME = get_pkg_data_filename('data/configdb_example.json', TEST_PACKAGE)
+CONFIGDB_FILENAME = pkg_resources.resource_filename(TEST_PACKAGE, 'data/configdb_example.json')
 
 
 def celery_join():
@@ -158,7 +158,7 @@ def observation_portal_side_effect(*args, **kwargs):
     site = kwargs['params']['site']
     start = datetime.strftime(parse(kwargs['params']['start_after']).replace(tzinfo=None).date(), '%Y%m%d')
     filename = 'test_obs_portal_response_{site}_{start}.json'.format(site=site, start=start)
-    filename = get_pkg_data_filename('data/{filename}'.format(filename=filename), TEST_PACKAGE)
+    filename = pkg_resources.resource_filename(TEST_PACKAGE, 'data/{filename}'.format(filename=filename))
     return FakeResponse(filename)
 
 
