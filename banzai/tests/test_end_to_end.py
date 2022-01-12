@@ -159,6 +159,8 @@ def observation_portal_side_effect(*args, **kwargs):
     start = datetime.strftime(parse(kwargs['params']['start_after']).replace(tzinfo=None).date(), '%Y%m%d')
     filename = 'test_obs_portal_response_{site}_{start}.json'.format(site=site, start=start)
     filename = pkg_resources.resource_filename(TEST_PACKAGE, 'data/{filename}'.format(filename=filename))
+    if not os.path.exists(filename):
+        filename = pkg_resources.resource_filename(TEST_PACKAGE, 'data/test_obs_portal_null.json')
     return FakeResponse(filename)
 
 
