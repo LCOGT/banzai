@@ -63,17 +63,6 @@ def celery_join():
             break
 
 
-def run_end_to_end_tests():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--marker', dest='marker', help='PyTest marker to run')
-    parser.add_argument('--junit-file', dest='junit_file', help='Path to junit xml file with results')
-    args = parser.parse_args()
-    command = 'pytest -s --pyargs banzai.tests --durations=0 --junitxml={junit_file} -m {marker}'
-
-    # Bitshift by 8 because Python encodes exit status in the leftmost 8 bits
-    return os.system(command.format(junit_file=args.junit_file, marker=args.marker)) >> 8
-
-
 def run_reduce_individual_frames(raw_filenames):
     logger.info('Reducing individual frames for filenames: {filenames}'.format(filenames=raw_filenames))
     for day_obs in DAYS_OBS:

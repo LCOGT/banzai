@@ -206,8 +206,7 @@ def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
                 data = np.array(hdu.data, data_type)
             else:
                 data = np.array(hdu.data, hdu.data.dtype)
-            header = hdu.header
-            hdulist.append(fits.ImageHDU(data=data, header=header))
+            hdulist.append(fits.ImageHDU(data=data, header=hdu.header))
         elif isinstance(hdu, fits.BinTableHDU):
             hdulist.append(fits.BinTableHDU(data=hdu.data, header=hdu.header))
         else:
