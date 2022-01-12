@@ -77,6 +77,7 @@ pipeline {
 			}
 			steps {
 				script {
+					echo "Start time is: ${START_TIME}"
 					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-bias.xml -m master_bias')
 				}
 			}
