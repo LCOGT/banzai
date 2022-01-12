@@ -74,14 +74,14 @@ pipeline {
 			}
 			steps {
 				script {
-				    env.START_TIME = sh('date +%s')
+				    START_TIME = sh('date +%s')
 					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-bias.xml -m master_bias')
 				}
 			}
 			post {
 				always {
 					script {
-					    env.LOGS_SINCE = sh('expr `date +%s` - ${START_TIME}')
+					    LOGS_SINCE = sh('expr `date +%s` - ${START_TIME}')
                         sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
 						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-bias.xml pytest-master-bias.xml')
 						junit 'pytest-master-bias.xml'
