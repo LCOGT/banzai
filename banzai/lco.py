@@ -407,7 +407,7 @@ class LCOFrameFactory(FrameFactory):
                 all(hdu.header.get('EXTNAME', '') in associated_fits_extensions
                     for hdu in fits_hdu_list if hdu.data is not None):
             for hdu in fits_hdu_list:
-                if hdu.data is None:
+                if hdu.data is None or hdu.data.size == 0:
                     hdu_list.append(HeaderOnly(meta=hdu.header))
                 else:
                     hdu_list.append(self.data_class(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
@@ -419,7 +419,7 @@ class LCOFrameFactory(FrameFactory):
                        for associated_extension in self.associated_extensions):
                     continue
                 # Otherwise parse the fits file into a frame object and the corresponding data objects
-                if hdu.data is None:
+                if hdu.data is None or hdu.data.size == 0:
                     hdu_list.append(HeaderOnly(meta=hdu.header))
                     primary_hdu = hdu
                 elif isinstance(hdu, fits.BinTableHDU):

@@ -182,7 +182,7 @@ def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
             move_1_to_0 = False
             break
     if not move_1_to_0 or not isinstance(compressed_hdulist[1], fits.CompImageHDU):
-        primary_hdu = fits.PrimaryHDU(data=None, header=compressed_hdulist[0].header)
+        primary_hdu = fits.PrimaryHDU(data=compressed_hdulist[0].data, header=compressed_hdulist[0].header)
     else:
         data_type = str(compressed_hdulist[1].data.dtype)
         if 'int' == data_type[:3]:

@@ -1,4 +1,8 @@
-1.7.1 (2021-01-11)
+1.7.2 (2022-01-12)
+------------------
+- Bugfix to read in non-fpacked files
+
+1.7.1 (2022-01-11)
 ------------------
 - Lowered the patch size to use on cosmic ray detection because it was taking too much memory
 
