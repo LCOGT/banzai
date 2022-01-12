@@ -1,6 +1,14 @@
-1.7.0 (2021-12-07)
+1.7.2 (2022-01-12)
 ------------------
 - Bugfix to read in non-fpacked files
+
+1.7.1 (2022-01-11)
+------------------
+- Lowered the patch size to use on cosmic ray detection because it was taking too much memory
+
+1.7.0 (2021-11-29)
+------------------
+- Added cosmic ray detection to processing stages. Cosmic rays are marked as bit 4 in the masks.
 
 1.6.0 (2021-11-01)
 ------------------

@@ -13,9 +13,13 @@ Please cite the following DOI if you are using processed LCOGT data.
     :target: https://zenodo.org/badge/latestdoi/26836413
     :alt: Zenodo DOI
 
+We have recently implemented a neural network model to detect cosmic rays in ground based images. For more information
+pleas see our paper on arXiv. If possible please also cite
+`Xu et al., 2021, arXiv:2106.14922 <https://arxiv.org/abs/2106.14922>`_.
+
 .. image:: https://travis-ci.com/LCOGT/banzai.png?branch=master
     :target: https://travis-ci.com/LCOGT/banzai
-    :alt: Travis Status
+    :alt: Test Status
 
 .. image:: https://coveralls.io/repos/github/LCOGT/banzai/badge.svg
     :target: https://coveralls.io/github/LCOGT/banzai
