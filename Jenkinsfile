@@ -65,7 +65,7 @@ pipeline {
 		}
 		stage('Test-Master-Bias-Creation') {
 			environment {
-				START_TIME = sh('date +%s', returnStdout: true).trim()
+				START_TIME = sh(script: 'date +%s', returnStdout: true).trim()
 			}
 			when {
 				anyOf {
@@ -82,7 +82,7 @@ pipeline {
 			post {
 				always {
 					script {
-						withEnv ([LOGS_SINCE=sh('expr `date +%s` - ${START_TIME}', returnStdout: true).trim()]) {
+						withEnv ([LOGS_SINCE=sh(script: 'expr `date +%s` - ${START_TIME}', returnStdout: true).trim()]) {
 							sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
 							sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n dev cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-bias.xml pytest-master-bias.xml')
 							junit 'pytest-master-bias.xml'
