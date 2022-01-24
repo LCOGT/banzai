@@ -11,30 +11,31 @@ import banzai
 
 FRAME_SELECTION_CRITERIA = [('type', 'not contains', 'FLOYDS'), ('type', 'not contains', 'NRES')]
 
-FRAME_FACTORY = 'banzai.lco.LCOFrameFactory'
+FRAME_FACTORY = 'banzai.steward.StewardFrameFactory'
 
-CALIBRATION_FRAME_CLASS = 'banzai.lco.LCOCalibrationFrame'
+CALIBRATION_FRAME_CLASS = 'banzai.steward.StewardCalibrationFrame'
 
 ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   'banzai.bpm.SaturatedPixelFlagger',
-                  'banzai.qc.header_checker.HeaderChecker',
-                  'banzai.qc.sinistro_1000s.ThousandsTest',
+                  # 'banzai.qc.header_checker.HeaderChecker',
+                  # 'banzai.qc.sinistro_1000s.ThousandsTest',
                   'banzai.qc.saturation.SaturationTest',
                   'banzai.bias.OverscanSubtractor',
-                  'banzai.crosstalk.CrosstalkCorrector',
+                  # 'banzai.crosstalk.CrosstalkCorrector',
                   'banzai.gain.GainNormalizer',
                   'banzai.mosaic.MosaicCreator',
-                  'banzai.trim.Trimmer',
+                  # 'banzai.trim.Trimmer',
                   'banzai.bias.BiasSubtractor',
                   'banzai.uncertainty.PoissonInitializer',
-                  'banzai.dark.DarkSubtractor',
+                  # 'banzai.dark.DarkSubtractor',
                   'banzai.flats.FlatDivider',
                   'banzai.qc.pattern_noise.PatternNoiseDetector',
                   'banzai.cosmic.CosmicRayDetector',
                   'banzai.photometry.SourceDetector',
-                  'banzai.astrometry.WCSSolver',
-                  'banzai.qc.pointing.PointingTest',
-                  'banzai.photometry.PhotometricCalibrator']
+                  # 'banzai.astrometry.WCSSolver',
+                  # 'banzai.qc.pointing.PointingTest',
+                  # 'banzai.photometry.PhotometricCalibrator',
+                  ]
 
 CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,
@@ -45,8 +46,8 @@ CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'binning'],
                             'SKYFLAT': ['configuration_mode', 'binning', 'filter'],
                             'BPM': ['configuration_mode', 'binning']}
 
-LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
-              'DARK': 'banzai.uncertainty.PoissonInitializer', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
+LAST_STAGE = {'BIAS': 'banzai.mosaic.MosaicCreator',
+              'DARK': 'banzai.uncertainty.PoissonInitializer', 'SKYFLAT': 'banzai.uncertainty.PoissonInitializer',
               'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None, 'EXPERIMENTAL': None}
 
 EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
@@ -69,8 +70,6 @@ CALIBRATION_STACK_DELAYS = {'BIAS': 300,
                             'DARK': 300,
                             'SKYFLAT': 300}
 
-SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
-
 SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
                                   'cpt': {'minute': 0, 'hour': 15},
                                   'tfn': {'minute': 30, 'hour': 17},
@@ -88,7 +87,7 @@ CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_fi
                                               'banzai.utils.file_utils.ccdsum_to_filename',
                                               'banzai.utils.file_utils.filter_to_filename')}
 
-TELESCOPE_FILENAME_FUNCTION = 'banzai.utils.file_utils.telescope_to_filename'
+TELESCOPE_FILENAME_FUNCTION = 'steward.telescope_to_filename'
 
 OBSERVATION_PORTAL_URL = os.getenv('OBSERVATION_PORTAL_URL',
                                    'http://internal-observation-portal.lco.gtn/api/observations/')
