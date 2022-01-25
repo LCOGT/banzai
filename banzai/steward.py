@@ -340,14 +340,9 @@ class StewardFrameFactory(FrameFactory):
         site = 'kpno'
         camera = header.get('INSTRUME')
         instrument = dbs.query_for_instrument(db_address, site, camera)
-        name = camera
-        if instrument is None:
-            # if instrument is missing, assume it is an NRES frame and check for the instrument again.
-            name = header.get('TELESCOP')
-            instrument = dbs.query_for_instrument(db_address, site, camera, name=name)
         if instrument is None:
             msg = 'Instrument is not in the database, Please add it before reducing this data.'
-            tags = {'site': site, 'camera': camera, 'telescop': name}
+            tags = {'site': site, 'camera': camera}
             logger.debug(msg, extra_tags=tags)
         return instrument
 
@@ -382,5 +377,5 @@ class StewardFrameFactory(FrameFactory):
 def telescope_to_filename(image):
     telescope = image.meta.get('TELESCOP', '')
     if telescope == 'Steward 2.3 m (bok)':
-        telescope = 'Bok'
+        telescope = '2m3bok'
     return telescope
