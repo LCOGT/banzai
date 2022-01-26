@@ -34,7 +34,7 @@ ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   'banzai.photometry.SourceDetector',
                   # 'banzai.astrometry.WCSSolver',
                   # 'banzai.qc.pointing.PointingTest',
-                  # 'banzai.photometry.PhotometricCalibrator',
+                  'banzai.photometry.PhotometricCalibrator',
                   ]
 
 CALIBRATION_MIN_FRAMES = {'BIAS': 5,
@@ -77,7 +77,7 @@ SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
                                   'elp': {'minute': 0, 'hour': 23},
                                   'ogg': {'minute': 0, 'hour': 3}}
 
-ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/catalog/')
+ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://localhost:5000/catalog/')
 
 CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_filename',
                                            'banzai.utils.file_utils.ccdsum_to_filename'),
@@ -146,4 +146,4 @@ LOSSLESS_EXTENSIONS = []
 
 CELERY_TASK_QUEUE_NAME = os.getenv('CELERY_TASK_QUEUE_NAME', 'celery')
 
-REFERENCE_CATALOG_URL = os.getenv('REFERENCE_CATALOG_URL', 'http://phot-catalog.lco.gtn/')
+REFERENCE_CATALOG_URL = os.getenv('REFERENCE_CATALOG_URL', 'http://localhost:5005')
