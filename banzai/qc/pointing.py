@@ -42,7 +42,7 @@ class PointingTest(Stage):
         angular_separation = solved_coords.separation(requested_coords).arcsec
 
         logging_tags = {'PNTOFST': angular_separation,
-                        'OBJECT': image.meta['OBJECT']}
+                        'OBJECT': image.meta.get('OBJECT', 'N/A')}
 
         pointing_severe = abs(angular_separation) > self.SEVERE_THRESHOLD
         pointing_warning = abs(angular_separation) > self.WARNING_THRESHOLD

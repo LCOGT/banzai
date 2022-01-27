@@ -20,7 +20,8 @@ def test_no_offset():
     image_header = Header({'CRVAL1': '1.0',
                            'CRVAL2': '-1.0',
                            'OFST-RA': '0:04:00.00',
-                           'OFST-DEC': '-01:00:00.000'})
+                           'OFST-DEC': '-01:00:00.000',
+                           'OBJECT': 'testobj'})
 
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(meta=image_header)])
     image = tester.do_stage(image)
@@ -34,7 +35,8 @@ def test_large_offset():
     image_header = Header({'CRVAL1': '00:00:00.000',
                            'CRVAL2': '-00:00:00.000',
                            'OFST-RA': '00:00:00.000',
-                           'OFST-DEC': '-00:00:10.000'})
+                           'OFST-DEC': '-00:00:10.000',
+                           'OBJECT': 'testobj'})
 
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(meta=image_header)])
     image = tester.do_stage(image)
