@@ -1,3 +1,7 @@
+1.7.3 (2022-01-28)
+------------------
+- Add OBJECT logging tag to pointing test so it can be filtered in Elasticsearch
+
 1.7.2 (2022-01-12)
 ------------------
 - Bugfix to read in non-fpacked files
