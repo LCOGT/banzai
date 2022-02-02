@@ -91,6 +91,8 @@ Ingester environment variables
   value: {{ .Values.ingester.apiRoot | quote }}
 - name: BUCKET
   value: {{ .Values.ingester.s3Bucket | quote }}
+- name: FILESTORE_TYPE
+  value: {{ .Values.ingester.filestoreType | quote }}
 {{- if .Values.ingester.noMetrics }}
 - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
   value: "1"
