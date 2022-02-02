@@ -1,3 +1,7 @@
+1.8.0 (2022-02-01)
+------------------
+- Fixed archive call when no auth token is included.
+
 1.7.3 (2022-01-28)
 ------------------
 - Add OBJECT logging tag to pointing test so it can be filtered in Elasticsearch
