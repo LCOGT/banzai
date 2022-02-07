@@ -1,4 +1,8 @@
-1.8.0 (2022-02-01)
+1.9.0 (2022-02-07)
+------------------
+- Upgraded tests to include newer versions of python up to 3.10
+
+.8.0 (2022-02-01)
 ------------------
 - Fixed archive call when no auth token is included.
 
