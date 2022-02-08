@@ -32,7 +32,7 @@ spec:
         - /data/
       resources:
         requests:
-          cpu: 0.1
+          cpu: 0.05
           memory: 256M
         limits:
           cpu: 1
@@ -44,7 +44,7 @@ spec:
       imagePullPolicy: IfNotPresent
       resources:
         requests:
-          cpu: 0.1
+          cpu: 0.05
           memory: 256M
         limits:
           cpu: 1
@@ -64,7 +64,7 @@ spec:
       imagePullPolicy: IfNotPresent
       resources:
         requests:
-          cpu: 0.1
+          cpu: 0.05
           memory: 512M
         limits:
           cpu: 1
@@ -135,10 +135,10 @@ spec:
         periodSeconds: 1
       resources:
         requests:
-          cpu: 2
+          cpu: 1
           memory: 8Gi
         limits:
-          cpu: 4
+          cpu: 2
           memory: 8Gi
     - name: banzai-celery-beat
       image: @BANZAI_IMAGE@
@@ -161,7 +161,7 @@ spec:
         - banzai_automate_stack_calibrations
       resources:
         requests:
-          cpu: 0.1
+          cpu: 0.05
           memory: 1Gi
         limits:
           cpu: 1
@@ -200,7 +200,7 @@ spec:
         - "--broker-url=localhost"
       resources:
         requests:
-          cpu: 0.1
+          cpu: 0.05
           memory: 512M
         limits:
           cpu: 1

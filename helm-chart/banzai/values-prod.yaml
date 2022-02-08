@@ -24,6 +24,7 @@ ingester:
   opentsdbPort: 80
   postProcessFiles: false
   noMetrics: false
+  filestoreType: s3
 
 # Values specific to the BANZAI pipeline
 banzai:

@@ -37,6 +37,16 @@ jobs:
             python-version: 3.7
             toxenv: py37-test-astropy30-numpy117
 
+          - name: Python 3.9 with minimal dependencies
+            os: ubuntu-latest
+            python: '3.9'
+            toxenv: py39-test
+
+          - name: Python 3.10 with minimal dependencies
+            os: ubuntu-latest
+            python: '3.10'
+            toxenv: py310-test
+
           - name: Code style checks
             os: ubuntu-latest
             python-version: 3.8
