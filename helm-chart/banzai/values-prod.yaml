@@ -40,6 +40,7 @@ banzai:
   queueName: banzai_pipeline
   celeryTaskQueueName: banzai_imaging
   PhotometryCatalogURL: http://phot-catalog.lco.gtn/
+  elasticSearchURL: http://es-migration-tee-old.prod
 
 # CronJob configuration to periodically update instrument table in BANZAI DB
 instrumentTableCronjob:
