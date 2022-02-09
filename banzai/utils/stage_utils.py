@@ -1,5 +1,4 @@
 from banzai.utils import import_utils
-from collections import Iterable
 import logging
 from banzai.context import Context
 

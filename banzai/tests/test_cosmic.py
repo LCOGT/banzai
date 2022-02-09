@@ -31,7 +31,7 @@ def generate_test_image(input_readnoise, n_source, n_cr):
     # Add 100 fake cosmic rays (lines/rectangles for cosmic-conn)
     cr_x = np.random.randint(low=20, high=980, size=n_cr)
     cr_y = np.random.randint(low=20, high=980, size=n_cr)
-    
+
     # The length of the crs
     cr_x_len = np.random.randint(low=3, high=15, size=n_cr)
     cr_y_len = np.random.randint(low=3, high=15, size=n_cr)

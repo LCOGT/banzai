@@ -33,7 +33,7 @@ def test_frame_add_hdu():
     hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}), DataTable(data=Table(np.array([1, 2, 3])), name='CAT')]
     test_frame = LCOObservationFrame(hdu_list=hdu_list, file_path='/foo/bar')
     test_frame.add_or_update(FakeCCDData(meta={'EXTNAME': 'SCI', 'OBSTYPE': 'EXPOSE'}, name='FOO'))
-    
+
     assert len(test_frame._hdus) == 3
     assert test_frame['FOO'].name == 'FOO'
 
@@ -55,9 +55,9 @@ def test_frame_contains_does_not_exist():
 
 
 def test_frame_to_db_record():
-    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI', 
-                                  'OBSTYPE': 'BIAS', 
-                                  'DATE-OBS': '2021-04-20T00:00:00.000', 
+    hdu_list = [FakeCCDData(meta={'EXTNAME': 'SCI',
+                                  'OBSTYPE': 'BIAS',
+                                  'DATE-OBS': '2021-04-20T00:00:00.000',
                                   'DATE': '2021-04-20T00:00:00.000',
                                   'CCDSUM': '1 1',
                                   'CONFMODE': 'full_frame'}, name='SCI')]
