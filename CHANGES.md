@@ -1,3 +1,7 @@
+1.9.1 (2022-02-09)
+------------------
+- Fixes to python 3.10 compatibility 
+
 1.9.0 (2022-02-07)
 ------------------
 - Upgraded tests to include newer versions of python up to 3.10
