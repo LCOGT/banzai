@@ -4,11 +4,6 @@ on:
   # Run this workflow for pushes on all branches
   push:
 
-env:
-  TOXENV: 'test'
-  TOXARGS: '-v'
-  TOXPOSARGS: ''
-
 jobs:
   tests:
     name: ${{ matrix.name }} (${{ matrix.os }}, ${{ matrix.toxenv }})
@@ -66,4 +61,5 @@ jobs:
       if: "endsWith(matrix.toxenv, 'build_docs')"
       run: sudo apt-get -y install graphviz
     - name: Run tests
-      run: tox $TOXARGS -- $TOXPOSARGS
+      run: |
+        tox -e ${{ matrix.toxenv }}
