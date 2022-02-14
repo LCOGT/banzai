@@ -13,8 +13,9 @@ RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
 
 COPY --chown=10087:10000 . /lco/banzai
 
-RUN apt-get -y update && apt-get -y install gcc gfortran && \
+RUN apt-get -y update && apt-get -y install gcc && \
         pip install --no-cache-dir git+https://github.com/cmccully/sep.git@deblending /lco/banzai/ && \
+        apt-get -y remove gcc && \
         apt-get autoclean && \
         rm -rf /var/lib/apt/lists/*
 
