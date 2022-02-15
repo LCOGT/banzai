@@ -31,9 +31,9 @@ class MosaicCreator(Stage):
         mosaiced_data.meta['L1STATOV'] = '1' if any([data.meta.get('L1STATOV', '0') == '1' for data in image.ccd_hdus]) \
                                          else '0', 'Status flag for overscan correction'
 
+        kwd = 'OVERSCN' if len(image.ccd_hdus) < 10 else 'OVRSCN'
         for i, data in enumerate(image.ccd_hdus):
             mosaiced_data.copy_in(data)
-            kwd = 'OVERSCN' if len(image.ccd_hdus) < 10 else 'OVRSCN'
             mosaiced_data.meta[f'{kwd}{i + 1}'] = '{:0.2f}'.format(data.meta.get('OVERSCAN', 0.0)), \
                                                     'Overscan value that was subtracted'
             image.remove(data)
