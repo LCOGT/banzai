@@ -8,14 +8,14 @@ from banzai import logs
 logger = logging.getLogger('banzai')
 
 
-def set_file_as_processed(path, db_address):
+def set_file_as_processed(path, db_address=None):
     image = dbs.get_processed_image(path, db_address=db_address)
     if image is not None:
         image.success = True
         dbs.commit_processed_image(image, db_address=db_address)
 
 
-def increment_try_number(path, db_address):
+def increment_try_number(path, db_address=None):
     image = dbs.get_processed_image(path, db_address=db_address)
     # Otherwise increment the number of tries
     image.tries += 1

@@ -9,6 +9,8 @@ settings.py: Settings script for banzai.
 import os
 import banzai
 
+DB_ADDRESS = os.getenv('DB_ADDRESS', 'sqlite:///banzai.db')
+
 FRAME_SELECTION_CRITERIA = [('type', 'not contains', 'FLOYDS'), ('type', 'not contains', 'NRES')]
 
 FRAME_FACTORY = 'banzai.steward.StewardFrameFactory'

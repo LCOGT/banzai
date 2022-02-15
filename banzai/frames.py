@@ -282,5 +282,5 @@ class FrameFactory:
 
     @staticmethod
     @abc.abstractmethod
-    def get_instrument_from_header(header, db_address):
+    def get_instrument_from_header(header, db_address=None):
         pass

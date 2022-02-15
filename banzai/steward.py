@@ -336,10 +336,10 @@ class StewardFrameFactory(FrameFactory):
             return None
 
     @staticmethod
-    def get_instrument_from_header(header, db_address):
+    def get_instrument_from_header(header, db_address=None):
         site = 'kpno'
         camera = header.get('INSTRUME')
-        instrument = dbs.query_for_instrument(db_address, site, camera)
+        instrument = dbs.query_for_instrument(site, camera, db_address=db_address)
         if instrument is None:
             msg = 'Instrument is not in the database, Please add it before reducing this data.'
             tags = {'site': site, 'camera': camera}

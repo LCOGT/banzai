@@ -490,15 +490,15 @@ class LCOFrameFactory(FrameFactory):
             return None
 
     @staticmethod
-    def get_instrument_from_header(header, db_address):
+    def get_instrument_from_header(header, db_address=None):
         site = header.get('SITEID')
         camera = header.get('INSTRUME')
-        instrument = dbs.query_for_instrument(db_address, site, camera)
+        instrument = dbs.query_for_instrument(site, camera, db_address=db_address)
         name = camera
         if instrument is None:
             # if instrument is missing, assume it is an NRES frame and check for the instrument again.
             name = header.get('TELESCOP')
-            instrument = dbs.query_for_instrument(db_address, site, camera, name=name)
+            instrument = dbs.query_for_instrument(site, camera, name=name, db_address=db_address)
         if instrument is None:
             msg = 'Instrument is not in the database, Please add it before reducing this data.'
             tags = {'site': site, 'camera': camera, 'telescop': name}

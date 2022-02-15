@@ -86,7 +86,6 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
                         help='Continue processing a file even if a master calibration does not exist?')
     parser.add_argument('--rlevel', dest='reduction_level', default=91, type=int, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
                         default='http://elasticsearch.lco.gtn:9200')
@@ -154,7 +153,8 @@ def make_master_calibrations():
                                                    'Must be in the format "YYYY-MM-DDThh:mm:ss".'}}]
 
     runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
-    instrument = dbs.query_for_instrument(runtime_context.db_address, runtime_context.site, runtime_context.camera)
+    instrument = dbs.query_for_instrument(runtime_context.site, runtime_context.camera,
+                                          db_address=runtime_context.db_address)
     calibrations.make_master_calibrations(instrument,  runtime_context.frame_type.upper(),
                                           runtime_context.min_date, runtime_context.max_date, runtime_context)
 
@@ -211,7 +211,6 @@ def mark_frame(mark_as):
     parser.add_argument('--filename', dest='filename', required=True,
                         help='Name of calibration file to be marked')
     parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
@@ -231,7 +230,7 @@ def add_instrument():
     parser.add_argument("--name", help='Instrument name (e.g kb05, nres03)', required=True)
     parser.add_argument("--instrument-type", dest='instrument_type',
                         help="Instrument type (e.g. 1m0-SciCam-Sinistro)", required=True)
-    parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
+    parser.add_argument('--db-address', dest='db_address',
                         help='Database address: Should be in SQLAlchemy format')
     args = parser.parse_args()
     instrument = {'site': args.site,
@@ -248,7 +247,7 @@ def add_site():
     parser.add_argument("--latitude", help='Latitude (deg)', required=True)
     parser.add_argument("--timezone", help="Time zone relative to UTC", required=True)
     parser.add_argument("--elevation", help="Elevation of site (m)", required=True)
-    parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
+    parser.add_argument('--db-address', dest='db_address',
                         help='Database address: Should be in SQLAlchemy format')
     args = parser.parse_args()
     site = {'code': args.site,
@@ -277,7 +276,6 @@ def update_db():
                         default='http://configdb.lco.gtn/sites/',
                         help='URL of the configdb with instrument information')
     parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     args = parser.parse_args()
     logs.set_log_level(args.log_level)
@@ -294,7 +292,6 @@ def add_bpm():
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     args = parser.parse_args()
     add_settings_to_context(args, settings)
@@ -324,7 +321,6 @@ def add_bpm():
 def add_bpms_from_archive():
     parser = argparse.ArgumentParser(description="Add bad pixel mask from a given archive api")
     parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     args = parser.parse_args()
     add_settings_to_context(args, settings)
@@ -362,7 +358,6 @@ def create_db():
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--db-address', dest='db_address',
-                        default='sqlite3:///test.db',
                         help='Database address: Should be in SQLAlchemy form')
     args = parser.parse_args()
     logs.set_log_level(args.log_level)

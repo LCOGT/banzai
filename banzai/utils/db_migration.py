@@ -59,7 +59,7 @@ class PreviewImage(Base):
     tries = Column(Integer, default=0)
 
 
-def create_new_db(db_address):
+def create_new_db(db_address=None):
     engine = create_engine(db_address)
     dbs.Base.metadata.create_all(engine)
 

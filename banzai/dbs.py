@@ -19,6 +19,7 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, C
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
+from banzai import settings
 
 Base = declarative_base()
 
@@ -26,7 +27,7 @@ logger = logging.getLogger('banzai')
 
 
 @contextmanager
-def get_session(db_address):
+def get_session(db_address=None):
     """
     Get a connection to the database.
 
@@ -34,6 +35,8 @@ def get_session(db_address):
     -------
     session: SQLAlchemy Database Session
     """
+    if db_address is None:
+        db_address = settings.DB_ADDRESS
     # Build a new engine for each session. This makes things thread safe.
     engine = create_engine(db_address, poolclass=pool.NullPool)
     Base.metadata.bind = engine
@@ -115,7 +118,7 @@ class ProcessedImage(Base):
     tries = Column(Integer, default=0)
 
 
-def parse_configdb(configdb_address):
+def parse_configdb(configdb_address=None):
     """
     Parse the contents of the configdb.
 
@@ -131,6 +134,8 @@ def parse_configdb(configdb_address):
     instruments : list of dicts
               each camera dictionary contains a site, instrument code, and camera type.
     """
+    if configdb_address is None:
+        configdb_address = settings.CONFIGDB_URL
     results = requests.get(configdb_address).json()['results']
     instruments = []
     sites = []
@@ -159,7 +164,7 @@ def parse_configdb(configdb_address):
     return sites, instruments
 
 
-def add_instrument(instrument, db_address):
+def add_instrument(instrument, db_address=None):
     with get_session(db_address=db_address) as db_session:
         equivalence_criteria = {'site': instrument['site'],
                                 'camera': instrument['camera'],
@@ -174,7 +179,7 @@ def add_instrument(instrument, db_address):
     return instrument_record
 
 
-def add_site(site, db_address):
+def add_site(site, db_address=None):
     with get_session(db_address=db_address) as db_session:
         equivalence_criteria = {'id': site['code']}
         record_attributes = {'id': site['code'],
@@ -233,7 +238,7 @@ class SiteMissingException(Exception):
     pass
 
 
-def query_for_instrument(db_address, site, camera, name=None):
+def query_for_instrument(site, camera, name=None, db_address=None):
     # Short circuit
     if None in [site, camera]:
         return None
@@ -245,7 +250,7 @@ def query_for_instrument(db_address, site, camera, name=None):
     return instrument
 
 
-def save_calibration_info(calibration_image: CalibrationImage, db_address):
+def save_calibration_info(calibration_image: CalibrationImage, db_address=None):
     record_attributes = vars(calibration_image)
     # There is not a clean way to back a dict object from a calibration image object without this instance state
     # parameter. Gross.
@@ -256,7 +261,7 @@ def save_calibration_info(calibration_image: CalibrationImage, db_address):
         db_session.commit()
 
 
-def get_processed_image(path, db_address):
+def get_processed_image(path, db_address=None):
     # TODO: add support for AWS path styles
     filename = os.path.basename(path)
     with get_session(db_address=db_address) as db_session:
@@ -266,13 +271,13 @@ def get_processed_image(path, db_address):
     return processed_image
 
 
-def commit_processed_image(processed_image, db_address):
+def commit_processed_image(processed_image, db_address=None):
     with get_session(db_address=db_address) as db_session:
         db_session.add(processed_image)
         db_session.commit()
 
 
-def save_processed_image(path, md5, db_address):
+def save_processed_image(path, md5, db_address=None):
     filename = os.path.basename(path)
     output_record = get_processed_image(filename, db_address)
     output_record.success = True
@@ -280,25 +285,25 @@ def save_processed_image(path, md5, db_address):
     commit_processed_image(output_record, db_address)
 
 
-def get_timezone(site, db_address):
+def get_timezone(site, db_address=None):
     site = get_site(site, db_address)
     return site.timezone
 
 
-def get_instruments_at_site(site, db_address):
+def get_instruments_at_site(site, db_address=None):
     with get_session(db_address=db_address) as db_session:
         query = (Instrument.site == site)
         instruments = db_session.query(Instrument).filter(query).all()
     return instruments
 
 
-def get_instrument_by_id(id, db_address):
+def get_instrument_by_id(id, db_address=None):
     with get_session(db_address=db_address) as db_session:
         instrument = db_session.query(Instrument).filter(Instrument.id==id).first()
     return instrument
 
 
-def get_site(site_id, db_address):
+def get_site(site_id, db_address=None):
     with get_session(db_address=db_address) as db_session:
         site_list = db_session.query(Site).filter(Site.id == site_id).all()
     if len(site_list) == 0:
@@ -321,7 +326,7 @@ def cal_record_to_file_info(record):
     return file_info
 
 
-def get_master_cal_record(image, calibration_type, master_selection_criteria, db_address,
+def get_master_cal_record(image, calibration_type, master_selection_criteria, db_address=None,
                           use_only_older_calibrations=False):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
@@ -356,13 +361,13 @@ def get_master_cal_record(image, calibration_type, master_selection_criteria, db
     return closest_calibration_image
 
 
-def get_master_cal(image, calibration_type, master_selection_criteria, db_address,
+def get_master_cal(image, calibration_type, master_selection_criteria, db_address=None,
                    use_only_older_calibrations=False):
     return cal_record_to_file_info(get_master_cal_record(image, calibration_type, master_selection_criteria, db_address,
                                                          use_only_older_calibrations=use_only_older_calibrations))
 
 
-def get_individual_cal_records(instrument, calibration_type, min_date: str, max_date: str, db_address: str,
+def get_individual_cal_records(instrument, calibration_type, min_date: str, max_date: str, db_address: str = None,
                                include_bad_frames: bool = False):
     calibration_criteria = CalibrationImage.instrument_id == instrument.id
     calibration_criteria &= CalibrationImage.type == calibration_type.upper()
@@ -379,14 +384,14 @@ def get_individual_cal_records(instrument, calibration_type, min_date: str, max_
     return image_records
 
 
-def get_individual_cal_frames(instrument, calibration_type, min_date: str, max_date: str, db_address: str,
+def get_individual_cal_frames(instrument, calibration_type, min_date: str, max_date: str, db_address: str = None,
                               include_bad_frames: bool = False):
     image_records = get_individual_cal_records(instrument, calibration_type, min_date, max_date, db_address,
                                                include_bad_frames=include_bad_frames)
     return [cal_record_to_file_info(record) for record in image_records]
 
 
-def mark_frame(filename, mark_as, db_address):
+def mark_frame(filename, mark_as, db_address=None):
     set_is_bad_to = True if mark_as == "bad" else False
     logger.debug("Setting the is_bad parameter for {filename} to {set_is_bad_to}".format(
         filename=filename, set_is_bad_to=set_is_bad_to))
@@ -407,7 +412,7 @@ def mark_frame(filename, mark_as, db_address):
         db_session.commit()
 
 
-def create_db(db_address):
+def create_db(db_address=None):
     # Create an engine for the database
     engine = create_engine(db_address)
 
@@ -416,7 +421,7 @@ def create_db(db_address):
     Base.metadata.create_all(engine)
 
 
-def populate_instrument_tables(db_address, configdb_address):
+def populate_instrument_tables(db_address=None, configdb_address=None):
     """
     Populate the instrument table from the configdb
 
