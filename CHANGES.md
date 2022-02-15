@@ -1,3 +1,7 @@
+1.9.2 (2022-02-10)
+------------------
+- Update for new major version of ingester lib
+
 1.9.1 (2022-02-09)
 ------------------
 - Fixes to python 3.10 compatibility 
