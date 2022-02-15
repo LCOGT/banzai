@@ -281,6 +281,7 @@ class PhotometricCalibrator(Stage):
 
     def do_stage(self, image):
         if image.filter not in ['gp', 'rp', 'ip', 'zs']:
+            logger.info("Not photometrically calibrating because of filter", image=image)
             return image
 
         if image['CAT'] is None:
@@ -298,6 +299,10 @@ class PhotometricCalibrator(Stage):
                                                       nx=image.shape[1], ny=image.shape[0])
         except HTTPError as e:
             logger.error(f'Error retrieving photometric reference catalog: {e}', image=image)
+            return image
+
+        if len(reference_catalog) == 0:
+            logger.error('No sources found in reference catalog', image=image)
             return image
 
         # Match the catalog to the detected sources
