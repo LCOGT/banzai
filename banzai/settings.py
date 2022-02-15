@@ -34,7 +34,7 @@ ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   'banzai.qc.pattern_noise.PatternNoiseDetector',
                   'banzai.cosmic.CosmicRayDetector',
                   'banzai.photometry.SourceDetector',
-                  # 'banzai.astrometry.WCSSolver',
+                  'banzai.astrometry.WCSSolver',
                   # 'banzai.qc.pointing.PointingTest',
                   'banzai.photometry.PhotometricCalibrator',
                   ]
