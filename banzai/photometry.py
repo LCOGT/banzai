@@ -274,13 +274,13 @@ class SourceDetector(Stage):
 
 
 class PhotometricCalibrator(Stage):
-    color_to_fit = {'gp': 'g-r', 'rp': 'r-i', 'ip': 'r-i', 'zs': 'i-z'}
+    color_to_fit = {'g': 'g-r', 'r': 'r-i', 'i': 'r-i', 'z': 'i-z'}
 
     def __init__(self, runtime_context):
         super(PhotometricCalibrator, self).__init__(runtime_context)
 
     def do_stage(self, image):
-        if image.filter not in ['gp', 'rp', 'ip', 'zs']:
+        if image.filter[0] not in ['g', 'r', 'i', 'z']:
             logger.info("Not photometrically calibrating because of filter", image=image)
             return image
 
@@ -317,7 +317,7 @@ class PhotometricCalibrator(Stage):
         # Note the zero index here in the filter name is because we only store teh first letter of the filter name
         try:
             zeropoint, zeropoint_error, color_coefficient, color_coefficient_error = \
-                fit_photometry(matched_catalog, image.filter[0], self.color_to_fit[image.filter], image.exptime)
+                fit_photometry(matched_catalog, image.filter[0], self.color_to_fit[image.filter[0]], image.exptime)
         except:
             logger.error(f"Error fitting photometry: {logs.format_exception()}", image=image)
             return image
@@ -325,7 +325,7 @@ class PhotometricCalibrator(Stage):
         # Save the zeropoint, color coefficient and errors to header
         image.meta['L1ZP'] = zeropoint, "Instrumental zeropoint [mag]"
         image.meta['L1ZPERR'] = zeropoint_error, "Error on Instrumental zeropoint [mag]"
-        image.meta['L1COLORU'] = self.color_to_fit[image.filter], "Color used for calibration"
+        image.meta['L1COLORU'] = self.color_to_fit[image.filter[0]], "Color used for calibration"
         image.meta['L1COLOR'] = color_coefficient, "Color coefficient [mag]"
         image.meta['L1COLERR'] = color_coefficient_error, "Error on color coefficient [mag]"
         # Calculate the mag of each of the items in the catalog (without the color term) saving them
