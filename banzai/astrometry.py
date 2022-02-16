@@ -8,10 +8,10 @@ from astropy import units
 import numpy as np
 
 from banzai.stages import Stage
+from banzai import settings
 
 logger = logging.getLogger('banzai')
 
-SOURCE_LIMIT = 50
 FAILED_WCS = (4, 'Error status of WCS fit. 0 for no error')
 SUCCESSFUL_WCS = (0, 'Error status of WCS fit. 0 for no error')
 
@@ -40,9 +40,11 @@ class WCSSolver(Stage):
         image_catalog.sort('flux')
         image_catalog.reverse()
 
-        catalog_payload = {'X': list(image_catalog['x'])[:SOURCE_LIMIT],
-                           'Y': list(image_catalog['y'])[:SOURCE_LIMIT],
-                           'FLUX': list(image_catalog['flux'])[:SOURCE_LIMIT],
+        catalog_payload = {'X': list(image_catalog['x'])[:settings.WCS_SOURCE_LIMIT],
+                           'Y': list(image_catalog['y'])[:settings.WCS_SOURCE_LIMIT],
+                           'FLUX': list(image_catalog['flux'])[:settings.WCS_SOURCE_LIMIT],
+                           'radius': settings.WCS_RADIUS,
+                           'tolerance': settings.WCS_TOLERANCE,
                            'pixel_scale': image.pixel_scale,
                            'naxis': 2,
                            'naxis1': image.shape[1],
