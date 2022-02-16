@@ -89,7 +89,7 @@ CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_fi
                                               'banzai.utils.file_utils.ccdsum_to_filename',
                                               'banzai.utils.file_utils.filter_to_filename')}
 
-TELESCOPE_FILENAME_FUNCTION = 'steward.telescope_to_filename'
+TELESCOPE_FILENAME_FUNCTION = 'banzai.steward.telescope_to_filename'
 
 OBSERVATION_PORTAL_URL = os.getenv('OBSERVATION_PORTAL_URL',
                                    'http://internal-observation-portal.lco.gtn/api/observations/')
