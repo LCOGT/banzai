@@ -1,3 +1,7 @@
+1.9.5 (2022-02-23)
+------------------
+- Minor fixes for new ingester lib (3.0.4)
+
 1.9.4 (2022-02-22)
 ------------------
 - Minor fixes for new ingester lib (3.0.3)
