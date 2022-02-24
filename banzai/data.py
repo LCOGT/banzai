@@ -99,7 +99,7 @@ class DataTable(Data):
         super().__init__(data, meta, name=name, memmap=memmap)
 
     def to_fits(self, context) -> Union[fits.HDUList, list]:
-        hdu = fits.BinTableHDU(self.data)
+        hdu = fits.BinTableHDU(self.data, header=self.meta)
         hdu.name = self.name
         # For all TTYPE header keywords, set the header comment
         # from the table column's description.
