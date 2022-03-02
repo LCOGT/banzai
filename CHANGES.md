@@ -1,3 +1,7 @@
+1.9.6 (2022-02-25)
+------------------
+- Bugfix to propagate headers in data table objects
+
 1.9.5 (2022-02-23)
 ------------------
 - Minor fixes for new ingester lib (3.0.4)
