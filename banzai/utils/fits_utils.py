@@ -89,9 +89,9 @@ def get_primary_header(filename) -> Optional[fits.Header]:
         return None
 
 
-# Stop after 4 attempts, and back off exponentially with a minimum wait time of 4 seconds, and a maximum of 10.
+# Stop after 4 attempts, and back off exponentially with a minimum wait time of 4 seconds, and a maximum of 60.
 # If it fails after 4 attempts, "reraise" the original exception back up to the caller.
-@retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
+@retry(wait=wait_exponential(multiplier=10, min=10, max=60), stop=stop_after_attempt(4), reraise=True)
 def download_from_s3(file_info, context, is_raw_frame=False):
     frame_id = file_info.get('frameid')
 
