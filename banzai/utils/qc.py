@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-import elasticsearch
+from opensearchpy import OpenSearch
 
 from banzai import logs
 
@@ -42,12 +42,12 @@ def save_qc_results(runtime_context, qc_results, image, **kwargs):
     File name, site, camera, dayobs and timestamp are always saved in the database.
     """
 
-    es_output = {}
+    os_output = {}
     if getattr(runtime_context, 'post_to_elasticsearch', False):
         filename, results_to_save = format_qc_results(qc_results, image)
-        es = elasticsearch.Elasticsearch(runtime_context.elasticsearch_url)
+        os = OpenSearch(runtime_context.elasticsearch_url)
         try:
-            es_output = es.update(index=runtime_context.elasticsearch_qc_index,
+            os_output = os.update(index=runtime_context.elasticsearch_qc_index,
                                   doc_type=runtime_context.elasticsearch_doc_type,
                                   id=filename, body={'doc': results_to_save, 'doc_as_upsert': True},
                                   retry_on_conflict=5, timestamp=results_to_save['@timestamp'], **kwargs)
@@ -55,4 +55,4 @@ def save_qc_results(runtime_context, qc_results, image, **kwargs):
             error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
             logger.error(error_message.format(url=runtime_context.elasticsearch_url,
                                               exception=logs.format_exception()))
-    return es_output
+    return os_output
