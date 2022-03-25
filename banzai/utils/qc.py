@@ -50,7 +50,7 @@ def save_qc_results(runtime_context, qc_results, image, **kwargs):
             os_output = os.update(index=runtime_context.elasticsearch_qc_index,
                                   doc_type=runtime_context.elasticsearch_doc_type,
                                   id=filename, body={'doc': results_to_save, 'doc_as_upsert': True},
-                                  retry_on_conflict=5, timestamp=results_to_save['@timestamp'], **kwargs)
+                                  retry_on_conflict=5, **kwargs)
         except Exception:
             error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
             logger.error(error_message.format(url=runtime_context.elasticsearch_url,
