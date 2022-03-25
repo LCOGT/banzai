@@ -45,7 +45,7 @@ def save_qc_results(runtime_context, qc_results, image, **kwargs):
     os_output = {}
     if getattr(runtime_context, 'post_to_elasticsearch', False):
         filename, results_to_save = format_qc_results(qc_results, image)
-        os = OpenSearch(runtime_context.elasticsearch_url)
+        os = OpenSearch(runtime_context.elasticsearch_url, read_timeout='1m')
         try:
             os_output = os.update(index=runtime_context.elasticsearch_qc_index,
                                   doc_type=runtime_context.elasticsearch_doc_type,
