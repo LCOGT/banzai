@@ -45,11 +45,11 @@ def save_qc_results(runtime_context, qc_results, image, **kwargs):
     os_output = {}
     if getattr(runtime_context, 'post_to_elasticsearch', False):
         filename, results_to_save = format_qc_results(qc_results, image)
-        os = OpenSearch(runtime_context.elasticsearch_url, read_timeout='1m')
+        os = OpenSearch(runtime_context.elasticsearch_url, timeout=60)
         try:
             os_output = os.update(index=runtime_context.elasticsearch_qc_index,
                                   id=filename, body={'doc': results_to_save, 'doc_as_upsert': True},
-                                  retry_on_conflict=5, timeout='30s', **kwargs)
+                                  retry_on_conflict=5, **kwargs)
         except Exception:
             error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
             logger.error(error_message.format(url=runtime_context.elasticsearch_url,
