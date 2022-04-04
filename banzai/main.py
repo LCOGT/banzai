@@ -78,7 +78,7 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
     parser.add_argument('--post-to-archive', dest='post_to_archive', action='store_true', default=False)
     parser.add_argument('--no-file-cache', dest='no_file_cache', action='store_true', default=False,
                         help='Turn off saving files to disk')
-    parser.add_argument('--post-to-elasticsearch', dest='post_to_elasticsearch', action='store_true',
+    parser.add_argument('--post-to-opensearch', dest='post_to_opensearch', action='store_true',
                         default=False)
     parser.add_argument('--fpack', dest='fpack', action='store_true', default=False,
                         help='Fpack the output files?')
@@ -88,12 +88,12 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
-    parser.add_argument('--elasticsearch-url', dest='elasticsearch_url',
-                        default='http://elasticsearch.lco.gtn:9200')
-    parser.add_argument('--es-index', dest='elasticsearch_qc_index', default='banzai_qc',
-                        help='ElasticSearch index to use for QC results')
-    parser.add_argument('--es-doc-type', dest='elasticsearch_doc_type', default='qc',
-                        help='Elasticsearch document type for QC records')
+    parser.add_argument('--opensearch-url', dest='opensearch_url',
+                        default='https://opensearch.lco.global/')
+    parser.add_argument('--os-index', dest='opensearch_qc_index', default='banzai_qc',
+                        help='OpenSearch index to use for QC results')
+    parser.add_argument('--os-doc-type', dest='opensearch_doc_type', default='qc',
+                        help='OpenSearch document type for QC records')
     parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
                         help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
     parser.add_argument('--use-only-older-calibrations', dest='use_only_older_calibrations', default=False,

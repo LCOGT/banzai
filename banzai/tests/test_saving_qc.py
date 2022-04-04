@@ -45,7 +45,7 @@ def test_format_qc_results_numpy_bool():
     assert type(results["numpy_bool"]) == bool
 
 
-def test_save_qc_results_no_post_to_elasticsearch_attribute():
+def test_save_qc_results_no_post_to_opensearch_attribute():
     stage = FakeStage(FakeContext())
     image = FakeLCOObservationFrame([FakeCCDData(meta=test_header)])
     assert qc.save_qc_results(stage.runtime_context, {}, image) == {}
@@ -55,8 +55,8 @@ def test_save_qc_results_no_post_to_elasticsearch_attribute():
 def test_save_qc_results(mock_es):
     context = FakeContext()
     image = FakeLCOObservationFrame([FakeCCDData(meta=test_header)])
-    context.post_to_elasticsearch = True
-    context.elasticsearch_url = '/'
+    context.post_to_opensearch = True
+    context.opensearch_url = '/'
     stage = FakeStage(context)
     qc.save_qc_results(stage.runtime_context, {}, image)
     assert mock_es.called

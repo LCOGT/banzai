@@ -37,7 +37,7 @@ ingester:
 banzai:
   useDifferentArchiveSources: false
   celeryTaskQueue: "celery"
-  elasticSearchURL: "http://host.example"
+  openSearchURL: "http://host.example"
 
 useDockerizedDatabase: false
 useDockerizedRabbitMQ: false
