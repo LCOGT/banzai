@@ -51,7 +51,7 @@ def test_save_qc_results_no_post_to_elasticsearch_attribute():
     assert qc.save_qc_results(stage.runtime_context, {}, image) == {}
 
 
-@mock.patch('banzai.utils.qc.opensearchpy.OpenSearch')
+@mock.patch('banzai.utils.qc.OpenSearch')
 def test_save_qc_results(mock_es):
     context = FakeContext()
     image = FakeLCOObservationFrame([FakeCCDData(meta=test_header)])
