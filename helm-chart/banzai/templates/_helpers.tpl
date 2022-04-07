@@ -84,7 +84,7 @@ External service URLS
   value: {{ .Values.banzai.configdbUrl | quote }}
 - name: OBSERVATION_PORTAL_URL
   value: {{ .Values.banzai.observationPortalUrl | quote }}
-- name: OS_URL
+- name: OPENSEARCH_URL
   value: {{ .Values.banzai.openSearchURL | quote }}
 {{/*
 Ingester environment variables
