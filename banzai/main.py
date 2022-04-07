@@ -295,7 +295,7 @@ def add_cal():
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
-                        help='Database address: Should be in SQLAlchemy form')#change to developer db
+                        help='Database address: Should be in SQLAlchemy form')#change to developer db for testing
     args = parser.parse_args()
     add_settings_to_context(args, settings)
     logs.set_log_level(args.log_level)
@@ -306,8 +306,8 @@ def add_cal():
         logger.error(f"Calibration file not able to be opened by BANZAI. Aborting... {logs.format_exception()}", extra_tags={'filename': args.filepath})
         cal_image = None
 
-    # upload BPM via ingester
-    if bpm_image is not None:
+    # upload calibration file via ingester
+    if cal_image is not None:
         with open(args.filepath, 'rb') as f:
             logger.debug("Posting Calibration file to s3 archive")
             ingester_response = file_utils.post_to_ingester(f, cal_image, args.filepath)
