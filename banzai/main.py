@@ -288,7 +288,7 @@ def update_db():
         logger.error('Could not populate instruments table: {error}'.format(error=logs.format_exception()))
 
 
-def add_bpm():
+def add_cal():
     parser = argparse.ArgumentParser(description="Add a bad pixel mask to the db.")
     parser.add_argument('filepath', help='Full path to Bad Pixel Mask file')
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
