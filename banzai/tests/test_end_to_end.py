@@ -15,7 +15,7 @@ from banzai.celery import app, schedule_calibration_stacking
 from banzai.dbs import get_session, CalibrationImage, get_timezone, populate_instrument_tables
 from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
-from banzai.main import add_bpm
+from banzai.main import add_cal
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.io import fits
 import pkg_resources
@@ -166,7 +166,7 @@ def init(configdb, mock_ingester, mock_args):
     for instrument in INSTRUMENTS:
         for bpm_filepath in glob(os.path.join(DATA_ROOT, instrument, 'bpm/*bpm*')):
             mock_args.return_value = argparse.Namespace(filepath=bpm_filepath, db_address=os.environ['DB_ADDRESS'], log_level='debug')
-            add_bpm()
+            add_cal()
 
 
 @pytest.mark.e2e
