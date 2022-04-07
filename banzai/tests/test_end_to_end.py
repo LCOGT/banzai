@@ -82,7 +82,7 @@ def stack_calibrations(frame_type):
         runtime_context = dict(processed_path=DATA_ROOT, log_level='debug', post_to_archive=False,
                                post_to_opensearch=False, fpack=True, reduction_level=91,
                                db_address=os.environ['DB_ADDRESS'], opensearch_qc_index='banzai_qc',
-                               opensearch_url='https://opensearch.lco.global/', opensearch_doc_type='qc',
+                               opensearch_url='https://opensearch.lco.global/',
                                no_bpm=False, ignore_schedulability=True, use_only_older_calibrations=False,
                                preview_mode=False, max_tries=5, broker_url=os.getenv('FITS_BROKER'),
                                no_file_cache=False)

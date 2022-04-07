@@ -92,8 +92,6 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
                         default='https://opensearch.lco.global/')
     parser.add_argument('--os-index', dest='opensearch_qc_index', default='banzai_qc',
                         help='OpenSearch index to use for QC results')
-    parser.add_argument('--os-doc-type', dest='opensearch_doc_type', default='qc',
-                        help='OpenSearch document type for QC records')
     parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
                         help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
     parser.add_argument('--use-only-older-calibrations', dest='use_only_older_calibrations', default=False,

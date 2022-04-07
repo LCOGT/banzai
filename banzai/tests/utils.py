@@ -75,7 +75,6 @@ class FakeContext(object):
         self.processed_path = '/tmp'
         self.db_address = 'sqlite:///test.db'
         self.opensearch_qc_index = 'banzai_qc'
-        self.opensearch_doc_type = 'qc'
         self.ignore_schedulability = False
         self.max_tries = 5
         self.fpack = fpack
