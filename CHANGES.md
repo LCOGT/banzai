@@ -1,3 +1,7 @@
+1.9.7 (2022-04-07)
+------------------
+- Updates to use OpenSearch
+
 1.9.6 (2022-02-25)
 ------------------
 - Bugfix to propagate headers in data table objects
