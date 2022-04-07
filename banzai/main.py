@@ -289,13 +289,13 @@ def update_db():
 
 
 def add_cal():
-    parser = argparse.ArgumentParser(description="Add a bad pixel mask to the db.")
-    parser.add_argument('filepath', help='Full path to Bad Pixel Mask file')
+    parser = argparse.ArgumentParser(description="Add a calibration file (bad pixel mask, bias, dark, skyflat)to the db.")
+    parser.add_argument('filepath', help='Full path to calibration file')
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
-                        help='Database address: Should be in SQLAlchemy form')
+                        help='Database address: Should be in SQLAlchemy form')#change to developer db
     args = parser.parse_args()
     add_settings_to_context(args, settings)
     logs.set_log_level(args.log_level)
@@ -303,13 +303,13 @@ def add_cal():
     try:
         bpm_image = frame_factory.open({'path': args.filepath}, args)
     except Exception:
-        logger.error(f"BPM not able to be opened by BANZAI. Aborting... {logs.format_exception()}", extra_tags={'filename': args.filepath})
+        logger.error(f"Calibration file not able to be opened by BANZAI. Aborting... {logs.format_exception()}", extra_tags={'filename': args.filepath})
         bpm_image = None
 
     # upload BPM via ingester
     if bpm_image is not None:
         with open(args.filepath, 'rb') as f:
-            logger.debug("Posting BPM to s3 archive")
+            logger.debug("Posting Calibration file to s3 archive")
             ingester_response = file_utils.post_to_ingester(f, bpm_image, args.filepath)
 
         logger.debug("File posted to s3 archive. Saving to database.", extra_tags={'frameid': ingester_response['frameid']})
