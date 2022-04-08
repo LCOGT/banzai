@@ -289,7 +289,7 @@ def update_db():
 
 
 def add_cal():
-    parser = argparse.ArgumentParser(description="Add a calibration file (bad pixel mask, bias, dark, skyflat)to the db.")
+    parser = argparse.ArgumentParser(description="Add a calibration file (bad pixel mask, bias, dark, skyflat) to the db.")
     parser.add_argument('filepath', help='Full path to calibration file')
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
