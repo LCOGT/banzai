@@ -36,6 +36,7 @@ BANZAI can be installed using pip, by running from the top-level directory conta
 Note that `pip>=19.3.1` is required to build and install BANZAI.
 
 To run banzai using jupyter notebooks or any other anacode application, you must install banzai from the anaconda terminal using the same procedure.
+
 .. code-block:: bash
 
     pip install .
