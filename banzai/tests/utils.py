@@ -74,8 +74,7 @@ class FakeContext(object):
         self.preview_mode = preview_mode
         self.processed_path = '/tmp'
         self.db_address = 'sqlite:///test.db'
-        self.elasticsearch_qc_index = 'banzai_qc'
-        self.elasticsearch_doc_type = 'qc'
+        self.opensearch_qc_index = 'banzai_qc'
         self.ignore_schedulability = False
         self.max_tries = 5
         self.fpack = fpack
