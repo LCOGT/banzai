@@ -1,3 +1,7 @@
+1.9.8 (2022-04-14)
+------------------
+- Changed add_bpm function to take any calibration file, renamed to add_super_calibration
+
 1.9.7 (2022-04-07)
 ------------------
 - Updates to use OpenSearch

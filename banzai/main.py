@@ -286,9 +286,9 @@ def update_db():
         logger.error('Could not populate instruments table: {error}'.format(error=logs.format_exception()))
 
 
-def add_bpm():
-    parser = argparse.ArgumentParser(description="Add a bad pixel mask to the db.")
-    parser.add_argument('filepath', help='Full path to Bad Pixel Mask file')
+def add_super_calibration():
+    parser = argparse.ArgumentParser(description="Add a super calibration file to the db.")
+    parser.add_argument('filepath', help='Full path to calibration file')
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--db-address', dest='db_address',
@@ -299,22 +299,22 @@ def add_bpm():
     logs.set_log_level(args.log_level)
     frame_factory = import_utils.import_attribute(settings.FRAME_FACTORY)()
     try:
-        bpm_image = frame_factory.open({'path': args.filepath}, args)
+        cal_image = frame_factory.open({'path': args.filepath}, args)
     except Exception:
-        logger.error(f"BPM not able to be opened by BANZAI. Aborting... {logs.format_exception()}", extra_tags={'filename': args.filepath})
-        bpm_image = None
+        logger.error(f"Calibration file not able to be opened by BANZAI. Aborting... {logs.format_exception()}", extra_tags={'filename': args.filepath})
+        cal_image = None
 
-    # upload BPM via ingester
-    if bpm_image is not None:
+    # upload calibration file via ingester
+    if cal_image is not None:
         with open(args.filepath, 'rb') as f:
-            logger.debug("Posting BPM to s3 archive")
-            ingester_response = file_utils.post_to_ingester(f, bpm_image, args.filepath)
+            logger.debug("Posting calibration file to s3 archive")
+            ingester_response = file_utils.post_to_ingester(f, cal_image, args.filepath)
 
         logger.debug("File posted to s3 archive. Saving to database.", extra_tags={'frameid': ingester_response['frameid']})
-        bpm_image.frame_id = ingester_response['frameid']
-        bpm_image.is_bad = False
-        bpm_image.is_master = True
-        dbs.save_calibration_info(bpm_image.to_db_record(DataProduct(None, filename=os.path.basename(args.filepath),
+        cal_image.frame_id = ingester_response['frameid']
+        cal_image.is_bad = False
+        cal_image.is_master = True
+        dbs.save_calibration_info(cal_image.to_db_record(DataProduct(None, filename=os.path.basename(args.filepath),
                                                                      filepath=os.path.dirname(args.filepath))),
                                   args.db_address)
 
