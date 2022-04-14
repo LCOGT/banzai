@@ -41,9 +41,9 @@ To run banzai using jupyter notebooks or any other anacode application, you must
     pip install .
 
 This will automatically install the dependencies from PyPi, so it is recommended to install
-BANZAI in a virtual environment. <br>
-Note: If the error: `ERROR: Could not build wheels for banzai, which is required to install pyproject.toml-based projects` comes up, on Windows you need to download Microsoft Visual C++ 14.0 or greater. <br>
-You may also need to install lcogt_logging, as it is a separate module. This can be done by running `pip3 install lcogt_logging`
+BANZAI in a virtual environment.
+| Note: If the error: `ERROR: Could not build wheels for banzai, which is required to install pyproject.toml-based projects` comes up, on Windows you need to download Microsoft Visual C++ 14.0 or greater.
+| You may also need to install lcogt_logging, as it is a separate module. This can be done by running `pip3 install lcogt_logging`
 
 Usage
 -----
