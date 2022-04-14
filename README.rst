@@ -35,12 +35,15 @@ BANZAI can be installed using pip, by running from the top-level directory conta
 
 Note that `pip>=19.3.1` is required to build and install BANZAI.
 
+To run banzai using jupyter notebooks or any other anacode application, you must install banzai from the anaconda terminal using the same procedure.
 .. code-block:: bash
 
     pip install .
 
 This will automatically install the dependencies from PyPi, so it is recommended to install
 BANZAI in a virtual environment.
+Note: If the error: `ERROR: Could not build wheels for banzai, which is required to install pyproject.toml-based projects` comes up, on Windows you need to download Microsoft Visual C++ 14.0 or greater.
+You may also need to install lcogt_logging, as it is a separate module. This can be done by running `pip3 install lcogt_logging`
 
 Usage
 -----
