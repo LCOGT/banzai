@@ -288,8 +288,8 @@ def update_db():
         logger.error('Could not populate instruments table: {error}'.format(error=logs.format_exception()))
 
 
-def add_cal():
-    parser = argparse.ArgumentParser(description="Add a calibration file (bad pixel mask, bias, dark, skyflat) to the db.")
+def add_super_calibration():
+    parser = argparse.ArgumentParser(description="Add a super calibration file to the db.")
     parser.add_argument('filepath', help='Full path to calibration file')
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
@@ -309,7 +309,7 @@ def add_cal():
     # upload calibration file via ingester
     if cal_image is not None:
         with open(args.filepath, 'rb') as f:
-            logger.debug("Posting Calibration file to s3 archive")
+            logger.debug("Posting calibration file to s3 archive")
             ingester_response = file_utils.post_to_ingester(f, cal_image, args.filepath)
 
         logger.debug("File posted to s3 archive. Saving to database.", extra_tags={'frameid': ingester_response['frameid']})
