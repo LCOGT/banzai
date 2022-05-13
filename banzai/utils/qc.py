@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-import elasticsearch
+from opensearchpy import OpenSearch
 
 from banzai import logs
 
@@ -16,7 +16,7 @@ def format_qc_results(qc_results, image):
                        'obstype': image.obstype,
                        '@timestamp': image.dateobs}
     for key, value in qc_results.items():
-        # Elasticsearch does not like numpy.bool_ types
+        # OpenSearch does not like numpy.bool_ types
         if type(value) == np.bool_:
             value = bool(value)
         results_to_save[key] = value
@@ -26,14 +26,14 @@ def format_qc_results(qc_results, image):
 
 def save_qc_results(runtime_context, qc_results, image, **kwargs):
     """
-    Save the Quality Control results to ElasticSearch
+    Save the Quality Control results to OpenSearch
 
     Parameters
     ----------
     runtime_context: object
                       Context instance with runtime values
     qc_results : dict
-                 Dictionary of key value pairs to be saved to ElasticSearch
+                 Dictionary of key value pairs to be saved to OpenSearch
     image : banzai.frames.ObservationFrame
             Image that should be linked
 
@@ -42,17 +42,16 @@ def save_qc_results(runtime_context, qc_results, image, **kwargs):
     File name, site, camera, dayobs and timestamp are always saved in the database.
     """
 
-    es_output = {}
-    if getattr(runtime_context, 'post_to_elasticsearch', False):
+    opensearch_output = {}
+    if getattr(runtime_context, 'post_to_opensearch', False):
         filename, results_to_save = format_qc_results(qc_results, image)
-        es = elasticsearch.Elasticsearch(runtime_context.elasticsearch_url)
+        opensearch_client = OpenSearch(runtime_context.opensearch_url, timeout=60)
         try:
-            es_output = es.update(index=runtime_context.elasticsearch_qc_index,
-                                  doc_type=runtime_context.elasticsearch_doc_type,
-                                  id=filename, body={'doc': results_to_save, 'doc_as_upsert': True},
-                                  retry_on_conflict=5, timestamp=results_to_save['@timestamp'], **kwargs)
+            opensearch_output = opensearch_client.update(index=runtime_context.opensearch_qc_index,
+                                                         id=filename, body={'doc': results_to_save, 'doc_as_upsert': True},
+                                                         retry_on_conflict=5, **kwargs)
         except Exception:
-            error_message = 'Cannot update elasticsearch index to URL \"{url}\": {exception}'
-            logger.error(error_message.format(url=runtime_context.elasticsearch_url,
+            error_message = 'Cannot update opensearch index to URL \"{url}\": {exception}'
+            logger.error(error_message.format(url=runtime_context.opensearch_url,
                                               exception=logs.format_exception()))
-    return es_output
+    return opensearch_output

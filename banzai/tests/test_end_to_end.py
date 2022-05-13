@@ -15,7 +15,7 @@ from banzai.celery import app, schedule_calibration_stacking
 from banzai.dbs import get_session, CalibrationImage, get_timezone, populate_instrument_tables
 from banzai.dbs import mark_frame
 from banzai.utils import fits_utils, file_utils
-from banzai.main import add_bpm
+from banzai.main import add_super_calibration
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.io import fits
 import pkg_resources
@@ -80,9 +80,9 @@ def stack_calibrations(frame_type):
         timezone = get_timezone(site, db_address=os.environ['DB_ADDRESS'])
         min_date, max_date = get_min_and_max_dates(timezone, dayobs=dayobs)
         runtime_context = dict(processed_path=DATA_ROOT, log_level='debug', post_to_archive=False,
-                               post_to_elasticsearch=False, fpack=True, reduction_level=91,
-                               db_address=os.environ['DB_ADDRESS'], elasticsearch_qc_index='banzai_qc',
-                               elasticsearch_url='http://elasticsearch.lco.gtn:9200', elasticsearch_doc_type='qc',
+                               post_to_opensearch=False, fpack=True, reduction_level=91,
+                               db_address=os.environ['DB_ADDRESS'], opensearch_qc_index='banzai_qc',
+                               opensearch_url='https://opensearch.lco.global/',
                                no_bpm=False, ignore_schedulability=True, use_only_older_calibrations=False,
                                preview_mode=False, max_tries=5, broker_url=os.getenv('FITS_BROKER'),
                                no_file_cache=False)
@@ -166,7 +166,7 @@ def init(configdb, mock_ingester, mock_args):
     for instrument in INSTRUMENTS:
         for bpm_filepath in glob(os.path.join(DATA_ROOT, instrument, 'bpm/*bpm*')):
             mock_args.return_value = argparse.Namespace(filepath=bpm_filepath, db_address=os.environ['DB_ADDRESS'], log_level='debug')
-            add_bpm()
+            add_super_calibration()
 
 
 @pytest.mark.e2e
