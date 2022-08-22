@@ -6,8 +6,24 @@ import numpy as np
 from banzai.utils import stats
 from banzai.stages import Stage
 from banzai.calibrations import CalibrationStacker, CalibrationUser, CalibrationComparer
+import numpy as np
 
 logger = logging.getLogger('banzai')
+
+
+class FlatSNRChecker(Stage):
+    def __init__(self, runtime_context):
+        super(FlatSNRChecker, self).__init__(runtime_context)
+
+    def do_stage(self, image):
+        # Make sure the median signal-to-noise ratio is over 50 for the image other abort
+        flat_snr = np.median(np.abs(image.data) / np.abs(image.uncertainty))
+        logger.info('Flat signal-to-noise', image=image, extra_tags={'flat_snr': flat_snr})
+        if flat_snr < 50.0:
+            logger.error('Rejecting Flat due to low signal-to-noise', image=image, extra_tags={'flat_snr': flat_snr})
+            return None
+        else:
+            return image
 
 
 class FlatNormalizer(Stage):
