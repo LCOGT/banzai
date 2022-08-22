@@ -17,7 +17,7 @@ class FlatSNRChecker(Stage):
 
     def do_stage(self, image):
         # Make sure the median signal-to-noise ratio is over 50 for the image other abort
-        flat_snr = np.median(np.abs(image.data) / np.abs(image.uncertainty))
+        flat_snr = np.median(image.data.signal_to_noise())
         logger.info('Flat signal-to-noise', image=image, extra_tags={'flat_snr': flat_snr})
         if flat_snr < 50.0:
             logger.error('Rejecting Flat due to low signal-to-noise', image=image, extra_tags={'flat_snr': flat_snr})
