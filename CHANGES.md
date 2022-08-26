@@ -1,3 +1,7 @@
+1.9.9 (2022-08-22)
+------------------
+- We now reject flat field frames that have too low of signal to noise. 
+
 1.9.8 (2022-04-14)
 ------------------
 - Changed add_bpm function to take any calibration file, renamed to add_super_calibration

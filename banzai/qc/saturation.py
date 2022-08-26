@@ -37,8 +37,7 @@ class SaturationTest(Stage):
             logger.error('SATFRAC exceeds threshold.', image=image, extra_tags=logging_tags)
             qc_results['rejected'] = True
         else:
-            image.meta['SATFRAC'] = (saturation_fraction,
-                                       "Fraction of Pixels that are Saturated")
+            image.meta['SATFRAC'] = (saturation_fraction, "Fraction of Pixels that are Saturated")
 
         qc.save_qc_results(self.runtime_context, qc_results, image)
         return None if is_saturated else image
