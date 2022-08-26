@@ -16,7 +16,7 @@ class FlatSNRChecker(Stage):
         super(FlatSNRChecker, self).__init__(runtime_context)
 
     def do_stage(self, image):
-        # Make sure the median signal-to-noise ratio is over 50 for the image other abort
+        # Make sure the median signal-to-noise ratio is over 50 for the image otherwise abort
         flat_snr = np.median(image.primary_hdu.signal_to_noise())
         logger.info('Flat signal-to-noise', image=image, extra_tags={'flat_snr': flat_snr})
         if flat_snr < 50.0:
