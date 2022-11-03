@@ -348,7 +348,7 @@ class StewardFrameFactory(FrameFactory):
 
     @staticmethod
     def _init_saturate(image):
-        defaults = {'90prime': 65565.}
+        defaults = {'90prime': 65535.}  # ADU (before gain)
 
         default_unbinned_saturation = None
         for instrument_type in defaults:
@@ -364,7 +364,7 @@ class StewardFrameFactory(FrameFactory):
             # If still nothing, use hard coded defaults
             if hdu.meta.get('SATURATE', 0.0) == 0.0 and default_unbinned_saturation is not None:
                 n_binned_pixels = hdu.binning[0] * hdu.binning[1]
-                default = default_unbinned_saturation * n_binned_pixels / hdu.gain
+                default = default_unbinned_saturation * n_binned_pixels
                 image.meta['SATURATE'] = (default, '[ADU] Saturation level used')
                 hdu.meta['SATURATE'] = (default, '[ADU] Saturation level used')
                 hdu.meta['MAXLIN'] = (default, '[ADU] Non-linearity level')
