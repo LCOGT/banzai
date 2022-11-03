@@ -1,97 +1,36 @@
-version: '2'
+version: '0'
 services:
-  banzai-e2e:
-    image: docker.lco.global/banzai-e2e-data:1.3.0
-    container_name: banzai-e2e
-    network_mode: "bridge"
-    entrypoint:
-    - /bin/true
-    labels:
-      io.rancher.container.pull_image: always
-      io.rancher.container.start_once: 'true'
+  database:
+    image: postgis/postgis
+    container_name: banzai_database
+    ports:
+      - ${PGPORT}:5432
+    user: 1024:100
     volumes:
-    - banzaie2e:/archive
-    logging:
-      options:
-        max-size: '100m'
-        max-file: '3'
-  banzai-fits-exchange:
-    image: rabbitmq:3.7.9
-    network_mode: "bridge"
-    container_name: banzai-fits-exchange
-    mem_limit: '1g'
-    logging:
-      options:
-        max-size: '100m'
-        max-file: '3'
-  banzai-redis:
-    image: redis:5.0.3
-    network_mode: "bridge"
-    container_name: banzai-redis
-    labels:
-      io.rancher.container.pull_image: always
-    mem_limit: '1g'
-  banzai-celery-workers:
-    image: ${DOCKER_IMG}
-    network_mode: "bridge"
-    container_name: banzai-celery-workers
-    entrypoint: ["celery", "-A", "banzai", "worker",
-                 "--hostname", "banzai-celery-worker",
-                 "-l", "debug", "-c", "4"]
-    mem_limit: '8g'
-    depends_on:
-      - banzai-redis
-      - banzai-fits-exchange
-      - banzai-e2e
-    links:
-      - banzai-redis:redis
-    volumes_from:
-      - banzai-e2e
+      - /nfs/data/primefocus/pgdata:/var/lib/postgresql/data
     environment:
-      RETRY_DELAY: "0"
-      TASK_HOST: "redis://redis:6379/0"
-      OBSERVATION_PORTAL_URL: "http://internal-observation-portal.lco.gtn/api/observations/"
-      OMP_NUM_THREADS: "2"
-      OPENTSDB_PYTHON_METRICS_TEST_MODE: "1"
-    labels:
-      io.rancher.container.pull_image: always
-      io.rancher.sidekicks: banzai-e2e
-    logging:
-      options:
-        max-size: '100m'
-        max-file: '3'
-  banzai-listener:
-    image: ${DOCKER_IMG}
-    network_mode: "bridge"
-    container_name: banzai-listener
-    mem_limit: '1g'
-    depends_on:
-      - banzai-redis
-      - banzai-fits-exchange
-      - banzai-e2e
-    links:
-      - banzai-fits-exchange:broker
-      - banzai-redis:redis
-    entrypoint: ["banzai_run_realtime_pipeline", "--fpack",
-                 "--db-address=sqlite:////archive/engineering/test.db",
-                 "--broker-url=broker"]
+      POSTGRES_DB: ${PGNAME}
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+  astrometry:
+    build: /home/primefocus/gaia-astrometry.net-service
+    container_name: banzai_astrometry
+    ports:
+      - 5000:80
+    volumes:
+      - /nfs/data/primefocus/gaia-astrometry.net-indices:/index
     environment:
-      DB_ADDRESS: sqlite:////archive/engineering/test.db
-      TASK_HOST: "redis://redis:6379/0"
-      FITS_BROKER_URL: "broker"
-      OBSERVATION_PORTAL_URL:  "http://internal-observation-portal.lco.gtn/api/observations/"
-      FITS_EXCHANGE: fits_files
-      FITS_BROKER: broker
-      OPENTSDB_PYTHON_METRICS_TEST_MODE: "1"
-    volumes_from:
-    - banzai-e2e
-    labels:
-      io.rancher.container.pull_image: always
-      io.rancher.sidekicks: banzai-e2e
-    logging:
-      options:
-        max-size: '100m'
-        max-file: '3'
-volumes:
-  banzaie2e:
-    driver: local
+      MAX_REQUESTS: 5
+      INDEX_FILE_PATH: /index
+      GUNICORN_WORKERS: 3
+      WORKER_TIMEOUT_SECONDS: 120
+      GRACEFUL_TIMEOUT: 120
+  photometry:
+    build: /home/primefocus/photometric-catalog-service
+    container_name: banzai_photometry
+    ports:
+      - 5005:80
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    environment:
+      CATALOG_DB_URL: postgresql://${PGUSER}:${PGPASSWORD}@host.docker.internal:${PGPORT}/${PGNAME}

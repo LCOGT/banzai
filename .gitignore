@@ -75,3 +75,6 @@ distribute-*.tar.gz
 *.iml
 
 .coverage.subprocess
+
+# Docker environment file
+.env
