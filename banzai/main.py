@@ -21,6 +21,7 @@ from banzai.context import Context
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
 from banzai.celery import process_image, app, schedule_calibration_stacking
 from banzai.data import DataProduct
+from banzai.split_chips import split_chips
 from celery.schedules import crontab
 import celery
 import celery.bin.beat
@@ -131,6 +132,17 @@ def reduce_single_frame():
         return
     try:
         stage_utils.run_pipeline_stages([{'path': runtime_context.path}], runtime_context)
+    except Exception:
+        logger.error(logs.format_exception(), extra_tags={'filepath': runtime_context.path})
+
+
+def reduce_multichip_frame():
+    extra_console_arguments = [{'args': ['--filepath'],
+                                'kwargs': {'dest': 'path', 'help': 'Full path to the file to process'}}]
+    runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
+    image_paths = split_chips(runtime_context.path)
+    try:
+        stage_utils.run_pipeline_stages(image_paths, runtime_context)
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filepath': runtime_context.path})
 
