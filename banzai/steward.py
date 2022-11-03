@@ -51,7 +51,7 @@ class StewardObservationFrame(ObservationFrame):
 
     @property
     def camera(self):
-        return self.primary_hdu.meta.get('INSTRUME')
+        return self.primary_hdu.meta.get('INSTRUME')[:3] + self.primary_hdu.meta.get('CHIP')
 
     @property
     def filter(self):
@@ -338,7 +338,7 @@ class StewardFrameFactory(FrameFactory):
     @staticmethod
     def get_instrument_from_header(header, db_address=None):
         site = 'kpno'
-        camera = header.get('INSTRUME')
+        camera = header.get('INSTRUME')[:3] + header.get('CHIP')
         instrument = dbs.query_for_instrument(site, camera, db_address=db_address)
         if instrument is None:
             msg = 'Instrument is not in the database, Please add it before reducing this data.'
