@@ -376,6 +376,6 @@ class StewardFrameFactory(FrameFactory):
 
 def telescope_to_filename(image):
     telescope = image.meta.get('TELESCOP', '')
-    if telescope == 'Steward 2.3 m (bok)':
+    if 'bok' in telescope.lower():
         telescope = '2m3bok'
     return telescope
