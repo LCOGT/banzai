@@ -23,6 +23,8 @@ from banzai.celery import process_image, app, schedule_calibration_stacking
 from banzai.data import DataProduct
 from banzai.split_chips import split_chips
 from celery.schedules import crontab
+from multiprocessing import Pool
+from functools import partial
 import celery
 import celery.bin.beat
 import requests
@@ -141,8 +143,10 @@ def reduce_multichip_frame():
                                 'kwargs': {'dest': 'path', 'help': 'Full path to the file to process'}}]
     runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
     image_paths = split_chips(runtime_context.path)
+    run_with_context = partial(stage_utils.run_pipeline_stages, runtime_context=runtime_context)
     try:
-        stage_utils.run_pipeline_stages(image_paths, runtime_context)
+        with Pool(len(image_paths)) as p:
+            p.map(run_with_context, [[image_path] for image_path in image_paths])
     except Exception:
         logger.error(logs.format_exception(), extra_tags={'filepath': runtime_context.path})
 
