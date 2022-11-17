@@ -75,3 +75,4 @@ distribute-*.tar.gz
 *.iml
 
 .venv/
+test.db
