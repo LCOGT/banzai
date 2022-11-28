@@ -1,38 +1,22 @@
-from typing import List, Optional
-from datetime import datetime
+from typing import List
 
 from fastapi import APIRouter, Path, HTTPException, Depends
-from pydantic import BaseModel, Field, constr, StrictInt, Json
 from sqlalchemy import select, insert, update, delete
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from .. import dbs
 from .db import begin_conn
+from .schema import (
+    CalibrationImage,
+    CalibrationImageAddInput,
+    CalibrationImageUpdateInput,
+)
 
 
-router = APIRouter(prefix="/calibration-images", tags=["calibration-images"])
-
-
-class CalibrationImageAddInput(BaseModel):
-    type_: str = Field(alias="type")
-    filename: constr(max_length=100) # pyright: ignore
-    filepath: constr(max_length=150) # pyright: ignore
-    frameid: Optional[int]
-    dateobs: datetime
-    datecreated: datetime
-    instrument_id: StrictInt
-    is_master: bool
-    is_bad: bool
-    good_until: Optional[datetime]
-    good_after: Optional[datetime]
-    attributes: Optional[Json]
-
-class CalibrationImage(CalibrationImageAddInput):
-    id_: int = Field(alias="id")
-
-class CalibrationImageUpdateInput(CalibrationImageAddInput):
-    pass
-
+router = APIRouter(
+    prefix="/calibration-images",
+    tags=["calibration-images"],
+)
 
 @router.get("/", response_model=List[CalibrationImage])
 async def get_calibration_images(
@@ -61,6 +45,7 @@ async def get_calibration_image_by_id(
     id_: str = Path(alias="id"),
     conn: AsyncConnection = Depends(begin_conn),
 ):
+
     q = select(dbs.CalibrationImage).where(dbs.CalibrationImage.id == id_)
     cr = await conn.execute(q)
 

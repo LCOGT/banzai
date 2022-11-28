@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from . import sites, instruments, calibration_images
+from . import sites, instruments, calibration_images, processed_images
 from .db import init_models, engine
 
 
@@ -14,6 +14,7 @@ app = FastAPI(
 app.include_router(sites.router)
 app.include_router(instruments.router)
 app.include_router(calibration_images.router)
+app.include_router(processed_images.router)
 
 
 @app.on_event("startup")

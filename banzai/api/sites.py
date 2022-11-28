@@ -1,31 +1,19 @@
 from typing import List
 
 from fastapi import APIRouter, Path, HTTPException, Depends
-from pydantic import BaseModel, Field
 from sqlalchemy import select, insert, update, delete
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from .. import dbs
 from .db import begin_conn
-from .instruments import Instrument
+from .schema import (
+    Site,
+    SiteUpdateInput,
+    Instrument,
+)
 
 
 router = APIRouter(prefix="/sites", tags=["sites"])
-
-
-class Site(BaseModel):
-  id_: str = Field(alias="id")
-  timezone: int
-  latitude: float
-  longitude: float
-  elevation: float
-
-
-class SiteUpdateInput(BaseModel):
-  timezone: int
-  latitude: float
-  longitude: float
-  elevation: float
 
 
 @router.get("/", response_model=List[Site])

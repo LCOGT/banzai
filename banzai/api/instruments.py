@@ -1,29 +1,20 @@
 from typing import List
 
 from fastapi import APIRouter, Path, HTTPException, Depends
-from pydantic import BaseModel, Field
 from sqlalchemy import select, insert, update, delete
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from .. import dbs
 from .db import begin_conn
-from .calibration_images import CalibrationImage
+from .schema import (
+    Instrument,
+    InstrumentAddInput,
+    InstrumentUpdateInput,
+    CalibrationImage,
+)
 
 
 router = APIRouter(prefix="/instruments", tags=["instruments"])
-
-
-class InstrumentAddInput(BaseModel):
-    site: str
-    camera: str
-    type_: str = Field(alias="type")
-    name: str
-
-class Instrument(InstrumentAddInput):
-    id_: int = Field(alias="id")
-
-class InstrumentUpdateInput(InstrumentAddInput):
-    pass
 
 
 @router.get("/", response_model=List[Instrument])
