@@ -16,7 +16,7 @@ FRAME_FACTORY = 'banzai.lco.LCOFrameFactory'
 CALIBRATION_FRAME_CLASS = 'banzai.lco.LCOCalibrationFrame'
 
 ORDERED_STAGES = [
-    # TODO: 'banzai.bpm.BadPixelMaskLoader',
+    'banzai.bpm.BadPixelMaskLoader',
     'banzai.bpm.SaturatedPixelFlagger',
     'banzai.qc.header_checker.HeaderChecker',
     'banzai.qc.saturation.SaturationTest',
