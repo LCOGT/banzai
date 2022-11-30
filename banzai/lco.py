@@ -456,7 +456,8 @@ class LCOFrameFactory(FrameFactory):
                     # For master frames without uncertainties, set to all zeros
                     if hdu.header.get('ISMASTER', False) and associated_data['uncertainty'] is None:
                         associated_data['uncertainty'] = np.zeros(hdu.data.shape, dtype=hdu.data.dtype)
-                    hdu_list.append(self.data_class(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME'),
+                    hdu_name = hdu.header.get('EXTNAME') if hdu.header.get('EXTNAME') is not None else 'SCI'
+                    hdu_list.append(self.data_class(data=hdu.data, meta=hdu.header, name=hdu_name,
                                                     **associated_data))
                 else:
                     hdu_list.append(ArrayData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
