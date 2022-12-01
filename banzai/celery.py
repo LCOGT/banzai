@@ -126,45 +126,22 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                      extra_tags={'site': site})
 
 
-@app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY, reject_on_worker_lost=True)
+@app.task(name='celery.stack_calibrations', bind=True, reject_on_worker_lost=True)
 def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, frame_type: str,
-                       runtime_context: dict, observations: list):
+                       runtime_context: dict):
     try:
         runtime_context = Context(runtime_context)
         instrument = dbs.get_instrument_by_id(instrument_id, db_address=runtime_context.db_address)
         logger.info('Checking if we are ready to stack',
                     extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
                                 'instrument': instrument.name, 'frame_type': frame_type})
-
-        completed_image_count = len(dbs.get_individual_cal_frames(instrument, frame_type,
-                                                                  min_date, max_date, include_bad_frames=True,
-                                                                  db_address=runtime_context.db_address))
-        expected_image_count = 0
-        for observation in observations:
-            for configuration in observation['request']['configurations']:
-                if frame_type.upper() == configuration['type']:
-                    for instrument_config in configuration['instrument_configs']:
-                        expected_image_count += instrument_config['exposure_count']
-        logger.info('expected image count: {0}, completed image count: {1}'.format(str(expected_image_count), str(completed_image_count)))
-        if completed_image_count < expected_image_count and self.request.retries < 3:
-            logger.info('Number of processed images less than expected. '
-                        'Expected: {}, Completed: {}'.format(expected_image_count, completed_image_count),
-                        extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
-                                    'instrument': instrument.camera, 'frame_type': frame_type})
-            retry = True
-        else:
-            logger.info('Starting to stack', extra_tags={'site': instrument.site, 'min_date': min_date,
-                                                          'max_date': max_date, 'instrument': instrument.camera,
-                                                          'frame_type': frame_type})
-            calibrations.make_master_calibrations(instrument, frame_type, min_date, max_date, runtime_context)
-            retry = False
+        logger.info('Starting to stack', extra_tags={'site': instrument.site, 'min_date': min_date,
+                                                     'max_date': max_date, 'instrument': instrument.camera,
+                                                     'frame_type': frame_type})
+        calibrations.make_master_calibrations(instrument, frame_type, min_date, max_date, runtime_context)
     except Exception:
         logger.error("Exception making master frames: {error}".format(error=logs.format_exception()),
                      extra_tags={'frame_type': frame_type, 'instrument_id': instrument_id})
-        retry = False
-
-    if retry:
-        raise self.retry()
 
 
 @app.task(name='celery.process_image', reject_on_worker_lost=True, max_retries=5)

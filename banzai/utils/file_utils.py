@@ -79,7 +79,7 @@ def config_to_filename(image):
 
 
 def telescope_to_filename(image):
-    return image.meta.get('TELESCOP', '').replace('-', '')
+    return image.meta.get('TELESCOP', '').replace('-', '').replace('.', '').replace(' ', '')
 
 
 def make_calibration_filename_function(calibration_type, context):
