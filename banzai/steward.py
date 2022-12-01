@@ -26,7 +26,7 @@ IMAGETYP_TO_OBSTYPE = {
 
 class StewardObservationFrame(ObservationFrame):
     def get_output_directory(self, runtime_context) -> str:
-        return os.path.join(runtime_context.processed_path, self.instrument.camera, self.epoch, 'processed')
+        return os.path.join(runtime_context.processed_path, self.epoch)
 
     @property
     def obstype(self):
@@ -35,7 +35,11 @@ class StewardObservationFrame(ObservationFrame):
 
     @property
     def epoch(self):
-        return date_utils.epoch_date_to_string(self.primary_hdu.meta.get('DATE-OBS'))
+        dayobs_boundary_utc = 12. - dbs.get_timezone(self.site)  # local noon
+        dayobs = self.dateobs
+        if self.dateobs.hour < dayobs_boundary_utc:
+            dayobs -= datetime.timedelta(days=1.)
+        return dayobs.strftime('%Y%m%d')
 
     @property
     def request_number(self):
@@ -59,7 +63,8 @@ class StewardObservationFrame(ObservationFrame):
 
     @property
     def dateobs(self):
-        return Time(self.primary_hdu.meta.get('DATE-OBS'), scale='utc').datetime
+        return Time(self.primary_hdu.meta.get('DATE-OBS') + 'T' +
+                    self.primary_hdu.meta.get('TIME-OBS'), scale='utc').datetime
 
     @property
     def datecreated(self):
