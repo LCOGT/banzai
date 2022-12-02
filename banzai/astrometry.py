@@ -49,6 +49,7 @@ class WCSSolver(Stage):
                            'naxis2': image.shape[0],
                            'ra': image.ra,
                            'dec': image.dec,
+                           'camera_name': image.camera,
                            'statistics': False,
                            'filename': image.filename}
         try:
