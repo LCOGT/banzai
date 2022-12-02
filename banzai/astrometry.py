@@ -73,16 +73,19 @@ class WCSSolver(Stage):
             image.meta['WCSERR'] = FAILED_WCS
             return image
 
-        if not astrometry_response.json()['solved']:
+        astrometry_json = astrometry_response.json()
+        if not astrometry_json['solved']:
             logger.warning('WCS solution failed.', image=image)
             image.meta['WCSERR'] = FAILED_WCS
             return image
 
         header_keywords_to_update = ['CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
-                                     'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2']
+                                     'CRVAL2', 'CD1_1', 'CD1_2', 'CD2_1', 'CD2_2',
+                                     'SIPA_1_1', 'SIPA_0_2', 'SIPA_2_0', 'SIPB_1_1', 'SIPB_0_2', 'SIPB_2_0']
 
         for keyword in header_keywords_to_update:
-            image.meta[keyword] = astrometry_response.json()[keyword]
+            if keyword in astrometry_json:
+                image.meta[keyword] = astrometry_json[keyword]
 
         image.meta['RA'], image.meta['DEC'] = get_ra_dec_in_sexagesimal(image.meta['CRVAL1'],
                                                                         image.meta['CRVAL2'])
