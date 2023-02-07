@@ -16,6 +16,7 @@ FRAME_FACTORY = 'banzai.lco.LCOFrameFactory'
 CALIBRATION_FRAME_CLASS = 'banzai.lco.LCOCalibrationFrame'
 
 ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
+                  'banzai.readnoisemap.ReadNoiseMapLoader',
                   'banzai.bpm.SaturatedPixelFlagger',
                   'banzai.qc.header_checker.HeaderChecker',
                   'banzai.qc.sinistro_1000s.ThousandsTest',
@@ -43,7 +44,8 @@ CALIBRATION_MIN_FRAMES = {'BIAS': 5,
 CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'binning'],
                             'DARK': ['configuration_mode', 'binning', 'ccd_temperature'],
                             'SKYFLAT': ['configuration_mode', 'binning', 'filter'],
-                            'BPM': ['configuration_mode', 'binning']}
+                            'BPM': ['configuration_mode', 'binning'],
+                            'READNOISE': ['configuration_mode', 'binning']}
 
 LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
               'DARK': 'banzai.uncertainty.PoissonInitializer', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
