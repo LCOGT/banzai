@@ -192,6 +192,10 @@ class CCDData(Data):
         return type(self)(data=self.data - other.data, meta=self.meta, mask=self.mask|other.mask,
                           uncertainty=uncertainty)
 
+    def add_uncertainty(self, readnoise: np.array):
+        self._validate_mask(readnoise)
+        self.uncertainty = self._init_array(readnoise)
+    
     def signal_to_noise(self):
         return np.abs(self.data) / self.uncertainty
 
