@@ -10,7 +10,7 @@ class ReadNoiseMapLoader(CalibrationUser):
     def apply_master_calibration(self, image, master_calibration_image):
         try:
             for image_extension, readnoise_extension in zip(image.ccd_hdus, master_calibration_image.ccd_hdus):
-                image_extension.add_readnoise(readnoise_extension.data)
+                image_extension.add_uncertainty(readnoise_extension.data)
         except:
             logger.error(f"Can't add READNOISE to image, stopping reduction: {format_exception()}", image=image)
             return None
