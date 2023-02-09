@@ -18,7 +18,6 @@ class ReadNoiseMapLoader(CalibrationUser):
         return image
 
     def on_missing_master_calibration(self, image):
-        #NOOP
         return image
 
     @property
