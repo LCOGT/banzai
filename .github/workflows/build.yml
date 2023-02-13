@@ -22,10 +22,10 @@ jobs:
             python-version: 3.8
             toxenv: build_docs
 
-          - name: Python 3.8 with developer version of astropy and numpy
+          - name: Python 3.9 with developer version of astropy and numpy
             os: ubuntu-latest
-            python-version: 3.8
-            toxenv: py38-test-devdeps
+            python-version: 3.9
+            toxenv: py39-test-devdeps
 
           - name: Python 3.7 with older dependencies, astropy 3.0 and Numpy 1.17
             os: ubuntu-latest
