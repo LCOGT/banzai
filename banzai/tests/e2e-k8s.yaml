@@ -65,10 +65,10 @@ spec:
       resources:
         requests:
           cpu: 0.1
-          memory: 1Gi
+          memory: 512M
         limits:
           cpu: 1
-          memory: 2Gi
+          memory: 1Gi
       readinessProbe:
         exec:
           command:
@@ -76,6 +76,7 @@ spec:
             - node_health_check
         initialDelaySeconds: 5
         periodSeconds: 1
+        timeoutSeconds: 10
     - name: banzai-celery-workers
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
@@ -133,6 +134,7 @@ spec:
             - "banzai-celery-worker:.*OK"
         initialDelaySeconds: 5
         periodSeconds: 1
+        timeoutSeconds: 10
       resources:
         requests:
           cpu: 1
