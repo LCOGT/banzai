@@ -16,7 +16,7 @@ spec:
     # When the Pod is initialized, copy all files within the container at path
     # /archive/engineering into the empty data volume mounted at /data
     - name: banzai-data
-      image: docker.lco.global/banzai-e2e-data:d893ff902996
+      image: docker.lco.global/banzai-e2e-data:eb8606337185
       imagePullPolicy: IfNotPresent
       securityContext:
         runAsUser: 10087
