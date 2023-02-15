@@ -39,14 +39,14 @@ class Data(metaclass=abc.ABCMeta):
         else:
             self.data = self._init_array(data)
         self.meta = meta.copy()
-        self._validate_mask(mask)
+        self._validate_extension(mask)
         self.mask = self._init_array(mask, dtype=np.uint8)
         self.name = name
 
-    def _validate_mask(self, mask):
-        if mask is not None:
-            if mask.shape != self.data.shape:
-                raise ValueError('Mask must have the same dimensions as the data')
+    def _validate_extension(self, extension_data):
+        if extension_data is not None:
+            if extension_data.shape != self.data.shape:
+                raise ValueError('Extension data must have the same dimensions as the image data')
 
     def _init_array(self, array: np.array = None, dtype: Type = None):
         if not self.memmap:
@@ -66,7 +66,7 @@ class Data(metaclass=abc.ABCMeta):
         return memory_mapped_array
 
     def add_mask(self, mask: np.array):
-        self._validate_mask(mask)
+        self._validate_extension(mask)
         self.mask = self._init_array(mask)
 
     def __del__(self):
@@ -193,7 +193,7 @@ class CCDData(Data):
                           uncertainty=uncertainty)
 
     def add_uncertainty(self, readnoise: np.array):
-        self._validate_mask(readnoise)
+        self._validate_extension(readnoise)
         self.uncertainty = self._init_array(readnoise)
 
     def signal_to_noise(self):
