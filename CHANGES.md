@@ -1,3 +1,7 @@
+1.10.0 (2023-02-15)
+------------------
+- Add support for 'READNOISE' frames, which seed the initial pixel-to-pixel uncertainties for a camera
+
 1.9.9 (2022-08-22)
 ------------------
 - We now reject flat field frames that have too low of signal to noise. 
