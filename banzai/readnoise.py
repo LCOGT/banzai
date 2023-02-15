@@ -6,7 +6,7 @@ from banzai.logs import format_exception
 logger = logging.getLogger('banzai')
 
 
-class ReadNoiseMapLoader(CalibrationUser):
+class ReadNoiseLoader(CalibrationUser):
     def apply_master_calibration(self, image, master_calibration_image):
         try:
             for image_extension, readnoise_extension in zip(image.ccd_hdus, master_calibration_image.ccd_hdus):
