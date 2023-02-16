@@ -31,13 +31,13 @@ def test_null_input_images():
 @mock.patch("banzai.calibrations.CalibrationUser.get_calibration_file_info", return_value={"filename": "test.fits"})
 def test_adds_good_noise_map(mock_noise_map_file_info, mock_noise_map, set_random_seed):
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False)])
-    master_image = FakeLCOObservationFrame(
+    super_image = FakeLCOObservationFrame(
         hdu_list=[FakeCCDData(data=make_test_readnoise(101, 103, 9.0), memmap=False)], file_path="test.fits"
     )
-    mock_noise_map.return_value = master_image
+    mock_noise_map.return_value = super_image
     tester = ReadNoiseLoader(FakeContext())
     image = tester.do_stage(image)
-    np.testing.assert_array_equal(image.uncertainty, master_image.data)
+    np.testing.assert_array_equal(image.uncertainty, super_image.data)
     assert image.meta.get("L1IDNOISE") == "test.fits"
 
 
@@ -45,7 +45,7 @@ def test_adds_good_noise_map(mock_noise_map_file_info, mock_noise_map, set_rando
 @mock.patch("banzai.calibrations.CalibrationUser.get_calibration_file_info", return_value={"filename": "test.fits"})
 def test_adds_good_noise_map_3d(mock_noise_map_file_info, mock_noise_map, set_random_seed):
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False) for i in range(4)])
-    master_image = FakeLCOObservationFrame(
+    super_image = FakeLCOObservationFrame(
         hdu_list=[
             FakeCCDData(data=readnoise_data, memmap=False)
             for readnoise_data in make_test_readnoise(101, 103, 9.0, make_3d=True)
@@ -53,10 +53,10 @@ def test_adds_good_noise_map_3d(mock_noise_map_file_info, mock_noise_map, set_ra
         file_path="test.fits",
     )
 
-    mock_noise_map.return_value = master_image
+    mock_noise_map.return_value = super_image
     tester = ReadNoiseLoader(FakeContext())
     image = tester.do_stage(image)
-    for image_hdu, master_hdu in zip(image.ccd_hdus, master_image.ccd_hdus):
+    for image_hdu, master_hdu in zip(image.ccd_hdus, super_image.ccd_hdus):
         np.testing.assert_array_equal(image_hdu.uncertainty, master_hdu.data)
     assert image.meta.get("L1IDNOISE") == "test.fits"
 
