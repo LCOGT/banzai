@@ -14,7 +14,7 @@ class ReadNoiseLoader(CalibrationUser):
         except:
             logger.error(f"Can't add READNOISE to image, stopping reduction: {format_exception()}", image=image)
             return None
-        image.meta['L1IDNOISE'] = master_calibration_image.filename, 'Id. of map file used'
+        image.meta['L1IDRDN'] = master_calibration_image.filename, 'Id. of readnoise map file used'
         return image
 
     def on_missing_master_calibration(self, image):

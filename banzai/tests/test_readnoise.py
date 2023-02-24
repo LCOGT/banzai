@@ -38,7 +38,7 @@ def test_adds_good_noise_map(mock_noise_map_file_info, mock_noise_map, set_rando
     tester = ReadNoiseLoader(FakeContext())
     image = tester.do_stage(image)
     np.testing.assert_array_equal(image.uncertainty, super_image.data)
-    assert image.meta.get("L1IDNOISE") == "test.fits"
+    assert image.meta.get("L1IDRDN") == "test.fits"
 
 
 @mock.patch("banzai.lco.LCOFrameFactory.open")
@@ -58,7 +58,7 @@ def test_adds_good_noise_map_3d(mock_noise_map_file_info, mock_noise_map, set_ra
     image = tester.do_stage(image)
     for image_hdu, master_hdu in zip(image.ccd_hdus, super_image.ccd_hdus):
         np.testing.assert_array_equal(image_hdu.uncertainty, master_hdu.data)
-    assert image.meta.get("L1IDNOISE") == "test.fits"
+    assert image.meta.get("L1IDRDN") == "test.fits"
 
 
 @mock.patch("banzai.calibrations.CalibrationUser.get_calibration_file_info", return_value=None)
