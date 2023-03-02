@@ -16,6 +16,7 @@ FRAME_FACTORY = 'banzai.lco.LCOFrameFactory'
 CALIBRATION_FRAME_CLASS = 'banzai.lco.LCOCalibrationFrame'
 
 ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
+                  'banzai.readnoise.ReadNoiseLoader',
                   'banzai.bpm.SaturatedPixelFlagger',
                   'banzai.qc.header_checker.HeaderChecker',
                   'banzai.qc.sinistro_1000s.ThousandsTest',
@@ -43,7 +44,8 @@ CALIBRATION_MIN_FRAMES = {'BIAS': 5,
 CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'binning'],
                             'DARK': ['configuration_mode', 'binning', 'ccd_temperature'],
                             'SKYFLAT': ['configuration_mode', 'binning', 'filter'],
-                            'BPM': ['configuration_mode', 'binning']}
+                            'BPM': ['configuration_mode', 'binning'],
+                            'READNOISE': ['configuration_mode', 'binning']}
 
 LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
               'DARK': 'banzai.uncertainty.PoissonInitializer', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
@@ -62,7 +64,7 @@ CALIBRATION_STACKER_STAGES = {'BIAS': ['banzai.bias.BiasMaker'],
                               'DARK': ['banzai.dark.DarkMaker'],
                               'SKYFLAT': ['banzai.flats.FlatMaker']}
 
-CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'BPM']
+CALIBRATION_IMAGE_TYPES = ['BIAS', 'DARK', 'SKYFLAT', 'BPM', 'READNOISE']
 
 # Stack delays are expressed in seconds--namely, each is five minutes
 CALIBRATION_STACK_DELAYS = {'BIAS': 300,
@@ -132,7 +134,7 @@ DATA_RELEASE_DELAY = 365
 # Proposal ids for data that should be public instantly. Should all be lowercase
 PUBLIC_PROPOSALS = ['calibrate', 'standard', '*standards', '*epo*', 'pointing']
 
-SUPPORTED_FRAME_TYPES = ['BPM', 'BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'EXPERIMENTAL']
+SUPPORTED_FRAME_TYPES = ['BPM', 'READNOISE', 'BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'EXPERIMENTAL']
 
 REDUCED_DATA_EXTENSION_ORDERING = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                    'DARK': ['SCI', 'BPM', 'ERR'],

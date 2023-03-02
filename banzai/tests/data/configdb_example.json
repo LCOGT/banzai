@@ -2218,8 +2218,8 @@
                   "telescope": "http://configdb.lco.gtn/telescopes/21/?format=json",
                   "instrument_type": {
                     "id": 9,
-                    "name": "0.4 meter SBIG",
-                    "code": "0m4-SciCam-SBIG",
+                    "name": "0m4 SCICAM QHY600",
+                    "code": "0m4-SciCam-QHY600",
                     "fixed_overhead_per_exposure": 1.0,
                     "front_padding": 90.0,
                     "filter_change_time": 2.0,
@@ -2230,25 +2230,31 @@
                   "science_cameras": [
                     {
                       "id": 61,
-                      "code": "kb82",
+                      "code": "sq30",
                       "camera_type": {
-                        "id": 9,
-                        "size": "29.2x19.5",
-                        "pscale": 0.571,
-                        "name": "0.4 meter SBIG",
-                        "code": "0m4-SciCam-SBIG"
+                        "id": 189,
+                        "size": "117x78",
+                        "pscale": 0.734,
+                        "name": "0m4 QHY600",
+                        "code": "0m4-SciCam-QHY600",
+                        "pixels_x": 9576,
+                        "pixels_y": 6388,
+                        "max_rois": 0
                       }
                     }
                   ],
                   "autoguider_camera": {
                     "id": 61,
-                    "code": "kb82",
+                    "code": "sq30",
                     "camera_type": {
-                      "id": 9,
-                      "size": "29.2x19.5",
-                      "pscale": 0.571,
-                      "name": "0.4 meter SBIG",
-                      "code": "0m4-SciCam-SBIG"
+                      "id": 189,
+                      "size": "117x78",
+                      "pscale": 0.734,
+                      "name": "0m4 QHY600",
+                      "code": "0m4-SciCam-QHY600",
+                      "pixels_x": 9576,
+                      "pixels_y": 6388,
+                      "max_rois": 0
                     }
                   },
                   "__str__": "ogg.clma.0m4c.kb82-kb82"

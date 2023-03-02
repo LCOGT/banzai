@@ -1,0 +1,585 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 447332947,
+      "request": {
+        "id": 3064253,
+        "observation_note": "",
+        "optimization_type": "TIME",
+        "state": "COMPLETED",
+        "acceptability_threshold": 90,
+        "configuration_repeats": 1,
+        "extra_params": {},
+        "modified": "2022-11-24T03:00:40.765906Z",
+        "duration": 3361,
+        "configurations": [
+          {
+            "id": 8816098,
+            "instrument_type": "0M4-SCICAM-QHY600",
+            "type": "BIAS",
+            "repeat_duration": null,
+            "extra_params": {},
+            "priority": 4,
+            "instrument_configs": [
+              {
+                "optical_elements": {
+                  "filter": "opaque"
+                },
+                "mode": "default",
+                "exposure_time": 0,
+                "exposure_count": 15,
+                "rotator_mode": "",
+                "extra_params": {
+                  "bin_x": 1,
+                  "bin_y": 1
+                },
+                "rois": []
+              }
+            ],
+            "constraints": {
+              "max_airmass": 20,
+              "min_lunar_distance": 0,
+              "max_lunar_phase": 1,
+              "extra_params": {}
+            },
+            "acquisition_config": {
+              "mode": "OFF",
+              "extra_params": {}
+            },
+            "guiding_config": {
+              "optional": true,
+              "mode": "OFF",
+              "optical_elements": {},
+              "exposure_time": null,
+              "extra_params": {}
+            },
+            "target": {
+              "type": "HOUR_ANGLE",
+              "name": "No target",
+              "ra": null,
+              "dec": 0,
+              "proper_motion_ra": null,
+              "proper_motion_dec": null,
+              "parallax": null,
+              "epoch": null,
+              "hour_angle": 1,
+              "extra_params": {}
+            },
+            "configuration_status": 584708895,
+            "state": "COMPLETED",
+            "instrument_name": "sq30",
+            "guide_camera_name": "",
+            "summary": {
+              "id": 3575743,
+              "start": "2022-11-24T02:33:25Z",
+              "end": "2022-11-24T02:35:06Z",
+              "state": "COMPLETED",
+              "reason": "",
+              "time_completed": 0,
+              "events": [
+                {
+                  "time": "2022-11-24T02:33:25",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureCCDCommand"
+                },
+                {
+                  "time": "2022-11-24T02:33:26",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureCCDCommand"
+                },
+                {
+                  "time": "2022-11-24T02:33:26",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureFiltersCommand"
+                },
+                {
+                  "time": "2022-11-24T02:33:27",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureFiltersCommand"
+                },
+                {
+                  "time": "2022-11-24T02:33:27",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T02:35:04",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T02:35:05",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
+                },
+                {
+                  "time": "2022-11-24T02:35:05",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
+                }
+              ]
+            }
+          },
+          {
+            "id": 8816099,
+            "instrument_type": "0M4-SCICAM-QHY600",
+            "type": "DARK",
+            "repeat_duration": null,
+            "extra_params": {},
+            "priority": 5,
+            "instrument_configs": [
+              {
+                "optical_elements": {
+                  "filter": "opaque"
+                },
+                "mode": "default",
+                "exposure_time": 300,
+                "exposure_count": 5,
+                "rotator_mode": "",
+                "extra_params": {
+                  "bin_x": 1,
+                  "bin_y": 1
+                },
+                "rois": []
+              }
+            ],
+            "constraints": {
+              "max_airmass": 20,
+              "min_lunar_distance": 0,
+              "max_lunar_phase": 1,
+              "extra_params": {}
+            },
+            "acquisition_config": {
+              "mode": "OFF",
+              "extra_params": {}
+            },
+            "guiding_config": {
+              "optional": true,
+              "mode": "OFF",
+              "optical_elements": {},
+              "exposure_time": null,
+              "extra_params": {}
+            },
+            "target": {
+              "type": "HOUR_ANGLE",
+              "name": "No target",
+              "ra": null,
+              "dec": 0,
+              "proper_motion_ra": null,
+              "proper_motion_dec": null,
+              "parallax": null,
+              "epoch": null,
+              "hour_angle": 1,
+              "extra_params": {}
+            },
+            "configuration_status": 584708896,
+            "state": "COMPLETED",
+            "instrument_name": "sq30",
+            "guide_camera_name": "",
+            "summary": {
+              "id": 3575805,
+              "start": "2022-11-24T02:35:09Z",
+              "end": "2022-11-24T03:00:40Z",
+              "state": "COMPLETED",
+              "reason": "",
+              "time_completed": 1500,
+              "events": [
+                {
+                  "time": "2022-11-24T02:35:09",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureCCDCommand"
+                },
+                {
+                  "time": "2022-11-24T02:35:10",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureCCDCommand"
+                },
+                {
+                  "time": "2022-11-24T02:35:10",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureFiltersCommand"
+                },
+                {
+                  "time": "2022-11-24T02:35:10",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureFiltersCommand"
+                },
+                {
+                  "time": "2022-11-24T02:35:11",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T03:00:38",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T03:00:39",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
+                },
+                {
+                  "time": "2022-11-24T03:00:40",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "site": "ogg",
+      "enclosure": "clma",
+      "telescope": "0m4c",
+      "start": "2022-11-24T02:06:50.790176Z",
+      "end": "2022-11-24T03:11:44.790176Z",
+      "priority": 10,
+      "state": "COMPLETED",
+      "proposal": "calibrate",
+      "submitter": "eng",
+      "name": "LCOGT",
+      "ipp_value": 1,
+      "observation_type": "DIRECT",
+      "request_group_id": 1586394,
+      "created": "2022-11-23T21:05:27.903856Z",
+      "modified": "2022-11-24T03:00:40.801088Z"
+    },
+    {
+      "id": 447117758,
+      "request": {
+        "id": 3063816,
+        "observation_note": "",
+        "optimization_type": "TIME",
+        "state": "COMPLETED",
+        "acceptability_threshold": 90,
+        "configuration_repeats": 1,
+        "extra_params": {},
+        "modified": "2022-11-24T03:41:37.888960Z",
+        "duration": 254,
+        "configurations": [
+          {
+            "id": 8813536,
+            "instrument_type": "0M4-SCICAM-QHY600",
+            "type": "SKY_FLAT",
+            "repeat_duration": null,
+            "extra_params": {},
+            "priority": 5,
+            "instrument_configs": [
+              {
+                "optical_elements": {
+                  "filter": "rp"
+                },
+                "mode": "default",
+                "exposure_time": 0,
+                "exposure_count": 5,
+                "rotator_mode": "",
+                "extra_params": {
+                  "bin_x": 1,
+                  "bin_y": 1
+                },
+                "rois": []
+              }
+            ],
+            "constraints": {
+              "max_airmass": 20,
+              "min_lunar_distance": 0,
+              "max_lunar_phase": 1,
+              "extra_params": {}
+            },
+            "acquisition_config": {
+              "mode": "OFF",
+              "extra_params": {}
+            },
+            "guiding_config": {
+              "optional": true,
+              "mode": "OFF",
+              "optical_elements": {},
+              "exposure_time": null,
+              "extra_params": {}
+            },
+            "target": {
+              "type": "HOUR_ANGLE",
+              "name": "No target",
+              "ra": null,
+              "dec": 0,
+              "proper_motion_ra": null,
+              "proper_motion_dec": null,
+              "parallax": null,
+              "epoch": null,
+              "hour_angle": 1,
+              "extra_params": {}
+            },
+            "configuration_status": 584449636,
+            "state": "COMPLETED",
+            "instrument_name": "sq30",
+            "guide_camera_name": "",
+            "summary": {
+              "id": 3575967,
+              "start": "2022-11-24T04:03:31Z",
+              "end": "2022-11-24T04:04:54Z",
+              "state": "COMPLETED",
+              "reason": "",
+              "time_completed": 0,
+              "events": [
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.mount.HomeCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.astrometric.EnableTrackingCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.enclosure.OpenCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.focus.HomeCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.enclosure.OpenCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.mount.HomeCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.telescopeservices.StowMirrorCoverCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.focus.HomeCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.EnableTrackingCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.focus.DeFocusCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.telescopeservices.StowMirrorCoverCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.astrometric.FlatCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.focus.DeFocusCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:32",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureCCDCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:33",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureCCDCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:33",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureFiltersCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:35",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.ConfigureFiltersCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:38",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.FlatCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:40",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.astrometric.OffsetCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:41",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.OffsetCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:41",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.FlatCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:42",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:51",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:51",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.astrometric.OffsetCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:56",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.OffsetCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:56",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.FlatCommand"
+                },
+                {
+                  "time": "2022-11-24T04:03:57",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:06",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:06",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.astrometric.OffsetCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:11",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.FlatCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:11",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.OffsetCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:12",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:21",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:21",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.astrometric.OffsetCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:26",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.OffsetCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:26",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.FlatCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:27",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:36",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:36",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.astrometric.OffsetCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:41",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.OffsetCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:41",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.astrometric.FlatCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:42",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:52",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:52",
+                  "state": "PROCESSING",
+                  "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
+                },
+                {
+                  "time": "2022-11-24T04:04:53",
+                  "state": "DONE",
+                  "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "site": "ogg",
+      "enclosure": "clma",
+      "telescope": "0m4c",
+      "start": "2022-11-24T03:41:36.620627Z",
+      "end": "2022-11-24T04:11:15.349476Z",
+      "priority": 10,
+      "state": "COMPLETED",
+      "proposal": "calibrate",
+      "submitter": "eng",
+      "name": "LCOGT",
+      "ipp_value": 1,
+      "observation_type": "DIRECT",
+      "request_group_id": 1585988,
+      "created": "2022-11-23T11:10:24.419040Z",
+      "modified": "2022-11-24T04:04:54.386716Z"
+    }
+  ]
+}

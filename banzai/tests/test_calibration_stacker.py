@@ -59,7 +59,7 @@ def test_stacking_with_noise():
 
 
 def test_stacking_with_different_pixels():
-    d = np.arange(nx*ny, dtype=np.float).reshape(ny, nx)
+    d = np.arange(nx*ny, dtype=np.float64).reshape(ny, nx)
     test_images = [LCOCalibrationFrame([CCDData(d * i, meta=fits.Header(header))], '')
                    for i in range(9)]
     for image in test_images:

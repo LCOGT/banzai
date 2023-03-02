@@ -167,6 +167,9 @@ def init(configdb, mock_ingester, mock_args):
         for bpm_filepath in glob(os.path.join(DATA_ROOT, instrument, 'bpm/*bpm*')):
             mock_args.return_value = argparse.Namespace(filepath=bpm_filepath, db_address=os.environ['DB_ADDRESS'], log_level='debug')
             add_super_calibration()
+        for noise_map_filepath in glob(os.path.join(DATA_ROOT, instrument, 'readnoise/*readnoise*')):
+            mock_args.return_value = argparse.Namespace(filepath=noise_map_filepath, db_address=os.environ['DB_ADDRESS'], log_level='debug')
+            add_super_calibration()
 
 
 @pytest.mark.e2e

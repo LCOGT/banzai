@@ -38,7 +38,7 @@ def test_stacking_with_noise(set_random_seed):
 
 def test_stacking_with_different_pixels(set_random_seed):
     nx, ny = 102, 105
-    d = np.arange(nx*ny, dtype=np.float).reshape(ny, nx)
+    d = np.arange(nx*ny, dtype=np.float64).reshape(ny, nx)
     test_data = [FakeCCDData(data=d * i,
                              mask=np.zeros((ny, nx), dtype=np.uint8),
                              uncertainty=np.ones((ny, nx)) * 3.0) for i in range(9)]
