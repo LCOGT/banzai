@@ -31,41 +31,40 @@ ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   'banzai.qc.pointing.PointingTest',
                   'banzai.photometry.PhotometricCalibrator']
 
-CALIBRATION_MIN_FRAMES = {'Bias': 5,
+CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,
-                          'Flat': 5}
+                          'FLAT': 5}
 
-CALIBRATION_SET_CRITERIA = {'Bias': ['configuration_mode', 'binning'],
-                            'DARK': ['configuration_mode', 'binning', 'ccd_temperature'],
-                            'Flat': ['configuration_mode', 'binning', 'filter'],
-                            'BPM': ['configuration_mode', 'binning'],
-                            'READNOISE': ['configuration_mode', 'binning']}
+CALIBRATION_SET_CRITERIA = {'BIAS': ['binning'],
+                            'DARK': ['binning', 'ccd_temperature'],
+                            'FLAT': ['binning', 'filter'],
+                            'BPM': ['binning']}
 
-LAST_STAGE = {'Bias': 'banzai.trim.Trimmer',
-              'DARK': 'banzai.uncertainty.PoissonInitializer', 'Flat': 'banzai.dark.DarkSubtractor',
+LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
+              'DARK': 'banzai.uncertainty.PoissonInitializer', 'FLAT': 'banzai.dark.DarkSubtractor',
               'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None, 'EXPERIMENTAL': None}
 
-EXTRA_STAGES = {'Bias': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
+EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
                 'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkTemperatureChecker',
                          'banzai.dark.DarkComparer'],
-                'Flat': ['banzai.flats.FlatSNRChecker', 'banzai.flats.FlatNormalizer', 'banzai.qc.PatternNoiseDetector',
+                'FLAT': ['banzai.flats.FlatSNRChecker', 'banzai.flats.FlatNormalizer', 'banzai.qc.PatternNoiseDetector',
                             'banzai.flats.FlatComparer'],
                 'STANDARD': None,
                 'EXPOSE': None,
                 'EXPERIMENTAL': None}
 
-CALIBRATION_STACKER_STAGES = {'Bias': ['banzai.bias.BiasMaker'],
+CALIBRATION_STACKER_STAGES = {'BIAS': ['banzai.bias.BiasMaker'],
                               'DARK': ['banzai.dark.DarkMaker'],
-                              'Flat': ['banzai.flats.FlatMaker']}
+                              'FLAT': ['banzai.flats.FlatMaker']}
 
-CALIBRATION_IMAGE_TYPES = ['Bias', 'Flat']
+CALIBRATION_IMAGE_TYPES = ['BIAS', 'FLAT']
 
 # Stack delays are expressed in seconds--namely, each is five minutes
-CALIBRATION_STACK_DELAYS = {'Bias': 300,
+CALIBRATION_STACK_DELAYS = {'BIAS': 300,
                             'DARK': 300,
-                            'Flat': 300}
+                            'FLAT': 300}
 
-SINISTRO_IMAGE_TYPES = ['Bias', 'DARK', 'Flat', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
+SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'FLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
 
 SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
                                   'cpt': {'minute': 0, 'hour': 15},
@@ -76,9 +75,9 @@ SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
 
 ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/catalog/')
 
-CALIBRATION_FILENAME_FUNCTIONS = {'Bias': ('banzai.utils.file_utils.config_to_filename',
+CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_filename',
                                            'banzai.utils.file_utils.ccdsum_to_filename'),
-                                  'Flat': ('banzai.utils.file_utils.config_to_filename',
+                                  'FLAT': ('banzai.utils.file_utils.config_to_filename',
                                               'banzai.utils.file_utils.ccdsum_to_filename',
                                               'banzai.utils.file_utils.filter_to_filename')}
 
@@ -116,7 +115,7 @@ OBSERVATION_REQUEST_TYPES = {}
 # For some extension names, we want to just have corresponding BPM or ERR extensions
 EXTENSION_NAMES_TO_CONDENSE = ['SCI', 'UNKNOWN']
 
-CALIBRATION_LOOKBACK = {'Bias': 0.5, 'DARK': 0.5, 'Flat': 0.5}
+CALIBRATION_LOOKBACK = {'BIAS': 0.5, 'DARK': 0.5, 'FLAT': 0.5}
 
 PIPELINE_VERSION = banzai.__version__
 
@@ -126,18 +125,18 @@ DATA_RELEASE_DELAY = 365
 # Proposal ids for data that should be public instantly. Should all be lowercase
 PUBLIC_PROPOSALS = ['calibrate', 'standard', '*standards', '*epo*', 'pointing']
 
-SUPPORTED_FRAME_TYPES = ['BPM', 'READNOISE', 'Bias', 'DARK', 'Flat', 'EXPOSE', 'STANDARD', 'EXPERIMENTAL']
+SUPPORTED_FRAME_TYPES = ['BPM', 'READNOISE', 'BIAS', 'DARK', 'FLAT', 'EXPOSE', 'STANDARD', 'EXPERIMENTAL']
 
-REDUCED_DATA_EXTENSION_ORDERING = {'Bias': ['SCI', 'BPM', 'ERR'],
+REDUCED_DATA_EXTENSION_ORDERING = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                    'DARK': ['SCI', 'BPM', 'ERR'],
-                                   'Flat': ['SCI', 'BPM', 'ERR'],
+                                   'FLAT': ['SCI', 'BPM', 'ERR'],
                                    'EXPOSE': ['SCI', 'CAT', 'BPM', 'ERR'],
                                    'STANDARD': ['SCI', 'CAT', 'BPM', 'ERR'],
                                    'EXPERIMENTAL': ['SCI', 'CAT', 'BPM', 'ERR']}
 
-MASTER_CALIBRATION_EXTENSION_ORDER = {'Bias': ['SCI', 'BPM', 'ERR'],
+MASTER_CALIBRATION_EXTENSION_ORDER = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                       'DARK': ['SCI', 'BPM', 'ERR'],
-                                      'Flat': ['SCI', 'BPM', 'ERR']}
+                                      'FLAT': ['SCI', 'BPM', 'ERR']}
 
 REDUCED_DATA_EXTENSION_TYPES = {'SCI': 'float32',
                                 'ERR': 'float32',

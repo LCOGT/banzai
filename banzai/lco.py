@@ -21,7 +21,7 @@ from banzai.utils.image_utils import Section
 class LCOObservationFrame(ObservationFrame):
     def get_output_directory(self, runtime_context) -> str:
         return os.path.join(runtime_context.processed_path, self.instrument.site,
-                            self.instrument.camera, self.epoch, 'processed')
+                            self.instrument.camera, self.epoch.replace('-', ''), 'processed')
 
     @property
     def n_amps(self):
@@ -101,14 +101,6 @@ class LCOObservationFrame(ObservationFrame):
         self.meta['RLEVEL'] = (context.reduction_level, 'Reduction level')
 
         self.meta['PIPEVER'] = (context.PIPELINE_VERSION, 'Pipeline version')
-
-        if any(fnmatch(self.meta['PROPID'].lower(), public_proposal) for public_proposal in context.PUBLIC_PROPOSALS):
-            self.meta['L1PUBDAT'] = (self.meta['DATE-OBS'], '[UTC] Date the frame becomes public')
-        else:
-            # Wait to make public
-            date_observed = date_utils.parse_date_obs(self.meta['DATE-OBS'])
-            next_year = date_observed + datetime.timedelta(days=context.DATA_RELEASE_DELAY)
-            self.meta['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year), '[UTC] Date the frame becomes public')
 
     def get_output_filename(self, runtime_context):
         output_filename = self.filename.replace('00.fits', '{:02d}.fits'.format(int(runtime_context.reduction_level)))

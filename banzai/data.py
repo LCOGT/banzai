@@ -150,9 +150,7 @@ class CCDData(Data):
         # TODO: Handle the case where this is an array. Add SATURATE and GAIN handling when array.
         self.data *= value
         self.uncertainty *= value
-        self.meta['SATURATE'] *= value
-        self.meta['GAIN'] /= value
-        self.meta['MAXLIN'] *= value
+        self.meta['EGAIN'] /= value
         return self
 
     def __itruediv__(self, value):
@@ -277,7 +275,7 @@ class CCDData(Data):
 
     @property
     def binning(self):
-        return [int(b) for b in self.meta.get('CCDSUM', '1 1').split(' ')]
+        return [int(b) for b in self.meta.get('BINNING', '1 1').split('x')]
 
     @binning.setter
     def binning(self, value):
