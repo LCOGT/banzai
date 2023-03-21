@@ -21,7 +21,7 @@ class BadPixelMaskLoader(CalibrationUser):
 
     def on_missing_master_calibration(self, image):
         logger.error('Master {caltype} does not exist'.format(caltype=self.calibration_type.upper()), image=image)
-        if self.runtime_context.override_missing:
+        if self.runtime_context.no_bpm:
             if image.data is None:
                 bpm = None
             else:

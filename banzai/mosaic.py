@@ -23,9 +23,9 @@ class MosaicCreator(Stage):
         mosaiced_data.data_section = Section(x_start=1, y_start=1, x_stop=binned_shape[1], y_stop=binned_shape[0])
         mosaiced_data.name = 'SCI'
 
-        mosaiced_data.gain = np.mean([data.meta.get('GAIN') for data in image.ccd_hdus])
-        mosaiced_data.saturate = np.min([data.saturate for data in image.ccd_hdus])
-        mosaiced_data.max_linearity = np.min([data.max_linearity for data in image.ccd_hdus])
+        mosaiced_data.gain = np.mean([data.meta.get('EGAIN') for data in image.ccd_hdus])
+        # mosaiced_data.saturate = np.min([data.saturate for data in image.ccd_hdus])
+        # mosaiced_data.max_linearity = np.min([data.max_linearity for data in image.ccd_hdus])
 
         # Store Overscan to header for each amplifier
         mosaiced_data.meta['L1STATOV'] = '1' if any([data.meta.get('L1STATOV', '0') == '1' for data in image.ccd_hdus]) \
