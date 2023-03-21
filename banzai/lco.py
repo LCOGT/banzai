@@ -21,7 +21,7 @@ from banzai.utils.image_utils import Section
 class LCOObservationFrame(ObservationFrame):
     def get_output_directory(self, runtime_context) -> str:
         return os.path.join(runtime_context.processed_path, self.instrument.site,
-                            self.instrument.camera, self.epoch.replace('-', ''), 'processed')
+                            self.instrument.camera, self.epoch, 'processed')
 
     @property
     def n_amps(self):
@@ -37,7 +37,7 @@ class LCOObservationFrame(ObservationFrame):
 
     @property
     def epoch(self):
-        return self.primary_hdu.meta.get('UT-DATE')
+        return self.primary_hdu.meta.get('UT-DATE').replace('-', '')
 
     @property
     def site(self):
@@ -300,7 +300,7 @@ class LCOFrameFactory(FrameFactory):
         # Either use the calibration frame type or normal frame type depending on the OBSTYPE keyword
         hdu_order = runtime_context.REDUCED_DATA_EXTENSION_ORDERING.get(hdu_list[0].meta.get('OBSTYPE'))
 
-        if hdu_list[0].meta.get('EXPTYPE') in runtime_context.CALIBRATION_IMAGE_TYPES:
+        if hdu_list[0].meta.get('EXPTYPE').upper() in runtime_context.CALIBRATION_IMAGE_TYPES:
             grouping = runtime_context.CALIBRATION_SET_CRITERIA.get(hdu_list[0].meta.get('OBSTYPE'), [])
             image = self.calibration_frame_class(hdu_list, filename, frame_id=frame_id, grouping_criteria=grouping,
                                                  hdu_order=hdu_order)

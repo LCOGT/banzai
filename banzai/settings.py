@@ -22,18 +22,15 @@ ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   'banzai.trim.Trimmer',
                   'banzai.bias.BiasSubtractor',
                   'banzai.uncertainty.PoissonInitializer',
-                  'banzai.dark.DarkSubtractor',
                   'banzai.flats.FlatDivider',
-                  'banzai.qc.pattern_noise.PatternNoiseDetector',
                   'banzai.cosmic.CosmicRayDetector',
                   'banzai.photometry.SourceDetector',
                   'banzai.astrometry.WCSSolver',
                   'banzai.qc.pointing.PointingTest',
                   'banzai.photometry.PhotometricCalibrator']
 
-CALIBRATION_MIN_FRAMES = {'BIAS': 5,
-                          'DARK': 5,
-                          'FLAT': 5}
+CALIBRATION_MIN_FRAMES = {'BIAS': 1,
+                          'FLAT': 1}
 
 CALIBRATION_SET_CRITERIA = {'BIAS': ['binning'],
                             'DARK': ['binning', 'ccd_temperature'],
@@ -75,11 +72,9 @@ SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
 
 ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/catalog/')
 
-CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_filename',
-                                           'banzai.utils.file_utils.ccdsum_to_filename'),
-                                  'FLAT': ('banzai.utils.file_utils.config_to_filename',
-                                              'banzai.utils.file_utils.ccdsum_to_filename',
-                                              'banzai.utils.file_utils.filter_to_filename')}
+CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ['banzai.utils.file_utils.ccdsum_to_filename'],
+                                  'FLAT': ['banzai.utils.file_utils.ccdsum_to_filename',
+                                           'banzai.utils.file_utils.filter_to_filename']}
 
 TELESCOPE_FILENAME_FUNCTION = 'banzai.utils.file_utils.telescope_to_filename'
 
