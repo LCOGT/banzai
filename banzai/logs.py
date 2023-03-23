@@ -3,17 +3,23 @@ import os
 import traceback
 import sys
 import multiprocessing
+from lcogt_logging import LCOGTFormatter
 
 from banzai.utils import date_utils
 
+logging.captureWarnings(True)
+logging.basicConfig()
+logger = logging.getLogger()
+logger.handlers[0].setFormatter(LCOGTFormatter())
 
-class BanzaiLogger(logging.getLoggerClass()):
-    def __init__(self, name, level='NOTSET'):
-        super(BanzaiLogger, self).__init__(name, level)
+# Default the logger to INFO so that we actually get messages by default.
+logger.setLevel('INFO')
 
-    def _log(self, level, msg, *args, **kwargs):
+
+class BanzaiLogger(logging.LoggerAdapter):
+    def process(self, msg, kwargs):
         kwargs = _create_logging_tags_dictionary(kwargs)
-        super(BanzaiLogger, self)._log(level, msg, *args, **kwargs)
+        return msg, kwargs
 
 
 def _create_logging_tags_dictionary(kwargs):
@@ -47,10 +53,13 @@ def _image_to_tags(image):
 
 
 def set_log_level(log_level='INFO'):
-    root_logger = logging.getLogger('banzai')
-    root_logger.setLevel(log_level.upper())
+    logger.setLevel(log_level.upper())
 
 
 def format_exception():
     exc_type, exc_value, exc_tb = sys.exc_info()
     return traceback.format_exception(exc_type, exc_value, exc_tb)
+
+
+def get_logger():
+    return BanzaiLogger(logging.getLogger('banzai'))

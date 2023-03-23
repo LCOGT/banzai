@@ -1,13 +1,12 @@
-import logging
-
 import pytest
 import mock
 import numpy as np
 
 from banzai.qc import pattern_noise
 from banzai.tests.utils import gaussian2d, FakeCCDData, FakeLCOObservationFrame
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 pytestmark = pytest.mark.pattern_noise_qc
 

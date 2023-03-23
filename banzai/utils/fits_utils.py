@@ -1,5 +1,4 @@
 import datetime
-import logging
 from typing import Optional
 import requests
 from collections.abc import Iterable
@@ -15,7 +14,7 @@ from tenacity import retry, wait_exponential, stop_after_attempt
 import io
 import os
 
-logger = logging.getLogger('banzai')
+logger = logs.get_logger()
 
 FITS_MANDATORY_KEYWORDS = ['SIMPLE', 'BITPIX', 'NAXIS', 'EXTEND', 'COMMENT', 'CHECKSUM', 'DATASUM']
 

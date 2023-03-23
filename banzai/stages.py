@@ -1,4 +1,3 @@
-import logging
 import abc
 import itertools
 from collections.abc import Iterable
@@ -6,7 +5,7 @@ from collections.abc import Iterable
 from banzai import logs
 from banzai.frames import ObservationFrame
 
-logger = logging.getLogger('banzai')
+logger = logs.get_logger()
 
 
 class Stage(abc.ABC):

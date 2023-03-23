@@ -1,5 +1,4 @@
 import os
-import logging
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 
@@ -14,7 +13,7 @@ from banzai.utils.observation_utils import filter_calibration_blocks_for_type, g
 from banzai.utils.date_utils import get_stacking_date_range
 
 
-logger = logging.getLogger('banzai')
+logger = logs.get_logger()
 
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 

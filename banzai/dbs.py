@@ -8,7 +8,6 @@ Author
 October 2015
 """
 import os.path
-import logging
 import datetime
 from dateutil.parser import parse
 import numpy as np
@@ -19,10 +18,11 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, C
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
+from banzai.logs import get_logger
 
 Base = declarative_base()
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 @contextmanager

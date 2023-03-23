@@ -1,8 +1,8 @@
-import logging
 from banzai.stages import Stage
 from cosmic_conn import init_model
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 # initialize a Cosmic-CoNN model
 cr_model = init_model("ground_imaging")

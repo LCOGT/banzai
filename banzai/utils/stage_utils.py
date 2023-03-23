@@ -1,8 +1,8 @@
 from banzai.utils import import_utils
-import logging
 from banzai.context import Context
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 def get_stages_for_individual_frame(ordered_stages, last_stage=None, extra_stages=None):

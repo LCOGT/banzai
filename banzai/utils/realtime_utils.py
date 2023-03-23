@@ -1,11 +1,10 @@
-import logging
-
 import os
 from banzai import dbs
 from banzai.utils import file_utils, import_utils, image_utils
 from banzai.data import HeaderOnly
 from banzai import logs
-logger = logging.getLogger('banzai')
+
+logger = logs.get_logger()
 
 
 def set_file_as_processed(path, db_address):
@@ -85,7 +84,8 @@ def need_to_process_image(file_info, context):
     if 'frameid' in file_info:
         try:
             factory = import_utils.import_attribute(context.FRAME_FACTORY)()
-            test_image = factory.observation_frame_class(hdu_list=[HeaderOnly(file_info)], file_path=file_info['filename'])
+            test_image = factory.observation_frame_class(hdu_list=[HeaderOnly(file_info)], 
+                                                         file_path=file_info['filename'])
             test_image.instrument = factory.get_instrument_from_header(file_info, db_address=context.db_address)
             if image_utils.get_reduction_level(test_image.meta) != '00':
                 logger.error('Image has nonzero reduction level. Aborting.', extra_tags={'filename': filename})
@@ -95,8 +95,8 @@ def need_to_process_image(file_info, context):
                              extra_tags={'filename': filename})
                 need_to_process = False
             elif not image_utils.image_can_be_processed(test_image, context):
-                logger.error('The header in this queue message appears to not be complete enough to make a Frame object',
-                             extra_tags={'filename': filename})
+                msg = 'The header in this queue message appears to not be complete enough to make a Frame object'
+                logger.error(msg, extra_tags={'filename': filename})
                 need_to_process = False
         except Exception:
             logger.error('Issue creating Image object with given queue message', extra_tags={"filename": filename})

@@ -1,7 +1,5 @@
 import requests
-import logging
 import copy
-from datetime import datetime
 from dateutil.parser import parse
 
 logger = logging.getLogger('banzai')

@@ -8,8 +8,8 @@ Author
 October 2015
 """
 import argparse
-import logging
 import os.path
+import logging
 
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
@@ -26,7 +26,7 @@ import celery
 import celery.bin.beat
 import requests
 
-logger = logging.getLogger('banzai')
+logger = logs.get_logger()
 
 
 class RealtimeModeListener(ConsumerMixin):
@@ -95,7 +95,8 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
     parser.add_argument('--no-bpm', dest='no_bpm', default=False, action='store_true',
                         help='Do not use a bad pixel mask to reduce data (BPM contains all zeros)')
     parser.add_argument('--use-only-older-calibrations', dest='use_only_older_calibrations', default=False,
-                        action='store_true', help='Only use calibrations that were created before the start of the block')
+                        action='store_true', 
+                        help='Only use calibrations that were created before the start of the block')
     parser.add_argument('--preview-mode', dest='preview_mode', default=False, action='store_true',
                         help='Save the reductions to the preview directory')
     parser.add_argument('--max-tries', dest='max_tries', default=5,
@@ -301,7 +302,8 @@ def add_super_calibration():
     try:
         cal_image = frame_factory.open({'path': args.filepath}, args)
     except Exception:
-        logger.error(f"Calibration file not able to be opened by BANZAI. Aborting... {logs.format_exception()}", extra_tags={'filename': args.filepath})
+        logger.error(f"Calibration file not able to be opened by BANZAI. Aborting... {logs.format_exception()}",
+                     extra_tags={'filename': args.filepath})
         cal_image = None
 
     # upload calibration file via ingester
@@ -310,7 +312,8 @@ def add_super_calibration():
             logger.debug("Posting calibration file to s3 archive")
             ingester_response = file_utils.post_to_ingester(f, cal_image, args.filepath)
 
-        logger.debug("File posted to s3 archive. Saving to database.", extra_tags={'frameid': ingester_response['frameid']})
+        logger.debug("File posted to s3 archive. Saving to database.",
+                     extra_tags={'frameid': ingester_response['frameid']})
         cal_image.frame_id = ingester_response['frameid']
         cal_image.is_bad = False
         cal_image.is_master = True
@@ -345,7 +348,8 @@ def add_bpms_from_archive():
                                                                              filepath=None)),
                                           args.db_address)
         except Exception:
-            logger.error(f"BPM not added to database: {logs.format_exception()}", extra_tags={'filename': frame.get('filename')})
+            logger.error(f"BPM not added to database: {logs.format_exception()}",
+                         extra_tags={'filename': frame.get('filename')})
 
 
 def create_db():

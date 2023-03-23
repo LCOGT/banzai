@@ -1,13 +1,12 @@
 import argparse
-import logging
 
 from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, CHAR
 from sqlalchemy.ext.declarative import declarative_base
 
-from banzai import dbs, logs, main
+from banzai import dbs, logs
 
-logger = logging.getLogger('banzai')
+logger = logs.get_logger()
 
 Base = declarative_base()
 
@@ -120,7 +119,7 @@ def migrate_db():
             row['type'] = 'BPM'
             row['is_master'] = True
             row['attributes'] = {'ccdsum': row.pop('ccdsum')}
-            del(row['id'])
+            del row['id']
         change_key_name(bpms, 'creation_date', 'dateobs')
         change_key_name(bpms, 'telescope_id', 'instrument_id')
         # BPMs have some duplicates, remove them
@@ -140,7 +139,7 @@ def migrate_db():
         for row in calibrations:
             row['is_master'] = True
             row['attributes'] = {'filter': row.pop('filter_name'), 'ccdsum': row.pop('ccdsum')}
-            del(row['id'])
+            del row['id']
         change_key_name(calibrations, 'dayobs', 'dateobs')
         change_key_name(calibrations, 'telescope_id', 'instrument_id')
         logger.info("Adding {n} rows from the old CalibrationImage table to the new CalibrationImage table".format(

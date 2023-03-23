@@ -1,15 +1,14 @@
-import logging
-
+from banzai.logs import get_logger
 import numpy as np
 
 from banzai.utils.instrument_utils import instrument_passes_criteria
 
 
-logger = logging.getLogger('banzai')
+logger = get_logger('banzai')
 
 
 def get_reduction_level(header):
-    reduction_level =  header.get('RLEVEL', '00')
+    reduction_level = header.get('RLEVEL', '00')
     # return a correctly-formatted RLEVEL string - 00 or 91
     return '{:02d}'.format(int(reduction_level))
 

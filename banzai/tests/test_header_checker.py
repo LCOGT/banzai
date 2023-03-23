@@ -1,11 +1,11 @@
-import logging
 import mock
 import pytest
 
 from banzai.tests.utils import FakeLCOObservationFrame, FakeContext
 from banzai.qc.header_checker import HeaderChecker
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 pytestmark = pytest.mark.header_checker
 

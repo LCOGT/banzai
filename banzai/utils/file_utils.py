@@ -1,5 +1,4 @@
 import hashlib
-import logging
 from time import sleep
 
 from ocs_ingester import ingester
@@ -7,8 +6,9 @@ from ocs_ingester.exceptions import RetryError, DoNotRetryError, BackoffRetryErr
 
 from kombu import Connection, Exchange
 from banzai.utils import import_utils
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):
@@ -20,7 +20,7 @@ def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):
 
 
 def post_to_ingester(file_object, image, output_filename, meta=None):
-    logger.info(f'Posting file to the archive', image=image)
+    logger.info('Posting file to the archive', image=image)
     retry = True
     try_counter = 1
     ingester_response = {}

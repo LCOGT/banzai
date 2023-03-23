@@ -1,11 +1,9 @@
-import logging
-
 import numpy as np
 from opensearchpy import OpenSearch
 
 from banzai import logs
 
-logger = logging.getLogger('banzai')
+logger = logs.get_logger()
 
 
 def format_qc_results(qc_results, image):
@@ -48,7 +46,8 @@ def save_qc_results(runtime_context, qc_results, image, **kwargs):
         opensearch_client = OpenSearch(runtime_context.opensearch_url, timeout=60)
         try:
             opensearch_output = opensearch_client.update(index=runtime_context.opensearch_qc_index,
-                                                         id=filename, body={'doc': results_to_save, 'doc_as_upsert': True},
+                                                         id=filename,
+                                                         body={'doc': results_to_save, 'doc_as_upsert': True},
                                                          retry_on_conflict=5, **kwargs)
         except Exception:
             error_message = 'Cannot update opensearch index to URL \"{url}\": {exception}'
