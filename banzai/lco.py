@@ -21,7 +21,7 @@ from banzai.utils.image_utils import Section
 class LCOObservationFrame(ObservationFrame):
     def get_output_directory(self, runtime_context) -> str:
         return os.path.join(runtime_context.processed_path, self.instrument.site,
-                            self.instrument.camera, self.epoch, 'processed')
+                            self.instrument.camera.replace('/', ''), self.epoch, 'processed')
 
     @property
     def n_amps(self):
@@ -29,7 +29,7 @@ class LCOObservationFrame(ObservationFrame):
 
     @property
     def obstype(self):
-        return self.primary_hdu.meta.get('EXPTYPE')
+        return self.primary_hdu.meta.get('EXPTYPE').upper()
     
     @property
     def request_number(self):
@@ -231,7 +231,7 @@ class LCOFrameFactory(FrameFactory):
 
     @property
     def associated_extensions(self):
-        return []
+        return [{'FITS_NAME': 'BPM', 'NAME': 'mask'}, {'FITS_NAME': 'ERR', 'NAME': 'uncertainty'}]
 
     def open(self, file_info, runtime_context) -> Optional[ObservationFrame]:
         if file_info.get('RLEVEL') is not None:
@@ -301,7 +301,7 @@ class LCOFrameFactory(FrameFactory):
         hdu_order = runtime_context.REDUCED_DATA_EXTENSION_ORDERING.get(hdu_list[0].meta.get('OBSTYPE'))
 
         if hdu_list[0].meta.get('EXPTYPE').upper() in runtime_context.CALIBRATION_IMAGE_TYPES:
-            grouping = runtime_context.CALIBRATION_SET_CRITERIA.get(hdu_list[0].meta.get('OBSTYPE'), [])
+            grouping = runtime_context.CALIBRATION_SET_CRITERIA.get(hdu_list[0].meta.get('EXPTYPE').upper(), [])
             image = self.calibration_frame_class(hdu_list, filename, frame_id=frame_id, grouping_criteria=grouping,
                                                  hdu_order=hdu_order)
         else:

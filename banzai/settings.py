@@ -26,7 +26,6 @@ ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   'banzai.cosmic.CosmicRayDetector',
                   'banzai.photometry.SourceDetector',
                   'banzai.astrometry.WCSSolver',
-                  'banzai.qc.pointing.PointingTest',
                   'banzai.photometry.PhotometricCalibrator']
 
 CALIBRATION_MIN_FRAMES = {'BIAS': 1,
@@ -38,8 +37,8 @@ CALIBRATION_SET_CRITERIA = {'BIAS': ['binning'],
                             'BPM': ['binning']}
 
 LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
-              'DARK': 'banzai.uncertainty.PoissonInitializer', 'FLAT': 'banzai.dark.DarkSubtractor',
-              'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None, 'EXPERIMENTAL': None}
+              'DARK': 'banzai.uncertainty.PoissonInitializer', 'FLAT': 'banzai.bias.BiasSubtractor',
+              'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'OBJECT': None, 'EXPERIMENTAL': None}
 
 EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
                 'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkTemperatureChecker',
@@ -47,7 +46,7 @@ EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.B
                 'FLAT': ['banzai.flats.FlatSNRChecker', 'banzai.flats.FlatNormalizer', 'banzai.qc.PatternNoiseDetector',
                             'banzai.flats.FlatComparer'],
                 'STANDARD': None,
-                'EXPOSE': None,
+                'OBJECT': None,
                 'EXPERIMENTAL': None}
 
 CALIBRATION_STACKER_STAGES = {'BIAS': ['banzai.bias.BiasMaker'],
@@ -61,7 +60,7 @@ CALIBRATION_STACK_DELAYS = {'BIAS': 300,
                             'DARK': 300,
                             'FLAT': 300}
 
-SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'FLAT', 'EXPOSE', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
+SINISTRO_IMAGE_TYPES = ['BIAS', 'DARK', 'FLAT', 'OBJECT', 'STANDARD', 'TRAILED', 'EXPERIMENTAL']
 
 SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
                                   'cpt': {'minute': 0, 'hour': 15},
@@ -120,12 +119,12 @@ DATA_RELEASE_DELAY = 365
 # Proposal ids for data that should be public instantly. Should all be lowercase
 PUBLIC_PROPOSALS = ['calibrate', 'standard', '*standards', '*epo*', 'pointing']
 
-SUPPORTED_FRAME_TYPES = ['BPM', 'READNOISE', 'BIAS', 'DARK', 'FLAT', 'EXPOSE', 'STANDARD', 'EXPERIMENTAL']
+SUPPORTED_FRAME_TYPES = ['BPM', 'READNOISE', 'BIAS', 'DARK', 'FLAT', 'OBJECT', 'STANDARD', 'EXPERIMENTAL']
 
 REDUCED_DATA_EXTENSION_ORDERING = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                    'DARK': ['SCI', 'BPM', 'ERR'],
                                    'FLAT': ['SCI', 'BPM', 'ERR'],
-                                   'EXPOSE': ['SCI', 'CAT', 'BPM', 'ERR'],
+                                   'OBJECT': ['SCI', 'CAT', 'BPM', 'ERR'],
                                    'STANDARD': ['SCI', 'CAT', 'BPM', 'ERR'],
                                    'EXPERIMENTAL': ['SCI', 'CAT', 'BPM', 'ERR']}
 
