@@ -53,7 +53,7 @@ app.conf.broker_transport_options = {'visibility_timeout': 86400}
 logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
 # Calling setup() uses setup_celery_logging. Use redirect to get more celery logs to our logger.
 app.log.setup()
-app.log.redirect_stdouts_to_logger(logger, 'INFO')
+app.log.redirect_stdouts_to_logger(logger.logger, 'INFO')
 
 
 @app.task(name='celery.schedule_calibration_stacking', reject_on_worker_lost=True, max_retries=5)
