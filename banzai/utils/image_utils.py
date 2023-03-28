@@ -4,7 +4,7 @@ import numpy as np
 from banzai.utils.instrument_utils import instrument_passes_criteria
 
 
-logger = get_logger('banzai')
+logger = get_logger()
 
 
 def get_reduction_level(header):
