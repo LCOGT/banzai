@@ -18,11 +18,9 @@ logger = logs.get_logger()
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 
 
-# Celery sets up a logger on its own, which messes up the LCOGTFormatter that I want to use.
-# Using this disables celery's logging setup.
-@setup_logging.connect
-def setup_celery_logging(**kwargs):
-    pass
+# Celery sets up a logger on its own, which messes up the LCOGTFormatter that I want to use. Celery logging in general
+# is a nightmare. I read this as a reference:
+# https://distributedpython.com/posts/three-ideas-to-customise-celery-logging-handlers/
 
 
 @worker_process_init.connect
@@ -35,7 +33,8 @@ def configure_workers(**kwargs):
 
 app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
-app.conf.update(broker_url=os.getenv('TASK_HOST', 'redis://localhost:6379/0'))
+app.conf.update(broker_url=os.getenv('TASK_HOST', 'redis://localhost:6379/0'),
+                worker_hijack_root_logger=False)
 celery_task_queue_name = os.getenv('CELERY_TASK_QUEUE_NAME', 'celery')
 
 # Set up custom named celery task queue
@@ -50,10 +49,8 @@ app.conf.task_default_routing_key = 'task.default'
 # Increase broker timeout to avoid re-scheduling tasks that aren't completed within an hour
 app.conf.broker_transport_options = {'visibility_timeout': 86400}
 
-logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
-# Calling setup() uses setup_celery_logging. Use redirect to get more celery logs to our logger.
 app.log.setup()
-app.log.redirect_stdouts_to_logger(logger.logger, 'INFO')
+logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
 
 
 @app.task(name='celery.schedule_calibration_stacking', reject_on_worker_lost=True, max_retries=5)
