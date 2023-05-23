@@ -10,6 +10,11 @@ horizontalPodAutoscaler:
   maxReplicas: 25
   targetCPUUtilizationPercentage: 50
 
+keda:
+  enabled: true
+  minReplicas: 0
+  maxReplicas: 15
+
 image:
   repository: docker.lco.global/banzai
   tag: "1.10.0"

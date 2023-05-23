@@ -6,6 +6,12 @@ image:
   tag: ""
   pullPolicy: IfNotPresent
 
+# Use Keda ScaledJob to run banzai workers.
+keda:
+  enabled: false
+  minReplicas: 0
+  maxReplicas: 1
+
 # Automatically manage worker count within the configured limits. More workers
 # will be started when the CPU usage rises above the configured threshold.
 horizontalPodAutoscaler:
@@ -39,10 +45,13 @@ banzai:
   celeryTaskQueue: "celery"
   openSearchURL: "http://host.example"
 
-useDockerizedDatabase: false
-useDockerizedRabbitMQ: false
+useDockerizedDatabase: true
+useDockerizedRabbitMQ: true
 
 nodeSelector: {}
 tolerations: []
 affinity: {}
 
+postgresql: {}
+rabbitmq: {}
+instrumentTableCronjob: {}
