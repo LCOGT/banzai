@@ -7,3 +7,5 @@ class SingleShot(TaskPool):
         r = super().on_apply(*args, **kwargs)
 
         self.terminate()
+
+        return r
