@@ -4,6 +4,13 @@ from celery.exceptions import WorkerTerminate
 
 class SingleShot(TaskPool):
 
-    def on_apply(self, *args, **kwargs):
-        super().on_apply(*args, **kwargs)
-        raise WorkerTerminate()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        f = super().on_apply
+
+        def on_apply(*nargs, **nkwargs):
+            f(*nargs, **nkwargs)
+            raise WorkerTerminate()
+
+        self.on_apply = on_apply
