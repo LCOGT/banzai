@@ -6,8 +6,8 @@
 # will be started when the CPU usage rises above the configured threshold.
 horizontalPodAutoscaler:
   enabled: true
-  minReplicas: 25
-  maxReplicas: 25
+  minReplicas: 15
+  maxReplicas: 15
   targetCPUUtilizationPercentage: 50
 
 image:
@@ -50,7 +50,7 @@ useDockerizedDatabase: false
 useDockerizedRabbitMQ: false
 
 postgresql:
-  hostname: postgres1-cluster.cluster-cple9sjsskrf.us-west-2.rds.amazonaws.com
+  hostname: prod-postgres1-cluster-writer-pgbouncer.prod-db-proxy.svc.cluster.local
   postgresqlUsername: banzai
   postgresqlDatabase: banzai
 
