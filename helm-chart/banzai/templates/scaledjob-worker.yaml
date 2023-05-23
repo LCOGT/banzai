@@ -63,6 +63,13 @@ spec:
               - info
               - -Q
               - $(CELERY_TASK_QUEUE_NAME)
+            resources:
+              requests:
+                cpu: "0.5"
+                memory: "4Gi"
+              limits:
+                cpu: "2"
+                memory: "4Gi"
             env:
               - name: CELERY_ACKS_LATE
                 value: "True"
