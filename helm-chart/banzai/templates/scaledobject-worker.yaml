@@ -1,0 +1,33 @@
+{{- if .Values.keda.enabled -}}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "banzai.fullname" . -}} -workers
+  labels:
+{{ include "banzai.labels" . | indent 4 }}
+spec:
+  triggers:
+    - type: rabbitmq
+      metadata:
+        hostFromEnv: TASK_HOST
+        mode: QueueLength
+        value: "1"
+        activationValue: "1"
+        queueName: {{ .Values.banzai.celeryTaskQueueName | quote }}
+
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "banzai.fullname" . -}} -workers
+
+  pollingInterval: 30
+  cooldownPeriod: 120
+  idleReplicaCount: 0
+  minReplicaCount: {{ .Values.keda.minReplicas }}
+  maxReplicaCount: {{ .Values.keda.maxReplicas }}
+  fallback:
+    failureThreshold: 3
+    replicas: 2
+  advanced:
+    restoreToOriginalReplicaCount: true
+{{- end }}

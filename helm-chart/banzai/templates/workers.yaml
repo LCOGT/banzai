@@ -1,4 +1,3 @@
-{{- if not .Values.keda.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -10,12 +9,17 @@ spec:
     matchLabels:
       app.kubernetes.io/name: {{ include "banzai.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: workers
   template:
     metadata:
       labels:
         app.kubernetes.io/name: {{ include "banzai.name" . }}
         app.kubernetes.io/instance: "{{ .Release.Name }}"
+        app.kubernetes.io/component: workers
     spec:
+      # After receiving a SIGTERM, give the worker enough time to finish any
+      # processing in-progress.
+      terminationGracePeriodSeconds: 620
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -34,13 +38,17 @@ spec:
             - "-A"
             - "banzai"
             - "worker"
-            - "--concurrency"
-            - "1"
+            - --concurrency=1
+            - --prefetch-multiplier=1
             - "-l"
             - "info"
             - "-Q"
             - "$(CELERY_TASK_QUEUE_NAME)"
           env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: CELERY_ACKS_LATE
+              value: "True"
             - name: OMP_NUM_THREADS
               value: "2"
             {{- include "banzai.Env" . | nindent 12 }}
@@ -57,8 +65,19 @@ spec:
               readOnly: false
       volumes:
         - name: tmp
-          emptyDir:
-            sizeLimit: 20Gi
+          ephemeral:
+            volumeClaimTemplate:
+              metadata:
+                labeles:
+                  app.kubernetes.io/name: {{ include "banzai.name" . }}
+                  app.kubernetes.io/instance: "{{ .Release.Name }}"
+                  app.kubernetes.io/component: workers
+              spec:
+                accessModes:
+                  - "ReadWriteOnce"
+                resources:
+                  requests:
+                    storage: 20Gi
     {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -71,4 +90,3 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-{{- end }}
