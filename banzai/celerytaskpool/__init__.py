@@ -1,16 +1,11 @@
 from celery.concurrency.solo import TaskPool
-from celery.exceptions import WorkerTerminate
+from celery.worker import state
 
 
 class SingleShot(TaskPool):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def apply_async(self, *args, **kwargs):
+        r = super().apply_async(*args, **kwargs)
+        state.should_stop = 0
 
-        f = super().on_apply
-
-        def on_apply(*nargs, **nkwargs):
-            f(*nargs, **nkwargs)
-            raise WorkerTerminate()
-
-        self.on_apply = on_apply
+        return r
