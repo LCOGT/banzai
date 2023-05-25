@@ -6,14 +6,20 @@ metadata:
   labels:
     app.kubernetes.io/name: banzai
 spec:
-  backoffLimit: 3
+  backoffLimit: 1
   template:
     spec:
       # Create some empty directories to be mounted within the Pod
       volumes:
         - name: banzai-data
-          emptyDir:
-            sizeLimit: 10Gi
+          ephemeral:
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - "ReadWriteOnce"
+                resources:
+                  requests:
+                    storage: 10Gi
 
       initContainers:
         # When the Pod is initialized, copy all files within the container at path
