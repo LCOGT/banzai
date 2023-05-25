@@ -39,7 +39,7 @@ pipeline {
 		stage('Unit Tests') {
 			steps {
 				script {
-					sh 'docker run --rm --read-only "${DOCKER_IMG}" pytest -p no:cacheprovider --pyargs banzai.tests -m \'not e2e\''
+					sh 'docker run --rm -v /does-not-exist:/home/archive/.cache/:ro "${DOCKER_IMG}" pytest -p no:cacheprovider --pyargs banzai.tests -m \'not e2e\''
 				}
 			}
 		}
