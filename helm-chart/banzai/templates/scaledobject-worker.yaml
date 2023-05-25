@@ -11,8 +11,12 @@ spec:
       metadata:
         hostFromEnv: TASK_HOST
         mode: QueueLength
-        value: "1"
+
+        # Wait until there's at-least 1 message in the queue to scale
         activationValue: "1"
+
+        # We're targeting 5 tasks per Pod on average.
+        value: "5"
         queueName: {{ .Values.banzai.celeryTaskQueueName | quote }}
 
   scaleTargetRef:
@@ -20,14 +24,44 @@ spec:
     kind: Deployment
     name: {{ include "banzai.fullname" . -}} -workers
 
-  pollingInterval: 30
-  cooldownPeriod: 120
-  idleReplicaCount: 0
+  # Poll the queue length every x secs
+  pollingInterval: 5
+
+  # Wait x secs before scaling to zero
+  cooldownPeriod: 300
+
   minReplicaCount: {{ .Values.keda.minReplicas }}
   maxReplicaCount: {{ .Values.keda.maxReplicas }}
+
+  # If metrics start failing for some reason
   fallback:
     failureThreshold: 3
     replicas: 2
+
   advanced:
     restoreToOriginalReplicaCount: true
+    horizontalPodAutoscalerConfig:
+      behavior:
+
+        # https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#stabilization-window
+
+        scaleDown:
+          # Take a rolling max over the last x seconds of the recommended replicas
+          stabilizationWindowSeconds: 300
+
+          policies:
+            # Scale down at most by 50% every 1 min
+            - type: Percent
+              value: 50
+              periodSeconds: 60
+
+        scaleUp:
+          stabilizationWindowSeconds: 0
+
+          policies:
+            # Scale up by at most 2 Pod every 2 mins
+            - type: Pods
+              value: 2
+              periodSeconds: 120
+
 {{- end }}

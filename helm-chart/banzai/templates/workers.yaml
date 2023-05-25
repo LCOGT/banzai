@@ -16,6 +16,8 @@ spec:
         app.kubernetes.io/name: {{ include "banzai.name" . }}
         app.kubernetes.io/instance: "{{ .Release.Name }}"
         app.kubernetes.io/component: workers
+      annotations:
+        karpenter.sh/do-not-evict: {{ .Values.keda.enabled | ternary "true" "false" | quote }}
     spec:
       # After receiving a SIGTERM, give the worker enough time to finish any
       # processing in-progress.
