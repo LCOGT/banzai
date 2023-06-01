@@ -21,6 +21,7 @@ spec:
       securityContext:
         runAsUser: 10087
         runAsGroup: 10000
+        fsGroup: 10000
       volumeMounts:
         - name: banzai-data
           mountPath: /data
