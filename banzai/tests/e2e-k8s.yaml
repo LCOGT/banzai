@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: banzai-e2e-test
-  namespace: dev
+  namespace: build
   labels:
     app.kubernetes.io/name: banzai
 spec:
