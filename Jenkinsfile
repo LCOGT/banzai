@@ -15,7 +15,6 @@ pipeline {
 		PROJ_NAME = projName()
 		GIT_DESCRIPTION = gitDescribe()
 		DOCKER_IMG = dockerImageName("${LCO_DOCK_REG}", "${PROJ_NAME}", "${GIT_DESCRIPTION}")
-		KUBERNETES_CREDS = credentials('jenkins-kubeconfig')
 	}
 	options {
 		timeout(time: 8, unit: 'HOURS')
@@ -52,14 +51,16 @@ pipeline {
 			}
 			steps {
 				script {
-					// delete previous run if the previous failed somehow
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build delete pod banzai-e2e-test || true')
-					// we will be testing the image that we just built
-					sh('sed -i -e "s^@BANZAI_IMAGE@^${DOCKER_IMG}^g" banzai/tests/e2e-k8s.yaml')
-					// deploy the test pod to the cluster
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build apply -f banzai/tests/e2e-k8s.yaml')
-					// wait for the test pod to be running
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build wait --for=condition=Ready --timeout=60m pod/banzai-e2e-test')
+					withKubeConfig([credentialsId: 'build-kube-config']) {
+						// delete previous run if the previous failed somehow
+						sh('kubectl -n dev delete pod banzai-e2e-test || true')
+						// we will be testing the image that we just built
+						sh('sed -i -e "s^@BANZAI_IMAGE@^${DOCKER_IMG}^g" banzai/tests/e2e-k8s.yaml')
+						// deploy the test pod to the cluster
+						sh('kubectl -n build apply -f banzai/tests/e2e-k8s.yaml')
+						// wait for the test pod to be running
+						sh('kubectl -n build wait --for=condition=Ready --timeout=60m pod/banzai-e2e-test')
+					}
 				}
 			}
 		}
@@ -76,16 +77,20 @@ pipeline {
 			}
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-bias.xml -m master_bias')
+					withKubeConfig([credentialsId: 'build-kube-config']) {
+						sh('kubectl -n build exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-bias.xml -m master_bias')
+					}
 				}
 			}
 			post {
 				always {
 					script {
-						env.LOGS_SINCE = sh(script: 'expr `date +%s` - ${START_TIME}', returnStdout: true).trim()
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-bias.xml pytest-master-bias.xml')
-						junit 'pytest-master-bias.xml'
+						withKubeConfig([credentialsId: 'build-kube-config']) {
+							env.LOGS_SINCE = sh(script: 'expr `date +%s` - ${START_TIME}', returnStdout: true).trim()
+							sh('kubectl -n build logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
+							sh('kubectl -n build cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-bias.xml pytest-master-bias.xml')
+							junit 'pytest-master-bias.xml'
+						}
 					}
 				}
 			}
@@ -103,16 +108,20 @@ pipeline {
 			}
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-dark.xml -m master_dark')
+					withKubeConfig([credentialsId: 'build-kube-config']) {
+						sh('kubectl -n build exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-dark.xml -m master_dark')
+					}
 				}
 			}
 			post {
 				always {
 					script {
-						env.LOGS_SINCE = sh(script: 'expr `date +%s` - ${START_TIME}', returnStdout: true).trim()
-					    sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-dark.xml pytest-master-dark.xml')
-						junit 'pytest-master-dark.xml'
+						withKubeConfig([credentialsId: 'build-kube-config']) {
+							env.LOGS_SINCE = sh(script: 'expr `date +%s` - ${START_TIME}', returnStdout: true).trim()
+							sh('kubectl -n build logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
+							sh('kubectl -n build cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-dark.xml pytest-master-dark.xml')
+							junit 'pytest-master-dark.xml'
+						}
 					}
 				}
 			}
@@ -130,16 +139,20 @@ pipeline {
 			}
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-flat.xml -m master_flat')
+					withKubeConfig([credentialsId: 'build-kube-config']) {
+						sh('kubectl -n build exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-flat.xml -m master_flat')
+					}
 				}
 			}
 			post {
 				always {
 					script {
-						env.LOGS_SINCE = sh(script: 'expr `date +%s` - ${START_TIME}', returnStdout: true).trim()
-                        sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-flat.xml pytest-master-flat.xml')
-						junit 'pytest-master-flat.xml'
+						withKubeConfig([credentialsId: 'build-kube-config']) {
+							env.LOGS_SINCE = sh(script: 'expr `date +%s` - ${START_TIME}', returnStdout: true).trim()
+							sh('kubectl -n build logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
+							sh('kubectl -n build cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-master-flat.xml pytest-master-flat.xml')
+							junit 'pytest-master-flat.xml'
+						}
 					}
 				}
 			}
@@ -157,21 +170,27 @@ pipeline {
 			}
 			steps {
 				script {
-					sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-science-files.xml -m science_files')
+					withKubeConfig([credentialsId: 'build-kube-config']) {
+						sh('kubectl -n build exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-science-files.xml -m science_files')
+					}
 				}
 			}
 			post {
 				always {
 					script {
-						env.LOGS_SINCE = sh(script: 'expr `date +%s` - ${START_TIME}', returnStdout: true).trim()
-					    sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-science-files.xml pytest-science-files.xml ')
-						junit 'pytest-science-files.xml'
+						withKubeConfig([credentialsId: 'build-kube-config']) {
+							env.LOGS_SINCE = sh(script: 'expr `date +%s` - ${START_TIME}', returnStdout: true).trim()
+							sh('kubectl -n build logs --since=${LOGS_SINCE}s --all-containers banzai-e2e-test')
+							sh('kubectl -n build cp -c banzai-listener banzai-e2e-test:/archive/engineering/pytest-science-files.xml pytest-science-files.xml ')
+							junit 'pytest-science-files.xml'
+						}
 					}
 				}
 				success {
 					script {
-						sh('kubectl --kubeconfig=${KUBERNETES_CREDS} -n build delete pod banzai-e2e-test || true')
+						withKubeConfig([credentialsId: 'build-kube-config']) {
+							sh('kubectl -n build delete pod banzai-e2e-test || true')
+						}
 					}
 				}
 			}
