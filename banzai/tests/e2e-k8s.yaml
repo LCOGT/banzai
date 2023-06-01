@@ -11,6 +11,8 @@ spec:
     - name: banzai-data
       emptyDir:
         sizeLimit: 10Gi
+  securityContext:
+    fsGroup: 10000
 
   initContainers:
     # When the Pod is initialized, copy all files within the container at path
@@ -21,7 +23,6 @@ spec:
       securityContext:
         runAsUser: 10087
         runAsGroup: 10000
-        fsGroup: 10000
       volumeMounts:
         - name: banzai-data
           mountPath: /data
