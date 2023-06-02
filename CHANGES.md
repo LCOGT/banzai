@@ -1,3 +1,8 @@
+1.10.1 (2023-05-31)
+-------------------
+- Updated the logging scheme
+- We now silently fix fits errors that can be repaired automatically
+
 1.10.0 (2023-02-15)
 ------------------
 - Add support for 'READNOISE' frames, which seed the initial pixel-to-pixel uncertainties for a camera
