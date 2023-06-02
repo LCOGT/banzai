@@ -62,4 +62,4 @@ def format_exception():
 
 
 def get_logger():
-    return BanzaiLogger(logging.getLogger('banzai'))
+    return BanzaiLogger(logging.getLogger('banzai'), extra=None)
