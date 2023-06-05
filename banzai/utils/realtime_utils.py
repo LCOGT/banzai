@@ -84,7 +84,7 @@ def need_to_process_image(file_info, context):
     if 'frameid' in file_info:
         try:
             factory = import_utils.import_attribute(context.FRAME_FACTORY)()
-            test_image = factory.observation_frame_class(hdu_list=[HeaderOnly(file_info)], 
+            test_image = factory.observation_frame_class(hdu_list=[HeaderOnly(file_info)],
                                                          file_path=file_info['filename'])
             test_image.instrument = factory.get_instrument_from_header(file_info, db_address=context.db_address)
             if image_utils.get_reduction_level(test_image.meta) != '00':
