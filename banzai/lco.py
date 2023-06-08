@@ -176,7 +176,7 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
         for attribute in self.grouping_criteria:
             record_attributes['attributes'][attribute] = str(getattr(self, attribute))
         return dbs.CalibrationImage(**record_attributes)
-
+    
     @property
     def is_master(self):
         return self.meta.get('ISMASTER', False)
@@ -184,6 +184,10 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
     @is_master.setter
     def is_master(self, value):
         self.meta['ISMASTER'] = value
+
+    @property
+    def dark_temperature_coefficient(self):
+        return self.meta.get('DARKCOEF', 0.0)
 
     def write(self, runtime_context):
         output_products = LCOObservationFrame.write(self, runtime_context)
