@@ -176,7 +176,7 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
         for attribute in self.grouping_criteria:
             record_attributes['attributes'][attribute] = str(getattr(self, attribute))
         return dbs.CalibrationImage(**record_attributes)
-    
+
     @property
     def is_master(self):
         return self.meta.get('ISMASTER', False)
