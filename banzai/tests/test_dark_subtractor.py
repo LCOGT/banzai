@@ -27,7 +27,7 @@ def test_null_input_images():
 def test_reasonable_dark_subtraction(mock_super_cal_name, mock_super_frame):
 
     mock_super_cal_name.return_value = {'filename': 'test.fits'}
-    mock_super_frame.return_value = LCOCalibrationFrame(hdu_list=[CCDData(data=0.5*np.ones((100,100)), 
+    mock_super_frame.return_value = LCOCalibrationFrame(hdu_list=[CCDData(data=0.5*np.ones((100,100)),
                                                                           meta={'EXPTIME': 1.0,
                                                                                 'SATURATE': 35000,
                                                                                 'GAIN': 1.0,
@@ -51,9 +51,8 @@ def test_reasonable_dark_subtraction_with_scaling(mock_super_cal_name, mock_supe
     image_measured_temp = 0
     super_measured_temp = -5
 
-
     mock_super_cal_name.return_value = {'filename': 'test.fits'}
-    mock_super_frame.return_value = LCOCalibrationFrame(hdu_list=[CCDData(data=0.5*np.ones((100,100)), 
+    mock_super_frame.return_value = LCOCalibrationFrame(hdu_list=[CCDData(data=0.5*np.ones((100,100)),
                                                                           meta={'EXPTIME': 1.0,
                                                                                 'SATURATE': 35000,
                                                                                 'GAIN': 1.0,
@@ -61,13 +60,13 @@ def test_reasonable_dark_subtraction_with_scaling(mock_super_cal_name, mock_supe
                                                                                 'ISMASTER': True,
                                                                                 'DARKCOEF': dark_temperature_coefficient,
                                                                                 'CCDATEMP': -5})], file_path='/tmp')
-    image = FakeLCOObservationFrame(hdu_list=[CCDData(data=4*np.ones((100,100)), 
+    image = FakeLCOObservationFrame(hdu_list=[CCDData(data=4*np.ones((100,100)),
                                                       meta={'EXPTIME': 2.0,
                                                             'SATURATE': 35000,
                                                             'GAIN': 1.0,
                                                             'MAXLIN': 35000,
                                                             'CCDATEMP': 0})])
-    
+
     dark_scaling_factor = np.exp(dark_temperature_coefficient * (image_measured_temp - super_measured_temp))
     subtracted_data = image.data - np.ones((100,100)) * dark_scaling_factor
     subtractor = DarkSubtractor(FakeContext())
