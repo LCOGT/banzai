@@ -58,7 +58,7 @@ def test_reasonable_dark_subtraction_with_scaling(mock_super_cal_name, mock_supe
                                                                                 'GAIN': 1.0,
                                                                                 'MAXLIN': 35000,
                                                                                 'ISMASTER': True,
-                                                                                'DARKCOEF': dark_temperature_coefficient,
+                                                                                'DRKTCOEF': dark_temperature_coefficient,
                                                                                 'CCDATEMP': -5})], file_path='/tmp')
     image = FakeLCOObservationFrame(hdu_list=[CCDData(data=4*np.ones((100,100)),
                                                       meta={'EXPTIME': 2.0,

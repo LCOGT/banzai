@@ -50,7 +50,7 @@ class DarkSubtractor(CalibrationUser):
         image -= master_calibration_image
         image.meta['L1IDDARK'] = master_calibration_image.filename, 'ID of dark frame'
         image.meta['L1STATDA'] = 1, 'Status flag for dark frame correction'
-        image.meta['DARKTSCL'] = temp_scaling_factor, 'Temperature scaling factor applied to dark image'
+        image.meta['DRKTSCAL'] = temp_scaling_factor, 'Temperature scaling factor applied to dark image'
         return image
 
 
