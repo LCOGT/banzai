@@ -185,6 +185,10 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
     def is_master(self, value):
         self.meta['ISMASTER'] = value
 
+    @property
+    def dark_temperature_coefficient(self):
+        return self.meta.get('DRKTCOEF', 0.0)
+
     def write(self, runtime_context):
         output_products = LCOObservationFrame.write(self, runtime_context)
         CalibrationFrame.write(self, output_products, runtime_context)

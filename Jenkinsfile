@@ -42,6 +42,25 @@ pipeline {
 				}
 			}
 		}
+		stage('DeployProdStack') {
+			agent {
+				label 'helm'
+			}
+	        when {
+                buildingTag();
+	        }
+		    steps {
+	            script {
+                    withKubeConfig([credentialsId: "prod-kube-config"]) {
+                        sh('helm repo update && helm dependency update helm-chart/banzai/ '+
+                                '&& helm package helm-chart/banzai --app-version="${GIT_DESCRIPTION}" --version="${GIT_DESCRIPTION}" ' +
+                                '&& helm upgrade --install banzai banzai-"${GIT_DESCRIPTION}".tgz --namespace=prod ' +
+                                '--set image.tag="${GIT_DESCRIPTION}" --values=helm-chart/banzai/values-prod.yaml ' +
+                                '--force --atomic --timeout=3600s')
+                    }
+                 }
+		    }
+		}
 		stage('DeployTestStack') {
 			when {
 				anyOf {
