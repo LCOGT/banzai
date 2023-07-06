@@ -63,7 +63,7 @@ based on the ``TRIMSEC`` header keyword.
 Bias Subtraction
 ================
 Full frame bias images are subtracted from each of the darks, flat field images, and science frames.
-The master bias frame that was taken closest in time to the current data will be used.
+The super bias frame that was taken closest in time to the current data will be used.
 This will add a few counts of noise to each pixel, but it solves two problems. First, if there is systematic
 structure in the read out, this will be removed. Second, this will remove the bias values for images
 that do not have an overscan region.
@@ -74,17 +74,27 @@ raised.
 
 Dark Subtraction
 ================
-Full-frame master dark frames, scaled to the exposure time of the frame,
+Full-frame super dark frames, scaled to the exposure time of the frame,
 are subtracted from all flat-field and science images. The most recent
-master dark frame is used. Often this is taken on the same day. If no dark frame exists for this
+super dark frame is used. Often this is taken on the same day. If no dark frame exists for this
 instrument, the data will not be reduced and an exception will be raised.
+
+If there exists a ``DRKTCOEF`` keyword in the super dark header, then an exponential temperature scaling factor
+will be applied to the super dark prior to subtraction. This exponential scaling factor is designed to account for
+differences in detector temperature between the science and calibration frames.
+
+The scaling is as follows. Note that the temperature terms, :math:`T`, are the measured detector temperatures in each of the images.
+
+temperature scaling factor = :math:`\exp(\texttt{DRKTCOEF} \cdot (T_{\mathrm{SCI}} - T_{\mathrm{CAL}}))`
+
+The final temperature scaling factor will be stored in the ``DRKTSCAL`` keyword in the reduced science image's header.
 
 
 Flat Field Correction
 =====================
-Master flat field images (normalized to unity using the inner quarter of the image)
+Super flat field images (normalized to unity using the inner quarter of the image)
 are divided out of every science frame. The most recent
-master flat-field image for the given telescope, filter, and binning is used. If no flat field exists,
+super flat-field image for the given telescope, filter, and binning is used. If no flat field exists,
 the data will not be reduced and an exception will be raised.
 
 Cosmic Ray Detection
@@ -153,9 +163,9 @@ r: r-i, i: r-i, z: i-z. To estimate the uncertainties on the zeropoint and the c
 reduced data product have no color term applied.
 
 
-Master Calibration Frames
+Super Calibration Frames
 -------------------------
-BANZAI also contains routines to create the master bias, dark and flat frames required for the reduction of
+BANZAI also contains routines to create the super bias, dark and flat frames required for the reduction of
 science frames.  Before we describe how these are created, we introduce an important statistical metric used
 throughout the BANZAI pipeline.
 
@@ -171,12 +181,12 @@ We have termed this the "robust standard deviation" (rstd). Using the robust sta
 take a mean of the remaining pixels as usual.
 
 
-Master Bias Creation
+Super Bias Creation
 ====================
 For all instruments, we take many full-frame bias exposures every afternoon and morning. The afternoon and morning sets
 of bias frames are typically reduced together for quality control and to increase statistics.
 
-When creating a master bias frame for the night, we first calculate the sigma clipped mean of each image.
+When creating a super bias frame for the night, we first calculate the sigma clipped mean of each image.
 In this case, outliers that are 3.5 rstd from the median are rejected before calculating the mean. As
 the read noise is approximately Gaussian (to surprisingly high precision), the median is a robust estimation
 of the center of the pixel brightness distribution.
@@ -189,15 +199,15 @@ This is much less than the ~10 electron read noise, meaning that this does not i
 frames in any significant way.
 
 
-Master Dark Creation
+Super Dark Creation
 ====================
 For all instruments, we take full-frame dark exposures every afternoon and morning. Like the bias frames,
 the afternoon and morning dark frames are combined together to increase statistics. Typically, a
 total of 10x900s images are taken.
 
-When creating a master dark frame, each individual frame is scaled by the exposure time (read from the
+When creating a super dark frame, each individual frame is scaled by the exposure time (read from the
 header). The sigma clipped mean of the scaled frames is then calculated on a pixel by pixel basis.
-We reject any 3 rstd outliers, similar to the master bias creation.
+We reject any 3 rstd outliers, similar to the super bias creation.
 
 Our cameras have dark currents of 0.1-0.2 electrons / s per pixel. For 10x900s this corresponds to
 1 - 3 electrons of additional noise per pixel added in quadrature (given the same length science frame,
@@ -205,23 +215,23 @@ and not including the Poisson noise from the dark current itself). Again, this i
 read noise so it will not affect the noise properties of the final science frames.
 
 
-Master Flat Field Creation
+Super Flat Field Creation
 ==========================
 Twilight flats are taken every day. However, flat-field images for every filter are not taken daily,
 because twilight is not long enough to take all of them in a single night. Instead the choice of filter is rotated,
 based on the necessary exposure time to get a high signal to noise image and the popularity of the
-filter for science programs. Typically, a master flat field is produced about once every 3 days for any
+filter for science programs. Typically, a super flat field is produced about once every 3 days for any
 given filter. When a flat-field image is taken for a given filter is taken in the evening twilight,
 it is also taken in morning twilight for quality control. Typically, 5 flat field frames are taken
 in the evening and 5 taken in the morning per filter. The frames are dithered so that we can remove
-stars in the combined master flat field.
+stars in the combined super flat field.
 
 Each individual flat-field image is normalized to unity before combining them.
 The normalization is calculated finding the robust sigma clipped mean (3.5 rstd outliers are rejected) of
 the central region of the image. For the central region, we choose the central 25% of the field (the region
 has dimensions that are half of the full image).
 
-The flat-field frames are then stacked using a sigma clipped mean, similar to the master bias and
+The flat-field frames are then stacked using a sigma clipped mean, similar to the super bias and
 dark frames. We again choose to reject 3 rstd outliers.
 
 
@@ -282,14 +292,14 @@ with the actual RA and declination of the observation (``CRVAL1`` and ``CRVAL2``
 The test is considered failed if the offset is above 300", and a warning is provided if it is above 30".
 
 
-Master Calibration Comparison
+Super Calibration Comparison
 =============================
 
 When a calibration frame is processed by BANZAI, it can be compared to the temporally nearest
-previous master to check
+previous super to check
 for significant variations, which can serve as an alert for e.g. major issues with the camera.
 Since this check also discards frames found to deviate significantly,
-it prevents the creation of bad master frames that can cause
+it prevents the creation of bad super frames that can cause
 problems as they are propagated through the pipeline and used for the reduction of science data.
 
 The algorithm works as follows.  After some preprocessing that depends on the calibration type,
