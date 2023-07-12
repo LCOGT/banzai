@@ -447,9 +447,9 @@ class LCOFrameFactory(FrameFactory):
                             associated_data[associated_extension['NAME']] = None
                     if len(hdu.data.shape) > 2:
                         hdu_list += self._munge_data_cube(hdu)
-                    # update datasec/trimsec for fs01
-                    if hdu.header.get('INSTRUME') == 'fs01':
-                        self._update_fs01_sections(hdu)
+                    # # update datasec/trimsec for fs01
+                    # if hdu.header.get('INSTRUME') == 'fs01':
+                    #     self._update_fs01_sections(hdu)
                     if hdu.data.dtype == np.uint16:
                         hdu.data = hdu.data.astype(np.float64)
                     # check if we need to propagate any header keywords from the primary header
