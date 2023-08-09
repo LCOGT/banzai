@@ -48,6 +48,10 @@ class CalibrationStacker(CalibrationMaker):
     def __init__(self, runtime_context):
         super(CalibrationStacker, self).__init__(runtime_context)
 
+    @property
+    def process_by_group(self):
+        return True
+
     def make_master_calibration_frame(self, images):
         make_calibration_name = file_utils.make_calibration_filename_function(self.calibration_type,
                                                                               self.runtime_context)

@@ -21,6 +21,10 @@ class Stage(abc.ABC):
     def group_by_attributes(self):
         return []
 
+    @property
+    def process_by_group(self):
+        return False
+
     def get_grouping(self, image):
         grouping_criteria = [image.instrument.site, image.instrument.id]
         if self.group_by_attributes:
@@ -30,11 +34,13 @@ class Stage(abc.ABC):
     def run(self, images):
         if not images:
             return images
-        if not self.group_by_attributes:
-            image_sets = images
-        else:
+        if self.group_by_attributes or self.process_by_group:
             images.sort(key=self.get_grouping)
             image_sets = [list(image_set) for _, image_set in itertools.groupby(images, self.get_grouping)]
+        else:
+            # Treat each image individually
+            image_sets = images
+
         processed_images = []
         for image_set in image_sets:
             try:
