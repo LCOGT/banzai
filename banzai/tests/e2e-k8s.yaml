@@ -118,7 +118,7 @@ spec:
         - --hostname
         - "banzai-celery-worker"
         - --concurrency
-        - "2"
+        - "4"
         - -l
         - "debug"
         - "-Q"
