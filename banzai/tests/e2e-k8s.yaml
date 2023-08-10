@@ -138,10 +138,10 @@ spec:
         timeoutSeconds: 10
       resources:
         requests:
-          cpu: 2
-          memory: 8Gi
-        limits:
           cpu: 4
+          memory: 6Gi
+        limits:
+          cpu: 6
           memory: 8Gi
     - name: banzai-celery-beat
       image: @BANZAI_IMAGE@
