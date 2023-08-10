@@ -110,7 +110,6 @@ spec:
           value: "e2e_task_queue"
         - name: REFERENCE_CATALOG_URL
           value: "http://phot-catalog.lco.gtn/"
-
       command:
         - celery
         - -A
