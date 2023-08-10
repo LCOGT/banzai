@@ -1,6 +1,9 @@
-1.10.1 (2023-05-31)
+1.11.0 (2023-08-10)
 -------------------
 - Updated the logging scheme
+
+1.10.1 (2023-05-31)
+-------------------
 - We now silently fix fits errors that can be repaired automatically
 
 1.10.0 (2023-02-15)
