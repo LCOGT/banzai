@@ -186,7 +186,7 @@ def run_realtime_pipeline():
 def start_listener(runtime_context):
     # Need to keep the amqp logger level at least as high as INFO,
     # or else it send heartbeat check messages every second
-    logging.getLogger('amqp').setLevel(max(logging.getLogger().level, getattr(logging, 'INFO')))
+    logging.getLogger('amqp').setLevel(logging.WARNING)
     logger.info('Starting pipeline listener')
 
     fits_exchange = Exchange(runtime_context.FITS_EXCHANGE, type='fanout')
