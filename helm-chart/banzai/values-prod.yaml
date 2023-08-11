@@ -12,7 +12,7 @@ horizontalPodAutoscaler:
 
 image:
   repository: docker.lco.global/banzai
-  tag: "1.10.0"
+  tag: "1.11.0"
   pullPolicy: IfNotPresent
 
 # Values for the OCS Ingester library, used by BANZAI.
@@ -35,7 +35,7 @@ banzai:
   calibrateProposalId: calibrate
   banzaiWorkerLogLevel: info
   rawDataApiRoot: http://archiveapi-internal.prod/
-  fitsBroker: rabbitmq.lco.gtn
+  fitsBroker: rabbitmq-ha.prod.svc.cluster.local.
   fitsExchange: archived_fits
   queueName: banzai_pipeline
   celeryTaskQueueName: banzai_imaging
