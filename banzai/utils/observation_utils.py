@@ -1,10 +1,9 @@
 import requests
-import logging
 import copy
-from datetime import datetime
 from dateutil.parser import parse
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 def get_calibration_blocks_for_time_range(site, start_before, start_after, context):

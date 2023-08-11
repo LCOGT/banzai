@@ -1,11 +1,11 @@
-import logging
 import numpy as np
 
 from banzai.calibrations import CalibrationStacker, CalibrationUser, CalibrationComparer
 from banzai.stages import Stage
 from banzai.utils import stats
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 class BiasMaker(CalibrationStacker):

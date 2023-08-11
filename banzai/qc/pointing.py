@@ -1,12 +1,11 @@
-import logging
-
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 
 from banzai.stages import Stage
 from banzai.utils import qc
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 class PointingTest(Stage):

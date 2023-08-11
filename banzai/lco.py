@@ -2,7 +2,6 @@ import datetime
 import os
 from fnmatch import fnmatch
 from typing import Optional
-from io import BytesIO
 
 import numpy as np
 from astropy.io import fits
@@ -222,7 +221,8 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
         mean_dateobs = date_utils.mean_date(observation_dates)
 
         header['DATE-OBS'] = (date_utils.date_obs_to_string(mean_dateobs), '[UTC] Mean observation start time')
-        header['DAY-OBS'] = (max(images, key=lambda x: datetime.datetime.strptime(x.epoch, '%Y%m%d')).epoch, '[UTC] Date at start of local observing night')
+        header['DAY-OBS'] = (max(images, key=lambda x: datetime.datetime.strptime(x.epoch, '%Y%m%d')).epoch,
+                             '[UTC] Date at start of local observing night')
         header['ISMASTER'] = (True, 'Is this a master calibration frame')
 
         header.add_history("Images combined to create master calibration image:")
@@ -435,13 +435,13 @@ class LCOFrameFactory(FrameFactory):
                     for extension_name_to_condense in runtime_context.EXTENSION_NAMES_TO_CONDENSE:
                         condensed_name = condensed_name.replace(extension_name_to_condense, '')
                     for associated_extension in self.associated_extensions:
-                        associated_fits_extension_name = condensed_name + associated_extension['FITS_NAME']
-                        if associated_fits_extension_name in fits_hdu_list:
+                        associated_extension_name = condensed_name + associated_extension['FITS_NAME']
+                        if associated_extension_name in fits_hdu_list:
                             if hdu.header.get('EXTVER') == 0:
                                 extension_version = None
                             else:
                                 extension_version = hdu.header.get('EXTVER')
-                            associated_data[associated_extension['NAME']] = fits_hdu_list[associated_fits_extension_name,
+                            associated_data[associated_extension['NAME']] = fits_hdu_list[associated_extension_name,
                                                                                           extension_version].data
                         else:
                             associated_data[associated_extension['NAME']] = None
@@ -561,10 +561,12 @@ class LCOFrameFactory(FrameFactory):
             if hdu.meta.get('DETSEC', 'UNKNOWN') in ['UNKNOWN', 'N/A']:
                 # DETSEC missing?
                 binning = hdu.meta.get('CCDSUM', image.primary_hdu.meta.get('CCDSUM', '1 1'))
+                x_binning = int(binning[0])
+                y_binning = int(binning[2])
                 if hdu.data_section is not None:
                     # use binning from FITS header, bin_x is index 0, bin_y is index 2.
-                    detector_section = Section(1, max(hdu.data_section.x_start, hdu.data_section.x_stop) * int(binning[0]),
-                                               1, max(hdu.data_section.y_start, hdu.data_section.y_stop) * int(binning[2]))
+                    detector_section = Section(1, max(hdu.data_section.x_start, hdu.data_section.x_stop) * x_binning,
+                                               1, max(hdu.data_section.y_start, hdu.data_section.y_stop) * y_binning)
                     hdu.detector_section = detector_section
                 else:
                     logger.warning("Data and detector sections are both undefined for image.", image=image)

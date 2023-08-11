@@ -1,11 +1,10 @@
-import logging
-import mock
 import pytest
 
 from banzai.tests.utils import FakeLCOObservationFrame, FakeContext
 from banzai.qc.header_checker import HeaderChecker
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 pytestmark = pytest.mark.header_checker
 
@@ -53,61 +52,53 @@ def test_one_keyword_missing_and_one_na():
     assert set(bad_keywords) == set(tester.expected_header_keywords[0:2])
 
 
-def test_ra_outside_range():
-    logger.error = mock.MagicMock()
+def test_ra_outside_range(caplog):
     tester = HeaderChecker(FakeContext())
     tester.check_ra_range(FakeHeaderImage({'CRVAL1': 360.1}))
-    assert logger.error.called
+    assert any(record.levelname == 'ERROR' for record in caplog.records)
 
 
-def test_ra_within_range():
-    logger.error = mock.MagicMock()
+def test_ra_within_range(caplog):
     tester = HeaderChecker(FakeContext())
     tester.check_ra_range(FakeHeaderImage({'CRVAL1': 359.9}))
     tester.check_ra_range(FakeHeaderImage({'CRVAL1': 0.1}))
-    assert not logger.error.called
+    assert not any(record.levelname == 'INFO' for record in caplog.records)
 
 
-def test_dec_outside_range():
-    logger.error = mock.MagicMock()
+def test_dec_outside_range(caplog):
     tester = HeaderChecker(FakeContext())
     tester.check_dec_range(FakeHeaderImage({'CRVAL2': -90.1}))
-    assert logger.error.called
+    assert any(record.levelname == 'ERROR' for record in caplog.records)
 
 
-def test_dec_within_range():
-    logger.error = mock.MagicMock()
+def test_dec_within_range(caplog):
     tester = HeaderChecker(FakeContext())
     tester.check_dec_range(FakeHeaderImage({'CRVAL2': -89.9}))
     tester.check_dec_range(FakeHeaderImage({'CRVAL2': 89.9}))
     tester.check_dec_range(FakeHeaderImage({'CRVAL2': 0.0}))
-    assert not logger.error.called
+    assert not any(record.levelname == 'ERROR' for record in caplog.records)
 
 
-def test_null_exptime_value():
-    logger.error = mock.MagicMock()
+def test_null_exptime_value(caplog):
     tester = HeaderChecker(FakeContext())
     tester.check_exptime_value(FakeHeaderImage({'EXPTIME': 0.0, 'OBSTYPE': 'test'}))
-    assert logger.error.called
+    assert any(record.levelname == 'ERROR' for record in caplog.records)
 
 
-def test_negative_exptime_value():
-    logger.error = mock.MagicMock()
+def test_negative_exptime_value(caplog):
     tester = HeaderChecker(FakeContext())
     tester.check_exptime_value(FakeHeaderImage({'EXPTIME': -0.1, 'OBSTYPE': 'test'}))
-    assert logger.error.called
+    assert any(record.levelname == 'ERROR' for record in caplog.records)
 
 
-def test_null_or_negative_exptime_value_for_bias():
-    logger.error = mock.MagicMock()
+def test_null_or_negative_exptime_value_for_bias(caplog):
     tester = HeaderChecker(FakeContext())
     tester.check_exptime_value(FakeHeaderImage({'EXPTIME': 0.0, 'OBSTYPE': 'BIAS'}))
     tester.check_exptime_value(FakeHeaderImage({'EXPTIME': -0.1, 'OBSTYPE': 'BIAS'}))
-    assert not logger.error.called
+    assert not any(record.levelname == 'ERROR' for record in caplog.records)
 
 
-def test_postive_exptime_value():
-    logger.error = mock.MagicMock()
+def test_postive_exptime_value(caplog):
     tester = HeaderChecker(FakeContext())
     tester.check_exptime_value(FakeHeaderImage({'EXPTIME': 0.1, 'OBSTYPE': 'test'}))
-    assert not logger.error.called
+    assert not any(record.levelname == 'ERROR' for record in caplog.records)

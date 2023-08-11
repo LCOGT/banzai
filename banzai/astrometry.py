@@ -1,4 +1,3 @@
-import logging
 import requests
 from requests import ConnectionError, HTTPError
 
@@ -8,8 +7,9 @@ from astropy import units
 import numpy as np
 
 from banzai.stages import Stage
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 SOURCE_LIMIT = 50
 FAILED_WCS = (4, 'Error status of WCS fit. 0 for no error')

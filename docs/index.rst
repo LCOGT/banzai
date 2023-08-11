@@ -239,8 +239,8 @@ Quality Control
 ---------------
 
 
-Header Sanity
-=============
+Header Checker
+==============
 The header sanity test first checks if any of the following principal FITS
 header keywords are either missing or set to ``'N/A'``:
 ``RA``, ``DEC``, ``CAT-RA``, ``CAT-DEC``,

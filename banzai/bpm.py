@@ -1,11 +1,10 @@
-import logging
 import numpy as np
 
 from banzai.calibrations import CalibrationUser
 from banzai.stages import Stage
-from banzai.logs import format_exception
+from banzai.logs import format_exception, get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 class BadPixelMaskLoader(CalibrationUser):

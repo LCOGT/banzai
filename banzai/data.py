@@ -189,7 +189,7 @@ class CCDData(Data):
 
     def __sub__(self, other):
         uncertainty = np.sqrt(self.uncertainty * self.uncertainty + other.uncertainty * other.uncertainty)
-        return type(self)(data=self.data - other.data, meta=self.meta, mask=self.mask|other.mask,
+        return type(self)(data=self.data - other.data, meta=self.meta, mask=self.mask | other.mask,
                           uncertainty=uncertainty)
 
     def add_uncertainty(self, readnoise: np.array):

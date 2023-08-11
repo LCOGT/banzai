@@ -1,9 +1,7 @@
-import logging
-
 from banzai.calibrations import CalibrationUser
-from banzai.logs import format_exception
+from banzai.logs import format_exception, get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 class ReadNoiseLoader(CalibrationUser):

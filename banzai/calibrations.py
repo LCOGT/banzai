@@ -1,4 +1,3 @@
-import logging
 import abc
 from datetime import datetime
 
@@ -8,7 +7,7 @@ from banzai.utils import qc, import_utils, stage_utils, file_utils
 from banzai.data import stack
 from banzai.utils.image_utils import Section
 
-logger = logging.getLogger('banzai')
+logger = logs.get_logger()
 
 
 class CalibrationMaker(Stage):

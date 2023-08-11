@@ -1,8 +1,7 @@
-import logging
-
+from banzai.logs import get_logger
 from banzai.stages import Stage
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 class GainNormalizer(Stage):

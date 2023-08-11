@@ -1,4 +1,3 @@
-import logging
 from urllib.parse import urljoin
 
 import numpy as np
@@ -14,7 +13,7 @@ from banzai import logs
 
 from skimage import measure
 
-logger = logging.getLogger('banzai')
+logger = logs.get_logger()
 sep.set_sub_object_limit(int(1e6))
 
 
