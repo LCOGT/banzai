@@ -1,3 +1,7 @@
+1.11.1 (2023-08-23)
+-------------------
+- Ack tasks late so that they may be re-queued in the event of a worker shutdown a la kubernetes
+
 1.11.0 (2023-08-10)
 -------------------
 - Added the process_by_group keyword to stages to fix a bug that wouldn't allow grouping only by instrument
