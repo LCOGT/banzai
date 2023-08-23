@@ -1,4 +1,3 @@
-import logging
 import abc
 from datetime import datetime
 
@@ -8,7 +7,7 @@ from banzai.utils import qc, import_utils, stage_utils, file_utils
 from banzai.data import stack
 from banzai.utils.image_utils import Section
 
-logger = logging.getLogger('banzai')
+logger = logs.get_logger()
 
 
 class CalibrationMaker(Stage):
@@ -48,6 +47,10 @@ class CalibrationMaker(Stage):
 class CalibrationStacker(CalibrationMaker):
     def __init__(self, runtime_context):
         super(CalibrationStacker, self).__init__(runtime_context)
+
+    @property
+    def process_by_group(self):
+        return True
 
     def make_master_calibration_frame(self, images):
         make_calibration_name = file_utils.make_calibration_filename_function(self.calibration_type,

@@ -1,6 +1,10 @@
+1.11.0 (2023-08-10)
+-------------------
+- Added the process_by_group keyword to stages to fix a bug that wouldn't allow grouping only by instrument
+- Updated the logging scheme
+
 1.10.1 (2023-05-31)
 -------------------
-- Updated the logging scheme
 - We now silently fix fits errors that can be repaired automatically
 
 1.10.0 (2023-02-15)

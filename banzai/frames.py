@@ -1,4 +1,3 @@
-import logging
 from banzai import dbs
 from banzai.data import HeaderOnly, CCDData
 from banzai.utils import fits_utils, file_utils
@@ -7,8 +6,9 @@ from astropy.io import fits
 import abc
 import os
 from typing import Optional
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 class ObservationFrame(metaclass=abc.ABCMeta):

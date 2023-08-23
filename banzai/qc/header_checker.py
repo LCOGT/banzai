@@ -3,15 +3,13 @@ This module performs basic sanity checks that the main image header keywords are
 format and validates their values.
 @author:ebachelet
 """
-import logging
 
 from banzai.stages import Stage
 from banzai.utils import qc
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
-class HeaderSanity:
-    pass
 
 class HeaderChecker(Stage):
     """

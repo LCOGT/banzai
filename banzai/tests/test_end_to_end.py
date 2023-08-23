@@ -19,13 +19,12 @@ from banzai.main import add_super_calibration
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.io import fits
 import pkg_resources
-
-import logging
+from banzai.logs import get_logger
 
 # TODO: Mock out AWS calls here
 # TODO: Mock out archived fits queue structure as well
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 app.conf.update(CELERY_TASK_ALWAYS_EAGER=True)
 

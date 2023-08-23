@@ -1,13 +1,11 @@
-import logging
-
 import pytest
-import mock
 import numpy as np
 
 from banzai.qc import pattern_noise
 from banzai.tests.utils import gaussian2d, FakeCCDData, FakeLCOObservationFrame
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 pytestmark = pytest.mark.pattern_noise_qc
 
@@ -45,7 +43,7 @@ def test_pattern_noise_detects_noise_when_it_should(set_random_seed):
 def test_pattern_noise_does_not_detect_white_noise(set_random_seed):
     data = generate_data()
     detector = pattern_noise.PatternNoiseDetector(None)
-    assert detector.check_for_pattern_noise(data)[0] == False
+    assert not detector.check_for_pattern_noise(data)[0]
 
 
 def test_pattern_noise_does_not_detect_stars(set_random_seed):
@@ -59,13 +57,12 @@ def test_pattern_noise_does_not_detect_stars(set_random_seed):
     assert detector.check_for_pattern_noise(data)[0] == False
 
 
-def test_pattern_noise_on_2d_image(set_random_seed):
+def test_pattern_noise_on_2d_image(set_random_seed, caplog):
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=generate_data(has_pattern_noise=True))])
 
     detector = pattern_noise.PatternNoiseDetector(None)
-    logger.error = mock.MagicMock()
     detector.do_stage(image)
-    assert logger.error.called
+    assert any(record.levelname == 'ERROR' for record in caplog.records)
 
 
 def test_trim_edges():

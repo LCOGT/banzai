@@ -66,10 +66,10 @@ spec:
       imagePullPolicy: IfNotPresent
       resources:
         requests:
-          cpu: 0.1
+          cpu: 1
           memory: 512M
         limits:
-          cpu: 1
+          cpu: 2
           memory: 1Gi
       readinessProbe:
         exec:
@@ -110,7 +110,6 @@ spec:
           value: "e2e_task_queue"
         - name: REFERENCE_CATALOG_URL
           value: "http://phot-catalog.lco.gtn/"
-
       command:
         - celery
         - -A
@@ -119,7 +118,7 @@ spec:
         - --hostname
         - "banzai-celery-worker"
         - --concurrency
-        - "2"
+        - "4"
         - -l
         - "debug"
         - "-Q"
@@ -139,10 +138,10 @@ spec:
         timeoutSeconds: 10
       resources:
         requests:
-          cpu: 1
-          memory: 8Gi
+          cpu: 6
+          memory: 6Gi
         limits:
-          cpu: 2
+          cpu: 8
           memory: 8Gi
     - name: banzai-celery-beat
       image: @BANZAI_IMAGE@

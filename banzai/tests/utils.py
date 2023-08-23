@@ -11,9 +11,9 @@ from banzai.lco import LCOObservationFrame, LCOCalibrationFrame
 from banzai.utils.image_utils import Section
 from banzai.data import HeaderOnly, CCDData
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
-import logging
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 class FakeCCDData(CCDData):

@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 from scipy.ndimage.filters import median_filter
 from itertools import groupby
@@ -8,8 +6,9 @@ from operator import itemgetter
 from banzai.stages import Stage
 from banzai.utils import qc
 from banzai.utils.stats import robust_standard_deviation
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 class PatternNoiseDetector(Stage):

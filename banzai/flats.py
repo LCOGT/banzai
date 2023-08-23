@@ -1,14 +1,12 @@
 import os.path
-import logging
 
 import numpy as np
-
 from banzai.utils import stats
 from banzai.stages import Stage
 from banzai.calibrations import CalibrationStacker, CalibrationUser, CalibrationComparer
-import numpy as np
+from banzai.logs import get_logger
 
-logger = logging.getLogger('banzai')
+logger = get_logger()
 
 
 class FlatSNRChecker(Stage):
