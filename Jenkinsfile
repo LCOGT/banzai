@@ -23,6 +23,7 @@ pipeline {
 	stages {
 		stage('Build image') {
 			steps {
+				error 'Hello :)'
 				script {
 					dockerImage = docker.build("${DOCKER_IMG}", ".")
 				}
