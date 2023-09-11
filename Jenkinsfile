@@ -38,6 +38,7 @@ pipeline {
 		stage('Unit Tests') {
 			steps {
 				script {
+					sh 'echo sup!'
 					sh 'docker run --rm "${DOCKER_IMG}" pytest --pyargs banzai.tests -m \'not e2e\''
 				}
 			}
