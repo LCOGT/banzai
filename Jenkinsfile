@@ -24,7 +24,7 @@ pipeline {
 		stage('Build image') {
 			steps {
 				script {
-					sh 'echo sup2'
+					sh 'echo sup3'
 					error 'done'				}
 			}
 		}
