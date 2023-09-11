@@ -24,6 +24,9 @@ pipeline {
 		stage('Build image') {
 			steps {
 				script {
+					sh 'echo sup2'
+					error 'done'
+
 					dockerImage = docker.build("${DOCKER_IMG}", ".")
 				}
 			}
@@ -38,7 +41,6 @@ pipeline {
 		stage('Unit Tests') {
 			steps {
 				script {
-					sh 'echo sup2'
 					sh 'docker run --rm "${DOCKER_IMG}" pytest --pyargs banzai.tests -m \'not e2e\''
 				}
 			}
