@@ -25,10 +25,7 @@ pipeline {
 			steps {
 				script {
 					sh 'echo sup2'
-					error 'done'
-
-					dockerImage = docker.build("${DOCKER_IMG}", ".")
-				}
+					error 'done'				}
 			}
 		}
 		stage('Push image') {
