@@ -1,3 +1,7 @@
+1.13.0 (2023-10-05)
+-------------------
+- Migrated photometry extraction to be done by astropy's photutils instead of SEP.
+
 1.12.0 (2023-08-10)
 -------------------
 - Added the process_by_group keyword to stages to fix a bug that wouldn't allow grouping only by instrument

@@ -39,6 +39,6 @@ class BadPixelMaskLoader(CalibrationUser):
 class SaturatedPixelFlagger(Stage):
     def do_stage(self, image):
         for image_extension in image.ccd_hdus:
-            image_extension.mask[image_extension.data > image_extension.saturate] |= 2
+            image_extension.mask[image_extension.data >= image_extension.saturate] |= 2
 
         return image
