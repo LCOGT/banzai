@@ -6,6 +6,20 @@ metadata:
   labels:
     app.kubernetes.io/name: banzai
 spec:
+  tolerations:
+    - name: karpenter.lco.earth/provisioner-name
+      operator: Equal
+      value: banzai-e2e
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+            - key: karpenter.lco.earth/provisioner-name
+              operator: In
+              values:
+                - banzai-e2e
+      
   # Create some empty directories to be mounted within the Pod
   volumes:
     - name: banzai-data
