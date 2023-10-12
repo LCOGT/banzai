@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: banzai
 spec:
   tolerations:
-    - name: karpenter.lco.earth/provisioner-name
+    - key: karpenter.lco.earth/provisioner-name
       operator: Equal
       value: banzai-e2e
   affinity:
