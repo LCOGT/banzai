@@ -61,7 +61,7 @@ spec:
         initialDelaySeconds: 5
         periodSeconds: 1
     - name: banzai-fits-exchange
-      image: rabbitmq:3.7.9
+      image: rabbitmq:3.12.3
       imagePullPolicy: IfNotPresent
       resources:
         requests:
@@ -79,7 +79,7 @@ spec:
         periodSeconds: 1
         timeoutSeconds: 10
     - name: banzai-celery-workers
-      image: docker.lco.global/banzai:1.11.0-34-ge24107f3
+      image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
       volumeMounts:
         - name: banzai-data
@@ -143,7 +143,7 @@ spec:
           cpu: 8
           memory: 8Gi
     - name: banzai-celery-beat
-      image: docker.lco.global/banzai:1.11.0-34-ge24107f3
+      image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
       volumeMounts:
         - name: banzai-data
@@ -169,7 +169,7 @@ spec:
           cpu: 1
           memory: 1Gi
     - name: banzai-listener
-      image: docker.lco.global/banzai:1.11.0-34-ge24107f3
+      image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent
       volumeMounts:
         - name: banzai-data
