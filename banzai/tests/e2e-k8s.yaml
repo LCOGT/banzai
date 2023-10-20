@@ -118,8 +118,8 @@ spec:
         - "banzai-celery-worker"
         - --concurrency
         - "4"
-        - -l
-        - "debug"
+        - "-l"
+        - "info"
         - "-Q"
         - "$(CELERY_TASK_QUEUE_NAME)"
       readinessProbe:

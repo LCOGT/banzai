@@ -156,6 +156,3 @@ LOSSLESS_EXTENSIONS = []
 CELERY_TASK_QUEUE_NAME = os.getenv('CELERY_TASK_QUEUE_NAME', 'celery')
 
 REFERENCE_CATALOG_URL = os.getenv('REFERENCE_CATALOG_URL', 'http://phot-catalog.lco.gtn/')
-
-# Number of cores to use for photometry deblending
-N_PHOT_CORES = 4

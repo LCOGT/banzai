@@ -109,7 +109,7 @@ class SourceDetector(Stage):
             deblended_seg_map = deblend_sources(convolved_data, segmentation_map,
                                                 npixels=self.min_area, nlevels=32,
                                                 contrast=0.005, progress_bar=False,
-                                                nproc=self.runtime_context.N_PHOT_CORES)
+                                                nproc=1)
             # Convert the segmentation map to a source catalog
             catalog = SourceCatalog(data, deblended_seg_map, convolved_data=convolved_data, error=error,
                                     background=bkg.background)
@@ -132,7 +132,7 @@ class SourceDetector(Stage):
 
             for r in [0.25, 0.5, 0.75]:
                 sources['fluxrad' + f'{r:.2f}'.lstrip("0.")] = catalog.fluxfrac_radius(r)
-            
+
             sources['flag'] = 0
 
             # Flag = 1 for sources with bad pixels
