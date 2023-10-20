@@ -30,17 +30,17 @@ def radius_of_contour(contour, source):
 
 
 def flag_sources(sources, source_labels, segmentation_map, mask, flag, mask_value):
-    affected_sources = np.unique(segmentation_map[mask == mask_value])
+    affected_sources = np.unique(segmentation_map.data[mask == mask_value])
     sources['flag'][np.in1d(source_labels, affected_sources)] |= flag
 
 
 def flag_deblended(sources, catalog, segmentation_map, deblended_seg_map, flag_value=2):
     # By default deblending appends labels instead of reassigning them so we can just use the
     # extras in the deblended map
-    deblended_sources = np.unique(deblended_seg_map[deblended_seg_map > np.max(segmentation_map)])
+    deblended_sources = np.unique(deblended_seg_map.data[deblended_seg_map > np.max(segmentation_map)])
     # Get the sources that were originally blended
-    original_blends = np.unique(segmentation_map[deblended_seg_map > np.max(segmentation_map)])
-    deblended_sources = np.hstack([deblend_sources, original_blends])
+    original_blends = np.unique(segmentation_map.data[deblended_seg_map > np.max(segmentation_map)])
+    deblended_sources = np.hstack([deblended_sources, original_blends])
     sources['flag'][np.in1d(catalog.labels, deblended_sources)] |= flag_value
 
 
@@ -76,9 +76,6 @@ class SourceDetector(Stage):
 
     def do_stage(self, image):
         try:
-            # Increase the internal buffer size in sep. This is most necessary for crowded fields.
-            ny, nx = image.shape
-
             data = image.data.copy()
             error = image.uncertainty
 
@@ -101,10 +98,11 @@ class SourceDetector(Stage):
             kernel_squared = CustomKernel(kernel.array * kernel.array)
             normalization = np.sqrt(convolve(1 / (error * error), kernel_squared))
             convolved_data /= normalization
-
+            logger.info('Running image segmentation', image=image)
             # Do an initial source detection
             segmentation_map = detect_sources(convolved_data, self.threshold, npixels=self.min_area)
 
+            logger.info('Deblending sources', image=image)
             # Note that nlevels here is DEBLEND_NTHRESH in source extractor which is 32 by default
             deblended_seg_map = deblend_sources(convolved_data, segmentation_map,
                                                 npixels=self.min_area, nlevels=32,
@@ -255,7 +253,7 @@ class SourceDetector(Stage):
                 image.meta['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
 
                 mean_position_angle = stats.sigma_clipped_mean(catalog['theta'][good_objects], 3.0)
-                image.meta['L1ELLIPA'] = (mean_position_angle,'[deg] PA of mean image ellipticity')
+                image.meta['L1ELLIPA'] = (mean_position_angle, '[deg] PA of mean image ellipticity')
 
             logging_tags = {key: float(image.meta[key]) for key in ['L1MEAN', 'L1MEDIAN', 'L1SIGMA',
                                                                     'L1FWHM', 'L1ELLIP', 'L1ELLIPA']}

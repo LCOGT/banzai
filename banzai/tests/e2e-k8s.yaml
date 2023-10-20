@@ -94,13 +94,13 @@ spec:
         - name: TASK_HOST
           value: "redis://localhost:6379/0"
         - name: BANZAI_WORKER_LOGLEVEL
-          value: debug
+          value: info
         - name: CALIBRATE_PROPOSAL_ID
           value: "calibrate"
         - name: OBSERVATION_PORTAL_URL
           value: "http://internal-observation-portal.lco.gtn/api/observations/"
         - name: OMP_NUM_THREADS
-          value: "4"
+          value: "2"
         - name: FITS_EXCHANGE
           value: "fits_files"
         - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
@@ -117,7 +117,7 @@ spec:
         - --hostname
         - "banzai-celery-worker"
         - --concurrency
-        - "4"
+        - "2"
         - "-l"
         - "info"
         - "-Q"
