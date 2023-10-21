@@ -142,32 +142,6 @@ spec:
         limits:
           cpu: 8
           memory: 8Gi
-    - name: banzai-celery-beat
-      image: @BANZAI_IMAGE@
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: banzai-data
-          mountPath: /archive/engineering
-          subPath: engineering
-          readOnly: false
-      env:
-        - name: DB_ADDRESS
-          value: "sqlite:////archive/engineering/test.db"
-        - name: RETRY_DELAY
-          value: "0"
-        - name: TASK_HOST
-          value: "redis://localhost:6379/0"
-        - name: CELERY_TASK_QUEUE_NAME
-          value: "e2e_task_queue"
-      command:
-        - banzai_automate_stack_calibrations
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 1Gi
-        limits:
-          cpu: 1
-          memory: 1Gi
     - name: banzai-listener
       image: @BANZAI_IMAGE@
       imagePullPolicy: IfNotPresent

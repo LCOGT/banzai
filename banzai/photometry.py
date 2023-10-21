@@ -23,8 +23,8 @@ logger = logs.get_logger()
 def radius_of_contour(contour, source):
     x = contour[:, 1]
     y = contour[:, 0]
-    x_center = (source['xmax'] - source['xmin'] + 1) / 2.0 - 0.5
-    y_center = (source['ymax'] - source['ymin'] + 1) / 2.0 - 0.5
+    x_center = (source.bbox_xmax - source.bbox_xmin + 1) / 2.0 - 0.5
+    y_center = (source.bbox_ymax - source.bbox_ymin + 1) / 2.0 - 0.5
 
     return np.percentile(np.sqrt((x - x_center)**2.0 + (y - y_center) ** 2.0), 90)
 
@@ -119,7 +119,7 @@ class SourceDetector(Stage):
                              'a': catalog.semimajor_sigma.value, 'b': catalog.semiminor_sigma.value,
                              'theta': catalog.orientation.to('deg').value, 'ellipticity': catalog.ellipticity.value,
                              'kronrad': catalog.kron_radius.value,
-                             'flux': catalog.kron_flux, 'fluxerr': catalog,
+                             'flux': catalog.kron_flux, 'fluxerr': catalog.kron_fluxerr,
                              'x2': catalog.covar_sigx2.value, 'y2': catalog.covar_sigy2.value,
                              'xy': catalog.covar_sigxy.value,
                              'background': catalog.background_mean})
@@ -152,91 +152,91 @@ class SourceDetector(Stage):
             sources['fwhm'] = np.nan
             sources['fwtm'] = np.nan
             # Here we estimate contours
-            for source in sources:
+            for source, row in zip(sources, catalog):
                 if source['flag'] == 0:
                     for ratio, keyword in zip([0.5, 0.1], ['fwhm', 'fwtm']):
-                        contours = measure.find_contours(data[source['ymin']: source['ymax'] + 1,
-                                                         source['xmin']: source['xmax'] + 1],
+                        contours = measure.find_contours(data[row.bbox_ymin: row.bbox_ymax + 1,
+                                                         row.bbox_xmin: row.bbox_xmax + 1],
                                                          ratio * source['peak'])
                         if contours:
                             # If there are multiple contours like a donut might have take the outer
-                            contour_radii = [radius_of_contour(contour, source) for contour in contours]
+                            contour_radii = [radius_of_contour(contour, row) for contour in contours]
                             source[keyword] = 2.0 * np.nanmax(contour_radii)
 
             # Add the units and description to the catalogs
-            catalog['x'].unit = 'pixel'
-            catalog['x'].description = 'X coordinate of the object'
-            catalog['y'].unit = 'pixel'
-            catalog['y'].description = 'Y coordinate of the object'
-            catalog['xwin'].unit = 'pixel'
-            catalog['xwin'].description = 'Windowed X coordinate of the object'
-            catalog['ywin'].unit = 'pixel'
-            catalog['ywin'].description = 'Windowed Y coordinate of the object'
-            catalog['xpeak'].unit = 'pixel'
-            catalog['xpeak'].description = 'X coordinate of the peak'
-            catalog['ypeak'].unit = 'pixel'
-            catalog['ypeak'].description = 'Windowed Y coordinate of the peak'
-            catalog['flux'].unit = 'count'
-            catalog['flux'].description = 'Flux within a Kron-like elliptical aperture'
-            catalog['fluxerr'].unit = 'count'
-            catalog['fluxerr'].description = 'Error on the flux within Kron aperture'
-            catalog['peak'].unit = 'count'
-            catalog['peak'].description = 'Peak flux (flux at xpeak, ypeak)'
+            sources['x'].unit = 'pixel'
+            sources['x'].description = 'X coordinate of the object'
+            sources['y'].unit = 'pixel'
+            sources['y'].description = 'Y coordinate of the object'
+            sources['xwin'].unit = 'pixel'
+            sources['xwin'].description = 'Windowed X coordinate of the object'
+            sources['ywin'].unit = 'pixel'
+            sources['ywin'].description = 'Windowed Y coordinate of the object'
+            sources['xpeak'].unit = 'pixel'
+            sources['xpeak'].description = 'X coordinate of the peak'
+            sources['ypeak'].unit = 'pixel'
+            sources['ypeak'].description = 'Windowed Y coordinate of the peak'
+            sources['flux'].unit = 'count'
+            sources['flux'].description = 'Flux within a Kron-like elliptical aperture'
+            sources['fluxerr'].unit = 'count'
+            sources['fluxerr'].description = 'Error on the flux within Kron aperture'
+            sources['peak'].unit = 'count'
+            sources['peak'].description = 'Peak flux (flux at xpeak, ypeak)'
             for diameter in [1, 2, 3, 4, 5, 6]:
-                catalog['fluxaper{0}'.format(diameter)].unit = 'count'
-                catalog['fluxaper{0}'.format(diameter)].description = 'Flux from fixed circular aperture: {0}" diameter'.format(diameter)
-                catalog['fluxerr{0}'.format(diameter)].unit = 'count'
-                catalog['fluxerr{0}'.format(diameter)].description = 'Error on Flux from circular aperture: {0}"'.format(diameter)
+                sources['fluxaper{0}'.format(diameter)].unit = 'count'
+                sources['fluxaper{0}'.format(diameter)].description = 'Flux from fixed circular aperture: {0}" diameter'.format(diameter)
+                sources['fluxerr{0}'.format(diameter)].unit = 'count'
+                sources['fluxerr{0}'.format(diameter)].description = 'Error on Flux from circular aperture: {0}"'.format(diameter)
 
-            catalog['background'].unit = 'count'
-            catalog['background'].description = 'Average background value in the aperture'
-            catalog['fwhm'].unit = 'pixel'
-            catalog['fwhm'].description = 'FWHM of the object'
-            catalog['fwtm'].unit = 'pixel'
-            catalog['fwtm'].description = 'Full-Width Tenth Maximum'
-            catalog['a'].unit = 'pixel'
-            catalog['a'].description = 'Semi-major axis of the object'
-            catalog['b'].unit = 'pixel'
-            catalog['b'].description = 'Semi-minor axis of the object'
-            catalog['theta'].unit = 'degree'
-            catalog['theta'].description = 'Position angle of the object'
-            catalog['kronrad'].unit = 'pixel'
-            catalog['kronrad'].description = 'Kron radius used for extraction'
-            catalog['ellipticity'].description = 'Ellipticity'
-            catalog['fluxrad25'].unit = 'pixel'
-            catalog['fluxrad25'].description = 'Radius containing 25% of the flux'
-            catalog['fluxrad50'].unit = 'pixel'
-            catalog['fluxrad50'].description = 'Radius containing 50% of the flux'
-            catalog['fluxrad75'].unit = 'pixel'
-            catalog['fluxrad75'].description = 'Radius containing 75% of the flux'
-            catalog['x2'].unit = 'pixel^2'
-            catalog['x2'].description = 'Variance on X coordinate of the object'
-            catalog['y2'].unit = 'pixel^2'
-            catalog['y2'].description = 'Variance on Y coordinate of the object'
-            catalog['xy'].unit = 'pixel^2'
-            catalog['xy'].description = 'XY covariance of the object'
-            catalog['flag'].description = 'Bit mask of extraction/photometry flags'
+            sources['background'].unit = 'count'
+            sources['background'].description = 'Average background value in the aperture'
+            sources['fwhm'].unit = 'pixel'
+            sources['fwhm'].description = 'FWHM of the object'
+            sources['fwtm'].unit = 'pixel'
+            sources['fwtm'].description = 'Full-Width Tenth Maximum'
+            sources['a'].unit = 'pixel'
+            sources['a'].description = 'Semi-major axis of the object'
+            sources['b'].unit = 'pixel'
+            sources['b'].description = 'Semi-minor axis of the object'
+            sources['theta'].unit = 'degree'
+            sources['theta'].description = 'Position angle of the object'
+            sources['kronrad'].unit = 'pixel'
+            sources['kronrad'].description = 'Kron radius used for extraction'
+            sources['ellipticity'].description = 'Ellipticity'
+            sources['fluxrad25'].unit = 'pixel'
+            sources['fluxrad25'].description = 'Radius containing 25% of the flux'
+            sources['fluxrad50'].unit = 'pixel'
+            sources['fluxrad50'].description = 'Radius containing 50% of the flux'
+            sources['fluxrad75'].unit = 'pixel'
+            sources['fluxrad75'].description = 'Radius containing 75% of the flux'
+            sources['x2'].unit = 'pixel^2'
+            sources['x2'].description = 'Variance on X coordinate of the object'
+            sources['y2'].unit = 'pixel^2'
+            sources['y2'].description = 'Variance on Y coordinate of the object'
+            sources['xy'].unit = 'pixel^2'
+            sources['xy'].description = 'XY covariance of the object'
+            sources['flag'].description = 'Bit mask of extraction/photometry flags'
 
-            catalog.sort('flux')
-            catalog.reverse()
+            sources.sort('flux')
+            sources.reverse()
 
             # Save some background statistics in the header
-            mean_background = stats.sigma_clipped_mean(bkg.background(), 5.0)
+            mean_background = stats.sigma_clipped_mean(bkg.background, 5.0)
             image.meta['L1MEAN'] = (mean_background,
                                     '[counts] Sigma clipped mean of frame background')
 
-            median_background = np.median(bkg.background())
+            median_background = np.median(bkg.background)
             image.meta['L1MEDIAN'] = (median_background,
                                       '[counts] Median of frame background')
 
-            std_background = stats.robust_standard_deviation(bkg.background())
+            std_background = stats.robust_standard_deviation(bkg.background)
             image.meta['L1SIGMA'] = (std_background,
                                      '[counts] Robust std dev of frame background')
 
             # Save some image statistics to the header
-            good_objects = catalog['flag'] == 0
+            good_objects = sources['flag'] == 0
             for quantity in ['fwhm', 'ellipticity', 'theta']:
-                good_objects = np.logical_and(good_objects, np.logical_not(np.isnan(catalog[quantity])))
+                good_objects = np.logical_and(good_objects, np.logical_not(np.isnan(sources[quantity])))
             if good_objects.sum() == 0:
                 image.meta['L1FWHM'] = ('NaN', '[arcsec] Frame FWHM in arcsec')
                 image.meta['L1FWTM'] = ('NaN', 'Ratio of FWHM to Full-Width Tenth Max')
@@ -244,15 +244,15 @@ class SourceDetector(Stage):
                 image.meta['L1ELLIP'] = ('NaN', 'Mean image ellipticity (1-B/A)')
                 image.meta['L1ELLIPA'] = ('NaN', '[deg] PA of mean image ellipticity')
             else:
-                seeing = np.nanmedian(catalog['fwhm'][good_objects]) * image.pixel_scale
+                seeing = np.nanmedian(sources['fwhm'][good_objects]) * image.pixel_scale
                 image.meta['L1FWHM'] = (seeing, '[arcsec] Frame FWHM in arcsec')
-                image.meta['L1FWTM'] = (np.nanmedian(catalog['fwtm'][good_objects] / catalog['fwhm'][good_objects]),
+                image.meta['L1FWTM'] = (np.nanmedian(sources['fwtm'][good_objects] / sources['fwhm'][good_objects]),
                                         'Ratio of FWHM to Full-Width Tenth Max')
 
-                mean_ellipticity = stats.sigma_clipped_mean(catalog['ellipticity'][good_objects], 3.0)
+                mean_ellipticity = stats.sigma_clipped_mean(sources['ellipticity'][good_objects], 3.0)
                 image.meta['L1ELLIP'] = (mean_ellipticity, 'Mean image ellipticity (1-B/A)')
 
-                mean_position_angle = stats.sigma_clipped_mean(catalog['theta'][good_objects], 3.0)
+                mean_position_angle = stats.sigma_clipped_mean(sources['theta'][good_objects], 3.0)
                 image.meta['L1ELLIPA'] = (mean_position_angle, '[deg] PA of mean image ellipticity')
 
             logging_tags = {key: float(image.meta[key]) for key in ['L1MEAN', 'L1MEDIAN', 'L1SIGMA',
@@ -260,7 +260,7 @@ class SourceDetector(Stage):
 
             logger.info('Extracted sources', image=image, extra_tags=logging_tags)
             # adding catalog (a data table) to the appropriate images attribute.
-            image.add_or_update(DataTable(catalog, name='CAT'))
+            image.add_or_update(DataTable(sources, name='CAT'))
         except Exception:
             logger.error(logs.format_exception(), image=image)
         return image
