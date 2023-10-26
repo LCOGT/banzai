@@ -11,7 +11,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.22.17"
         
       - name: Start a Kind cluster
+        uses: helm/kind-action@v1.8.0
+
+      - name: Test
         run: |
-          echo "TODO"
+          kubectl cluster-info
