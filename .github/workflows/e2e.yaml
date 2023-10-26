@@ -1,0 +1,16 @@
+name: E2E Tests
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on:
+      - banzai-runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Start a Kind cluster
+        run: |
+          echo "TODO"
