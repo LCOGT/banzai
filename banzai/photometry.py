@@ -64,7 +64,7 @@ def flag_edge_sources(image, sources, flag_value=8):
     sources_off = np.logical_or(sources_off, major_xmax > nx)
     sources_off = np.logical_or(sources_off, minor_ymax > ny)
     sources_off = np.logical_or(sources_off, major_ymax > ny)
-    sources[sources_off] |= flag_value
+    sources[sources_off]['flag'] |= flag_value
 
 
 class SourceDetector(Stage):
@@ -107,7 +107,8 @@ class SourceDetector(Stage):
             deblended_seg_map = deblend_sources(convolved_data, segmentation_map,
                                                 npixels=self.min_area, nlevels=32,
                                                 contrast=0.005, progress_bar=False,
-                                                nproc=1)
+                                                nproc=1, mode='sinh')
+            logger.info('Finished deblending. Estimat', image=image)
             # Convert the segmentation map to a source catalog
             catalog = SourceCatalog(data, deblended_seg_map, convolved_data=convolved_data, error=error,
                                     background=bkg.background)
@@ -140,6 +141,7 @@ class SourceDetector(Stage):
             # Flag = 4 for sources that have saturated pixels
             flag_sources(sources, catalog.labels, deblended_seg_map, image.mask, flag=4, mask_value=2)
             # Flag = 8 if kron aperture falls off the image
+            flag_edge_sources(image, sources, flag_pixel=8)
             # Flag = 16 if source has cosmic ray pixels
             flag_sources(sources, catalog.labels, deblended_seg_map, image.mask, flag=16, mask_value=8)
 
