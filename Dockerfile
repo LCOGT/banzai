@@ -17,7 +17,7 @@ WORKDIR /home/archive
 
 COPY environment.yaml .
 
-RUN  . /opt/conda/etc/profile.d/conda.sh && conda env create -p /home/archive/envs/banzai -f environment.yaml --solver=libmamba
+RUN  . /opt/conda/etc/profile.d/conda.sh && conda config --set remote_read_timeout_secs 900 && conda env create -p /home/archive/envs/banzai -f environment.yaml --solver=libmamba
 
 COPY --chown=10087:10000 . /lco/banzai
 
