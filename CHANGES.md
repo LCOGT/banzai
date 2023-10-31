@@ -1,3 +1,7 @@
+1.13.1 (2023-10-21)
+-------------------
+- bugfix to the docker build
+
 1.13.0 (2023-10-31)
 -------------------
 - Refreshed build enviornment
