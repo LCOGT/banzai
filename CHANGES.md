@@ -1,3 +1,8 @@
+1.13.0 (2023-10-31)
+-------------------
+- Refreshed build enviornment
+- We now push tags to ghcr.io instead of an internal docker registry
+
 1.12.0 (2023-08-10)
 -------------------
 - Added the process_by_group keyword to stages to fix a bug that wouldn't allow grouping only by instrument
