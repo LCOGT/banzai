@@ -199,12 +199,15 @@ def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
         starting_extension = 1
     for hdu in compressed_hdulist[starting_extension:]:
         if isinstance(hdu, fits.CompImageHDU):
-            data_type = str(hdu.data.dtype)
-            if 'int' == data_type[:3]:
-                data_type = getattr(np, 'u' + data_type)
-                data = np.array(hdu.data, data_type)
+            if hdu.data is None:
+                data = hdu.data
             else:
-                data = np.array(hdu.data, hdu.data.dtype)
+                data_type = str(hdu.data.dtype)
+                if 'int' == data_type[:3]:
+                    data_type = getattr(np, 'u' + data_type)
+                    data = np.array(hdu.data, data_type)
+                else:
+                    data = np.array(hdu.data, hdu.data.dtype)
             hdulist.append(fits.ImageHDU(data=data, header=hdu.header))
         elif isinstance(hdu, fits.BinTableHDU):
             hdulist.append(fits.BinTableHDU(data=hdu.data, header=hdu.header))
