@@ -1,3 +1,7 @@
+1.13.2 (2023-11-10)
+-------------------
+- Fix to fpacking data when the image data array is None
+
 1.13.1 (2023-10-21)
 -------------------
 - bugfix to the docker build

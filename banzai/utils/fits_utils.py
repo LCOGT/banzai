@@ -223,7 +223,11 @@ def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: Iterable) -> f
             quantize_level = 1e9
         else:
             quantize_level = 64
-        compressed_hdu = fits.CompImageHDU(data=np.ascontiguousarray(uncompressed_hdulist[0].data),
+        if uncompressed_hdulist[0].data is None:
+            data = None
+        else:
+            data = np.ascontiguousarray(uncompressed_hdulist[0].data)
+        compressed_hdu = fits.CompImageHDU(data=data,
                                            header=uncompressed_hdulist[0].header, quantize_level=quantize_level,
                                            quantize_method=1)
         hdulist = [primary_hdu, compressed_hdu]
@@ -234,7 +238,11 @@ def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: Iterable) -> f
                 quantize_level = 1e9
             else:
                 quantize_level = 64
-            compressed_hdu = fits.CompImageHDU(data=np.ascontiguousarray(hdu.data), header=hdu.header,
+            if hdu.data is None:
+                data = None
+            else:
+                data = np.ascontiguousarray(hdu.data)
+            compressed_hdu = fits.CompImageHDU(data=data, header=hdu.header,
                                                quantize_level=quantize_level, quantize_method=1)
             hdulist.append(compressed_hdu)
         else:
