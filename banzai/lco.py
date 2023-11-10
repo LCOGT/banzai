@@ -412,7 +412,7 @@ class LCOFrameFactory(FrameFactory):
                     for hdu in fits_hdu_list if hdu.data is not None):
             for hdu in fits_hdu_list:
                 if hdu.data is None or hdu.data.size == 0:
-                    hdu_list.append(HeaderOnly(meta=hdu.header))
+                    hdu_list.append(HeaderOnly(meta=hdu.header, name=hdu.header.get('EXTNAME')))
                 else:
                     hdu_list.append(self.data_class(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
         else:
@@ -424,7 +424,7 @@ class LCOFrameFactory(FrameFactory):
                     continue
                 # Otherwise parse the fits file into a frame object and the corresponding data objects
                 if hdu.data is None or hdu.data.size == 0:
-                    hdu_list.append(HeaderOnly(meta=hdu.header))
+                    hdu_list.append(HeaderOnly(meta=hdu.header, name=hdu.header.get('EXTNAME')))
                     primary_hdu = hdu
                 elif isinstance(hdu, fits.BinTableHDU):
                     hdu_list.append(DataTable(data=Table(hdu.data), meta=hdu.header, name=hdu.header.get('EXTNAME')))
@@ -601,7 +601,7 @@ class LCOFrameFactory(FrameFactory):
         :return: List CCDData objects
         """
         # The first extension gets to be a header only object
-        hdu_list = [HeaderOnly(meta=hdu.header)]
+        hdu_list = [HeaderOnly(meta=hdu.header, name=hdu.header.get('EXTNAME'))]
 
         # We need to properly set the datasec and detsec keywords in case we didn't read out the
         # middle row (the "Missing Row Problem").

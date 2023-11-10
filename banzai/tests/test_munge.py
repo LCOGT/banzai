@@ -23,7 +23,7 @@ def test_when_has_partial_coefficients():
     for i in range(2):
         for j in range(2):
             header['CRSTLK{i}{j}'.format(i=i+1, j=j+1)] = 1.0
-    hdu_list = [HeaderOnly(meta=header)] + [FakeCCDData() for i in range(4)]
+    hdu_list = [HeaderOnly(meta=header, name='')] + [FakeCCDData() for i in range(4)]
     with pytest.raises(MissingCrosstalkCoefficients):
         LCOFrameFactory._init_crosstalk(FakeLCOObservationFrame(hdu_list=hdu_list))
 
@@ -34,7 +34,7 @@ def test_when_has_coefficients():
     for i in range(4):
         for j in range(4):
             header['CRSTLK{i}{j}'.format(i=i+1, j=j+1)] = 1.0
-    hdu_list = [HeaderOnly(meta=header)] + [FakeCCDData() for i in range(4)]
+    hdu_list = [HeaderOnly(meta=header, name='')] + [FakeCCDData() for i in range(4)]
     LCOFrameFactory._init_crosstalk(FakeLCOObservationFrame(hdu_list=hdu_list))
 
 
@@ -44,7 +44,7 @@ def test_defaults_do_not_override_header():
         for j in range(4):
             header['CRSTLK{i}{j}'.format(i=i+1, j=j+1)] = 1.0
 
-    hdu_list = [HeaderOnly(meta=header)] + [FakeCCDData() for i in range(4)]
+    hdu_list = [HeaderOnly(meta=header, name='')] + [FakeCCDData() for i in range(4)]
     fake_image = FakeLCOObservationFrame(hdu_list=hdu_list)
     LCOFrameFactory._init_crosstalk(fake_image)
 

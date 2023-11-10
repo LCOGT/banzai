@@ -85,8 +85,8 @@ class Data(metaclass=abc.ABCMeta):
 
 
 class HeaderOnly(Data):
-    def __init__(self, meta: Union[dict, fits.Header]):
-        super().__init__(data=np.zeros(0), meta=meta, memmap=False)
+    def __init__(self, meta: Union[dict, fits.Header], name):
+        super().__init__(data=np.zeros(0), meta=meta, memmap=False, name=name)
 
     def to_fits(self, context):
         return fits.HDUList([fits.ImageHDU(data=None, header=self.meta)])
