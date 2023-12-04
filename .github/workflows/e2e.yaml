@@ -27,17 +27,14 @@ jobs:
 
       - name: Build docker image
         run: |
-          docker build -t banzai:e2e .
+          docker build -t banzai:test-latest .
 
       - name: Copy docker image to nodes
         run: |
-          kind load docker-image banzai:e2e
+          kind load docker-image banzai:test-latest
 
       - name: Start banzai
         run: |
-          # Replace w/ docker image just built & loaded
-          sed -i -e "s^@BANZAI_IMAGE@^banzai:e2e^g" banzai/tests/e2e-k8s.yaml
-
           cat banzai/tests/e2e-k8s.yaml
 
           # Deploy banzai stack
