@@ -9,6 +9,12 @@ jobs:
     runs-on:
       - banzai-runner
     steps:
+      - name: Expose GitHub Runtime
+        uses: crazy-max/ghaction-github-runtime@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -27,7 +33,7 @@ jobs:
 
       - name: Build docker image
         run: |
-          docker build -t banzai:test-latest .
+          docker buildx build -t banzai:test-latest --cache-to type=gha,ignore-error=true,mode=max --cache-from type=gha .
 
       - name: Copy docker image to nodes
         run: |
