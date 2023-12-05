@@ -33,7 +33,7 @@ jobs:
 
       - name: Build docker image
         run: |
-          docker buildx build -t banzai:test-latest --cache-to type=gha,ignore-error=true,mode=max --cache-from type=gha .
+          docker buildx build -t banzai:test-latest --load --cache-to type=gha,ignore-error=true,mode=max --cache-from type=gha .
 
       - name: Copy docker image to nodes
         run: |
