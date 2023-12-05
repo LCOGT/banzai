@@ -11,11 +11,11 @@ from banzai.logs import get_logger
 logger = get_logger()
 
 
-def post_to_archive_queue(image_path, broker_url, exchange_name='fits_files'):
+def post_to_archive_queue(filename, frameid, broker_url, exchange_name='fits_files'):
     exchange = Exchange(exchange_name, type='fanout')
     with Connection(broker_url) as conn:
         producer = conn.Producer(exchange=exchange)
-        producer.publish({'path': image_path})
+        producer.publish({'filename': filename, 'frameid': frameid})
         producer.release()
 
 

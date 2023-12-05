@@ -13,33 +13,7 @@ spec:
   securityContext:
     fsGroup: 10000
 
-  initContainers:
-    # When the Pod is initialized, copy all files within the container at path
-    # /archive/engineering into the empty data volume mounted at /data
-    - name: banzai-data
-      image: docker.lco.global/banzai-e2e-data:1.4.2
-      imagePullPolicy: IfNotPresent
-      securityContext:
-        runAsUser: 10087
-        runAsGroup: 10000
-      volumeMounts:
-        - name: banzai-data
-          mountPath: /data
-          readOnly: false
-      command:
-        - /bin/cp
-        - -a
-        - /archive/engineering
-        - /data/
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 256M
-        limits:
-          cpu: 1
-          memory: 1Gi
-
-  containers:
+   containers:
     - name: banzai-redis
       image: redis:5.0.3
       imagePullPolicy: IfNotPresent
@@ -141,7 +115,7 @@ spec:
           memory: 6Gi
         limits:
           cpu: 8
-          memory: 8Gi
+          memory: 10Gi
     - name: banzai-celery-beat
       image: banzai:test-latest
       imagePullPolicy: IfNotPresent
