@@ -75,3 +75,5 @@ distribute-*.tar.gz
 *.iml
 
 .coverage.subprocess
+
+.devenv/

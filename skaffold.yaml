@@ -1,0 +1,24 @@
+apiVersion: skaffold/v4beta8
+kind: Config
+metadata:
+  name: banzai
+profiles:
+  - name: e2e
+    build:
+      artifacts:
+        - image: localhost:5001/banzai
+          context: .
+          custom:
+            buildCommand: skaffold-builder-buildx
+            dependencies:
+              dockerfile:
+                path: Dockerfile
+      local:
+        push: true
+
+    manifests:
+      rawYaml:
+        - ./banzai/tests/e2e-k8s.yaml
+
+    deploy:
+      kubectl: {}

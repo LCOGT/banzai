@@ -31,13 +31,6 @@ spec:
         - -a
         - /archive/engineering
         - /data/
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 256M
-        limits:
-          cpu: 1
-          memory: 1Gi
 
   containers:
     - name: banzai-redis
@@ -45,8 +38,8 @@ spec:
       imagePullPolicy: IfNotPresent
       resources:
         requests:
-          cpu: 0.1
-          memory: 256M
+          cpu: 100m
+          memory: 256Mi
         limits:
           cpu: 1
           memory: 1Gi
@@ -65,8 +58,8 @@ spec:
       imagePullPolicy: IfNotPresent
       resources:
         requests:
-          cpu: 1
-          memory: 512M
+          cpu: 100m
+          memory: 256Mi
         limits:
           cpu: 2
           memory: 1Gi
@@ -79,7 +72,7 @@ spec:
         periodSeconds: 1
         timeoutSeconds: 10
     - name: banzai-celery-workers
-      image: banzai:test-latest
+      image: localhost:5001/banzai
       imagePullPolicy: IfNotPresent
       volumeMounts:
         - name: banzai-data
@@ -137,13 +130,13 @@ spec:
         timeoutSeconds: 10
       resources:
         requests:
-          cpu: 6
-          memory: 6Gi
+          cpu: 100m
+          memory: 256Mi
         limits:
           cpu: 8
           memory: 8Gi
     - name: banzai-celery-beat
-      image: banzai:test-latest
+      image: localhost:5001/banzai
       imagePullPolicy: IfNotPresent
       volumeMounts:
         - name: banzai-data
@@ -163,13 +156,13 @@ spec:
         - banzai_automate_stack_calibrations
       resources:
         requests:
-          cpu: 0.1
-          memory: 1Gi
+          cpu: 100m
+          memory: 256Mi
         limits:
           cpu: 1
           memory: 1Gi
     - name: banzai-listener
-      image: banzai:test-latest
+      image: localhost:5001/banzai
       imagePullPolicy: IfNotPresent
       volumeMounts:
         - name: banzai-data
@@ -202,8 +195,8 @@ spec:
         - "--broker-url=localhost"
       resources:
         requests:
-          cpu: 0.1
-          memory: 1Gi
+          cpu: 100m
+          memory: 256Mi
         limits:
           cpu: 1
           memory: 2Gi
