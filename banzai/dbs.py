@@ -88,6 +88,8 @@ class Instrument(Base):
     camera = Column(String(50), index=True, nullable=False)
     type = Column(String(100))
     name = Column(String(100), index=True, nullable=False)
+    nx = Column(Integer)
+    ny = Column(Integer)
     __table_args__ = (UniqueConstraint('site', 'camera', 'name', name='instrument_constraint'),)
 
 
@@ -146,10 +148,14 @@ def parse_configdb(configdb_address):
                 for ins in tel['instrument_set']:
                     for sci_cam in ins['science_cameras']:
                         if sci_cam is not None:
+                            nx, ny = sci_cam['size'].split('x')
+                            nx = int(float(nx) * float(sci_cam['pscale']))
+                            ny = int(float(ny) * float(sci_cam['pscale']))
                             instrument = {'site': site['code'],
                                           'camera': sci_cam['code'],
                                           'name': ins.get('code'),
-                                          'type': ins['instrument_type']['code']}
+                                          'type': ins['instrument_type']['code'],
+                                          'nx': nx, 'ny': ny}
                             # hotfix for configdb
                             if not instrument['name']:
                                 instrument['name'] = instrument['camera']

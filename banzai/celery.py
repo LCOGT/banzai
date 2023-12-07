@@ -110,9 +110,14 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                     logger.info('Scheduling stacking at {}'.format(schedule_time.strftime(date_utils.TIMESTAMP_FORMAT)),
                                 extra_tags={'site': site, 'min_date': stacking_min_date, 'max_date': stacking_max_date,
                                             'instrument': instrument.camera, 'frame_type': frame_type})
+                    if instrument.nx * instrument.ny > runtime_context.LARGE_WORKER_THRESHOLD:
+                        queue_name = runtime_context.LARGE_WORKER_QUEUE
+                    else:
+                        queue_name = runtime_context.CELERY_TASK_QUEUE_NAME
+
                     stack_calibrations.apply_async(args=(stacking_min_date, stacking_max_date, instrument.id, frame_type,
                                                          vars(runtime_context), blocks_for_calibration),
-                                                   countdown=message_delay_in_seconds)
+                                                   countdown=message_delay_in_seconds, queue=queue_name)
                 else:
                     logger.warning('No scheduled calibration blocks found.',
                                    extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,

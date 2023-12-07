@@ -6,9 +6,11 @@
 # will be started when the CPU usage rises above the configured threshold.
 horizontalPodAutoscaler:
   enabled: true
-  minReplicas: 15
-  maxReplicas: 15
+  minReplicas: 12
+  maxReplicas: 12
   targetCPUUtilizationPercentage: 50
+  minLargeReplicas: 3
+  maxLargeReplicas: 3
 
 image:
   repository: docker.lco.global/banzai
@@ -39,6 +41,7 @@ banzai:
   fitsExchange: archived_fits
   queueName: banzai_pipeline
   celeryTaskQueueName: banzai_imaging
+  largeCeleryTaskQueueName: banzai_large_imaging
   PhotometryCatalogURL: http://phot-catalog.lco.gtn/
   openSearchURL: https://opensearch.lco.global/
 

@@ -29,6 +29,7 @@ banzai:
   fitsExchange: archived_fits
   queueName: banzai_dev_pipeline
   celeryTaskQueueName: banzai_imaging
+  largeCeleryTaskQueueName: banzai_large_imaging
   PhotometryCatalogURL: http://phot-catalog.lco.gtn/
   openSearchURL: https://opensearch.lco.global/
 

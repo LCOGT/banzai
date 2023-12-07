@@ -36,7 +36,8 @@ ingester:
 
 banzai:
   useDifferentArchiveSources: false
-  celeryTaskQueue: "celery"
+  celeryTaskQueueName: "celery"
+  largeCeleryTaskQueueName: "celery_large"
   openSearchURL: "http://host.example"
 
 useDockerizedDatabase: false
