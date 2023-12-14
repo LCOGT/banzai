@@ -176,7 +176,7 @@ def init(configdb):
         calimage = CalibrationImage(
             type=frame['obstype'],
             filename=frame['filename'],
-            frameid=f'{frame['frameid']:d},
+            frameid=f'{frame["frameid"]:d},
             dateobs=datetime.strptime(frame['dateobs'], '%Y-%m-%d'),
             datecreated=datetime(2023, 11, 19),
             instrument_id=instrument.id,
