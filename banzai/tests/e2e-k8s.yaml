@@ -99,7 +99,8 @@ spec:
       - "-Q"
       - "$(CELERY_TASK_QUEUE_NAME)"
       - "-n"
-      - "large-celery-worker""
+      - "large-celery-worker"
+
     readinessProbe:
       exec:
         command:
