@@ -47,6 +47,8 @@ def need_to_process_image(file_info, context):
         return False
 
     if 'frameid' in file_info:
+        if 'version_set' not in file_info:
+            return True
         checksum = file_info['version_set'][0].get('md5')
         filename = file_info['filename']
     else:

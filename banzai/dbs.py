@@ -148,9 +148,10 @@ def parse_configdb(configdb_address):
                 for ins in tel['instrument_set']:
                     for sci_cam in ins['science_cameras']:
                         if sci_cam is not None:
-                            nx, ny = sci_cam['size'].split('x')
-                            nx = int(float(nx) * float(sci_cam['pscale']))
-                            ny = int(float(ny) * float(sci_cam['pscale']))
+                            nx, ny = sci_cam['camera_type']['size'].split('x')
+                            # Convert from arcminutes to arcseconds and then to pixels
+                            nx = int(float(nx) * 60 / float(sci_cam['camera_type']['pscale']))
+                            ny = int(float(ny) * 60 / float(sci_cam['camera_type']['pscale']))
                             instrument = {'site': site['code'],
                                           'camera': sci_cam['code'],
                                           'name': ins.get('code'),
@@ -173,7 +174,9 @@ def add_instrument(instrument, db_address):
         record_attributes = {'site': instrument['site'],
                              'camera': instrument['camera'],
                              'name': instrument['name'],
-                             'type': instrument['type']}
+                             'type': instrument['type'],
+                             'nx': instrument['nx'],
+                             'ny': instrument['ny']}
 
         instrument_record = add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
         db_session.commit()
@@ -441,8 +444,7 @@ def populate_instrument_tables(db_address, configdb_address):
     added to the network.
     """
     sites, instruments = parse_configdb(configdb_address=configdb_address)
-    with get_session(db_address=db_address) as db_session:
-        for site in sites:
-            add_site(site, db_address)
+    for site in sites:
+        add_site(site, db_address)
     for instrument in instruments:
         add_instrument(instrument, db_address)

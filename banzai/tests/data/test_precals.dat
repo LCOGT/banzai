@@ -1,11 +1,11 @@
 frameid filename binning mode obstype dateobs site instrument 
-9741441 bpm_lsc_fa03_20181001_bin1x1.fits.fz '[1, 1]' default BPM lsc fa03
-3519536 bpm_ogg_fs02_20140325_bin2x2.fits.fz '[2, 2]' default BPM ogg fs02
-8831324 bpm_ogg_kb27_20180605_bin1x1.fits.fz '[1, 1]' default BPM ogg kb27
-13261910 bpm-cpt-fa06-central2k-20190617.fits.fz '[2, 2]' central2k BPM cpt fa06
-33347346 tst1m0XX-ep01-20200710-bpm-1.fits.fz '[1, 1]' default BPM tst ep01
-33347347 tst1m0XX-ep02-20200710-bpm-1.fits.fz '[1, 1]' default BPM tst ep02
-33347348 tst1m0XX-ep03-20200710-bpm-1.fits.fz '[1, 1]' default BPM tst ep03
-33347349 tst1m0XX-ep04-20200710-bpm-1.fits.fz '[1, 1]' default BPM tst ep04
-58186456 ogg0m404-sq30-20221123-readnoise-default-e2e.fits.fz '[1, 1]' default READNOISE ogg sq30
-56389948 ogg0m404-sq30-20221206-bpm-default.fits.fz '[1, 1]' default BPM ogg sq30
+9741441 bpm_lsc_fa03_20181001_bin1x1.fits.fz '[1, 1]' default BPM 2018-10-01 lsc fa03
+3519536 bpm_ogg_fs02_20140325_bin2x2.fits.fz '[2, 2]' default BPM 2014-03-25 ogg fs02
+8831324 bpm_ogg_kb27_20180605_bin1x1.fits.fz '[1, 1]' default BPM 2018-06-05 ogg kb27
+13261910 bpm-cpt-fa06-central2k-20190617.fits.fz '[2, 2]' central2k BPM 2019-06-17 cpt fa06
+33347346 tst1m0XX-ep01-20200710-bpm-1.fits.fz '[1, 1]' default BPM 2020-07-10 tst ep01
+33347347 tst1m0XX-ep02-20200710-bpm-1.fits.fz '[1, 1]' default BPM 2020-07-10 tst ep02
+33347348 tst1m0XX-ep03-20200710-bpm-1.fits.fz '[1, 1]' default BPM 2020-07-10 tst ep03
+33347349 tst1m0XX-ep04-20200710-bpm-1.fits.fz '[1, 1]' default BPM 2020-07-10 tst ep04
+58186456 ogg0m404-sq30-20221123-readnoise-default-e2e.fits.fz '[1, 1]' default READNOISE 2022-11-23 ogg sq30
+56389948 ogg0m404-sq30-20221206-bpm-default.fits.fz '[1, 1]' default BPM 2022-12-06 ogg sq30

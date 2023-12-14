@@ -7,10 +7,11 @@ from kombu import Queue
 
 from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, stage_utils
-from celery.signals import setup_logging, worker_process_init
+from celery.signals import worker_process_init
 from banzai.context import Context
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
 from banzai.utils.date_utils import get_stacking_date_range
+import logging
 
 
 logger = logs.get_logger()
@@ -51,6 +52,9 @@ app.conf.broker_transport_options = {'visibility_timeout': 86400}
 
 app.log.setup()
 logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
+logging.getLogger('amqp').setLevel(logging.WARNING)
+logging.getLogger('kombu').setLevel(logging.WARNING)
+logging.getLogger('celery.bootsteps').setLevel(logging.WARNING)
 
 
 @app.task(name='celery.schedule_calibration_stacking', reject_on_worker_lost=True, max_retries=5)

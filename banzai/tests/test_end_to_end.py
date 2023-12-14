@@ -1,6 +1,5 @@
 import os
 from glob import glob
-import argparse
 
 import pytest
 import mock
@@ -15,7 +14,6 @@ from banzai.celery import app, schedule_calibration_stacking
 from banzai.dbs import get_session, CalibrationImage, get_timezone, populate_instrument_tables
 from banzai.dbs import mark_frame, query_for_instrument
 from banzai.utils import file_utils
-from banzai.main import add_super_calibration
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.io import fits, ascii
 import pkg_resources
@@ -31,7 +29,7 @@ app.conf.update(CELERY_TASK_ALWAYS_EAGER=True)
 TEST_PACKAGE = 'banzai.tests'
 TEST_FRAMES = ascii.read(pkg_resources.resource_filename(TEST_PACKAGE, 'data/test_data.dat'))
 
-PRECAL_FRAMES = ascii.read(pkg_resources.resource_filename(TEST_PACKAGE, 'data/test_precal.dat'))
+PRECAL_FRAMES = ascii.read(pkg_resources.resource_filename(TEST_PACKAGE, 'data/test_precals.dat'))
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
 # Use the LCO filenaming convention to infer the sites
@@ -69,8 +67,10 @@ def run_reduce_individual_frames(filename_pattern):
     logger.info('Reducing individual frames for filenames: {filenames}'.format(filenames=filename_pattern))
     for frame in TEST_FRAMES:
         if filename_pattern in frame['filename']:
-            file_utils.post_to_archive_queue(frame['filename'], frame['frameid'], os.getenv('FITS_BROKER'),
-                                             exchange_name=os.getenv('FITS_EXCHANGE'))
+            file_utils.post_to_archive_queue(frame['filename'], frame['frameid'],
+                                             os.getenv('FITS_BROKER'),
+                                             exchange_name=os.getenv('FITS_EXCHANGE'),
+                                             SITEID=frame['site'], INSTRUME=frame['instrument'])
     celery_join()
     logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=filename_pattern))
 
@@ -165,7 +165,7 @@ def observation_portal_side_effect(*args, **kwargs):
 @pytest.mark.e2e
 @pytest.fixture(scope='module')
 @mock.patch('banzai.dbs.requests.get', return_value=FakeResponse(CONFIGDB_FILENAME))
-def init(configdb, mock_ingester, mock_args):
+def init(configdb):
     os.system(f'banzai_create_db --db-address={os.environ["DB_ADDRESS"]}')
     populate_instrument_tables(db_address=os.environ["DB_ADDRESS"], configdb_address='http://fakeconfigdb')
 
@@ -176,9 +176,9 @@ def init(configdb, mock_ingester, mock_args):
         calimage = CalibrationImage(
             type=frame['obstype'],
             filename=frame['filename'],
-            frameid=frame['frameid'],
-            dateobs=frame['dateobs'],
-            datecreated='2023-11-19',
+            frameid=f'{frame['frameid']:d},
+            dateobs=datetime.strptime(frame['dateobs'], '%Y-%m-%d'),
+            datecreated=datetime(2023, 11, 19),
             instrument_id=instrument.id,
             is_master=True, is_bad=False,
             attributes={'binning': frame['binning'], 'configuration_mode': frame['mode']}

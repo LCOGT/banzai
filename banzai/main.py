@@ -16,7 +16,7 @@ from kombu.mixins import ConsumerMixin
 
 from types import ModuleType
 
-from banzai.lco import get_instrument_from_header
+from banzai.lco import LCOFrameFactory
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
@@ -47,7 +47,7 @@ class RealtimeModeListener(ConsumerMixin):
         return [consumer]
 
     def on_message(self, body, message):
-        instrument = get_instrument_from_header(body, self.runtime_context.db_address)
+        instrument = LCOFrameFactory.get_instrument_from_header(body, self.runtime_context.db_address)
         if instrument.nx * instrument.ny > self.runtime_context.LARGE_WORKER_THRESHOLD:
             queue_name = self.runtime_context.LARGE_WORKER_QUEUE
         else:
