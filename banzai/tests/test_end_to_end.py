@@ -121,7 +121,7 @@ def get_expected_number_of_calibrations(raw_filename_pattern, calibration_type):
         site, instrument, dayobs = day_obs.split('/')
         raw_frames_for_this_dayobs = [
             frame for frame in TEST_FRAMES
-            if site in frame['filename'] and instrument in frame['filename'] 
+            if site in frame['filename'] and instrument in frame['filename']
             and dayobs in frame['filename'] and raw_filename_pattern in frame['filename']
         ]
         if 'calibration_type.lower()' == 'skyflat':
