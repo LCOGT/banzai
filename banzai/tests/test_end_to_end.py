@@ -43,10 +43,12 @@ CONFIGDB_FILENAME = pkg_resources.resource_filename(TEST_PACKAGE, 'data/configdb
 
 def celery_join():
     celery_inspector = app.control.inspect()
+    celery_connection = app.connection()
+    celery_channel = celery_connection.channel()
     log_counter = 0
     while True:
-        queues = [celery_inspector.active(), celery_inspector.scheduled(), celery_inspector.reserved()]
         time.sleep(1)
+        queues = [celery_inspector.active(), celery_inspector.scheduled(), celery_inspector.reserved()]
         log_counter += 1
         if log_counter % 30 == 0:
             logger.info('Processing: ' + '. ' * (log_counter // 30))
@@ -54,12 +56,18 @@ def celery_join():
         for queue in queues:
             if queue is not None:
                 queue_names += queue.keys()
-        if 'celery@banzai-celery-worker' not in queue_names:
-            logger.warning('No valid celery queues were detected, retrying...', extra_tags={'queues': queues})
+        if 'celery@celery-worker' not in queue_names or 'celery@large-celery-worker' not in queue_names:
+            logger.warning('Valid celery queues were not detected, retrying...', extra_tags={'queues': queues})
             # Reset the celery connection
             celery_inspector = app.control.inspect()
             continue
-        if all(queue is None or len(queue['celery@banzai-celery-worker']) == 0 for queue in queues):
+        jobs_left = celery_channel.queue_declare('e2e_large_task_queue').message_count
+        jobs_left += celery_channel.queue_declare('e2e_task_queue').message_count
+        no_active_jobs = all(queue is None or
+                             (len(queue['celery@celery-worker']) == 0 and
+                              len(queue['celery@large-celery-worker']) == 0)
+                             for queue in queues)
+        if no_active_jobs and jobs_left == 0:
             break
 
 

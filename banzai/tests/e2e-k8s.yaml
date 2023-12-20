@@ -93,13 +93,13 @@ spec:
       - --hostname
       - "banzai-celery-worker"
       - --concurrency
-      - "1"
+      - "2"
       - -l
       - "info"
       - "-Q"
       - "$(CELERY_TASK_QUEUE_NAME)"
       - "-n"
-      - "large-celery-worker"
+      - "celery-worker"
 
     readinessProbe:
       exec:
@@ -168,7 +168,7 @@ spec:
       - "-Q"
       - "$(CELERY_TASK_QUEUE_NAME)"
       - "-n"
-      - "celery-worker"
+      - "large-celery-worker"
     readinessProbe:
       exec:
         command:

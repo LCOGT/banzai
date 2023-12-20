@@ -58,7 +58,8 @@ logging.getLogger('celery.bootsteps').setLevel(logging.WARNING)
 
 
 @app.task(name='celery.schedule_calibration_stacking', reject_on_worker_lost=True, max_retries=5)
-def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=None, max_date=None, frame_types=None):
+def schedule_calibration_stacking(site: str, runtime_context: dict,
+                                  min_date: str = None, max_date: str = None, frame_types=None):
     logger.info('Scheduling when to stack frames.', extra_tags={'site': site})
     try:
         runtime_context = Context(runtime_context)
@@ -91,11 +92,12 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
 
             instruments = dbs.get_instruments_at_site(site=site, db_address=runtime_context.db_address)
             for instrument in instruments:
-                logger.info('Checking for scheduled calibration blocks', extra_tags={'site': site,
-                                                                                     'min_date': stacking_min_date,
-                                                                                     'max_date': stacking_max_date,
-                                                                                     'instrument': instrument.camera,
-                                                                                     'frame_type': frame_type})
+                logger.info('Checking for scheduled calibration blocks',
+                            extra_tags={'site': site,
+                                        'min_date': stacking_min_date,
+                                        'max_date': stacking_max_date,
+                                        'instrument': instrument.camera,
+                                        'frame_type': frame_type})
                 blocks_for_calibration = filter_calibration_blocks_for_type(instrument, frame_type,
                                                                             calibration_blocks, runtime_context,
                                                                             stacking_min_date, stacking_max_date)
