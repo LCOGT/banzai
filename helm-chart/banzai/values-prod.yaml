@@ -13,7 +13,7 @@ horizontalPodAutoscaler:
   maxLargeReplicas: 3
 
 image:
-  repository: docker.lco.global/banzai
+  repository: ghcr.io/lcogt/banzai
   tag: "1.11.0"
   pullPolicy: IfNotPresent
 
@@ -62,3 +62,18 @@ rabbitmq:
   rabbitmq:
     username: banzai
   vhost: banzai
+
+tolerations:
+  - key: karpenter.lco.earth/provisioner-name
+    operator: Equal
+    value: prod
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: karpenter.lco.earth/provisioner-name
+            operator: In
+            values:
+              - prod
