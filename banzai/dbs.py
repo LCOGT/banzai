@@ -148,7 +148,10 @@ def parse_configdb(configdb_address):
                 for ins in tel['instrument_set']:
                     for sci_cam in ins['science_cameras']:
                         if sci_cam is not None:
-                            nx, ny = sci_cam['camera_type']['size'].split('x')
+                            camera_size = sci_cam['camera_type']['size']
+                            if camera_size == 'N/A':
+                                continue
+                            nx, ny = camera_size.split('x')
                             # Convert from arcminutes to arcseconds and then to pixels
                             nx = int(float(nx) * 60 / float(sci_cam['camera_type']['pscale']))
                             ny = int(float(ny) * 60 / float(sci_cam['camera_type']['pscale']))
