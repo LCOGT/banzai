@@ -49,4 +49,4 @@ jobs:
       
       - name: Cleanup
         run: |
-          kubectl delete banzai-e2e-test
+          kubectl delete pod banzai-e2e-test
