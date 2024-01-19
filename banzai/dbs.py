@@ -150,8 +150,10 @@ def parse_configdb(configdb_address):
                         if sci_cam is not None:
                             camera_size = sci_cam['camera_type']['size']
                             if camera_size == 'N/A':
-                                continue
-                            nx, ny = camera_size.split('x')
+                                nx = 25
+                                ny = 25
+                            else:
+                                nx, ny = camera_size.split('x')
                             # Convert from arcminutes to arcseconds and then to pixels
                             nx = int(float(nx) * 60 / float(sci_cam['camera_type']['pscale']))
                             ny = int(float(ny) * 60 / float(sci_cam['camera_type']['pscale']))
