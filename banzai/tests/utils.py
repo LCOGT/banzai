@@ -156,7 +156,8 @@ class FakeInstrument(object):
         self.schedulable = schedulable
         self.type = type
         self.name = camera
-
+        self.nx = 4096
+        self.ny = 4096
 
 class FakeCalImage:
     def __init__(self):
