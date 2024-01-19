@@ -48,7 +48,8 @@ class RealtimeModeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         instrument = LCOFrameFactory.get_instrument_from_header(body, self.runtime_context.db_address)
-        if instrument.nx * instrument.ny > self.runtime_context.LARGE_WORKER_THRESHOLD:
+
+        if instrument is not None and instrument.nx * instrument.ny > self.runtime_context.LARGE_WORKER_THRESHOLD:
             queue_name = self.runtime_context.LARGE_WORKER_QUEUE
         else:
             queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
