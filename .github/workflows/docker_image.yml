@@ -47,6 +47,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,event=pr
+            type=semver,pattern={{version}}
 
       - name: Build and also push Dockerimage
         id: build-and-push
