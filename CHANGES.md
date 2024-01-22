@@ -1,3 +1,8 @@
+1.14.0 (2024-01-22)
+-------------------
+- Split worker queues for small and large images
+- Update e2e tests to run on github actions
+
 1.13.1 (2023-10-21)
 -------------------
 - bugfix to the docker build
