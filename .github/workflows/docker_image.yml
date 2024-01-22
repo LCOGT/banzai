@@ -6,6 +6,9 @@ on:
   push:
     tags:
       - "*"
+  pull_request:
+    branches:
+      - master
 
 jobs:
   build-tag:
@@ -39,9 +42,11 @@ jobs:
 
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,event=pr
 
       - name: Build and also push Dockerimage
         id: build-and-push

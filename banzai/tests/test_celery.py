@@ -180,7 +180,10 @@ class TestMain():
         self.max_date = '2019-02-20T09:55:09'
         self.context = Context({'db_address': 'db_address', 'CALIBRATION_IMAGE_TYPES': ['BIAS'],
                                 'CALIBRATION_STACK_DELAYS': {'BIAS': 300},
-                                'CALIBRATION_STACKER_STAGES': {'BIAS': ['banzai.bias.BiasMaker']}})
+                                'CALIBRATION_STACKER_STAGES': {'BIAS': ['banzai.bias.BiasMaker']},
+                                'CELERY_TASK_QUEUE_NAME': 'test',
+                                'LARGE_WORKER_QUEUE': 'test_large',
+                                'LARGE_WORKER_THRESHOLD': 5000*5000})
         self.frame_type = 'BIAS'
         self.fake_blocks_response_json = fake_blocks_response_json
         self.fake_inst = FakeInstrument(site='coj', camera='2m0-SciCam-Spectral', enclosure='clma', telescope='2m0a')
@@ -198,7 +201,8 @@ class TestMain():
         mock_stack_calibrations.assert_called_with(args=(self.min_date, self.max_date, self.fake_inst.id,
                                                          self.frame_type, vars(self.context),
                                                          mock_filter_blocks.return_value),
-                                                   countdown=0)
+                                                   countdown=0,
+                                                   queue=self.context.CELERY_TASK_QUEUE_NAME)
 
     @mock.patch('banzai.celery.stack_calibrations.apply_async')
     @mock.patch('banzai.celery.dbs.get_instruments_at_site')
@@ -215,7 +219,8 @@ class TestMain():
         mock_stack_calibrations.assert_called_with(args=(self.min_date, self.max_date, self.fake_inst.id,
                                                          self.frame_type, vars(self.context),
                                                          mock_filter_blocks.return_value),
-                                                   countdown=(60+CALIBRATION_STACK_DELAYS['BIAS']))
+                                                   countdown=(60+CALIBRATION_STACK_DELAYS['BIAS']),
+                                                   queue=self.context.CELERY_TASK_QUEUE_NAME)
 
     @mock.patch('banzai.calibrations.make_master_calibrations')
     @mock.patch('banzai.celery.dbs.get_individual_cal_frames')

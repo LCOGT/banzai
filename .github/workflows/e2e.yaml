@@ -1,0 +1,52 @@
+name: E2E Tests
+
+on:
+  workflow_dispatch: {}
+  push: {}
+
+jobs:
+  test:
+    runs-on:
+      - banzai-runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.22.17"
+
+      - name: Start a Kind cluster
+        uses: helm/kind-action@v1.8.0
+        with:
+          cluster_name: kind
+          version: "v0.19.0"
+          node_image: kindest/node:v1.22.17@sha256:9af784f45a584f6b28bce2af84c494d947a05bd709151466489008f80a9ce9d5
+          wait: "600s"
+
+      - name: Build docker image
+        run: |
+          docker build -t banzai:test-latest .
+
+      - name: Copy docker image to nodes
+        run: |
+          kind load docker-image banzai:test-latest
+
+      - name: Start banzai
+        run: |
+          cat banzai/tests/e2e-k8s.yaml
+
+          # Deploy banzai stack
+          kubectl apply -f banzai/tests/e2e-k8s.yaml
+
+          # Wait for banzai to be ready
+          kubectl wait --for=condition=Ready --timeout=60m pod/banzai-e2e-test
+
+      - name: Test Master Bias Creation
+        run: |
+          kubectl exec banzai-e2e-test -c banzai-listener -- pytest -o log_cli=true -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-bias.xml -m master_bias
+      
+      - name: Cleanup
+        run: |
+          kubectl delete pod banzai-e2e-test

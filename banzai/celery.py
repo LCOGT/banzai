@@ -7,10 +7,11 @@ from kombu import Queue
 
 from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, stage_utils
-from celery.signals import setup_logging, worker_process_init
+from celery.signals import worker_process_init
 from banzai.context import Context
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
 from banzai.utils.date_utils import get_stacking_date_range
+import logging
 
 
 logger = logs.get_logger()
@@ -51,10 +52,14 @@ app.conf.broker_transport_options = {'visibility_timeout': 86400}
 
 app.log.setup()
 logs.set_log_level(os.getenv('BANZAI_WORKER_LOGLEVEL', 'INFO'))
+logging.getLogger('amqp').setLevel(logging.WARNING)
+logging.getLogger('kombu').setLevel(logging.WARNING)
+logging.getLogger('celery.bootsteps').setLevel(logging.WARNING)
 
 
 @app.task(name='celery.schedule_calibration_stacking', reject_on_worker_lost=True, max_retries=5)
-def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=None, max_date=None, frame_types=None):
+def schedule_calibration_stacking(site: str, runtime_context: dict,
+                                  min_date: str = None, max_date: str = None, frame_types=None):
     logger.info('Scheduling when to stack frames.', extra_tags={'site': site})
     try:
         runtime_context = Context(runtime_context)
@@ -87,11 +92,12 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
 
             instruments = dbs.get_instruments_at_site(site=site, db_address=runtime_context.db_address)
             for instrument in instruments:
-                logger.info('Checking for scheduled calibration blocks', extra_tags={'site': site,
-                                                                                     'min_date': stacking_min_date,
-                                                                                     'max_date': stacking_max_date,
-                                                                                     'instrument': instrument.camera,
-                                                                                     'frame_type': frame_type})
+                logger.info('Checking for scheduled calibration blocks',
+                            extra_tags={'site': site,
+                                        'min_date': stacking_min_date,
+                                        'max_date': stacking_max_date,
+                                        'instrument': instrument.camera,
+                                        'frame_type': frame_type})
                 blocks_for_calibration = filter_calibration_blocks_for_type(instrument, frame_type,
                                                                             calibration_blocks, runtime_context,
                                                                             stacking_min_date, stacking_max_date)
@@ -110,9 +116,14 @@ def schedule_calibration_stacking(site: str, runtime_context: dict, min_date=Non
                     logger.info('Scheduling stacking at {}'.format(schedule_time.strftime(date_utils.TIMESTAMP_FORMAT)),
                                 extra_tags={'site': site, 'min_date': stacking_min_date, 'max_date': stacking_max_date,
                                             'instrument': instrument.camera, 'frame_type': frame_type})
+                    if instrument.nx * instrument.ny > runtime_context.LARGE_WORKER_THRESHOLD:
+                        queue_name = runtime_context.LARGE_WORKER_QUEUE
+                    else:
+                        queue_name = runtime_context.CELERY_TASK_QUEUE_NAME
+
                     stack_calibrations.apply_async(args=(stacking_min_date, stacking_max_date, instrument.id, frame_type,
                                                          vars(runtime_context), blocks_for_calibration),
-                                                   countdown=message_delay_in_seconds)
+                                                   countdown=message_delay_in_seconds, queue=queue_name)
                 else:
                     logger.warning('No scheduled calibration blocks found.',
                                    extra_tags={'site': site, 'min_date': min_date, 'max_date': max_date,
