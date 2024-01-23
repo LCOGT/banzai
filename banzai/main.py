@@ -16,6 +16,7 @@ from kombu.mixins import ConsumerMixin
 
 from types import ModuleType
 
+from banzai.lco import LCOFrameFactory
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
@@ -46,8 +47,13 @@ class RealtimeModeListener(ConsumerMixin):
         return [consumer]
 
     def on_message(self, body, message):
+        instrument = LCOFrameFactory.get_instrument_from_header(body, self.runtime_context.db_address)
+        if instrument is not None and instrument.nx * instrument.ny > self.runtime_context.LARGE_WORKER_THRESHOLD:
+            queue_name = self.runtime_context.LARGE_WORKER_QUEUE
+        else:
+            queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
         process_image.apply_async(args=(body, vars(self.runtime_context)),
-                                  queue=self.runtime_context.CELERY_TASK_QUEUE_NAME)
+                                  queue=queue_name)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
@@ -230,13 +236,17 @@ def add_instrument():
     parser.add_argument("--name", help='Instrument name (e.g kb05, nres03)', required=True)
     parser.add_argument("--instrument-type", dest='instrument_type',
                         help="Instrument type (e.g. 1m0-SciCam-Sinistro)", required=True)
+    parser.add_argument("--nx", help='Number of pixels in x direction', required=True)
+    parser.add_argument("--ny", help='Number of pixels in y direction', required=True)
     parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
                         help='Database address: Should be in SQLAlchemy format')
     args = parser.parse_args()
     instrument = {'site': args.site,
                   'camera': args.camera,
                   'type': args.instrument_type,
-                  'name': args.name}
+                  'name': args.name,
+                  'nx': args.nx,
+                  'ny': args.ny}
     dbs.add_instrument(instrument, args.db_address)
 
 

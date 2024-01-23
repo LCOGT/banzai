@@ -1,6 +1,20 @@
-1.13.0 (2023-10-05)
+1.15.0 (2024-01-24)
 -------------------
 - Migrated photometry extraction to be done by astropy's photutils instead of SEP.
+
+1.14.0 (2024-01-22)
+-------------------
+- Split worker queues for small and large images
+- Update e2e tests to run on github actions
+
+1.13.1 (2023-10-31)
+-------------------
+- bugfix to the docker build
+
+1.13.0 (2023-10-31)
+-------------------
+- Refreshed build enviornment
+- We now push tags to ghcr.io instead of an internal docker registry
 
 1.12.0 (2023-08-10)
 -------------------
