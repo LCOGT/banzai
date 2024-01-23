@@ -186,7 +186,7 @@ def make_master_calibrations(instrument, frame_type, min_date, max_date, runtime
                   'max_date': max_date}
     logger.info("Making master frames", extra_tags=extra_tags)
     calibration_frames_info = dbs.get_individual_cal_frames(instrument, frame_type, min_date, max_date,
-                                                              db_address=runtime_context.db_address)
+                                                            db_address=runtime_context.db_address)
     if len(calibration_frames_info) == 0:
         logger.info("No calibration frames found to stack", extra_tags=extra_tags)
     try:

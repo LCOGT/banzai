@@ -2,7 +2,6 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: banzai-e2e-test
-  namespace: build
   labels:
     app.kubernetes.io/name: banzai
 spec:
@@ -14,200 +13,225 @@ spec:
   securityContext:
     fsGroup: 10000
 
-  initContainers:
-    # When the Pod is initialized, copy all files within the container at path
-    # /archive/engineering into the empty data volume mounted at /data
-    - name: banzai-data
-      image: docker.lco.global/banzai-e2e-data:1.4.2
-      imagePullPolicy: IfNotPresent
-      securityContext:
-        runAsUser: 10087
-        runAsGroup: 10000
-      volumeMounts:
-        - name: banzai-data
-          mountPath: /data
-          readOnly: false
-      command:
-        - /bin/cp
-        - -a
-        - /archive/engineering
-        - /data/
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 256M
-        limits:
-          cpu: 1
-          memory: 1Gi
-
   containers:
-    - name: banzai-redis
-      image: redis:5.0.3
-      imagePullPolicy: IfNotPresent
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 256M
-        limits:
-          cpu: 1
-          memory: 1Gi
-      readinessProbe:
-        exec:
-          command:
-            - redis-cli
-            - ping
-            - |
-            - grep
-            - "PONG"
-        initialDelaySeconds: 5
-        periodSeconds: 1
-    - name: banzai-fits-exchange
-      image: rabbitmq:3.7.9
-      imagePullPolicy: IfNotPresent
-      resources:
-        requests:
-          cpu: 1
-          memory: 512M
-        limits:
-          cpu: 2
-          memory: 1Gi
-      readinessProbe:
-        exec:
-          command:
-            - rabbitmqctl
-            - node_health_check
-        initialDelaySeconds: 5
-        periodSeconds: 1
-        timeoutSeconds: 10
-    - name: banzai-celery-workers
-      image: @BANZAI_IMAGE@
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: banzai-data
-          mountPath: /archive/engineering
-          subPath: engineering
-          readOnly: false
-      env:
-        - name: DB_ADDRESS
-          value: "sqlite:////archive/engineering/test.db"
-        - name: RETRY_DELAY
-          value: "0"
-        - name: TASK_HOST
-          value: "redis://localhost:6379/0"
-        - name: BANZAI_WORKER_LOGLEVEL
-          value: debug
-        - name: CALIBRATE_PROPOSAL_ID
-          value: "calibrate"
-        - name: OBSERVATION_PORTAL_URL
-          value: "http://internal-observation-portal.lco.gtn/api/observations/"
-        - name: OMP_NUM_THREADS
-          value: "4"
-        - name: FITS_EXCHANGE
-          value: "fits_files"
-        - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
-          value: "1"
-        - name: CELERY_TASK_QUEUE_NAME
-          value: "e2e_task_queue"
-        - name: REFERENCE_CATALOG_URL
-          value: "http://phot-catalog.lco.gtn/"
-      command:
-        - celery
-        - -A
-        - banzai
-        - worker
-        - --hostname
-        - "banzai-celery-worker"
-        - --concurrency
-        - "4"
-        - -l
-        - "debug"
-        - "-Q"
-        - "$(CELERY_TASK_QUEUE_NAME)"
-      readinessProbe:
-        exec:
-          command:
-            - celery
-            - -A
-            - banzai
-            - status
-            - |
-            - grep
-            - "banzai-celery-worker:.*OK"
-        initialDelaySeconds: 5
-        periodSeconds: 1
-        timeoutSeconds: 10
-      resources:
-        requests:
-          cpu: 6
-          memory: 6Gi
-        limits:
-          cpu: 8
-          memory: 8Gi
-    - name: banzai-celery-beat
-      image: @BANZAI_IMAGE@
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: banzai-data
-          mountPath: /archive/engineering
-          subPath: engineering
-          readOnly: false
-      env:
-        - name: DB_ADDRESS
-          value: "sqlite:////archive/engineering/test.db"
-        - name: RETRY_DELAY
-          value: "0"
-        - name: TASK_HOST
-          value: "redis://localhost:6379/0"
-        - name: CELERY_TASK_QUEUE_NAME
-          value: "e2e_task_queue"
-      command:
-        - banzai_automate_stack_calibrations
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 1Gi
-        limits:
-          cpu: 1
-          memory: 1Gi
-    - name: banzai-listener
-      image: @BANZAI_IMAGE@
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: banzai-data
-          mountPath: /archive/engineering
-          subPath: engineering
-          readOnly: false
-      env:
-        - name: DB_ADDRESS
-          value: "sqlite:////archive/engineering/test.db"
-        - name: FITS_BROKER
-          value: "localhost"
-        - name: TASK_HOST
-          value: "redis://localhost:6379/0"
-        - name: CALIBRATE_PROPOSAL_ID
-          value: "calibrate"
-        - name: OBSERVATION_PORTAL_URL
-          value: "http://internal-observation-portal.lco.gtn/api/observations/"
-        - name: FITS_EXCHANGE
-          value: "fits_files"
-        - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
-          value: "1"
-        - name: CELERY_TASK_QUEUE_NAME
-          value: "e2e_task_queue"
-        - name: REFERENCE_CATALOG_URL
-          value: "http://phot-catalog.lco.gtn/"
-      command:
-        - banzai_run_realtime_pipeline
-        - "--db-address=sqlite:////archive/engineering/test.db"
-        - "--fpack"
-        - "--broker-url=localhost"
-      resources:
-        requests:
-          cpu: 0.1
-          memory: 1Gi
-        limits:
-          cpu: 1
-          memory: 2Gi
+  - name: banzai-redis
+    image: redis:5.0.3
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 0.1
+        memory: 256Mi
+      limits:
+        cpu: 1
+        memory: 512Mi
+    readinessProbe:
+      exec:
+        command:
+          - redis-cli
+          - ping
+          - |
+          - grep
+          - "PONG"
+      initialDelaySeconds: 5
+      periodSeconds: 1
+  - name: banzai-fits-exchange
+    image: rabbitmq:3.12.3
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 1
+        memory: 512Mi
+      limits:
+        cpu: 2
+        memory: 512Mi
+    readinessProbe:
+      exec:
+        command:
+          - rabbitmqctl
+          - node_health_check
+      initialDelaySeconds: 5
+      periodSeconds: 1
+      timeoutSeconds: 10
+  - name: banzai-celery-workers
+    image: banzai:test-latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - name: banzai-data
+        mountPath: /archive/engineering
+        subPath: engineering
+        readOnly: false
+    env:
+      - name: DB_ADDRESS
+        value: "sqlite:////archive/engineering/test.db"
+      - name: RETRY_DELAY
+        value: "0"
+      - name: TASK_HOST
+        value: "redis://localhost:6379/0"
+      - name: BANZAI_WORKER_LOGLEVEL
+        value: debug
+      - name: CALIBRATE_PROPOSAL_ID
+        value: "calibrate"
+      - name: OBSERVATION_PORTAL_URL
+        value: "http://internal-observation-portal.lco.gtn/api/observations/"
+      - name: API_ROOT
+        value: "https://archive-api.lco.global/"
+      - name: OMP_NUM_THREADS
+        value: "2"
+      - name: FITS_EXCHANGE
+        value: "fits_files"
+      - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
+        value: "1"
+      - name: CELERY_TASK_QUEUE_NAME
+        value: "e2e_task_queue"
+      - name: REFERENCE_CATALOG_URL
+        value: "http://phot-catalog.lco.gtn/"
+    command:
+      - celery
+      - -A
+      - banzai
+      - worker
+      - --hostname
+      - "banzai-celery-worker"
+      - --concurrency
+      - "2"
+      - -l
+      - "info"
+      - "-Q"
+      - "$(CELERY_TASK_QUEUE_NAME)"
+      - "-n"
+      - "celery-worker"
+
+    readinessProbe:
+      exec:
+        command:
+          - celery
+          - -A
+          - banzai
+          - status
+          - |
+          - grep
+          - "banzai-celery-worker:.*OK"
+      initialDelaySeconds: 5
+      periodSeconds: 1
+      timeoutSeconds: 10
+    resources:
+      requests:
+        cpu: 4
+        memory: 4Gi
+      limits:
+        cpu: 8
+        memory: 5Gi
+  - name: banzai-large-celery-workers
+    image: banzai:test-latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - name: banzai-data
+        mountPath: /archive/engineering
+        subPath: engineering
+        readOnly: false
+    env:
+      - name: DB_ADDRESS
+        value: "sqlite:////archive/engineering/test.db"
+      - name: RETRY_DELAY
+        value: "0"
+      - name: TASK_HOST
+        value: "redis://localhost:6379/0"
+      - name: BANZAI_WORKER_LOGLEVEL
+        value: debug
+      - name: CALIBRATE_PROPOSAL_ID
+        value: "calibrate"
+      - name: OBSERVATION_PORTAL_URL
+        value: "http://internal-observation-portal.lco.gtn/api/observations/"
+      - name: API_ROOT
+        value: "https://archive-api.lco.global/"
+      - name: OMP_NUM_THREADS
+        value: "2"
+      - name: FITS_EXCHANGE
+        value: "fits_files"
+      - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
+        value: "1"
+      - name: CELERY_TASK_QUEUE_NAME
+        value: "e2e_large_task_queue"
+      - name: REFERENCE_CATALOG_URL
+        value: "http://phot-catalog.lco.gtn/"
+    command:
+      - celery
+      - -A
+      - banzai
+      - worker
+      - --hostname
+      - "banzai-celery-worker"
+      - --concurrency
+      - "1"
+      - -l
+      - "info"
+      - "-Q"
+      - "$(CELERY_TASK_QUEUE_NAME)"
+      - "-n"
+      - "large-celery-worker"
+    readinessProbe:
+      exec:
+        command:
+          - celery
+          - -A
+          - banzai
+          - status
+          - |
+          - grep
+          - "banzai-celery-worker:.*OK"
+      initialDelaySeconds: 5
+      periodSeconds: 1
+      timeoutSeconds: 10
+    resources:
+      requests:
+        cpu: 2
+        memory: 8Gi
+      limits:
+        cpu: 3
+        memory: 9Gi
+  - name: banzai-listener
+    image: banzai:test-latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - name: banzai-data
+        mountPath: /archive/engineering
+        subPath: engineering
+        readOnly: false
+    env:
+      - name: DB_ADDRESS
+        value: "sqlite:////archive/engineering/test.db"
+      - name: FITS_BROKER
+        value: "localhost"
+      - name: TASK_HOST
+        value: "redis://localhost:6379/0"
+      - name: CALIBRATE_PROPOSAL_ID
+        value: "calibrate"
+      - name: OBSERVATION_PORTAL_URL
+        value: "http://internal-observation-portal.lco.gtn/api/observations/"
+      - name: API_ROOT
+        value: "https://archive-api.lco.global/"
+      - name: FITS_EXCHANGE
+        value: "fits_files"
+      - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
+        value: "1"
+      - name: CELERY_TASK_QUEUE_NAME
+        value: "e2e_task_queue"
+      - name: REFERENCE_CATALOG_URL
+        value: "http://phot-catalog.lco.gtn/"
+      - name: "CELERY_LARGE_TASK_QUEUE_NAME"
+        value: "e2e_large_task_queue"
+    command:
+      - banzai_run_realtime_pipeline
+      - "--db-address=sqlite:////archive/engineering/test.db"
+      - "--fpack"
+      - "--broker-url=localhost"
+    resources:
+      requests:
+        cpu: 0.1
+        memory: 1Gi
+      limits:
+        cpu: 1
+        memory: 2Gi
 
   dnsPolicy: ClusterFirst
   restartPolicy: Never

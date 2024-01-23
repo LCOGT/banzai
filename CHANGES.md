@@ -1,8 +1,26 @@
-1.11.0 (2023-08-10)
+1.14.0 (2024-01-22)
+-------------------
+- Split worker queues for small and large images
+- Update e2e tests to run on github actions
+
+1.13.1 (2023-10-21)
+-------------------
+- bugfix to the docker build
+
+1.13.0 (2023-10-31)
+-------------------
+- Refreshed build enviornment
+- We now push tags to ghcr.io instead of an internal docker registry
+
+1.12.0 (2023-08-10)
 -------------------
 - Added the process_by_group keyword to stages to fix a bug that wouldn't allow grouping only by instrument
 - Updated the logging scheme
 - Ack tasks late so that they may be re-queued in the event of a worker shutdown a la kubernetes
+
+1.11.0 (2023-08-10)
+-------------------
+- Added optional dark temperature scaling
 
 1.10.1 (2023-05-31)
 -------------------
