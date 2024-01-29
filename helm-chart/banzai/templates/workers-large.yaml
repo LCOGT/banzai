@@ -57,7 +57,7 @@ spec:
       volumes:
         - name: tmp
           emptyDir:
-            sizeLimit: 20Gi
+            sizeLimit: 40Gi
     {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

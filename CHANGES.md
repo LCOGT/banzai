@@ -1,3 +1,7 @@
+1.14.1 (2024-01-29)
+-------------------
+- Fix for null instrument/instrument size to allow processing to continue
+
 1.14.0 (2024-01-22)
 -------------------
 - Split worker queues for small and large images
