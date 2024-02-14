@@ -1,6 +1,10 @@
-1.15.0 (2024-01-24)
+1.15.0 (2024-02-14)
 -------------------
 - Migrated photometry extraction to be done by astropy's photutils instead of SEP.
+
+1.14.1 (2024-01-29)
+-------------------
+- Fix for null instrument/instrument size to allow processing to continue
 
 1.14.0 (2024-01-22)
 -------------------
