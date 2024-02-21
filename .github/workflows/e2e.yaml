@@ -45,7 +45,7 @@ jobs:
 
       - name: Test Master Bias Creation
         run: |
-          kubectl exec banzai-e2e-test -c banzai-listener -- pytest -o log_cli=true -s --pyargs banzai.tests --durations=0 --junitxml=/archive/engineering/pytest-master-bias.xml -m master_bias
+          kubectl exec banzai-e2e-test -c banzai-listener -- pytest -o log_cli=true -s --pyargs banzai --durations=0 --junitxml=/archive/engineering/pytest-master-bias.xml -m master_bias
       
       - name: Cleanup
         run: |

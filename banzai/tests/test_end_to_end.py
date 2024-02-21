@@ -124,7 +124,7 @@ def get_expected_number_of_calibrations(raw_filename_pattern, calibration_type):
             if site in frame['filename'] and instrument in frame['filename']
             and dayobs in frame['filename'] and raw_filename_pattern in frame['filename']
         ]
-        if 'calibration_type.lower()' == 'skyflat':
+        if calibration_type.lower() == 'skyflat':
             # Group by filter
             observed_filters = []
             for frame in raw_frames_for_this_dayobs:
@@ -244,7 +244,7 @@ class TestMasterFlatCreation:
 @pytest.mark.e2e
 @pytest.mark.science_files
 class TestScienceFileCreation:
-    @pytest.fixture(autouse=True)
+    @pytest.fixture(autouse=True, scope='class')
     @mock.patch('banzai.utils.observation_utils.requests.get', side_effect=observation_portal_side_effect)
     def reduce_science_frames(self, mock_observation_portal):
         run_reduce_individual_frames('e00.fits')
@@ -254,7 +254,7 @@ class TestScienceFileCreation:
         created_files = []
         for day_obs in DAYS_OBS:
             expected_files += [filename.replace('e00', 'e91')
-                               for filename in TEST_FRAMES['filename']]
+                               for filename in TEST_FRAMES['filename'] if 'e00.fits' in filename]
             created_files += [os.path.basename(filename) for filename in glob(os.path.join(DATA_ROOT, day_obs,
                                                                                            'processed', '*e91*'))]
         assert len(expected_files) > 0
@@ -266,6 +266,6 @@ class TestScienceFileCreation:
         for day_obs in DAYS_OBS:
             science_files += [filepath for filepath in glob(os.path.join(DATA_ROOT, day_obs,
                                                                          'processed', '*e91*'))]
-        zeropoints = [fits.open(file)['SCI'].header.get('L1ZP') for file in science_files]
+        zeropoints = [fits.open(filename)['SCI'].header.get('L1ZP') for filename in science_files]
         # check that at least one of our images contains a zeropoint
         assert zeropoints.count(None) != len(zeropoints)
