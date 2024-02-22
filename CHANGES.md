@@ -1,3 +1,7 @@
+1.15.0 (2024-02-14)
+-------------------
+- Migrated photometry extraction to be done by astropy's photutils instead of SEP.
+
 1.14.1 (2024-01-29)
 -------------------
 - Fix for null instrument/instrument size to allow processing to continue
@@ -7,7 +11,7 @@
 - Split worker queues for small and large images
 - Update e2e tests to run on github actions
 
-1.13.1 (2023-10-21)
+1.13.1 (2023-10-31)
 -------------------
 - bugfix to the docker build
 

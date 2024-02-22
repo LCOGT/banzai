@@ -98,7 +98,6 @@ spec:
             - "--db-address=$(DB_ADDRESS)"
             - "--broker-url=$(FITS_BROKER)"
             - "--queue-name=$(QUEUE_NAME)"
-            - "--no-file-cache"
           env:
             {{- include "banzai.Env" . | nindent 12 }}
           resources:
@@ -128,7 +127,6 @@ spec:
             - "--db-address=$(DB_ADDRESS)"
             - "--broker-url=$(FITS_BROKER)"
             - "--log-level=info"
-            - "--no-file-cache"
           env:
             {{- include "banzai.Env" . | nindent 12 }}
           resources:
