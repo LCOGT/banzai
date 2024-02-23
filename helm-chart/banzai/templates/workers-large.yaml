@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "banzai.fullname" . -}} -large-workers
+  labels:
+{{ include "banzai.labels" . | indent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "banzai.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "banzai.name" . }}
+        app.kubernetes.io/instance: "{{ .Release.Name }}"
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          command:
+            - "celery"
+            - "-A"
+            - "banzai"
+            - "worker"
+            - "--concurrency"
+            - "1"
+            - "-l"
+            - "info"
+            - "-Q"
+            - "$(CELERY_LARGE_TASK_QUEUE_NAME)"
+          env:
+            - name: OMP_NUM_THREADS
+              value: "2"
+            {{- include "banzai.Env" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: "0.5"
+              memory: "10Gi"
+            limits:
+              cpu: "2"
+              memory: "10Gi"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+              readOnly: false
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 40Gi
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

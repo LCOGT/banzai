@@ -88,6 +88,8 @@ class Instrument(Base):
     camera = Column(String(50), index=True, nullable=False)
     type = Column(String(100))
     name = Column(String(100), index=True, nullable=False)
+    nx = Column(Integer)
+    ny = Column(Integer)
     __table_args__ = (UniqueConstraint('site', 'camera', 'name', name='instrument_constraint'),)
 
 
@@ -146,10 +148,20 @@ def parse_configdb(configdb_address):
                 for ins in tel['instrument_set']:
                     for sci_cam in ins['science_cameras']:
                         if sci_cam is not None:
+                            camera_size = sci_cam['camera_type']['size']
+                            if camera_size == 'N/A':
+                                nx = 25
+                                ny = 25
+                            else:
+                                nx, ny = camera_size.split('x')
+                            # Convert from arcminutes to arcseconds and then to pixels
+                            nx = int(float(nx) * 60 / float(sci_cam['camera_type']['pscale']))
+                            ny = int(float(ny) * 60 / float(sci_cam['camera_type']['pscale']))
                             instrument = {'site': site['code'],
                                           'camera': sci_cam['code'],
                                           'name': ins.get('code'),
-                                          'type': ins['instrument_type']['code']}
+                                          'type': ins['instrument_type']['code'],
+                                          'nx': nx, 'ny': ny}
                             # hotfix for configdb
                             if not instrument['name']:
                                 instrument['name'] = instrument['camera']
@@ -167,7 +179,9 @@ def add_instrument(instrument, db_address):
         record_attributes = {'site': instrument['site'],
                              'camera': instrument['camera'],
                              'name': instrument['name'],
-                             'type': instrument['type']}
+                             'type': instrument['type'],
+                             'nx': instrument['nx'],
+                             'ny': instrument['ny']}
 
         instrument_record = add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
         db_session.commit()
@@ -435,8 +449,7 @@ def populate_instrument_tables(db_address, configdb_address):
     added to the network.
     """
     sites, instruments = parse_configdb(configdb_address=configdb_address)
-    with get_session(db_address=db_address) as db_session:
-        for site in sites:
-            add_site(site, db_address)
+    for site in sites:
+        add_site(site, db_address)
     for instrument in instruments:
         add_instrument(instrument, db_address)

@@ -80,7 +80,7 @@ SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
                                   'elp': {'minute': 0, 'hour': 23},
                                   'ogg': {'minute': 0, 'hour': 3}}
 
-ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/catalog/')
+ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', ' ')
 
 CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_filename',
                                            'banzai.utils.file_utils.ccdsum_to_filename'),
@@ -154,5 +154,10 @@ REDUCED_DATA_EXTENSION_TYPES = {'SCI': 'float32',
 LOSSLESS_EXTENSIONS = []
 
 CELERY_TASK_QUEUE_NAME = os.getenv('CELERY_TASK_QUEUE_NAME', 'celery')
+
+# Choose a threshold a little larger than the 4096 x 4096 size frames
+LARGE_WORKER_THRESHOLD = 5000 * 5000
+
+LARGE_WORKER_QUEUE = os.getenv('CELERY_LARGE_TASK_QUEUE_NAME', 'celery_large')
 
 REFERENCE_CATALOG_URL = os.getenv('REFERENCE_CATALOG_URL', 'http://phot-catalog.lco.gtn/')

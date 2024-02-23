@@ -107,20 +107,18 @@ our models are 94% complete for our training data. Pixels flagged as cosmic-ray 
 
 Source Detection
 ================
-Source detection uses the "Source Extraction in Python" (SEP; https://github.com/kbarbary/sep).
-This is similar to Source Extractor, but is written purely in Python and Cython. This allows more
-customization.
+Source detection uses the "astropy.photutils" image segmentation.
+This is similar to Source Extractor, but is written purely in Python. This allows more customization than the original SExtractor.
 
 We estimate the background by taking a 3x3 median filter of the image and the doing a 32x32 block
 average of the image.
 
-We use the default match filter for source detection that is provided by SEP.
+We use the default match filter for source detection that is provided in Source Extractor. We include the proper match filter normalization though so the extraction will be slightly different.
 
 We do aperture photometry using an elliptical aperture that is set by 2.5 times the Kron radius. This
 produces approximately the same results as ``FLUX_AUTO`` from SExtractor.
 
-We set the source detection limit at 3 times the global rms of the image. ``MINAREA`` is set to 5,
-the default. This should minimize false detections, but may miss the faintest sources.
+We set the source detection limit at 2.5 times the uncertainty image. ``MINAREA`` is set to 9. This should minimize false detections, but may miss the faintest sources.
 
 To assess the image quality, we estimate the full-width half maximum (FWHM) of the stars in the image. We reject any
 sources that have a FWHM of less than a pixel to ensure that they do not bias our results. The PSFs for LCO are
@@ -131,6 +129,13 @@ asymmetric. For each source, we select the 90th percentile from these distances 
 estimate of the FWHM. This ensures that we do not underestimate the FWHM when dealing with stigmatic images. Finally,
 we take the robust standard deviation (see below) to estimate the overall FWHM of the image. This value is recorded
 in the header under the L1FWHM keyword.
+
+Flags are as follows:
+- 1: Source has bad pixels in the image segmentation
+- 2: Object is deblended
+- 4: Source has saturated pixels in the image segmentation
+- 8: Source kron aperture falls off the image
+- 16: Source has cosmic ray pixels in the image segmentation
 
 
 Astrometry
