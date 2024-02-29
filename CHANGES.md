@@ -1,3 +1,7 @@
+1.15.1 (2024-02-29)
+-------------------
+- Minor fixes in photometry when there are bad pixels near the image edges
+
 1.15.0 (2024-02-14)
 -------------------
 - Migrated photometry extraction to be done by astropy's photutils instead of SEP.
