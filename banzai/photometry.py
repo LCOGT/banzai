@@ -51,10 +51,10 @@ def flag_edge_sources(image, sources, flag_value=8):
     minor_xmax = sources['x'] + sources['b'] * sources['kronrad'] * np.sin(np.deg2rad(sources['theta']))
     minor_ymin = sources['y'] - sources['b'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
     minor_ymax = sources['y'] + sources['b'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
-    major_ymin = sources['y'] - sources['a'] * sources['kronrad'] * np.sin(np.deg2rad(sources['theta']))
-    major_ymax = sources['y'] + sources['a'] * sources['kronrad'] * np.sin(np.deg2rad(sources['theta']))
-    major_xmin = sources['x'] - sources['a'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
-    major_xmax = sources['x'] + sources['a'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
+    major_ymin = sources['y'] - sources['a'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
+    major_ymax = sources['y'] + sources['a'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
+    major_xmin = sources['x'] - sources['a'] * sources['kronrad'] * np.sin(np.deg2rad(sources['theta']))
+    major_xmax = sources['x'] + sources['a'] * sources['kronrad'] * np.sin(np.deg2rad(sources['theta']))
 
     # Note we are already 1 indexed here
     sources_off = np.logical_or(minor_xmin < 1, major_xmin < 1)
@@ -64,7 +64,7 @@ def flag_edge_sources(image, sources, flag_value=8):
     sources_off = np.logical_or(sources_off, major_xmax > nx)
     sources_off = np.logical_or(sources_off, minor_ymax > ny)
     sources_off = np.logical_or(sources_off, major_ymax > ny)
-    sources[sources_off]['flag'] |= flag_value
+    sources['flag'][sources_off] |= flag_value
 
 
 class SourceDetector(Stage):
@@ -145,10 +145,20 @@ class SourceDetector(Stage):
             # Flag = 16 if source has cosmic ray pixels
             flag_sources(sources, catalog.labels, deblended_seg_map, image.mask, flag=16, mask_value=8)
 
-            sources = array_utils.prune_nans_from_table(sources)
+            rows_with_nans = array_utils.find_nans_in_table(sources)
+            catalog = catalog[~rows_with_nans]
+            sources = sources[~rows_with_nans]
 
             # Cut individual bright pixels. Often cosmic rays
-            sources = sources[sources['fluxrad50'] > 0.5]
+            not_individual_bright_pixels = sources['fluxrad50'] > 0.5
+            catalog = catalog[not_individual_bright_pixels]
+            sources = sources[not_individual_bright_pixels]
+
+            # Cut sources that are less than 2 pixels wide
+            thin_sources = np.logical_or((catalog.bbox_ymax - catalog.bbox_ymin) < 1.5,
+                                         (catalog.bbox_xmax - catalog.bbox_xmin) < 1.5)
+            catalog = catalog[~thin_sources]
+            sources = sources[~thin_sources]
 
             # Calculate the FWHMs of the stars:
             sources['fwhm'] = np.nan

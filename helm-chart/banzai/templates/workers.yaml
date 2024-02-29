@@ -47,9 +47,10 @@ spec:
             requests:
               cpu: "0.5"
               memory: "4Gi"
+              ephemeral-storage: "128Mi"
             limits:
               cpu: "2"
-              memory: "4Gi"
+              memory: "8Gi"
           volumeMounts:
             - name: tmp
               mountPath: /tmp
