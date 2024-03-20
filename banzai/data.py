@@ -150,9 +150,9 @@ class CCDData(Data):
         # TODO: Handle the case where this is an array. Add SATURATE and GAIN handling when array.
         self.data *= value
         self.uncertainty *= value
-        self.meta['SATURATE'] *= value
-        self.meta['GAIN'] /= value
-        self.meta['MAXLIN'] *= value
+        self.saturate *= value
+        self.gain /= value
+        self.max_linearity *= value
         return self
 
     def __itruediv__(self, value):
