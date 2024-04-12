@@ -1,3 +1,7 @@
+1.15.2 (2023-04-12)
+-------------------
+- Fix to fpacking data when the image data array is None
+
 1.15.1 (2024-02-29)
 -------------------
 - Minor fixes in photometry when there are bad pixels near the image edges
