@@ -102,8 +102,8 @@ def handles_inhomogeneous_set(stagetype, context, keyword, value, calibration_ma
     stage = stagetype(context)
     kwargs = {keyword: value}
     if calibration_maker:
-        images = [LCOCalibrationFrame(hdu_list=[HeaderOnly(meta=kwargs)])]
-        images += [LCOCalibrationFrame(hdu_list=[HeaderOnly()]) for x in range(6)]
+        images = [LCOCalibrationFrame(hdu_list=[HeaderOnly(meta=kwargs, name='')])]
+        images += [LCOCalibrationFrame(hdu_list=[HeaderOnly(meta={}, name=''),]) for x in range(6)]
         images = stage.do_stage(images)
         assert len(images) == 0
     else:
