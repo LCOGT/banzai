@@ -141,7 +141,7 @@ class LCOObservationFrame(ObservationFrame):
             if runtime_context.post_to_archive:
                 archived_image_info = file_utils.post_to_ingester(data_product.file_buffer, self,
                                                                   data_product.filename, meta=data_product.meta)
-                self.frame_id = archived_image_info.get('frameid')
+                data_product.frame_id = archived_image_info.get('frameid')
 
             if not runtime_context.no_file_cache:
                 os.makedirs(self.get_output_directory(runtime_context), exist_ok=True)
@@ -170,7 +170,7 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
                              'instrument_id': self.instrument.id,
                              'is_master': self.is_master,
                              'is_bad': self.is_bad,
-                             'frameid': self.frame_id,
+                             'frameid': output_product.frame_id,
                              'attributes': {}}
         for attribute in self.grouping_criteria:
             record_attributes['attributes'][attribute] = str(getattr(self, attribute))

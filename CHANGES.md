@@ -1,3 +1,8 @@
+1.16.0 (2023-04-18)
+-------------------
+- Calibration frames are now associated with output data products rather than frames
+  so that we have more than one calibration data product produced per frame.
+
 1.15.2 (2023-04-12)
 -------------------
 - Fix to fpacking data when the image data array is None
