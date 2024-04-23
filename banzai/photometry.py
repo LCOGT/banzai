@@ -102,6 +102,10 @@ class SourceDetector(Stage):
             # Do an initial source detection
             segmentation_map = detect_sources(convolved_data, self.threshold, npixels=self.min_area)
 
+            # We now remove any sources with an area > 1000 pixels because they are almost invariably spurious
+            segmentation_map.remove_labels(segmentation_map.labels[segmentation_map.areas > 1000])
+            segmentation_map.relabel_consecutive(1)
+
             logger.info('Deblending sources', image=image)
             # Note that nlevels here is DEBLEND_NTHRESH in source extractor which is 32 by default
             deblended_seg_map = deblend_sources(convolved_data, segmentation_map,
