@@ -125,9 +125,9 @@ class SourceDetector(Stage):
                              'xy': catalog.covar_sigxy.value,
                              'background': catalog.background_mean})
 
-            for r in range(1, 7):
-                radius_arcsec = r / image.pixel_scale
-                sources[f'fluxaper{r}'], sources[f'fluxerr{r}'] = catalog.circular_photometry(radius_arcsec)
+            for d in range(1, 7):
+                radius_arcsec = d / image.pixel_scale / 2.0
+                sources[f'fluxaper{d}'], sources[f'fluxerr{d}'] = catalog.circular_photometry(radius_arcsec)
 
             for r in [0.25, 0.5, 0.75]:
                 sources['fluxrad' + f'{r:.2f}'.lstrip("0.")] = catalog.fluxfrac_radius(r)
