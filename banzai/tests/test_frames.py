@@ -63,9 +63,8 @@ def test_frame_to_db_record():
                                   'CONFMODE': 'full_frame'}, name='SCI')]
     test_frame = LCOCalibrationFrame(hdu_list=hdu_list, file_path='/foo/bar')
     test_frame.is_bad = False
-    test_frame.frame_id = 1234
     test_frame.instrument = MagicMock(id=7)
-    mock_data_product = MagicMock(filename='test.fits.fz', filepath='/path/to/test/test.fits.fz')
+    mock_data_product = MagicMock(filename='test.fits.fz', filepath='/path/to/test/test.fits.fz', frame_id=1234)
     db_record = test_frame.to_db_record(mock_data_product)
 
     assert type(db_record) == CalibrationImage
