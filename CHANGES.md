@@ -1,3 +1,7 @@
+1.16.1 (2023-04-23)
+-------------------
+- Correction to aperture photometry. We were incorrectly using the radius instead of the diameter
+
 1.16.0 (2023-04-18)
 -------------------
 - Calibration frames are now associated with output data products rather than frames
