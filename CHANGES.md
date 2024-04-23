@@ -1,3 +1,8 @@
+1.17.0 (2023-04-24)
+-------------------
+- We now omit sources in the photometry stage that have an area larger than 1000 pixels as they lead to long 
+  processing times and are almost invariably spurious.
+
 1.16.1 (2023-04-23)
 -------------------
 - Correction to aperture photometry. We were incorrectly using the radius instead of the diameter
