@@ -73,3 +73,7 @@ distribute-*.tar.gz
 *.xml
 
 *.iml
+
+.venv/
+
+.devenv/
