@@ -141,7 +141,7 @@ class LCOObservationFrame(ObservationFrame):
             if runtime_context.post_to_archive:
                 archived_image_info = file_utils.post_to_ingester(data_product.file_buffer, self,
                                                                   data_product.filename, meta=data_product.meta)
-                self.frame_id = archived_image_info.get('frameid')
+                data_product.frame_id = archived_image_info.get('frameid')
 
             if not runtime_context.no_file_cache:
                 os.makedirs(self.get_output_directory(runtime_context), exist_ok=True)
@@ -170,7 +170,7 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
                              'instrument_id': self.instrument.id,
                              'is_master': self.is_master,
                              'is_bad': self.is_bad,
-                             'frameid': self.frame_id,
+                             'frameid': output_product.frame_id,
                              'attributes': {}}
         for attribute in self.grouping_criteria:
             record_attributes['attributes'][attribute] = str(getattr(self, attribute))
@@ -412,7 +412,7 @@ class LCOFrameFactory(FrameFactory):
                     for hdu in fits_hdu_list if hdu.data is not None):
             for hdu in fits_hdu_list:
                 if hdu.data is None or hdu.data.size == 0:
-                    hdu_list.append(HeaderOnly(meta=hdu.header))
+                    hdu_list.append(HeaderOnly(meta=hdu.header, name=hdu.header.get('EXTNAME')))
                 else:
                     hdu_list.append(self.data_class(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
         else:
@@ -424,7 +424,7 @@ class LCOFrameFactory(FrameFactory):
                     continue
                 # Otherwise parse the fits file into a frame object and the corresponding data objects
                 if hdu.data is None or hdu.data.size == 0:
-                    hdu_list.append(HeaderOnly(meta=hdu.header))
+                    hdu_list.append(HeaderOnly(meta=hdu.header, name=hdu.header.get('EXTNAME')))
                     primary_hdu = hdu
                 elif isinstance(hdu, fits.BinTableHDU):
                     hdu_list.append(DataTable(data=Table(hdu.data), meta=hdu.header, name=hdu.header.get('EXTNAME')))
@@ -601,7 +601,7 @@ class LCOFrameFactory(FrameFactory):
         :return: List CCDData objects
         """
         # The first extension gets to be a header only object
-        hdu_list = [HeaderOnly(meta=hdu.header)]
+        hdu_list = [HeaderOnly(meta=hdu.header, name=hdu.header.get('EXTNAME'))]
 
         # We need to properly set the datasec and detsec keywords in case we didn't read out the
         # middle row (the "Missing Row Problem").

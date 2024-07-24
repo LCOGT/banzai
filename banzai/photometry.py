@@ -51,10 +51,10 @@ def flag_edge_sources(image, sources, flag_value=8):
     minor_xmax = sources['x'] + sources['b'] * sources['kronrad'] * np.sin(np.deg2rad(sources['theta']))
     minor_ymin = sources['y'] - sources['b'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
     minor_ymax = sources['y'] + sources['b'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
-    major_ymin = sources['y'] - sources['a'] * sources['kronrad'] * np.sin(np.deg2rad(sources['theta']))
-    major_ymax = sources['y'] + sources['a'] * sources['kronrad'] * np.sin(np.deg2rad(sources['theta']))
-    major_xmin = sources['x'] - sources['a'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
-    major_xmax = sources['x'] + sources['a'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
+    major_ymin = sources['y'] - sources['a'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
+    major_ymax = sources['y'] + sources['a'] * sources['kronrad'] * np.cos(np.deg2rad(sources['theta']))
+    major_xmin = sources['x'] - sources['a'] * sources['kronrad'] * np.sin(np.deg2rad(sources['theta']))
+    major_xmax = sources['x'] + sources['a'] * sources['kronrad'] * np.sin(np.deg2rad(sources['theta']))
 
     # Note we are already 1 indexed here
     sources_off = np.logical_or(minor_xmin < 1, major_xmin < 1)
@@ -64,7 +64,7 @@ def flag_edge_sources(image, sources, flag_value=8):
     sources_off = np.logical_or(sources_off, major_xmax > nx)
     sources_off = np.logical_or(sources_off, minor_ymax > ny)
     sources_off = np.logical_or(sources_off, major_ymax > ny)
-    sources[sources_off]['flag'] |= flag_value
+    sources['flag'][sources_off] |= flag_value
 
 
 class SourceDetector(Stage):
@@ -102,6 +102,10 @@ class SourceDetector(Stage):
             # Do an initial source detection
             segmentation_map = detect_sources(convolved_data, self.threshold, npixels=self.min_area)
 
+            # We now remove any sources with an area > 1000 pixels because they are almost invariably spurious
+            segmentation_map.remove_labels(segmentation_map.labels[segmentation_map.areas > 1000])
+            segmentation_map.relabel_consecutive(1)
+
             logger.info('Deblending sources', image=image)
             # Note that nlevels here is DEBLEND_NTHRESH in source extractor which is 32 by default
             deblended_seg_map = deblend_sources(convolved_data, segmentation_map,
@@ -125,9 +129,9 @@ class SourceDetector(Stage):
                              'xy': catalog.covar_sigxy.value,
                              'background': catalog.background_mean})
 
-            for r in range(1, 7):
-                radius_arcsec = r / image.pixel_scale
-                sources[f'fluxaper{r}'], sources[f'fluxerr{r}'] = catalog.circular_photometry(radius_arcsec)
+            for d in range(1, 7):
+                radius_arcsec = d / image.pixel_scale / 2.0
+                sources[f'fluxaper{d}'], sources[f'fluxerr{d}'] = catalog.circular_photometry(radius_arcsec)
 
             for r in [0.25, 0.5, 0.75]:
                 sources['fluxrad' + f'{r:.2f}'.lstrip("0.")] = catalog.fluxfrac_radius(r)
@@ -145,10 +149,20 @@ class SourceDetector(Stage):
             # Flag = 16 if source has cosmic ray pixels
             flag_sources(sources, catalog.labels, deblended_seg_map, image.mask, flag=16, mask_value=8)
 
-            sources = array_utils.prune_nans_from_table(sources)
+            rows_with_nans = array_utils.find_nans_in_table(sources)
+            catalog = catalog[~rows_with_nans]
+            sources = sources[~rows_with_nans]
 
             # Cut individual bright pixels. Often cosmic rays
-            sources = sources[sources['fluxrad50'] > 0.5]
+            not_individual_bright_pixels = sources['fluxrad50'] > 0.5
+            catalog = catalog[not_individual_bright_pixels]
+            sources = sources[not_individual_bright_pixels]
+
+            # Cut sources that are less than 2 pixels wide
+            thin_sources = np.logical_or((catalog.bbox_ymax - catalog.bbox_ymin) < 1.5,
+                                         (catalog.bbox_xmax - catalog.bbox_xmin) < 1.5)
+            catalog = catalog[~thin_sources]
+            sources = sources[~thin_sources]
 
             # Calculate the FWHMs of the stars:
             sources['fwhm'] = np.nan
