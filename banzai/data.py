@@ -155,6 +155,15 @@ class CCDData(Data):
         self.meta['MAXLIN'] *= value
         return self
 
+    def __mul__(self, value):
+        output = CCDData(self.data * value, meta=self.meta.copy(),
+                         name=self.name, uncertainty=self.uncertainty * value,
+                         mask=self.mask.copy(), memmap=self.memmap)
+        output.meta['SATURATE'] *= value
+        output.meta['GAIN'] /= value
+        output.meta['MAXLIN'] *= value
+        return output
+
     def __itruediv__(self, value):
         if isinstance(value, CCDData):
             self.uncertainty = np.abs(self.data / value.data) * \

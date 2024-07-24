@@ -195,7 +195,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         return [min(x_binnings), min(y_binnings)]
 
     def __sub__(self, other):
-        return self.primary_hdu - other.primary_hdu
+        if isinstance(other, ObservationFrame):
+            return self.primary_hdu - other.primary_hdu
+        else:
+            return self.primary_hdu - other
 
     def __isub__(self, other):
         if isinstance(other, ObservationFrame):
@@ -203,6 +206,12 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         else:
             self.primary_hdu.__isub__(other)
         return self
+
+    def __mul__(self, other):
+        if isinstance(other, ObservationFrame):
+            return self.primary_hdu.__mul__(other.primary_hdu)
+        else:
+            return self.primary_hdu.__mul__(other)
 
     def __imul__(self, other):
         if isinstance(other, ObservationFrame):
