@@ -28,9 +28,6 @@ jobs:
       - name: Expose GitHub Runtime
         uses: crazy-max/ghaction-github-runtime@v3
 
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-
       - name: Start Kind cluster
         shell: nix develop --impure --command bash -e {0}
         run: |
