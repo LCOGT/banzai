@@ -22,9 +22,9 @@ from banzai.context import Context
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
 from banzai.celery import process_image, app, schedule_calibration_stacking
 from banzai.data import DataProduct
+from celery.apps.beat import Beat
 from celery.schedules import crontab
 import celery
-import celery.bin.beat
 import requests
 
 logger = logs.get_logger()
@@ -174,9 +174,9 @@ def start_stacking_scheduler():
                               schedule_calibration_stacking.s(site=site, runtime_context=vars(runtime_context)),
                               queue=runtime_context.CELERY_TASK_QUEUE_NAME)
 
-    beat = celery.bin.beat.beat(app=app)
+    beat = Beat(app=app, loglevel='INFO', schedule='/tmp/celerybeat-schedule', pidfile='/tmp/celerybeat.pid')
     logger.info('Starting celery beat')
-    beat.run(schedule='/tmp/celerybeat-schedule', pidfile='/tmp/celerybeat.pid', working_directory='/tmp')
+    beat.run()
 
 
 def run_realtime_pipeline():
