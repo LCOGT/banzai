@@ -132,7 +132,7 @@ class CCDData(Data):
                  mask: np.array = None, name: str = '', uncertainty: np.array = None, memmap=True):
         super().__init__(data=data, meta=meta, mask=mask, name=name, memmap=memmap)
         if uncertainty is None:
-            uncertainty = self.read_noise * np.ones(data.shape, dtype=data.dtype) / self.gain
+            uncertainty = self.read_noise * self.n_sub_exposures * np.ones(data.shape, dtype=data.dtype) / self.gain
         self.uncertainty = self._init_array(uncertainty)
         self._detector_section = Section.parse_region_keyword(self.meta.get('DETSEC'))
         self._data_section = Section.parse_region_keyword(self.meta.get('DATASEC'))
@@ -301,6 +301,10 @@ class CCDData(Data):
     def data_section(self, section):
         self.meta['DATASEC'] = section.to_region_keyword()
         self._data_section = section
+
+    @property
+    def n_sub_exposures(self):
+        return self.meta.get('NSUBREAD', 1)
 
     def rebin(self, binning):
         # TODO: Implement me

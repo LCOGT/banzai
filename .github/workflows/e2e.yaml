@@ -43,9 +43,21 @@ jobs:
           # Wait for banzai to be ready
           kubectl wait --for=condition=Ready --timeout=60m pod/banzai-e2e-test
 
-      - name: Test Master Bias Creation
+      - name: Test Super Bias Creation
         run: |
           kubectl exec banzai-e2e-test -c banzai-listener -- pytest -o log_cli=true -s --pyargs banzai --durations=0 --junitxml=/archive/engineering/pytest-master-bias.xml -m master_bias
+      
+      - name: Test Super Dark Creation
+        run: |
+          kubectl exec banzai-e2e-test -c banzai-listener -- pytest -o log_cli=true -s --pyargs banzai --durations=0 --junitxml=/archive/engineering/pytest-master-dark.xml -m master_dark
+      
+      - name: Test Super Flat Creation
+        run: |
+          kubectl exec banzai-e2e-test -c banzai-listener -- pytest -o log_cli=true -s --pyargs banzai --durations=0 --junitxml=/archive/engineering/pytest-master-flat.xml -m master_flat
+      
+      - name: Test Science Frame Creation
+        run: |
+          kubectl exec banzai-e2e-test -c banzai-listener -- pytest -o log_cli=true -s --pyargs banzai --durations=0 --junitxml=/archive/engineering/pytest-science-files.xml -m science_files
       
       - name: Cleanup
         run: |
