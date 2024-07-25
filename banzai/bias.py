@@ -31,9 +31,9 @@ class BiasSubtractor(CalibrationUser):
         return 'bias'
 
     def apply_master_calibration(self, image, master_calibration_image):
-        image -= master_calibration_image.bias_level * image.n_sub_exposures
+        image -= master_calibration_image.bias_level
         image.meta['BIASLVL'] = master_calibration_image.bias_level, 'Bias level that was removed after overscan'
-        image -= master_calibration_image * image.n_sub_exposures
+        image -= master_calibration_image
         image.meta['L1IDBIAS'] = master_calibration_image.filename, 'ID of bias frame'
         image.meta['L1STATBI'] = 1, "Status flag for bias frame correction"
         return image
@@ -65,7 +65,7 @@ class BiasMasterLevelSubtractor(Stage):
     def do_stage(self, image):
         bias_level = stats.sigma_clipped_mean(image.data, 3.5, mask=image.mask)
         image -= bias_level
-        image.meta['BIASLVL'] = bias_level / image.n_sub_exposures, 'Bias level that was removed after overscan'
+        image.meta['BIASLVL'] = bias_level, 'Bias level that was removed after overscan'
         return image
 
 

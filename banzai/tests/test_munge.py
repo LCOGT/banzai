@@ -55,9 +55,7 @@ def test_defaults_do_not_override_header():
 
 def test_image_no_saturate_header_or_default():
     with pytest.raises(MissingSaturate):
-        fake_data = FakeCCDData(meta={'INSTRUME': 'blah27'})
-        fake_data.meta.pop('SATURATE')
-        LCOFrameFactory._init_saturate(FakeLCOObservationFrame(hdu_list=[fake_data]))
+        LCOFrameFactory._init_saturate(FakeLCOObservationFrame(hdu_list=[FakeCCDData(meta={'INSTRUME': 'blah27'})]))
 
 
 def test_saturate_no_default_but_header():

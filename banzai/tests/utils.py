@@ -43,13 +43,7 @@ class FakeCCDData(CCDData):
             self.uncertainty = self.read_noise * np.ones(self.data.shape, dtype=self.data.dtype)
         else:
             self.uncertainty = uncertainty
-        self.memmap = True
-        if 'SATURATE' not in self.meta:
-            self.meta['SATURATE'] = 65535.0
-        if 'GAIN' not in self.meta:
-            self.meta['GAIN'] = 1.0
-        if 'MAXLIN' not in self.meta:
-            self.meta['MAXLIN'] = 65535.0
+
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
 
@@ -69,7 +63,7 @@ class FakeLCOObservationFrame(LCOObservationFrame):
         self._file_path = file_path
         self.is_bad = False
         self.hdu_order = ['SCI', 'CAT', 'BPM', 'ERR']
-        self.n_sub_exposures = 1
+
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
 
@@ -164,7 +158,6 @@ class FakeInstrument(object):
         self.name = camera
         self.nx = 4096
         self.ny = 4096
-
 
 class FakeCalImage:
     def __init__(self):
