@@ -6,7 +6,7 @@ profiles:
   - name: e2e
     build:
       artifacts:
-        - image: localhost:5001/banzai
+        - image: 127.0.0.1:5001/banzai
           context: .
           custom:
             buildCommand: skaffold-builder-buildx
