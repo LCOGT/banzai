@@ -42,13 +42,14 @@ spec:
         cpu: 1
         memory: 512Mi
       limits:
-        cpu: 2
+        cpu: 4
         memory: 512Mi
     readinessProbe:
       exec:
         command:
-          - rabbitmqctl
-          - node_health_check
+          - rabbitmq-diagnostics
+          - "-q"
+          - ping
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
@@ -93,7 +94,7 @@ spec:
       - --hostname
       - "banzai-celery-worker"
       - --concurrency
-      - "2"
+      - "4"
       - -l
       - "info"
       - "-Q"

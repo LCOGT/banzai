@@ -159,6 +159,9 @@ def run_check_if_stacked_calibrations_are_in_db(raw_file_pattern, calibration_ty
 
 
 def observation_portal_side_effect(*args, **kwargs):
+    # To produce the mock observation portal resonse, we need to modify the response from
+    # this type of url
+    # https://observe.lco.global/api/observations/?enclosure=aqwa&telescope=0m4a&priority=&state=COMPLETED&time_span=&start_after=2024-07-23&start_before=&end_after=&end_before=2024-07-25&modified_after=&created_after=&created_before=&request_id=&request_group_id=&user=&proposal=calibrate&instrument_type=0M4-SCICAM-QHY600&configuration_type=SKY_FLAT&ordering=
     site = kwargs['params']['site']
     start = datetime.strftime(parse(kwargs['params']['start_after']).replace(tzinfo=None).date(), '%Y%m%d')
     filename = 'test_obs_portal_response_{site}_{start}.json'.format(site=site, start=start)

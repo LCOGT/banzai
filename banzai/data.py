@@ -313,7 +313,10 @@ class CCDData(Data):
 
     @property
     def n_sub_exposures(self):
-        return self.meta.get('NSUBREAD', 1)
+        n_exposures = self.meta.get('NSUBREAD', 1)
+        if str(n_exposures).lower() in ['n/a', 'unknown', 'none', '']:
+            n_exposures = 1
+        return n_exposures
 
     def rebin(self, binning):
         # TODO: Implement me

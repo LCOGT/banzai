@@ -78,6 +78,10 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def background(self, value):
         self.primary_hdu.background = value
 
+    @property
+    def n_sub_exposures(self):
+        return self.primary_hdu.n_sub_exposures
+
     @abc.abstractmethod
     def save_processing_metadata(self, context):
         pass
