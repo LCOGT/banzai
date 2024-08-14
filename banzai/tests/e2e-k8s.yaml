@@ -27,11 +27,9 @@ spec:
     readinessProbe:
       exec:
         command:
-          - redis-cli
-          - ping
-          - |
-          - grep
-          - "PONG"
+          - /bin/sh
+          - -c 
+          - 'redis-cli ping | grep -q "PONG"'
       initialDelaySeconds: 5
       periodSeconds: 1
   - name: banzai-fits-exchange
@@ -63,7 +61,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db"
+        value: "sqlite:////archive/engineering/test.db?timeout=10"
       - name: RETRY_DELAY
         value: "0"
       - name: TASK_HOST
@@ -105,13 +103,9 @@ spec:
     readinessProbe:
       exec:
         command:
-          - celery
-          - -A
-          - banzai
-          - status
-          - |
-          - grep
-          - "banzai-celery-worker:.*OK"
+          - /bin/sh
+          - -c
+          - 'celery -A banzai status | grep -q @banzai-celery-worker:.*OK"'
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
@@ -132,7 +126,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db"
+        value: "sqlite:////archive/engineering/test.db?timeout=10"
       - name: RETRY_DELAY
         value: "0"
       - name: TASK_HOST
@@ -173,13 +167,9 @@ spec:
     readinessProbe:
       exec:
         command:
-          - celery
-          - -A
-          - banzai
-          - status
-          - |
-          - grep
-          - "banzai-celery-worker:.*OK"
+          - /bin/sh
+          - -c
+          - 'celery -A banzai status | grep -q "large-celery-worker:.*OK"'
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
@@ -200,7 +190,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db"
+        value: "sqlite:////archive/engineering/test.db?timeout=10"
       - name: FITS_BROKER
         value: "localhost"
       - name: TASK_HOST
@@ -223,7 +213,7 @@ spec:
         value: "e2e_large_task_queue"
     command:
       - banzai_run_realtime_pipeline
-      - "--db-address=sqlite:////archive/engineering/test.db"
+      - "--db-address='sqlite:////archive/engineering/test.db?timeout=10'"
       - "--fpack"
       - "--broker-url=localhost"
     resources:
