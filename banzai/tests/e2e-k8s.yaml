@@ -20,7 +20,7 @@ spec:
     resources:
       requests:
         cpu: 0.1
-        memory: 256Mi
+        memory: 512Mi
       limits:
         cpu: 1
         memory: 512Mi
@@ -104,14 +104,14 @@ spec:
         command:
           - /bin/sh
           - -c
-          - 'celery -A banzai status | grep -q "@banzai-celery-worker:.*OK"'
+          - "celery -A banzai status | grep -q '@celery-worker:.*OK'"
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
     resources:
       requests:
         cpu: 4
-        memory: 4Gi
+        memory: 5Gi
       limits:
         cpu: 8
         memory: 5Gi
@@ -175,10 +175,10 @@ spec:
     resources:
       requests:
         cpu: 2
-        memory: 8Gi
+        memory: 5Gi
       limits:
         cpu: 3
-        memory: 9Gi
+        memory: 5Gi
   - name: banzai-listener
     image: banzai:test-latest
     imagePullPolicy: IfNotPresent
@@ -221,7 +221,15 @@ spec:
         memory: 1Gi
       limits:
         cpu: 1
-        memory: 2Gi
-
+        memory: 1Gi
+    readinessProbe:
+      exec:
+        command:
+          - /bin/sh
+          - -c
+          - 'ps -u archive | grep -q "banzai_run_real"'
+      initialDelaySeconds: 5
+      periodSeconds: 1
+      timeoutSeconds: 10
   dnsPolicy: ClusterFirst
   restartPolicy: Never
