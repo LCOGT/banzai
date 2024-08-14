@@ -99,13 +99,12 @@ spec:
       - "$(CELERY_TASK_QUEUE_NAME)"
       - "-n"
       - "celery-worker"
-
     readinessProbe:
       exec:
         command:
           - /bin/sh
           - -c
-          - 'celery -A banzai status | grep -q @banzai-celery-worker:.*OK"'
+          - 'celery -A banzai status | grep -q "@banzai-celery-worker:.*OK"'
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
