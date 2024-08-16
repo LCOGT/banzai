@@ -251,6 +251,7 @@ class TestScienceFileCreation:
     @mock.patch('banzai.utils.observation_utils.requests.get', side_effect=observation_portal_side_effect)
     def reduce_science_frames(self, mock_observation_portal):
         run_reduce_individual_frames('e00.fits')
+        run_reduce_individual_frames('x00.fits')
 
     def test_if_science_frames_were_created(self):
         expected_files = []

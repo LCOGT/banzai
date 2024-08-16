@@ -61,7 +61,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db?timeout=15"
+        value: "sqlite:////archive/engineering/test.db?timeout=30"
       - name: RETRY_DELAY
         value: "0"
       - name: TASK_HOST
@@ -125,7 +125,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db?timeout=15"
+        value: "sqlite:////archive/engineering/test.db?timeout=30"
       - name: RETRY_DELAY
         value: "0"
       - name: TASK_HOST
@@ -189,7 +189,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db?timeout=15"
+        value: "sqlite:////archive/engineering/test.db?timeout=30"
       - name: FITS_BROKER
         value: "localhost"
       - name: TASK_HOST
