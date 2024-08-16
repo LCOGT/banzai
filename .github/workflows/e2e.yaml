@@ -53,7 +53,7 @@ jobs:
       
       - name: Test Super Flat Creation
         run: |
-          kubectl exec banzai-e2e-test -c banzai-listener -- pytest-s --pyargs banzai --durations=0 --junitxml=/archive/engineering/pytest-master-flat.xml -m master_flat
+          kubectl exec banzai-e2e-test -c banzai-listener -- pytest -s --pyargs banzai --durations=0 --junitxml=/archive/engineering/pytest-master-flat.xml -m master_flat
       
       - name: Test Science Frame Creation
         run: |

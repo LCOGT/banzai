@@ -69,7 +69,10 @@ class FakeLCOObservationFrame(LCOObservationFrame):
         self._file_path = file_path
         self.is_bad = False
         self.hdu_order = ['SCI', 'CAT', 'BPM', 'ERR']
-        self.n_sub_exposures = 1
+
+        @property
+        def n_sub_exposures(self):
+            return 1
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
 
