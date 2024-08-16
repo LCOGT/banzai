@@ -256,10 +256,12 @@ class TestScienceFileCreation:
         expected_files = []
         created_files = []
         for day_obs in DAYS_OBS:
-            expected_files += [filename.replace('e00', 'e91')
-                               for filename in TEST_FRAMES['filename'] if 'e00.fits' in filename]
-            created_files += [os.path.basename(filename) for filename in glob(os.path.join(DATA_ROOT, day_obs,
-                                                                                           'processed', '*e91*'))]
+            for extension in ['e00', 'x00']:
+                expected_files += [filename.replace(extension, extension.replace('00', '91'))
+                                   for filename in TEST_FRAMES['filename'] if f'{extension}.fits' in filename]
+                created_files += [os.path.basename(filename)
+                                  for filename in glob(os.path.join(DATA_ROOT, day_obs, 'processed',
+                                                                    f'*{extension.replace("00", "91")}*'))]
         assert len(expected_files) > 0
         for expected_file in expected_files:
             assert expected_file in created_files
@@ -267,8 +269,9 @@ class TestScienceFileCreation:
     def test_that_photometric_calibration_succeeded(self):
         science_files = []
         for day_obs in DAYS_OBS:
-            science_files += [filepath for filepath in glob(os.path.join(DATA_ROOT, day_obs,
-                                                                         'processed', '*e91*'))]
+            for extension in ['e91', 'x91']:
+                science_files += [filepath for filepath in
+                                  glob(os.path.join(DATA_ROOT, day_obs, 'processed', f'*{extension}*'))]
         zeropoints = [fits.open(filename)['SCI'].header.get('L1ZP') for filename in science_files]
         # check that at least one of our images contains a zeropoint
         assert zeropoints.count(None) != len(zeropoints)
