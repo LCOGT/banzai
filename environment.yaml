@@ -288,7 +288,7 @@ dependencies:
       - cloudpickle==2.2.1
       - cosmic-conn==0.4.1
       - dask==2023.9.3
-      - extenion_helpers==1.1.1
+      - extension_helpers==1.1.1
       - fasteners==0.19
       - fsspec==2023.9.2
       - kombu==4.6.11
