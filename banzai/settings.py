@@ -80,7 +80,7 @@ SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
                                   'elp': {'minute': 0, 'hour': 23},
                                   'ogg': {'minute': 0, 'hour': 3}}
 
-ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', ' ')
+ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/')
 
 CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_filename',
                                            'banzai.utils.file_utils.ccdsum_to_filename'),

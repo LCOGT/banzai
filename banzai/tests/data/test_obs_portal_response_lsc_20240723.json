@@ -33,11 +33,11 @@
                         "extra_params": {},
                         "guide_camera_name": "",
                         "guiding_config": {
-                            "exposure_time": None,
+                            "exposure_time": null,
                             "extra_params": {},
                             "mode": "OFF",
                             "optical_elements": {},
-                            "optional": True
+                            "optional": true
                         },
                         "id": 11542373,
                         "instrument_configs": [
@@ -59,7 +59,7 @@
                         "instrument_name": "sq34",
                         "instrument_type": "0M4-SCICAM-QHY600",
                         "priority": 3,
-                        "repeat_duration": None,
+                        "repeat_duration": null,
                         "state": "COMPLETED",
                         "summary": {
                             "end": "2024-07-23T22:22:19Z",
@@ -343,14 +343,14 @@
                         },
                         "target": {
                             "dec": 0.0,
-                            "epoch": None,
+                            "epoch": null,
                             "extra_params": {},
                             "hour_angle": 1.0,
                             "name": "No target",
-                            "parallax": None,
-                            "proper_motion_dec": None,
-                            "proper_motion_ra": None,
-                            "ra": None,
+                            "parallax": null,
+                            "proper_motion_dec": null,
+                            "proper_motion_ra": null,
+                            "ra": null,
                             "type": "HOUR_ANGLE"
                         },
                         "type": "SKY_FLAT"
@@ -372,20 +372,20 @@
             "telescope": "0m4a"
         },
         {
-            "id": 631577495,
+            "id": 631287808,
             "request": {
-                "id": 3597581,
+                "id": 3596764,
                 "observation_note": "",
                 "optimization_type": "TIME",
                 "state": "COMPLETED",
                 "acceptability_threshold": 90.0,
                 "configuration_repeats": 1,
                 "extra_params": {},
-                "modified": "2024-07-24T21:21:09.473360Z",
+                "modified": "2024-07-23T21:20:17.110554Z",
                 "duration": 3427,
                 "configurations": [
                     {
-                        "id": 11549305,
+                        "id": 11543917,
                         "instrument_type": "0M4-SCICAM-QHY600",
                         "type": "BIAS",
                         "repeat_duration": null,
@@ -436,55 +436,55 @@
                             "hour_angle": 1.0,
                             "extra_params": {}
                         },
-                        "configuration_status": 813028208,
+                        "configuration_status": 812665084,
                         "state": "COMPLETED",
                         "instrument_name": "sq34",
                         "guide_camera_name": "",
                         "summary": {
-                            "id": 4818287,
-                            "start": "2024-07-24T20:52:40Z",
-                            "end": "2024-07-24T20:55:16Z",
+                            "id": 4815555,
+                            "start": "2024-07-23T20:52:00Z",
+                            "end": "2024-07-23T20:54:31Z",
                             "state": "COMPLETED",
                             "reason": "",
                             "time_completed": 0.0,
                             "events": [
                                 {
-                                    "time": "2024-07-24T20:52:40",
+                                    "time": "2024-07-23T20:52:00",
                                     "state": "PROCESSING",
                                     "description": "org.lcogt.sequencer.command.instrument.ConfigureCCDCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T20:52:41",
+                                    "time": "2024-07-23T20:52:01",
                                     "state": "DONE",
                                     "description": "org.lcogt.sequencer.command.instrument.ConfigureCCDCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T20:52:41",
+                                    "time": "2024-07-23T20:52:01",
                                     "state": "PROCESSING",
                                     "description": "org.lcogt.sequencer.command.instrument.ConfigureFiltersCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T20:52:42",
+                                    "time": "2024-07-23T20:52:03",
                                     "state": "DONE",
                                     "description": "org.lcogt.sequencer.command.instrument.ConfigureFiltersCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T20:52:43",
+                                    "time": "2024-07-23T20:52:03",
                                     "state": "PROCESSING",
                                     "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T20:55:14",
+                                    "time": "2024-07-23T20:54:30",
                                     "state": "DONE",
                                     "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T20:55:15",
+                                    "time": "2024-07-23T20:54:30",
                                     "state": "PROCESSING",
                                     "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T20:55:16",
+                                    "time": "2024-07-23T20:54:31",
                                     "state": "DONE",
                                     "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
                                 }
@@ -492,7 +492,7 @@
                         }
                     },
                     {
-                        "id": 11549306,
+                        "id": 11543918,
                         "instrument_type": "0M4-SCICAM-QHY600",
                         "type": "DARK",
                         "repeat_duration": null,
@@ -543,55 +543,55 @@
                             "hour_angle": 1.0,
                             "extra_params": {}
                         },
-                        "configuration_status": 813028209,
+                        "configuration_status": 812665085,
                         "state": "COMPLETED",
                         "instrument_name": "sq34",
                         "guide_camera_name": "",
                         "summary": {
-                            "id": 4818307,
-                            "start": "2024-07-24T20:55:19Z",
-                            "end": "2024-07-24T21:21:09Z",
+                            "id": 4815574,
+                            "start": "2024-07-23T20:54:34Z",
+                            "end": "2024-07-23T21:20:16Z",
                             "state": "COMPLETED",
                             "reason": "",
                             "time_completed": 1500.0,
                             "events": [
                                 {
-                                    "time": "2024-07-24T20:55:19",
+                                    "time": "2024-07-23T20:54:34",
                                     "state": "PROCESSING",
                                     "description": "org.lcogt.sequencer.command.instrument.ConfigureCCDCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T20:55:20",
+                                    "time": "2024-07-23T20:54:34",
                                     "state": "DONE",
                                     "description": "org.lcogt.sequencer.command.instrument.ConfigureCCDCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T20:55:20",
+                                    "time": "2024-07-23T20:54:35",
                                     "state": "PROCESSING",
                                     "description": "org.lcogt.sequencer.command.instrument.ConfigureFiltersCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T20:55:22",
+                                    "time": "2024-07-23T20:54:36",
                                     "state": "DONE",
                                     "description": "org.lcogt.sequencer.command.instrument.ConfigureFiltersCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T20:55:23",
+                                    "time": "2024-07-23T20:54:37",
                                     "state": "PROCESSING",
                                     "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T21:21:07",
+                                    "time": "2024-07-23T21:20:14",
                                     "state": "DONE",
                                     "description": "org.lcogt.sequencer.command.instrument.StartExposureCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T21:21:07",
+                                    "time": "2024-07-23T21:20:15",
                                     "state": "PROCESSING",
                                     "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
                                 },
                                 {
-                                    "time": "2024-07-24T21:21:08",
+                                    "time": "2024-07-23T21:20:16",
                                     "state": "DONE",
                                     "description": "org.lcogt.sequencer.command.instrument.AbortCommand"
                                 }
@@ -603,8 +603,8 @@
             "site": "lsc",
             "enclosure": "aqwa",
             "telescope": "0m4a",
-            "start": "2024-07-24T20:26:04.169574Z",
-            "end": "2024-07-24T21:32:04.169574Z",
+            "start": "2024-07-23T20:25:25.334568Z",
+            "end": "2024-07-23T21:31:25.334568Z",
             "priority": 10,
             "state": "COMPLETED",
             "proposal": "calibrate",
@@ -612,9 +612,9 @@
             "name": "LCOGT",
             "ipp_value": 1.0,
             "observation_type": "DIRECT",
-            "request_group_id": 2012784,
-            "created": "2024-07-24T15:05:49.265713Z",
-            "modified": "2024-07-24T21:21:09.532093Z"
+            "request_group_id": 2012021,
+            "created": "2024-07-23T15:05:56.175376Z",
+            "modified": "2024-07-23T21:20:17.151237Z"
         }
     ]
 }

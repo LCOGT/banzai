@@ -61,7 +61,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db?timeout=10"
+        value: "sqlite:////archive/engineering/test.db?timeout=15"
       - name: RETRY_DELAY
         value: "0"
       - name: TASK_HOST
@@ -75,7 +75,7 @@ spec:
       - name: API_ROOT
         value: "https://archive-api.lco.global/"
       - name: OMP_NUM_THREADS
-        value: "2"
+        value: "1"
       - name: FITS_EXCHANGE
         value: "fits_files"
       - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
@@ -125,7 +125,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db?timeout=10"
+        value: "sqlite:////archive/engineering/test.db?timeout=15"
       - name: RETRY_DELAY
         value: "0"
       - name: TASK_HOST
@@ -175,10 +175,10 @@ spec:
     resources:
       requests:
         cpu: 2
-        memory: 5Gi
+        memory: 7Gi
       limits:
         cpu: 3
-        memory: 5Gi
+        memory: 7Gi
   - name: banzai-listener
     image: banzai:test-latest
     imagePullPolicy: IfNotPresent
@@ -189,7 +189,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db?timeout=10"
+        value: "sqlite:////archive/engineering/test.db?timeout=15"
       - name: FITS_BROKER
         value: "localhost"
       - name: TASK_HOST
@@ -212,9 +212,9 @@ spec:
         value: "e2e_large_task_queue"
     command:
       - banzai_run_realtime_pipeline
-      - "--db-address='sqlite:////archive/engineering/test.db?timeout=10'"
-      - "--fpack"
-      - "--broker-url=localhost"
+      - --db-address=$(DB_ADDRESS)
+      - --fpack
+      - --broker-url=localhost
     resources:
       requests:
         cpu: 0.1
