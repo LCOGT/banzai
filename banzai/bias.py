@@ -17,6 +17,8 @@ class BiasMaker(CalibrationStacker):
         return 'BIAS'
 
     def make_master_calibration_frame(self, images):
+        for image in images:
+            image /= image.n_sub_exposures
         master_image = super(BiasMaker, self).make_master_calibration_frame(images)
         master_image.bias_level = np.mean([image.bias_level for image in images if image.bias_level is not None])
         return master_image
@@ -65,6 +67,8 @@ class BiasMasterLevelSubtractor(Stage):
     def do_stage(self, image):
         bias_level = stats.sigma_clipped_mean(image.data, 3.5, mask=image.mask)
         image -= bias_level
+        # This is only run for bias frames and n_sub_exposures should always be 1
+        # but we divide it here for consistency to cover pathological uses cases
         image.meta['BIASLVL'] = bias_level / image.n_sub_exposures, 'Bias level that was removed after overscan'
         return image
 

@@ -140,7 +140,9 @@ def test_all_datatypes_wrong():
 
 
 def test_subtract():
-    test_data = FakeCCDData(image_multiplier=4, uncertainty=3)
+    nx = 101
+    ny = 103
+    test_data = FakeCCDData(image_multiplier=4, uncertainty=3*np.ones((ny, nx)), nx=nx, ny=ny)
     test_data -= 1
 
     assert (test_data.data == 3 * np.ones(test_data.data.shape)).all()
@@ -179,7 +181,9 @@ def test_trim():
 
 def test_init_poisson_uncertainties():
     # Make sure the uncertainties add in quadrature
-    test_data = FakeCCDData(image_multiplier=16, uncertainty=3)
+    nx = 101
+    ny = 103
+    test_data = FakeCCDData(image_multiplier=16, uncertainty=3 * np.ones((ny, nx)), nx=nx, ny=ny)
     test_data.init_poisson_uncertainties()
     assert (test_data.uncertainty == 5 * np.ones(test_data.data.shape)).all()
 

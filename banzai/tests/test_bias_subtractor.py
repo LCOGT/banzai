@@ -69,10 +69,30 @@ def test_bias_subtraction_is_reasonable(mock_master_cal_name, mock_master_frame)
     input_level = 2000.0
     nx = 101
     ny = 103
-    mock_master_frame.return_value = FakeLCOObservationFrame(hdu_list=[FakeCCDData(bias_level=input_bias,
-                                                                                   data=np.random.normal(0.0, input_readnoise, size=(ny, nx)))])
+    stacked_hdu = FakeCCDData(bias_level=input_bias, data=np.random.normal(0.0, input_readnoise, size=(ny, nx)))
+    mock_master_frame.return_value = FakeLCOObservationFrame(hdu_list=[stacked_hdu])
     subtractor = BiasSubtractor(FakeContext())
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(image_multiplier=input_level)])
     image = subtractor.do_stage(image)
     assert np.abs(image.meta.get('BIASLVL') - input_bias) < 1.0
     assert np.abs(np.mean(image.data) - (input_level - input_bias)) < 1.0
+
+
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+@mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info')
+def test_multiread_bias_subtraction(mock_super_cal_name, mock_super_frame):
+    mock_super_cal_name.return_value = {'filename': 'test.fits'}
+    input_bias = 500.0
+    nreads = 5
+    nx = 101
+    ny = 103
+    bias_pattern = np.random.normal(0.0, 15.0, size=(ny, nx))
+    stacked_hdu = FakeCCDData(bias_level=input_bias, data=bias_pattern)
+    mock_super_frame.return_value = FakeLCOObservationFrame(hdu_list=[stacked_hdu])
+    data = bias_pattern * nreads + input_bias * nreads
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(bias_level=input_bias, data=data)])
+    image.n_sub_exposures = nreads
+    subtractor = BiasSubtractor(FakeContext())
+    image = subtractor.do_stage(image)
+    assert np.abs(image.meta.get('BIASLVL') - input_bias) < 1.0
+    assert np.abs(np.mean(image.data)) < 1.0

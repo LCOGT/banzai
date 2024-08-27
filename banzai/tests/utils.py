@@ -39,11 +39,11 @@ class FakeCCDData(CCDData):
             self.mask = np.zeros(self.data.shape, dtype=np.uint8)
         else:
             self.mask = mask
+        self.memmap = True
         if uncertainty is None:
             self.uncertainty = self.read_noise * np.ones(self.data.shape, dtype=self.data.dtype)
         else:
             self.uncertainty = uncertainty
-        self.memmap = True
         if 'SATURATE' not in self.meta:
             self.meta['SATURATE'] = 65535.0
         if 'GAIN' not in self.meta:
@@ -69,10 +69,7 @@ class FakeLCOObservationFrame(LCOObservationFrame):
         self._file_path = file_path
         self.is_bad = False
         self.hdu_order = ['SCI', 'CAT', 'BPM', 'ERR']
-
-        @property
-        def n_sub_exposures(self):
-            return 1
+        self.n_sub_exposures = 1
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
 
