@@ -14,7 +14,7 @@ horizontalPodAutoscaler:
 
 image:
   repository: ghcr.io/lcogt/banzai
-  tag: "1.17.0"
+  tag: "1.18.1"
   pullPolicy: IfNotPresent
 
 # Values for the OCS Ingester library, used by BANZAI.
