@@ -1,4 +1,9 @@
+1.18.1 (2024-08-28)
+-------------------
+- Update celery config to turn off gossip and mingle as workers were missing lots of heartbeats and were throwing errors. See https://www.cloudamqp.com/docs/celery.html#commandline-arguments for details
+
 1.18.0 (2024-08-09)
+-------------------
 - Added support for frames that are composed of sub-exposures that 
   are stacked at site
 
