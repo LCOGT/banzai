@@ -71,7 +71,7 @@ def test_makes_a_sensible_master_bias(mock_namer):
 
     images = [FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(0.0, size=(99, 99), scale=expected_readnoise),
                                                             bias_level=0.0,
-                                                            read_noise= expected_readnoise,
+                                                            read_noise=expected_readnoise,
                                                             meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
                                                                          'DETSEC': '[1:100,1:100]',
                                                                          'DATASEC': '[1:100,1:100]',
@@ -84,3 +84,29 @@ def test_makes_a_sensible_master_bias(mock_namer):
     assert np.abs(np.mean(master_bias)) < 0.1
     actual_readnoise = np.std(master_bias)
     assert np.abs(actual_readnoise - expected_readnoise / (nimages ** 0.5)) < 0.2
+
+
+def test_multiread_bias_maker():
+    nimages = 5
+    nreads = 20
+    images = []
+    pattern_scale = 8
+    nx = 101
+    ny = 105
+    bias_level = 100.0
+    bias_pattern = np.random.normal(0.0, pattern_scale, size=(ny, nx))
+    for i in range(nimages):
+        data = nreads * bias_pattern
+        image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=data, bias_level=bias_level,
+                                                              meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
+                                                                           'DETSEC': f'[1:{nx},1:{ny}]',
+                                                                           'DATASEC': f'[1:{nx},1:{ny}]',
+                                                                           'OBSTYPE': 'BIAS', 'RA': 0.0, 'DEC': 0.0}))])
+        image.n_sub_exposures = nreads
+        images.append(image)
+    maker = BiasMaker(FakeContext())
+    stacked_image = maker.do_stage(images)
+    np.testing.assert_allclose(stacked_image.meta['BIASLVL'], bias_level, atol=0.1)
+
+    # With 20 x 5 reads, we should get down to better than 1 count at a read_noise of 9
+    np.testing.assert_allclose(stacked_image.data, bias_pattern, atol=1.0)

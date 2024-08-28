@@ -1,18 +1,22 @@
-1.17.0 (2023-04-24)
+1.18.0 (2024-08-09)
+- Added support for frames that are composed of sub-exposures that 
+  are stacked at site
+
+1.17.0 (2024-04-24)
 -------------------
 - We now omit sources in the photometry stage that have an area larger than 1000 pixels as they lead to long 
   processing times and are almost invariably spurious.
 
-1.16.1 (2023-04-23)
+1.16.1 (2024-04-23)
 -------------------
 - Correction to aperture photometry. We were incorrectly using the radius instead of the diameter
 
-1.16.0 (2023-04-18)
+1.16.0 (2024-04-18)
 -------------------
 - Calibration frames are now associated with output data products rather than frames
   so that we have more than one calibration data product produced per frame.
 
-1.15.2 (2023-04-12)
+1.15.2 (2024-04-12)
 -------------------
 - Fix to fpacking data when the image data array is None
 

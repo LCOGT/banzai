@@ -450,7 +450,7 @@ class LCOFrameFactory(FrameFactory):
                     # update datasec/trimsec for fs01
                     if hdu.header.get('INSTRUME') == 'fs01':
                         self._update_fs01_sections(hdu)
-                    if hdu.data.dtype == np.uint16:
+                    if hdu.data.dtype == np.uint16 or hdu.data.dtype == np.uint32:
                         hdu.data = hdu.data.astype(np.float64)
                     # check if we need to propagate any header keywords from the primary header
                     if primary_hdu is not None:

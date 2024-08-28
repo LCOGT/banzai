@@ -24,3 +24,5 @@ COPY --chown=10087:10000 . /lco/banzai
 ENV PATH /home/archive/envs/banzai/bin:$PATH
 
 RUN /home/archive/envs/banzai/bin/pip install --no-cache-dir /lco/banzai/ 
+
+RUN cp /lco/banzai/pytest.ini /home/archive/pytest.ini

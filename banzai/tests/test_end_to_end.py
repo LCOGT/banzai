@@ -159,6 +159,9 @@ def run_check_if_stacked_calibrations_are_in_db(raw_file_pattern, calibration_ty
 
 
 def observation_portal_side_effect(*args, **kwargs):
+    # To produce the mock observation portal response, we need to modify the response from
+    # this type of url
+    # https://observe.lco.global/api/observations/?enclosure=aqwa&telescope=0m4a&priority=&state=COMPLETED&time_span=&start_after=2024-07-23&start_before=&end_after=&end_before=2024-07-25&modified_after=&created_after=&created_before=&request_id=&request_group_id=&user=&proposal=calibrate&instrument_type=0M4-SCICAM-QHY600&configuration_type=SKY_FLAT&ordering=
     site = kwargs['params']['site']
     start = datetime.strftime(parse(kwargs['params']['start_after']).replace(tzinfo=None).date(), '%Y%m%d')
     filename = 'test_obs_portal_response_{site}_{start}.json'.format(site=site, start=start)
@@ -248,15 +251,18 @@ class TestScienceFileCreation:
     @mock.patch('banzai.utils.observation_utils.requests.get', side_effect=observation_portal_side_effect)
     def reduce_science_frames(self, mock_observation_portal):
         run_reduce_individual_frames('e00.fits')
+        run_reduce_individual_frames('x00.fits')
 
     def test_if_science_frames_were_created(self):
         expected_files = []
         created_files = []
         for day_obs in DAYS_OBS:
-            expected_files += [filename.replace('e00', 'e91')
-                               for filename in TEST_FRAMES['filename'] if 'e00.fits' in filename]
-            created_files += [os.path.basename(filename) for filename in glob(os.path.join(DATA_ROOT, day_obs,
-                                                                                           'processed', '*e91*'))]
+            for extension in ['e00', 'x00']:
+                expected_files += [filename.replace(extension, extension.replace('00', '91'))
+                                   for filename in TEST_FRAMES['filename'] if f'{extension}.fits' in filename]
+                created_files += [os.path.basename(filename)
+                                  for filename in glob(os.path.join(DATA_ROOT, day_obs, 'processed',
+                                                                    f'*{extension.replace("00", "91")}*'))]
         assert len(expected_files) > 0
         for expected_file in expected_files:
             assert expected_file in created_files
@@ -264,8 +270,9 @@ class TestScienceFileCreation:
     def test_that_photometric_calibration_succeeded(self):
         science_files = []
         for day_obs in DAYS_OBS:
-            science_files += [filepath for filepath in glob(os.path.join(DATA_ROOT, day_obs,
-                                                                         'processed', '*e91*'))]
+            for extension in ['e91', 'x91']:
+                science_files += [filepath for filepath in
+                                  glob(os.path.join(DATA_ROOT, day_obs, 'processed', f'*{extension}*'))]
         zeropoints = [fits.open(filename)['SCI'].header.get('L1ZP') for filename in science_files]
         # check that at least one of our images contains a zeropoint
         assert zeropoints.count(None) != len(zeropoints)

@@ -7,5 +7,5 @@ frameid filename binning mode obstype dateobs site instrument
 33347347 tst1m0XX-ep02-20200710-bpm-1.fits.fz '[1, 1]' 1 BPM 2020-07-10 tst ep02
 33347348 tst1m0XX-ep03-20200710-bpm-1.fits.fz '[1, 1]' 1 BPM 2020-07-10 tst ep03
 33347349 tst1m0XX-ep04-20200710-bpm-1.fits.fz '[1, 1]' 1 BPM 2020-07-10 tst ep04
-58186456 ogg0m404-sq30-20221123-readnoise-default-e2e.fits.fz '[1, 1]' default READNOISE 2022-11-23 ogg sq30
-56389948 ogg0m404-sq30-20221206-bpm-default.fits.fz '[1, 1]' default BPM 2022-12-06 ogg sq30
+69359146 lsc0m409-sq34-20240314-bpm-full_frame.fits.fz '[1, 1]' full_frame BPM 2024-03-14 lsc sq34
+69359157 lsc0m409-sq34-20240314-readnoise-full_frame.fits.fz '[1, 1]' full_frame READNOISE 2024-03-14 lsc sq34
