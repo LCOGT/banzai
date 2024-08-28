@@ -20,18 +20,16 @@ spec:
     resources:
       requests:
         cpu: 0.1
-        memory: 256Mi
+        memory: 512Mi
       limits:
         cpu: 1
         memory: 512Mi
     readinessProbe:
       exec:
         command:
-          - redis-cli
-          - ping
-          - |
-          - grep
-          - "PONG"
+          - /bin/sh
+          - -c 
+          - 'redis-cli ping | grep -q "PONG"'
       initialDelaySeconds: 5
       periodSeconds: 1
   - name: banzai-fits-exchange
@@ -42,13 +40,14 @@ spec:
         cpu: 1
         memory: 512Mi
       limits:
-        cpu: 2
+        cpu: 4
         memory: 512Mi
     readinessProbe:
       exec:
         command:
-          - rabbitmqctl
-          - node_health_check
+          - rabbitmq-diagnostics
+          - "-q"
+          - ping
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
@@ -62,7 +61,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db"
+        value: "sqlite:////archive/engineering/test.db?timeout=30"
       - name: RETRY_DELAY
         value: "0"
       - name: TASK_HOST
@@ -76,7 +75,7 @@ spec:
       - name: API_ROOT
         value: "https://archive-api.lco.global/"
       - name: OMP_NUM_THREADS
-        value: "2"
+        value: "1"
       - name: FITS_EXCHANGE
         value: "fits_files"
       - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
@@ -93,31 +92,26 @@ spec:
       - --hostname
       - "banzai-celery-worker"
       - --concurrency
-      - "2"
+      - "4"
       - -l
       - "info"
       - "-Q"
       - "$(CELERY_TASK_QUEUE_NAME)"
       - "-n"
       - "celery-worker"
-
     readinessProbe:
       exec:
         command:
-          - celery
-          - -A
-          - banzai
-          - status
-          - |
-          - grep
-          - "banzai-celery-worker:.*OK"
+          - /bin/sh
+          - -c
+          - "celery -A banzai status | grep -q '@celery-worker:.*OK'"
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
     resources:
       requests:
         cpu: 4
-        memory: 4Gi
+        memory: 5Gi
       limits:
         cpu: 8
         memory: 5Gi
@@ -131,7 +125,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db"
+        value: "sqlite:////archive/engineering/test.db?timeout=30"
       - name: RETRY_DELAY
         value: "0"
       - name: TASK_HOST
@@ -172,23 +166,19 @@ spec:
     readinessProbe:
       exec:
         command:
-          - celery
-          - -A
-          - banzai
-          - status
-          - |
-          - grep
-          - "banzai-celery-worker:.*OK"
+          - /bin/sh
+          - -c
+          - 'celery -A banzai status | grep -q "large-celery-worker:.*OK"'
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
     resources:
       requests:
         cpu: 2
-        memory: 8Gi
+        memory: 7Gi
       limits:
         cpu: 3
-        memory: 9Gi
+        memory: 7Gi
   - name: banzai-listener
     image: banzai:test-latest
     imagePullPolicy: IfNotPresent
@@ -199,7 +189,7 @@ spec:
         readOnly: false
     env:
       - name: DB_ADDRESS
-        value: "sqlite:////archive/engineering/test.db"
+        value: "sqlite:////archive/engineering/test.db?timeout=30"
       - name: FITS_BROKER
         value: "localhost"
       - name: TASK_HOST
@@ -222,16 +212,24 @@ spec:
         value: "e2e_large_task_queue"
     command:
       - banzai_run_realtime_pipeline
-      - "--db-address=sqlite:////archive/engineering/test.db"
-      - "--fpack"
-      - "--broker-url=localhost"
+      - --db-address=$(DB_ADDRESS)
+      - --fpack
+      - --broker-url=localhost
     resources:
       requests:
         cpu: 0.1
         memory: 1Gi
       limits:
         cpu: 1
-        memory: 2Gi
-
+        memory: 1Gi
+    readinessProbe:
+      exec:
+        command:
+          - /bin/sh
+          - -c
+          - 'ps -u archive | grep -q "banzai_run_real"'
+      initialDelaySeconds: 5
+      periodSeconds: 1
+      timeoutSeconds: 10
   dnsPolicy: ClusterFirst
   restartPolicy: Never

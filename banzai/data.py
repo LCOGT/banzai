@@ -132,7 +132,8 @@ class CCDData(Data):
                  mask: np.array = None, name: str = '', uncertainty: np.array = None, memmap=True):
         super().__init__(data=data, meta=meta, mask=mask, name=name, memmap=memmap)
         if uncertainty is None:
-            uncertainty = self.read_noise * np.ones(data.shape, dtype=data.dtype) / self.gain
+            uncertainty = self.read_noise * np.sqrt(self.n_sub_exposures) * np.ones(data.shape, dtype=data.dtype)
+            uncertainty /= self.gain
         self.uncertainty = self._init_array(uncertainty)
         self._detector_section = Section.parse_region_keyword(self.meta.get('DETSEC'))
         self._data_section = Section.parse_region_keyword(self.meta.get('DATASEC'))
@@ -155,6 +156,15 @@ class CCDData(Data):
         self.meta['MAXLIN'] *= value
         return self
 
+    def __mul__(self, value):
+        output = CCDData(self.data * value, meta=self.meta.copy(),
+                         name=self.name, uncertainty=self.uncertainty * value,
+                         mask=self.mask.copy(), memmap=self.memmap)
+        output.meta['SATURATE'] *= value
+        output.meta['GAIN'] /= value
+        output.meta['MAXLIN'] *= value
+        return output
+
     def __itruediv__(self, value):
         if isinstance(value, CCDData):
             self.uncertainty = np.abs(self.data / value.data) * \
@@ -176,7 +186,7 @@ class CCDData(Data):
 
     def __del__(self):
         super().__del__()
-        del self.uncertainty
+        del self._uncertainty
 
     def __isub__(self, value):
         if isinstance(value, CCDData):
@@ -192,9 +202,14 @@ class CCDData(Data):
         return type(self)(data=self.data - other.data, meta=self.meta, mask=self.mask | other.mask,
                           uncertainty=uncertainty)
 
-    def add_uncertainty(self, readnoise: np.array):
-        self._validate_array(readnoise)
-        self.uncertainty = self._init_array(readnoise)
+    @property
+    def uncertainty(self):
+        return self._uncertainty
+
+    @uncertainty.setter
+    def uncertainty(self, value: np.array):
+        self._validate_array(value)
+        self._uncertainty = self._init_array(value)
 
     def signal_to_noise(self):
         return np.abs(self.data) / self.uncertainty
@@ -301,6 +316,17 @@ class CCDData(Data):
     def data_section(self, section):
         self.meta['DATASEC'] = section.to_region_keyword()
         self._data_section = section
+
+    @property
+    def n_sub_exposures(self):
+        n_exposures = self.meta.get('NSUBREAD', 1)
+        if str(n_exposures).lower() in ['n/a', 'unknown', 'none', '']:
+            n_exposures = 1
+        return n_exposures
+
+    @n_sub_exposures.setter
+    def n_sub_exposures(self, value):
+        self.meta['NSUBREAD'] = value
 
     def rebin(self, binning):
         # TODO: Implement me

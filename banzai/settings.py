@@ -54,8 +54,8 @@ LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
 EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
                 'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkTemperatureChecker',
                          'banzai.dark.DarkComparer'],
-                'SKYFLAT': ['banzai.flats.FlatSNRChecker', 'banzai.flats.FlatNormalizer', 'banzai.qc.PatternNoiseDetector',
-                            'banzai.flats.FlatComparer'],
+                'SKYFLAT': ['banzai.flats.FlatSNRChecker', 'banzai.flats.FlatNormalizer',
+                            'banzai.qc.PatternNoiseDetector', 'banzai.flats.FlatComparer'],
                 'STANDARD': None,
                 'EXPOSE': None,
                 'EXPERIMENTAL': None}
@@ -80,7 +80,7 @@ SCHEDULE_STACKING_CRON_ENTRIES = {'coj': {'minute': 30, 'hour': 6},
                                   'elp': {'minute': 0, 'hour': 23},
                                   'ogg': {'minute': 0, 'hour': 3}}
 
-ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', ' ')
+ASTROMETRY_SERVICE_URL = os.getenv('ASTROMETRY_SERVICE_URL', 'http://astrometry.lco.gtn/catalog')
 
 CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_filename',
                                            'banzai.utils.file_utils.ccdsum_to_filename'),

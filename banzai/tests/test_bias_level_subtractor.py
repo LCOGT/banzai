@@ -52,3 +52,16 @@ def test_bias_master_level_subtraction_is_reasonable(set_random_seed):
 
     np.testing.assert_allclose(np.zeros(image.data.shape), image.data, atol=8 * read_noise)
     np.testing.assert_allclose(image.meta.get('BIASLVL'), input_bias, atol=1.0)
+
+
+def test_multiread_bias_level():
+    input_bias = 500.0
+    nx, ny = 101, 103
+    nreads = 5
+    subtractor = BiasMasterLevelSubtractor(None)
+    image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(image_multiplier=input_bias*nreads, nx=nx, ny=ny)])
+    image.n_sub_exposures = nreads
+    image = subtractor.do_stage(image)
+
+    np.testing.assert_allclose(np.zeros(image.data.shape), image.data, atol=1.0)
+    np.testing.assert_allclose(image.meta.get('BIASLVL'), input_bias, atol=1.0)

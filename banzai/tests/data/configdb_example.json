@@ -2174,7 +2174,379 @@
               "horizon": 15.0,
               "ha_limit_pos": 4.4666667,
               "ha_limit_neg": -4.533333,
-              "instrument_set": [],
+              "instrument_set": [{
+                  "id": 1496,
+                  "code": "sq34",
+                  "state": "SCHEDULABLE",
+                  "telescope": "http://configdb.lco.gtn/telescopes/13/",
+                  "autoguider_camera": {
+                    "id": 1270,
+                    "code": "sq34",
+                    "camera_type": {
+                      "id": 189,
+                      "size": "117x78",
+                      "pscale": 0.734,
+                      "name": "0m4 QHY600",
+                      "code": "0m4-SciCam-QHY600",
+                      "pixels_x": 9576,
+                      "pixels_y": 6388,
+                      "max_rois": 0
+                    },
+                    "orientation": 0.0,
+                    "optical_elements": {
+                      "filters": "OIII,SII,Astrodon-Exo,w,opaque,up,rp,ip,gp,zs,V,B,H-Alpha"
+                    },
+                    "optical_element_groups": [
+                      {
+                        "name": "DeltaRho QHY600 default wheel",
+                        "type": "filters",
+                        "optical_elements": [
+                          {
+                            "name": "OIII",
+                            "code": "OIII",
+                            "schedulable": true
+                          },
+                          {
+                            "name": "S[II]",
+                            "code": "SII",
+                            "schedulable": true
+                          },
+                          {
+                            "name": "Astrodon-Exo",
+                            "code": "Astrodon-Exo",
+                            "schedulable": true
+                          },
+                          {
+                            "name": "PanSTARRS-w",
+                            "code": "w",
+                            "schedulable": true
+                          },
+                          {
+                            "name": "Opaque",
+                            "code": "opaque",
+                            "schedulable": false
+                          },
+                          {
+                            "name": "SDSS-up",
+                            "code": "up",
+                            "schedulable": true
+                          },
+                          {
+                            "name": "SDSS-rp",
+                            "code": "rp",
+                            "schedulable": true
+                          },
+                          {
+                            "name": "SDSS-ip",
+                            "code": "ip",
+                            "schedulable": true
+                          },
+                          {
+                            "name": "SDSS-gp",
+                            "code": "gp",
+                            "schedulable": true
+                          },
+                          {
+                            "name": "PanSTARRS-Z",
+                            "code": "zs",
+                            "schedulable": true
+                          },
+                          {
+                            "name": "Bessell-V",
+                            "code": "V",
+                            "schedulable": true
+                          },
+                          {
+                            "name": "Bessell-B",
+                            "code": "B",
+                            "schedulable": true
+                          },
+                          {
+                            "name": "H Alpha",
+                            "code": "H-Alpha",
+                            "schedulable": true
+                          }
+                        ],
+                        "element_change_overhead": 2.0,
+                        "default": ""
+                      }
+                    ],
+                    "host": "inst.0m4a.aqwa.lsc.lco.gtn"
+                  },
+                  "science_cameras": [
+                    {
+                      "id": 1270,
+                      "code": "sq34",
+                      "camera_type": {
+                        "id": 189,
+                        "size": "117x78",
+                        "pscale": 0.734,
+                        "name": "0m4 QHY600",
+                        "code": "0m4-SciCam-QHY600",
+                        "pixels_x": 9576,
+                        "pixels_y": 6388,
+                        "max_rois": 0
+                      },
+                      "orientation": 0.0,
+                      "optical_elements": {
+                        "filters": "OIII,SII,Astrodon-Exo,w,opaque,up,rp,ip,gp,zs,V,B,H-Alpha"
+                      },
+                      "optical_element_groups": [
+                        {
+                          "name": "DeltaRho QHY600 default wheel",
+                          "type": "filters",
+                          "optical_elements": [
+                            {
+                              "name": "OIII",
+                              "code": "OIII",
+                              "schedulable": true
+                            },
+                            {
+                              "name": "S[II]",
+                              "code": "SII",
+                              "schedulable": true
+                            },
+                            {
+                              "name": "Astrodon-Exo",
+                              "code": "Astrodon-Exo",
+                              "schedulable": true
+                            },
+                            {
+                              "name": "PanSTARRS-w",
+                              "code": "w",
+                              "schedulable": true
+                            },
+                            {
+                              "name": "Opaque",
+                              "code": "opaque",
+                              "schedulable": false
+                            },
+                            {
+                              "name": "SDSS-up",
+                              "code": "up",
+                              "schedulable": true
+                            },
+                            {
+                              "name": "SDSS-rp",
+                              "code": "rp",
+                              "schedulable": true
+                            },
+                            {
+                              "name": "SDSS-ip",
+                              "code": "ip",
+                              "schedulable": true
+                            },
+                            {
+                              "name": "SDSS-gp",
+                              "code": "gp",
+                              "schedulable": true
+                            },
+                            {
+                              "name": "PanSTARRS-Z",
+                              "code": "zs",
+                              "schedulable": true
+                            },
+                            {
+                              "name": "Bessell-V",
+                              "code": "V",
+                              "schedulable": true
+                            },
+                            {
+                              "name": "Bessell-B",
+                              "code": "B",
+                              "schedulable": true
+                            },
+                            {
+                              "name": "H Alpha",
+                              "code": "H-Alpha",
+                              "schedulable": true
+                            }
+                          ],
+                          "element_change_overhead": 2.0,
+                          "default": ""
+                        }
+                      ],
+                      "host": "inst.0m4a.aqwa.lsc.lco.gtn"
+                    }
+                  ],
+                  "instrument_type": {
+                    "id": 100,
+                    "name": "0m4 SCICAM QHY600",
+                    "code": "0m4-SciCam-QHY600",
+                    "fixed_overhead_per_exposure": 1.0,
+                    "instrument_category": "IMAGE",
+                    "observation_front_padding": 90.0,
+                    "acquire_exposure_time": 0.0,
+                    "default_configuration_type": "EXPOSE",
+                    "mode_types": [
+                      {
+                        "type": "guiding",
+                        "modes": [
+                          {
+                            "name": "Guide Off",
+                            "overhead": 0.0,
+                            "code": "OFF",
+                            "schedulable": true,
+                            "validation_schema": {}
+                          },
+                          {
+                            "name": "Guide On",
+                            "overhead": 0.0,
+                            "code": "ON",
+                            "schedulable": true,
+                            "validation_schema": {}
+                          }
+                        ],
+                        "default": "ON"
+                      },
+                      {
+                        "type": "readout",
+                        "modes": [
+                          {
+                            "name": "QHY600 Central 30x30 arcmin",
+                            "overhead": 4.0,
+                            "code": "central30x30",
+                            "schedulable": true,
+                            "validation_schema": {}
+                          },
+                          {
+                            "name": "QHY600 Full Frame Readout",
+                            "overhead": 9.0,
+                            "code": "full_frame",
+                            "schedulable": true,
+                            "validation_schema": {
+                              "extra_params": {
+                                "type": "dict",
+                                "schema": {
+                                  "bin_x": {
+                                    "type": "integer",
+                                    "allowed": [
+                                      1
+                                    ],
+                                    "default": 1
+                                  },
+                                  "bin_y": {
+                                    "type": "integer",
+                                    "allowed": [
+                                      1
+                                    ],
+                                    "default": 1
+                                  }
+                                },
+                                "default": {},
+                                "required": true
+                              },
+                              "exposure_count": {
+                                "max": 50
+                              }
+                            }
+                          }
+                        ],
+                        "default": "central30x30"
+                      },
+                      {
+                        "type": "acquisition",
+                        "modes": [
+                          {
+                            "name": "Acquire Off",
+                            "overhead": 0.0,
+                            "code": "OFF",
+                            "schedulable": true,
+                            "validation_schema": {}
+                          }
+                        ],
+                        "default": "OFF"
+                      }
+                    ],
+                    "default_acceptability_threshold": 90.0,
+                    "config_front_padding": 5.0,
+                    "allow_self_guiding": true,
+                    "configuration_types": [
+                      {
+                        "name": "Exposure",
+                        "code": "EXPOSE",
+                        "config_change_overhead": 0.0,
+                        "schedulable": true,
+                        "force_acquisition_off": false,
+                        "requires_optical_elements": true,
+                        "validation_schema": {}
+                      },
+                      {
+                        "name": "Exposure Sequence",
+                        "code": "REPEAT_EXPOSE",
+                        "config_change_overhead": 0.0,
+                        "schedulable": true,
+                        "force_acquisition_off": false,
+                        "requires_optical_elements": true,
+                        "validation_schema": {}
+                      },
+                      {
+                        "name": "AUTO_FOCUS",
+                        "code": "AUTO_FOCUS",
+                        "config_change_overhead": 0.0,
+                        "schedulable": true,
+                        "force_acquisition_off": false,
+                        "requires_optical_elements": true,
+                        "validation_schema": {}
+                      },
+                      {
+                        "name": "SKY_FLAT",
+                        "code": "SKY_FLAT",
+                        "config_change_overhead": 0.0,
+                        "schedulable": true,
+                        "force_acquisition_off": false,
+                        "requires_optical_elements": true,
+                        "validation_schema": {
+                          "exposure_time": {
+                            "type": "float",
+                            "default": 1
+                          }
+                        }
+                      },
+                      {
+                        "name": "BIAS",
+                        "code": "BIAS",
+                        "config_change_overhead": 0.0,
+                        "schedulable": true,
+                        "force_acquisition_off": true,
+                        "requires_optical_elements": false,
+                        "validation_schema": {}
+                      },
+                      {
+                        "name": "DARK",
+                        "code": "DARK",
+                        "config_change_overhead": 0.0,
+                        "schedulable": true,
+                        "force_acquisition_off": true,
+                        "requires_optical_elements": false,
+                        "validation_schema": {}
+                      },
+                      {
+                        "name": "STANDARD",
+                        "code": "STANDARD",
+                        "config_change_overhead": 0.0,
+                        "schedulable": true,
+                        "force_acquisition_off": false,
+                        "requires_optical_elements": true,
+                        "validation_schema": {}
+                      }
+                    ],
+                    "validation_schema": {
+                      "extra_params": {
+                        "type": "dict",
+                        "schema": {
+                          "defocus": {
+                            "max": 5.0,
+                            "min": -5.0,
+                            "type": "float"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "__str__": "lsc.aqwa.0m4a.sq34"
+                }
+              ],
               "__str__": "lsc.aqwa.0m4a"
             }
           ],
