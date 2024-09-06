@@ -1,3 +1,7 @@
+1.18.2 (2024-08-28)
+-------------------
+- Fix call to start celery beat for celery 5
+
 1.18.1 (2024-08-28)
 -------------------
 - Update celery config to turn off gossip and mingle as workers were missing lots of heartbeats and were throwing errors. See https://www.cloudamqp.com/docs/celery.html#commandline-arguments for details
