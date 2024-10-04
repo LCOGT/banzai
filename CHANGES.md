@@ -1,3 +1,7 @@
+1.18.3 (2024-10-04)
+-------------------
+- Update exception handling for photometric calibrator to handle general base exceptions from the requests library
+
 1.18.2 (2024-08-28)
 -------------------
 - Fix call to start celery beat for celery 5
@@ -8,12 +12,12 @@
 
 1.18.0 (2024-08-09)
 -------------------
-- Added support for frames that are composed of sub-exposures that 
+- Added support for frames that are composed of sub-exposures that
   are stacked at site
 
 1.17.0 (2024-04-24)
 -------------------
-- We now omit sources in the photometry stage that have an area larger than 1000 pixels as they lead to long 
+- We now omit sources in the photometry stage that have an area larger than 1000 pixels as they lead to long
   processing times and are almost invariably spurious.
 
 1.16.1 (2024-04-23)
@@ -75,7 +79,7 @@
 
 1.9.9 (2022-08-22)
 ------------------
-- We now reject flat field frames that have too low of signal to noise. 
+- We now reject flat field frames that have too low of signal to noise.
 
 1.9.8 (2022-04-14)
 ------------------
@@ -107,7 +111,7 @@
 
 1.9.1 (2022-02-09)
 ------------------
-- Fixes to python 3.10 compatibility 
+- Fixes to python 3.10 compatibility
 
 1.9.0 (2022-02-07)
 ------------------
@@ -195,7 +199,7 @@
 
 1.3.2 (2021-05-24)
 ------------------
-- Add custom celery task queue routing. 
+- Add custom celery task queue routing.
 
 1.3.1 (2021-05-24)
 ------------------
@@ -207,7 +211,7 @@
 
 1.2.1 (2021-04-08)
 ------------------
-- Upgrade to ocs-ingester 2.3.0, which adds the ability to ingest data products of 
+- Upgrade to ocs-ingester 2.3.0, which adds the ability to ingest data products of
   arbitrary type to an OCS Science Archive
 
 1.2.0 (2021-04-04)
@@ -229,7 +233,7 @@
 1.1.1 (2020-12-17)
 -------------------
 - Add documentation and example configuration to helm chart
-- Fix bug where raw data settings would not properly default if 
+- Fix bug where raw data settings would not properly default if
   environment variables were not set
 
 1.1.0 (2020-11-30)
@@ -319,11 +323,11 @@ per instrument.
 0.28.0 (2020-01-23)
 -------------------
 - Migrate BANZAI to be compatible with s3. Frames will now be downloaded from the LCO Archive, and posted
-  directly to the ingester, bypassing LCO's `/archive` machine. 
+  directly to the ingester, bypassing LCO's `/archive` machine.
 
 0.27.6 (2020-01-13)
 -------------------
-- Update celery task visibility timeout to 24h to avoid re-scheduling stacking tasks that do not complete within an hour. 
+- Update celery task visibility timeout to 24h to avoid re-scheduling stacking tasks that do not complete within an hour.
   This addresses the issue of creating multiple calibration stacks within seconds of each other.
 - https://docs.celeryproject.org/en/latest/getting-started/brokers/redis.html#id1
 
@@ -417,14 +421,14 @@ per instrument.
 0.22.0 (2019-05-05)
 -------------------
 - Significant refactor to how BANZAI runs. BANZAI now runs via celery tasks.
-- Calibration stacking is now scheduled by checking the Lake for calibration 
+- Calibration stacking is now scheduled by checking the Lake for calibration
   blocks.
-  
+
 0.21.0 (2019-03-25)
 -------------------
 - Significant refactor to the pipeline context and settings files. We have now
   split settings that are static into the settings file and settings that can
-  change at runtime into the "runtime context". This is in preparation for 
+  change at runtime into the "runtime context". This is in preparation for
   running a task queue (e.g. dramatiq).
 
 0.20.1 (2019-03-14)
@@ -454,8 +458,8 @@ per instrument.
 
 0.19.1 (2019-02-11)
 -------------------
-- Removed `'epoch'` from list of parameters to check for image 
-  homogeneity 
+- Removed `'epoch'` from list of parameters to check for image
+  homogeneity
 - Changed how image homogeneity is checked so that pipeline does
   not continue to run after check fails
 - Refactored "preview" to "realtime" processing so that reduced files are placed in
@@ -463,7 +467,7 @@ per instrument.
 
 0.19.0 (2019-02-07)
 -------------------
-- The `Stage` class and its inheritors have been changed to only process 
+- The `Stage` class and its inheritors have been changed to only process
   one frame at a time
 - Stages that require multiple frames (i.e. the calibration
   stackers) now inherit from the distinct `MultiFrameStage` class
@@ -485,18 +489,18 @@ per instrument.
 
 0.18.1 (2019-01-31)
 -------------------
-- Breaking typo in Preview Pipeline removed 
+- Breaking typo in Preview Pipeline removed
 
 0.18.0 (2019-01-29)
 -------------------
 - Calibration stacking is now separate from data reduction. Individual
-  calibration frames are reduced and added to the database. The stacking 
+  calibration frames are reduced and added to the database. The stacking
   method then queries the database using a range of dates to determine
-  which frames should be stacked. 
+  which frames should be stacked.
 - It is now possible to mark frames as good or bad in the database
-- Individual calibration frames for which a previous good master to 
+- Individual calibration frames for which a previous good master to
   perform a comparison against does not exist are marked as bad
-  
+
 0.17.2 (2019-01-24)
 -------------------
 - Increased the character limit of string columns in the database
@@ -514,20 +518,20 @@ per instrument.
 -------------------
 - Significant changes made to the database structure:
   - The `PreviewImage` table has been renamed to `ProcessedImage`
-  - The `Telescope` table has been renamed to `Instrument`; the `instrument` 
+  - The `Telescope` table has been renamed to `Instrument`; the `instrument`
     column is now `camera`; and the `camera_type` column is now `type`
   - `enclosure` and `telescope` columns have been added to the `Instrument` table
-  - The `BadPixelMask` table has been removed, and BPMs are now located in the 
+  - The `BadPixelMask` table has been removed, and BPMs are now located in the
     `CalibrationImage` table as type `BPM`
   - In the `CalibrationImage` table, `dayobs` has been changed to `dateobs` and
-    provides the date and time the observation took place; `telescope_id` has 
-    been renamed to `instrument_id`; an `is_master` column has been added; 
-    a JSON formatted `attributes` column is now used to store parameters such 
+    provides the date and time the observation took place; `telescope_id` has
+    been renamed to `instrument_id`; an `is_master` column has been added;
+    a JSON formatted `attributes` column is now used to store parameters such
     as `ccdsum` and `filter` which no longer have their own dedicated columns;
     and an `is_bad` column has been added to mark bad calibration frames
 - To reflect the name change of the `Telescope` table to `Instrument`, all
   `telescope` instances are now named `intrument`
-- All calibration frames (individual and master) are saved to the 
+- All calibration frames (individual and master) are saved to the
   `CalibrationImage` table
 - The naming scheme for master calibration files has been changed from:
   ```
@@ -548,7 +552,7 @@ per instrument.
 0.15.0 (2018-12-05)
 -------------------
 - Restructured settings to be an abstract class
-- Methods in main.py must now specify which version of settings to use 
+- Methods in main.py must now specify which version of settings to use
 - All parameters from settings are now added to the pipeline context
 
 0.14.4 (2018-11-28)
@@ -574,7 +578,7 @@ per instrument.
 - Added full traceback of uncaught exceptions to the logs
 - Removed group_by_attributes property fom all stages except CalibrationMaker
 - Added master_selection_criteria property to CalibrationComparer
-  
+
 0.14.0 (2018-11-13)
 -------------------
 - Refactored bias, dark, and flat makers to use a common superclass to remove
@@ -583,7 +587,7 @@ per instrument.
 0.13.0 (2018-11-12)
 -------------------
 - Refactored pipeline context so that we can subclass image types for BANZAI NRES.
-- Fixed bug (introduced in 0.11.3) where reduce night would 
+- Fixed bug (introduced in 0.11.3) where reduce night would
   only reduce data from a single telescope per site
 
 0.12.1 (2018-11-08)
@@ -595,11 +599,11 @@ per instrument.
 -------------------
 - Refactored BPM read-in and addition to occur in BPM stage instead of
   during image read-in
-- Cast rlevel to an integer in command line arguments 
+- Cast rlevel to an integer in command line arguments
 
 0.11.3 (2018-11-07)
 -------------------
-- Refactored calibration-related stages into their own module 
+- Refactored calibration-related stages into their own module
 - Moved stage and image parameters from main to settings
 
 0.11.2 (2018-11-01)
@@ -613,7 +617,7 @@ per instrument.
 
 0.11.0 (2018-10-30)
 -------------------
-- Added command-line option to ignore telescope schedulability requirement  
+- Added command-line option to ignore telescope schedulability requirement
 
 0.10.0 (2018-10-25)
 -------------------
@@ -624,7 +628,7 @@ per instrument.
 
 0.9.12 (2018-10-15)
 -------------------
-- Created new logger class to add image-specific info to logging tags  
+- Created new logger class to add image-specific info to logging tags
 - Updated table to HDU conversion to use astropy's built in function.
 
 0.9.11 (2018-10-02)
@@ -632,7 +636,7 @@ per instrument.
 - Added support for more tables to be associated with images (catalogs, etc.)
 - Removed wavelet convolution from pattern noise QC check algorithm
 - Modified photometry unit names to prevent astropy fits standard warnings
-- Added pyyaml pacakge requirement to prevent warnings due to photometry tables 
+- Added pyyaml pacakge requirement to prevent warnings due to photometry tables
   having description columns
 
 0.9.10 (2018-09-13)
@@ -648,21 +652,21 @@ per instrument.
 - Refactored exceptions for missing bad pixel masks
 - Added fallback check to search the TELESCOP keyword in the configdb (necessary for NRES)
 - Added override to the bad pixel mask requirement
-- Integrated e2e testing 
+- Integrated e2e testing
     - This test must be ignored when running pytest locally by using the option "-m 'not e2e'"
 - Modified pattern noise QC check to ignore large-scale pattern features
 - Added try/catch blocks to fail more gracefully if images are the incorrect size
 
 0.9.7 (2018-08-22)
 ------------------
-- Modified pattern noise QC check to reduce false positives 
+- Modified pattern noise QC check to reduce false positives
 - Enabled rejection of bias and dark frames when creating masters
 - Pinned pytest due to recursion depth issue
 - Bias level subtractor now subtracts the mean of the images rather than the value from previous masters.
 
 0.9.6 (2018-07-23)
 ------------------
-- Added functions to check whether image is 3d, and to extract central portion of image 
+- Added functions to check whether image is 3d, and to extract central portion of image
 - Updated Read the Docs
 
 0.9.5 (2018-06-11)
@@ -675,14 +679,14 @@ per instrument.
 - Fixed a bug that would stop preview frames from being retried if they failed even once.
 - Hotfix to remove double division by exposure time when creating master darks
 - Fixed bug that prevented calibration comparison being run on skyflats
-- Fixed image class null case 
+- Fixed image class null case
 
 0.9.3 (2018-05-10)
 ------------------
 - Hotfix (temporary until pattern noise and calibration comparer parameters are
   tuned to avoid false positives)
     - No longer removes images that fail pattern noise test
-    - Bias comparer no longer run in master bias creator 
+    - Bias comparer no longer run in master bias creator
 
 0.9.2 (2018-05-08)
 ------------------
@@ -697,7 +701,7 @@ per instrument.
 - Add comparison stages for calibration frames
     - Master calibration frames now go through the preview pipeline
     - Each new calibration is compared to the most recent master frame
-      which should alert us if the camera is having issues 
+      which should alert us if the camera is having issues
 - Refactored the Stage class to include quality control helpers
 
 0.8.1 (2018-04-24)

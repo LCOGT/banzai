@@ -6,20 +6,20 @@
 # will be started when the CPU usage rises above the configured threshold.
 horizontalPodAutoscaler:
   enabled: true
-  minReplicas: 15
-  maxReplicas: 15
+  minReplicas: 25
+  maxReplicas: 25
   targetCPUUtilizationPercentage: 50
-  minLargeReplicas: 7
-  maxLargeReplicas: 7
+  minLargeReplicas: 12
+  maxLargeReplicas: 12
 
 image:
   repository: ghcr.io/lcogt/banzai
-  tag: "1.18.1"
+  tag: "1.18.2"
   pullPolicy: IfNotPresent
 
 # Values for the OCS Ingester library, used by BANZAI.
 ingester:
-  apiRoot: http://archiveapi-internal.prod/
+  apiRoot: http://archiveapi-internal/
   s3Bucket: archive-lco-global
   ingesterProcessName: banzai_imaging
   opentsdbHostname: opentsdb.lco.gtn
@@ -30,19 +30,19 @@ ingester:
 
 # Values specific to the BANZAI pipeline
 banzai:
-  astrometryServiceUrl: http://astrometry.lco.gtn/catalog
-  configdbUrl: http://configdb.lco.gtn/sites/
-  observationPortalUrl: http://internal-observation-portal.lco.gtn/api/observations/
+  astrometryServiceUrl: http://gaia-astrometry-net-service/catalog
+  configdbUrl: http://configdb3/sites/
+  observationPortalUrl: http://internal-observation-portal/api/observations/
   useDifferentArchiveSources: false
   calibrateProposalId: calibrate
   banzaiWorkerLogLevel: info
-  rawDataApiRoot: http://archiveapi-internal.prod/
+  rawDataApiRoot: http://archiveapi-internal/
   fitsBroker: "amqp://science-archive:science-archive@rabbitmq.prod-rmq-shared.svc:5672/science-archive"
   fitsExchange: archived_fits
   queueName: banzai_pipeline
   celeryTaskQueueName: banzai_imaging
   largeCeleryTaskQueueName: banzai_large_imaging
-  PhotometryCatalogURL: http://phot-catalog.lco.gtn/
+  PhotometryCatalogURL: http://photometric-catalog-service/
   openSearchURL: https://opensearch.lco.global/
 
 # CronJob configuration to periodically update instrument table in BANZAI DB
