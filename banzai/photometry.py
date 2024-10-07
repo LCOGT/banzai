@@ -2,7 +2,7 @@ from urllib.parse import urljoin
 
 import numpy as np
 from astropy.table import Table
-from requests import HTTPError
+from requests.exceptions import RequestException
 
 from banzai.utils import stats, array_utils
 from banzai.utils.photometry_utils import get_reference_sources, match_catalogs, to_magnitude, fit_photometry
@@ -305,7 +305,7 @@ class PhotometricCalibrator(Stage):
             reference_catalog = get_reference_sources(image.meta,
                                                       urljoin(self.runtime_context.REFERENCE_CATALOG_URL, '/image'),
                                                       nx=image.shape[1], ny=image.shape[0])
-        except HTTPError as e:
+        except RequestException as e:
             logger.error(f'Error retrieving photometric reference catalog: {e}', image=image)
             return image
 
