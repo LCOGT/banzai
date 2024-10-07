@@ -99,10 +99,10 @@ def download_from_s3(file_info, context, is_raw_frame=False):
                             'attempt_number': download_from_s3.retry.statistics['attempt_number']})
 
     if is_raw_frame:
-        url = f'{context.RAW_DATA_FRAME_URL}/{frame_id}'
+        url = f'{context.RAW_DATA_FRAME_URL}/{frame_id}/?include_related_frames=false'
         archive_auth_header = context.RAW_DATA_AUTH_HEADER
     else:
-        url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}'
+        url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}/?include_related_frames=false'
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
     response = requests.get(url, headers=archive_auth_header).json()
     buffer = io.BytesIO()
