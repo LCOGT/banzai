@@ -28,7 +28,7 @@ spec:
       exec:
         command:
           - /bin/sh
-          - -c
+          - -c 
           - 'redis-cli ping | grep -q "PONG"'
       initialDelaySeconds: 5
       periodSeconds: 1
@@ -71,7 +71,7 @@ spec:
       - name: CALIBRATE_PROPOSAL_ID
         value: "calibrate"
       - name: OBSERVATION_PORTAL_URL
-        value: "http://internal-observation-portal/api/observations/"
+        value: "http://internal-observation-portal.lco.gtn/api/observations/"
       - name: API_ROOT
         value: "https://archive-api.lco.global/"
       - name: OMP_NUM_THREADS
@@ -83,7 +83,7 @@ spec:
       - name: CELERY_TASK_QUEUE_NAME
         value: "e2e_task_queue"
       - name: REFERENCE_CATALOG_URL
-        value: "http://photometric-catalog-service/"
+        value: "http://phot-catalog.lco.gtn/"
     command:
       - celery
       - -A
@@ -135,7 +135,7 @@ spec:
       - name: CALIBRATE_PROPOSAL_ID
         value: "calibrate"
       - name: OBSERVATION_PORTAL_URL
-        value: "http://internal-observation-portal/api/observations/"
+        value: "http://internal-observation-portal.lco.gtn/api/observations/"
       - name: API_ROOT
         value: "https://archive-api.lco.global/"
       - name: OMP_NUM_THREADS
@@ -147,7 +147,7 @@ spec:
       - name: CELERY_TASK_QUEUE_NAME
         value: "e2e_large_task_queue"
       - name: REFERENCE_CATALOG_URL
-        value: "http://photometric-catalog-service/"
+        value: "http://phot-catalog.lco.gtn/"
     command:
       - celery
       - -A
@@ -197,7 +197,7 @@ spec:
       - name: CALIBRATE_PROPOSAL_ID
         value: "calibrate"
       - name: OBSERVATION_PORTAL_URL
-        value: "http://internal-observation-portal/api/observations/"
+        value: "http://internal-observation-portal.lco.gtn/api/observations/"
       - name: API_ROOT
         value: "https://archive-api.lco.global/"
       - name: FITS_EXCHANGE
@@ -207,7 +207,7 @@ spec:
       - name: CELERY_TASK_QUEUE_NAME
         value: "e2e_task_queue"
       - name: REFERENCE_CATALOG_URL
-        value: "http://photometric-catalog-service/"
+        value: "http://phot-catalog.lco.gtn/"
       - name: "CELERY_LARGE_TASK_QUEUE_NAME"
         value: "e2e_large_task_queue"
     command:
