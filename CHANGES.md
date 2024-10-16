@@ -1,3 +1,7 @@
+1.19.0 (2024-10-16)
+-------------------
+- Added the ability to read fits files that are pre downloaded and are already in memory
+
 1.18.3 (2024-10-04)
 -------------------
 - Update exception handling for photometric calibrator to handle general base exceptions from the requests library
