@@ -18,11 +18,6 @@ jobs:
             python-version: 3.9
             toxenv: build_docs
 
-          - name: Python 3.8 with minimal dependencies
-            os: ubuntu-latest
-            python-version: '3.8'
-            toxenv: py38-test
-
           - name: Python 3.9 with minimal dependencies
             os: ubuntu-latest
             python-version: '3.9'
@@ -32,6 +27,11 @@ jobs:
             os: ubuntu-latest
             python-version: '3.10'
             toxenv: py310-test
+
+          - name: Python 3.11 with minimal dependencies
+            os: ubuntu-latest
+            python-version: '3.11'
+            toxenv: py311-test
 
           - name: Code style checks
             os: ubuntu-latest

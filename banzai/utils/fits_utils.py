@@ -142,7 +142,11 @@ def basename_search_in_archive(filename, dateobs, context, is_raw_frame=False):
 
 
 def open_fits_file(file_info, context, is_raw_frame=False):
-    if file_info.get('path') is not None and os.path.exists(file_info.get('path')):
+    if file_info.get('data_buffer') is not None:
+        filename = file_info.get('filename')
+        frame_id = None
+        buffer = file_info.get('data_buffer')
+    elif file_info.get('path') is not None and os.path.exists(file_info.get('path')):
         buffer = open(file_info.get('path'), 'rb')
         filename = os.path.basename(file_info.get('path'))
         frame_id = None
