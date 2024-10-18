@@ -20,7 +20,7 @@ ingester:
 banzai:
   astrometryServiceUrl: http://astrometry.lco.gtn/catalog
   configdbUrl: http://configdb.lco.gtn/sites/
-  observationPortalUrl: http://internal-observation-portal.lco.gtn/api/observations/
+  observationPortalUrl: http://observation-portal-internal.dev.svc/api/observations/
   useDifferentArchiveSources: true
   calibrateProposalId: calibrate
   banzaiWorkerLogLevel: debug
