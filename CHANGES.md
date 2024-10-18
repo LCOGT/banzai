@@ -1,3 +1,7 @@
+1.18.4 (2024-10-18)
+-------------------
+- Fix to the url of the observation portal in the deployment.
+
 1.18.3 (2024-10-04)
 -------------------
 - Update exception handling for photometric calibrator to handle general base exceptions from the requests library
