@@ -57,5 +57,5 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]'):${{ github.sha }}
             ${{ env.REGISTRY }}/$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]'):latest
-            ${{ github.event_name == 'push' && github.ref_type == 'tag' && format('{0}/{1}', env.REGISTRY, env.IMAGE_NAME | toLowerCase) }}:${{ github.ref_name }}
+            ${{ github.event_name == 'push' && github.ref_type == 'tag' && format('{0}/{1}', env.REGISTRY, env.IMAGE_NAME) | toLowerCase }}:${{ github.ref_name }}
           labels: ${{ steps.meta.outputs.labels }}
