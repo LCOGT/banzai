@@ -46,7 +46,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')
 
       - name: Build and also push Dockerimage
         id: build-and-push
@@ -55,7 +55,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ github.event_name == 'push' && github.ref_type == 'tag' && format('{0}:{1}', env.REGISTRY, env.IMAGE_NAME) }}:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]'):${{ github.sha }}
+            ${{ env.REGISTRY }}/$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]'):latest
+            ${{ github.event_name == 'push' && github.ref_type == 'tag' && format('{0}/{1}', env.REGISTRY, env.IMAGE_NAME | toLowerCase) }}:${{ github.ref_name }}
           labels: ${{ steps.meta.outputs.labels }}
