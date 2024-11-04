@@ -180,6 +180,7 @@ def process_image(file_info: dict, runtime_context: dict):
     :param file_info: Body of queue message: dict
     :param runtime_context: Context object with runtime environment info
     """
+    logger.info('Processing frame', extra_tags={'filename': file_info.get('filename')})
     runtime_context = Context(runtime_context)
     try:
         if realtime_utils.need_to_process_image(file_info, runtime_context):

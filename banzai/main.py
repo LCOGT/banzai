@@ -10,6 +10,7 @@ October 2015
 import argparse
 import os.path
 import logging
+import traceback
 
 from kombu import Exchange, Connection, Queue
 from kombu.mixins import ConsumerMixin
@@ -47,7 +48,13 @@ class RealtimeModeListener(ConsumerMixin):
         return [consumer]
 
     def on_message(self, body, message):
-        instrument = LCOFrameFactory.get_instrument_from_header(body, self.runtime_context.db_address)
+        logger.info('Received message', extra_tags={'filename': body['filename']})
+        try:
+            instrument = LCOFrameFactory.get_instrument_from_header(body, self.runtime_context.db_address)
+        except Exception:
+            logger.error(f'Could not get instrument from header. {traceback.format_exc()}', extra_tags={'filename': body['filename']})
+            message.ack()
+            return
         if instrument is None or instrument.nx is None:
             queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
         elif instrument.nx * instrument.ny > self.runtime_context.LARGE_WORKER_THRESHOLD:
