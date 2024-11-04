@@ -5,7 +5,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 on:
   push:
     branches:
-      - "*"
+      - "**"
     tags:
       - "*"
   pull_request:
@@ -54,5 +54,8 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ github.event_name == 'push' && github.ref_type == 'tag' && format('{0}:{1}', env.REGISTRY, env.IMAGE_NAME) }}:${{ github.ref_name }}
           labels: ${{ steps.meta.outputs.labels }}
