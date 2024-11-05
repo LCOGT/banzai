@@ -14,7 +14,7 @@ horizontalPodAutoscaler:
 
 image:
   repository: ghcr.io/lcogt/banzai
-  tag: "1.18.3"
+  tag: "1.18.4"
   pullPolicy: IfNotPresent
 
 # Values for the OCS Ingester library, used by BANZAI.
@@ -32,7 +32,7 @@ ingester:
 banzai:
   astrometryServiceUrl: http://gaia-astrometry-net-service/catalog
   configdbUrl: http://configdb3/sites/
-  observationPortalUrl: http://internal-observation-portal/api/observations/
+  observationPortalUrl: http://observation-portal-internal.prod.svc/api/observations/
   useDifferentArchiveSources: false
   calibrateProposalId: calibrate
   banzaiWorkerLogLevel: info
