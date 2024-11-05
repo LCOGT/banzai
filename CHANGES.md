@@ -1,3 +1,7 @@
+1.19.1 (2024-11-05)
+-------------------
+- Added extra logging and try excepts to catch frames that bypass silently
+
 1.19.0 (2024-10-16)
 -------------------
 - Added the ability to read fits files that are pre downloaded and are already in memory

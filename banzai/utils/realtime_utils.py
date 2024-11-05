@@ -1,4 +1,5 @@
 import os
+
 from banzai import dbs
 from banzai.utils import file_utils, import_utils, image_utils
 from banzai.data import HeaderOnly
@@ -48,6 +49,7 @@ def need_to_process_image(file_info, context):
 
     if 'frameid' in file_info:
         if 'version_set' not in file_info:
+            logger.info("Version set not available in file_info", extra_tags={"filename": file_info['filename']})
             return True
         checksum = file_info['version_set'][0].get('md5')
         filename = file_info['filename']
@@ -57,7 +59,7 @@ def need_to_process_image(file_info, context):
 
     logger.info("Checking if file needs to be processed", extra_tags={"filename": filename})
     if not (filename.endswith('.fits') or filename.endswith('.fits.fz')):
-        logger.debug("Filename does not have a .fits extension, stopping reduction",
+        logger.error("Filename does not have a .fits extension, stopping reduction",
                      extra_tags={"filename": filename})
         return False
 
@@ -70,6 +72,7 @@ def need_to_process_image(file_info, context):
     # Check the md5.
     # Reset the number of tries if the file has changed on disk/in s3
     if image.checksum != checksum:
+        logger.info('File has changed on disk. Resetting success flags and tries', extra_tags={'filename': filename})
         need_to_process = True
         image.checksum = checksum
         image.tries = 0
@@ -78,6 +81,7 @@ def need_to_process_image(file_info, context):
 
     # Check if we need to try again
     elif image.tries < context.max_tries and not image.success:
+        logger.info('File has not been successfully processed yet. Trying again.', extra_tags={'filename': filename})
         need_to_process = True
         dbs.commit_processed_image(image, context.db_address)
 
@@ -88,7 +92,11 @@ def need_to_process_image(file_info, context):
             factory = import_utils.import_attribute(context.FRAME_FACTORY)()
             test_image = factory.observation_frame_class(hdu_list=[HeaderOnly(file_info, name='')],
                                                          file_path=file_info['filename'])
-            test_image.instrument = factory.get_instrument_from_header(file_info, db_address=context.db_address)
+            try:
+                test_image.instrument = factory.get_instrument_from_header(file_info, db_address=context.db_address)
+            except Exception:
+                logger.error(f'Issue getting instrument from header. {logs.format_exception()}', extra_tags={'filename': filename})
+                need_to_process = False
             if image_utils.get_reduction_level(test_image.meta) != '00':
                 logger.error('Image has nonzero reduction level. Aborting.', extra_tags={'filename': filename})
                 need_to_process = False

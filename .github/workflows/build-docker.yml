@@ -5,7 +5,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 on:
   push:
     branches:
-      - "*"
+      - "**"
     tags:
       - "*"
   pull_request:
@@ -47,6 +47,11 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
 
       - name: Build and also push Dockerimage
         id: build-and-push
