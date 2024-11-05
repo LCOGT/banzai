@@ -1,3 +1,7 @@
+1.19.0 (2024-10-16)
+-------------------
+- Added the ability to read fits files that are pre downloaded and are already in memory
+
 1.18.4 (2024-10-18)
 -------------------
 - Fix to the url of the observation portal in the deployment.
