@@ -37,12 +37,14 @@ app.config_from_object('banzai.celeryconfig')
 app.conf.update(broker_url=os.getenv('TASK_HOST', 'redis://localhost:6379/0'),
                 worker_hijack_root_logger=False)
 celery_task_queue_name = os.getenv('CELERY_TASK_QUEUE_NAME', 'celery')
+celery_large_task_queue_name = os.getenv('CELERY_LARGE_TASK_QUEUE_NAME', 'celery_large')
 
 # Set up custom named celery task queue
 # https://docs.celeryproject.org/en/stable/userguide/routing.html#manual-routing
 app.conf.task_default_queue = celery_task_queue_name
 app.conf.task_queues = (
     Queue(celery_task_queue_name, routing_key=f'{celery_task_queue_name}.#'),
+    Queue(celery_large_task_queue_name, routing_key=f'{celery_large_task_queue_name}.#')
 )
 app.conf.task_default_exchange = 'tasks'
 app.conf.task_default_exchange_type = 'topic'
