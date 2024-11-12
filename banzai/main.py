@@ -61,8 +61,10 @@ class RealtimeModeListener(ConsumerMixin):
             queue_name = self.runtime_context.LARGE_WORKER_QUEUE
         else:
             queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
+        logger.info(f'Processing {body["filename"]} on queue {queue_name}. Routing key: {queue_name}', extra_tags={'filename': body['filename']})
         process_image.apply_async(args=(body, vars(self.runtime_context)),
-                                  queue=queue_name)
+                                  queue=queue_name,
+                                  routing_key=queue_name)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
