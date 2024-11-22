@@ -181,8 +181,9 @@ def start_stacking_scheduler():
                               schedule_calibration_stacking.s(site=site, runtime_context=vars(runtime_context)),
                               queue=runtime_context.CELERY_TASK_QUEUE_NAME)
 
-    app.Beat(schedule='/tmp/celerybeat-schedule', pidfile='/tmp/celerybeat.pid', working_directory='/tmp').run()
+    beat = celery.bin.beat.beat(app=app)
     logger.info('Starting celery beat')
+    beat.run(schedule='/tmp/celerybeat-schedule', pidfile='/tmp/celerybeat.pid', working_directory='/tmp')
 
 def run_realtime_pipeline():
     extra_console_arguments = [{'args': ['--n-processes'],
