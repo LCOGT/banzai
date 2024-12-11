@@ -166,6 +166,31 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         pass
 
     @property
+    @abc.abstractmethod
+    def block_end_date(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def proposal(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def blockid(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def public_date(self):
+        pass
+
+    @public_date.setter
+    @abc.abstractmethod
+    def public_date(self, value):
+        pass
+
+    @property
     def data_type(self):
         # Convert bytes to bits
         size = 8 * min([hdu.data.itemsize for hdu in self.ccd_hdus])

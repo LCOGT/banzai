@@ -4,7 +4,7 @@ from dateutil.parser import parse
 
 from celery import Celery
 from kombu import Queue
-
+from celery.exceptions import Retry
 from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, stage_utils
 from celery.signals import worker_process_init
@@ -174,15 +174,15 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
         raise self.retry()
 
 
-@app.task(name='celery.process_image', reject_on_worker_lost=True, max_retries=5)
-def process_image(file_info: dict, runtime_context: dict):
+@app.task(name='celery.process_image', bind=True, reject_on_worker_lost=True, max_retries=5)
+def process_image(self, file_info: dict, runtime_context: dict):
     """
     :param file_info: Body of queue message: dict
     :param runtime_context: Context object with runtime environment info
     """
-    logger.info('Processing frame', extra_tags={'filename': file_info.get('filename')})
-    runtime_context = Context(runtime_context)
     try:
+        logger.info('Processing frame', extra_tags={'filename': file_info.get('filename')})
+        runtime_context = Context(runtime_context)
         if realtime_utils.need_to_process_image(file_info, runtime_context):
             if 'path' in file_info:
                 filename = os.path.basename(file_info['path'])
@@ -193,6 +193,8 @@ def process_image(file_info: dict, runtime_context: dict):
             realtime_utils.increment_try_number(filename, db_address=runtime_context.db_address)
             stage_utils.run_pipeline_stages([file_info], runtime_context)
             realtime_utils.set_file_as_processed(filename, db_address=runtime_context.db_address)
+    except Retry:
+        raise
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
                      extra_tags={'file_info': file_info})

@@ -384,7 +384,7 @@ def test_data_to_detector_section_full():
 
 def test_propid_public():
     proposal_ids = ['standard', 'Photometric standards', 'NRES standards', 'FLOYDS standards']
-    date_obs = '2021-09-01T00:00:00'
+    date_obs = '2021-09-01T00:00:00.000009'
     test_data = [CCDData(np.zeros((1024, 1024)), meta={'PROPID': propid,
                                                        'DATE-OBS': date_obs}) for propid in proposal_ids]
 

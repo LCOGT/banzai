@@ -118,6 +118,14 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
                         help='Maximum number of times to try to process a frame')
     parser.add_argument('--broker-url', dest='broker_url',
                         help='URL for the FITS broker service.')
+    parser.add_argument('--delay-to-block-end', dest='delay_to_block_end', default=False, action='store_true',
+                        help='Delay real-time processing until after the block has ended')
+    parser.add_argument('--same-block-cals', dest='same_block_cals', default=False, action='store_true',
+                        help='Prefer calibrations taken in the same block')
+    parser.add_argument('--check-public-cals', dest='check_public_cals', default=False, action='store_true',
+                        help='Check to see if calibration frames are public before using them?')
+    parser.add_argument('--prefer-same-proposal', dest='prefer_same_proposal', default=False, action='store_true',
+                        help='Prefer calibrations taken with the same proposal')
 
     if extra_console_arguments is None:
         extra_console_arguments = []

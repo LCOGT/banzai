@@ -10,9 +10,8 @@ October 2015
 import os.path
 import datetime
 from dateutil.parser import parse
-import numpy as np
 import requests
-from sqlalchemy import create_engine, pool, type_coerce, cast
+from sqlalchemy import create_engine, pool, type_coerce, cast, func
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float
 from sqlalchemy.ext.declarative import declarative_base
@@ -74,6 +73,9 @@ class CalibrationImage(Base):
     good_until = Column(DateTime, default=datetime.datetime(3000, 1, 1))
     good_after = Column(DateTime, default=datetime.datetime(1000, 1, 1))
     attributes = Column(JSON)
+    blockid = Column(Integer, nullable=True)
+    proposal = Column(String(50), nullable=True)
+    public_date = Column(DateTime, nullable=True)
 
 
 class Instrument(Base):
@@ -336,7 +338,8 @@ def cal_record_to_file_info(record):
 
 
 def get_master_cal_record(image, calibration_type, master_selection_criteria, db_address,
-                          use_only_older_calibrations=False):
+                          use_only_older_calibrations=False, prefer_same_block=False, check_public=False,
+                          prefer_same_proposal=False):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
@@ -356,24 +359,22 @@ def get_master_cal_record(image, calibration_type, master_selection_criteria, db
     calibration_criteria &= CalibrationImage.good_after <= image.dateobs
     calibration_criteria &= CalibrationImage.good_until >= image.dateobs
 
+    calibration_image = None
     with get_session(db_address=db_address) as db_session:
-        calibration_images = db_session.query(CalibrationImage).filter(calibration_criteria).all()
-
-    # Exit if no calibration file found
-    if len(calibration_images) == 0:
-        return None
-
-    # Find the closest date
-    date_deltas = np.abs(np.array([i.dateobs - image.dateobs for i in calibration_images]))
-    closest_calibration_image = calibration_images[np.argmin(date_deltas)]
-
-    return closest_calibration_image
-
-
-def get_master_cal(image, calibration_type, master_selection_criteria, db_address,
-                   use_only_older_calibrations=False):
-    return cal_record_to_file_info(get_master_cal_record(image, calibration_type, master_selection_criteria, db_address,
-                                                         use_only_older_calibrations=use_only_older_calibrations))
+        if prefer_same_block:
+            block_criteria = CalibrationImage.blockid == image.blockid
+            image_filter = db_session.query(CalibrationImage).filter(calibration_criteria & block_criteria)
+            calibration_image = image_filter.order_by(func.abs(CalibrationImage.dateobs - image.dateobs)).first()
+        if calibration_image is None and prefer_same_proposal:
+            proposal_criteria = CalibrationImage.proposal == image.proposal
+            image_filter = db_session.query(CalibrationImage).filter(calibration_criteria & proposal_criteria)
+            calibration_image = image_filter.order_by(func.abs(CalibrationImage.dateobs - image.dateobs)).first()
+        if check_public:
+            calibration_criteria &= CalibrationImage.public_date <= datetime.datetime.utcnow()
+        if calibration_image is None:
+            image_filter = db_session.query(CalibrationImage).filter(calibration_criteria)
+            calibration_image = image_filter.order_by(func.abs(CalibrationImage.dateobs - image.dateobs)).first()
+    return calibration_image
 
 
 def get_individual_cal_records(instrument, calibration_type, min_date: str, max_date: str, db_address: str,
