@@ -1,3 +1,9 @@
+1.20.0 (2024-12-11)
+-------------------
+- Added functionality to delay processing until after the end of the observing block
+- Added the ability to only use public calibrations
+- Added the ability to prefer calibrations taken within the same block or with the same proposal
+
 1.19.1 (2024-11-05)
 -------------------
 - Added extra logging and try excepts to catch frames that bypass silently

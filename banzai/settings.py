@@ -90,6 +90,8 @@ CALIBRATION_FILENAME_FUNCTIONS = {'BIAS': ('banzai.utils.file_utils.config_to_fi
                                               'banzai.utils.file_utils.ccdsum_to_filename',
                                               'banzai.utils.file_utils.filter_to_filename')}
 
+OBSTYPES_TO_DELAY = []
+
 TELESCOPE_FILENAME_FUNCTION = 'banzai.utils.file_utils.telescope_to_filename'
 
 OBSERVATION_PORTAL_URL = os.getenv('OBSERVATION_PORTAL_URL',
