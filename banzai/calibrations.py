@@ -139,11 +139,11 @@ class CalibrationUser(Stage):
     def get_calibration_file_info(self, image):
         return dbs.cal_record_to_file_info(
             dbs.get_master_cal_record(image, self.calibration_type, self.master_selection_criteria,
-                                      self.runtime_context.db_address, 
+                                      self.runtime_context.db_address,
                                       use_only_older_calibrations=self.runtime_context.use_only_older_calibrations,
-                                      prefer_same_block=self.runtime_context.same_block_cals,
-                                      prefer_same_proposal=self.runtime_context.prefer_same_proposal,
-                                      check_public=self.runtime_context.check_public_cals)
+                                      prefer_same_block_cals=self.runtime_context.same_block_cals,
+                                      prefer_same_proposal_cals=self.runtime_context.prefer_same_proposal_cals,
+                                      check_public_cals=self.runtime_context.check_public_cals)
         )
 
 

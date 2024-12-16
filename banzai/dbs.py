@@ -338,8 +338,8 @@ def cal_record_to_file_info(record):
 
 
 def get_master_cal_record(image, calibration_type, master_selection_criteria, db_address,
-                          use_only_older_calibrations=False, prefer_same_block=False, check_public=False,
-                          prefer_same_proposal=False):
+                          use_only_older_calibrations=False, prefer_same_block_cals=False, check_public_cals=False,
+                          prefer_same_proposal_cals=False):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
@@ -361,16 +361,16 @@ def get_master_cal_record(image, calibration_type, master_selection_criteria, db
 
     calibration_image = None
     with get_session(db_address=db_address) as db_session:
-        if prefer_same_block:
+        if prefer_same_block_cals:
             block_criteria = CalibrationImage.blockid == image.blockid
             image_filter = db_session.query(CalibrationImage).filter(calibration_criteria & block_criteria)
             calibration_image = image_filter.order_by(func.abs(CalibrationImage.dateobs - image.dateobs)).first()
-        if calibration_image is None and prefer_same_proposal:
+        if calibration_image is None and prefer_same_proposal_cals:
             proposal_criteria = CalibrationImage.proposal == image.proposal
             image_filter = db_session.query(CalibrationImage).filter(calibration_criteria & proposal_criteria)
             calibration_image = image_filter.order_by(func.abs(CalibrationImage.dateobs - image.dateobs)).first()
-        if check_public:
-            calibration_criteria &= CalibrationImage.public_date <= datetime.datetime.utcnow()
+        if check_public_cals:
+            calibration_criteria &= CalibrationImage.public_date <= datetime.datetime.now(datetime.UTC)
         if calibration_image is None:
             image_filter = db_session.query(CalibrationImage).filter(calibration_criteria)
             calibration_image = image_filter.order_by(func.abs(CalibrationImage.dateobs - image.dateobs)).first()

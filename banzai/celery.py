@@ -183,7 +183,7 @@ def process_image(self, file_info: dict, runtime_context: dict):
     try:
         logger.info('Processing frame', extra_tags={'filename': file_info.get('filename')})
         runtime_context = Context(runtime_context)
-        if realtime_utils.need_to_process_image(file_info, runtime_context):
+        if realtime_utils.need_to_process_image(file_info, runtime_context, self):
             if 'path' in file_info:
                 filename = os.path.basename(file_info['path'])
             else:

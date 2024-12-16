@@ -124,7 +124,8 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
                         help='Prefer calibrations taken in the same block')
     parser.add_argument('--check-public-cals', dest='check_public_cals', default=False, action='store_true',
                         help='Check to see if calibration frames are public before using them?')
-    parser.add_argument('--prefer-same-proposal', dest='prefer_same_proposal', default=False, action='store_true',
+    parser.add_argument('--prefer-same-proposal-cals', dest='prefer_same_proposal_cals',
+                        default=False, action='store_true',
                         help='Prefer calibrations taken with the same proposal')
 
     if extra_console_arguments is None:
