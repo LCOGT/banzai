@@ -72,7 +72,10 @@ class LCOObservationFrame(ObservationFrame):
 
     @property
     def blockid(self):
-        return self.primary_hdu.meta.get('BLKUID')
+        id = self.primary_hdu.meta.get('BLKUID')
+        if str(id).lower() in ['n/a', 'unknown', 'none', '']:
+            id = None
+        return id
 
     @property
     def public_date(self):
