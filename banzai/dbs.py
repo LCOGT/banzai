@@ -361,19 +361,21 @@ def get_master_cal_record(image, calibration_type, master_selection_criteria, db
 
     calibration_image = None
     with get_session(db_address=db_address) as db_session:
+        order_func = func.abs(func.julianday(CalibrationImage.dateobs) - func.julianday(image.dateobs))
         if prefer_same_block_cals:
             block_criteria = CalibrationImage.blockid == image.blockid
             image_filter = db_session.query(CalibrationImage).filter(calibration_criteria & block_criteria)
-            calibration_image = image_filter.order_by(func.abs(CalibrationImage.dateobs - image.dateobs)).first()
+            calibration_image = image_filter.order_by(order_func).first()
         if calibration_image is None and prefer_same_proposal_cals:
             proposal_criteria = CalibrationImage.proposal == image.proposal
             image_filter = db_session.query(CalibrationImage).filter(calibration_criteria & proposal_criteria)
-            calibration_image = image_filter.order_by(func.abs(CalibrationImage.dateobs - image.dateobs)).first()
+            calibration_image = image_filter.order_by(order_func).first()
         if check_public_cals:
             calibration_criteria &= CalibrationImage.public_date <= datetime.datetime.now(datetime.UTC)
         if calibration_image is None:
             image_filter = db_session.query(CalibrationImage).filter(calibration_criteria)
-            calibration_image = image_filter.order_by(func.abs(CalibrationImage.dateobs - image.dateobs)).first()
+            calibration_image = image_filter.order_by(order_func).first()
+
     return calibration_image
 
 
