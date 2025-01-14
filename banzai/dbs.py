@@ -361,7 +361,13 @@ def get_master_cal_record(image, calibration_type, master_selection_criteria, db
 
     calibration_image = None
     with get_session(db_address=db_address) as db_session:
-        order_func = func.abs(func.julianday(CalibrationImage.dateobs) - func.julianday(image.dateobs))
+        if 'postgres' in db_session.bind.dialect.name:
+            order_func = func.abs(func.extract("epoch", CalibrationImage.dateobs) -
+                                  func.extract("epoch", image.dateobs))
+        elif 'sqlite' in db_session.bind.dialect.name:
+            order_func = func.abs(func.julianday(CalibrationImage.dateobs) - func.julianday(image.dateobs))
+        else:
+            raise NotImplementedError("Only postgres and sqlite are supported")
         if prefer_same_block_cals:
             block_criteria = CalibrationImage.blockid == image.blockid
             image_filter = db_session.query(CalibrationImage).filter(calibration_criteria & block_criteria)
