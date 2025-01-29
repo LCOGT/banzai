@@ -133,7 +133,7 @@ class LCOObservationFrame(ObservationFrame):
         return self.primary_hdu.meta.get('CCDATEMP', 0.0)
 
     def save_processing_metadata(self, context):
-        datecreated = datetime.datetime.utcnow()
+        datecreated = datetime.datetime.now(datetime.timezone.utc)
         self.meta['DATE'] = (date_utils.date_obs_to_string(datecreated), '[UTC] Date this FITS file was written')
         self.meta['RLEVEL'] = (context.reduction_level, 'Reduction level')
 

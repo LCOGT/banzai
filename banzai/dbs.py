@@ -377,7 +377,7 @@ def get_master_cal_record(image, calibration_type, master_selection_criteria, db
             image_filter = db_session.query(CalibrationImage).filter(calibration_criteria & proposal_criteria)
             calibration_image = image_filter.order_by(order_func).first()
         if check_public_cals:
-            calibration_criteria &= CalibrationImage.public_date <= datetime.datetime.now(datetime.UTC)
+            calibration_criteria &= CalibrationImage.public_date <= datetime.datetime.now(datetime.timezone.utc)
         if calibration_image is None:
             image_filter = db_session.query(CalibrationImage).filter(calibration_criteria)
             calibration_image = image_filter.order_by(order_func).first()

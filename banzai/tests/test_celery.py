@@ -1,7 +1,7 @@
 import mock
 import pytest
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import ANY
 
 from astropy.io.fits import Header
@@ -211,7 +211,7 @@ class TestMain():
     def test_submit_stacking_tasks_to_queue_with_delay(self, mock_filter_blocks, mock_get_blocks, mock_get_instruments,
                                                        mock_stack_calibrations, setup):
         mock_get_instruments.return_value = [self.fake_inst]
-        self.fake_blocks_response_json['results'][0]['end'] = datetime.strftime(datetime.utcnow() + timedelta(minutes=1),
+        self.fake_blocks_response_json['results'][0]['end'] = datetime.strftime(datetime.now(timezone.utc) + timedelta(minutes=1),
                                                                                 date_utils.TIMESTAMP_FORMAT)
         mock_get_blocks.return_value = self.fake_blocks_response_json
         mock_filter_blocks.return_value = [block for block in self.fake_blocks_response_json['results']]

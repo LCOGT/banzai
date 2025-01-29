@@ -105,7 +105,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
                     # Set the delay to after the latest block end
                     calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)
                     stack_delay = timedelta(seconds=runtime_context.CALIBRATION_STACK_DELAYS[frame_type.upper()])
-                    now = datetime.utcnow().replace(microsecond=0)
+                    now = datetime.now(datetime.timezone.utc).replace(microsecond=0)
                     message_delay = calibration_end_time - now + stack_delay
                     if message_delay.days < 0:
                         message_delay_in_seconds = 0  # Remove delay if block end is in the past
