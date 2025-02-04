@@ -117,7 +117,7 @@ def total_seconds(timedelta):
 
 def get_dayobs(timezone):
     # Get the current utc
-    now = datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.timezone.utc)
     # Add the timezone offset
     now += datetime.timedelta(hours=timezone)
     return epoch_date_to_string(now.date())

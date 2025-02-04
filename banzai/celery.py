@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse
 
 from celery import Celery
@@ -103,9 +103,10 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
                                                                             stacking_min_date, stacking_max_date)
                 if len(blocks_for_calibration) > 0:
                     # Set the delay to after the latest block end
-                    calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)
+                    calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration])
+                    calibration_end_time = calibration_end_time.replace(tzinfo=timezone.utc)
                     stack_delay = timedelta(seconds=runtime_context.CALIBRATION_STACK_DELAYS[frame_type.upper()])
-                    now = datetime.now(datetime.timezone.utc).replace(microsecond=0)
+                    now = datetime.now(timezone.utc).replace(microsecond=0)
                     message_delay = calibration_end_time - now + stack_delay
                     if message_delay.days < 0:
                         message_delay_in_seconds = 0  # Remove delay if block end is in the past
