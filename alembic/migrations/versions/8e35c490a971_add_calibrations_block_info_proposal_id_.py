@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 from sqlalchemy.sql import text
 import requests
 import os
@@ -23,9 +24,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('calimages', sa.Column('blockid', sa.Integer(), nullable=True))
-    op.add_column('calimages', sa.Column('proposal', sa.String(50), nullable=True))
-    op.add_column('calimages', sa.Column('public_date', sa.DateTime(), nullable=True))
+    bind = op.get_bind()
+    inspector = inspect(bind.engine)
+    columns = [col['name'] for col in inspector.get_columns('calimages')]
+
+    if 'blockid' not in columns:
+        op.add_column('calimages', sa.Column('blockid', sa.Integer(), nullable=True))
+    if 'proposal' not in columns:
+        op.add_column('calimages', sa.Column('proposal', sa.String(50), nullable=True))
+    if 'public_date' not in columns:
+        op.add_column('calimages', sa.Column('public_date', sa.DateTime(), nullable=True))
     if os.getenv("AUTH_TOKEN") is not None:
         auth_header = {'Authorization': f'Token {os.environ["AUTH_TOKEN"]}'}
     else:
@@ -36,18 +44,24 @@ def upgrade() -> None:
     for row in rows:
         params = {'basename_exact': row.filename.replace('.fz', '').replace('.fits', '')}
         request_results = requests.get('https://archive-api.lco.global/frames/', params=params, headers=auth_header)
-        request_results = request_results.json()
-        if len(request_results['results']) == 0:
+        request_results = request_results.json()['results']
+        if len(request_results) == 0:
             continue
 
         blockid = request_results[0]['BLKUID']
         proposal = request_results[0]['proposal_id']
-        public_date = datetime.datetime.strptime(request_results[0]['public_date'], '%Y-%m-%dT%H:%M:%S.%fZ')
-        values = {'public_date': public_date, 'proposal': proposal, 'blockid': blockid}
+        date_formats = ['%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ']
+        for date_format in date_formats:
+            try:
+                public_date = datetime.datetime.strptime(request_results[0]['public_date'], date_format)
+                break
+            except ValueError:
+                continue
+        values = {'id': row.id, 'public_date': public_date, 'proposal': proposal, 'blockid': blockid}
         query_str = 'blockid = :blockid, proposal = :proposal, public_date = :public_date'
         if row.frameid is None:
             query_str += ', frameid = :frameid'
-            values['frameid'] = request_results['results'][0]['id']
+            values['frameid'] = request_results[0]['id']
         connection.execute(
             text(f"UPDATE calimages SET {query_str} WHERE id = :id"),
             values

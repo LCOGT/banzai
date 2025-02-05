@@ -11,7 +11,7 @@ RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
 
 USER archive
 
-ENV HOME /home/archive
+ENV HOME=/home/archive
 
 WORKDIR /home/archive
 
@@ -21,7 +21,7 @@ RUN  . /opt/conda/etc/profile.d/conda.sh && conda config --set remote_read_timeo
 
 COPY --chown=10087:10000 . /lco/banzai
 
-ENV PATH /home/archive/envs/banzai/bin:$PATH
+ENV PATH=/home/archive/envs/banzai/bin:$PATH
 
 RUN /home/archive/envs/banzai/bin/pip install --no-cache-dir /lco/banzai/ 
 

@@ -32,7 +32,7 @@ def run_migrations() -> None:
     and associate a connection with the context.
 
     """
-    connection_url = os.getenv("DATABASE_URL", "sqlite:///fallback.db")
+    connection_url = os.getenv("DB_ADDRESS", "sqlite:///test.db")
     connectable = create_engine(connection_url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
