@@ -1,10 +1,10 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse
 
 from celery import Celery
 from kombu import Queue
-
+from celery.exceptions import Retry
 from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, stage_utils
 from celery.signals import worker_process_init
@@ -103,9 +103,10 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
                                                                             stacking_min_date, stacking_max_date)
                 if len(blocks_for_calibration) > 0:
                     # Set the delay to after the latest block end
-                    calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration]).replace(tzinfo=None)
+                    calibration_end_time = max([parse(block['end']) for block in blocks_for_calibration])
+                    calibration_end_time = calibration_end_time.replace(tzinfo=timezone.utc)
                     stack_delay = timedelta(seconds=runtime_context.CALIBRATION_STACK_DELAYS[frame_type.upper()])
-                    now = datetime.utcnow().replace(microsecond=0)
+                    now = datetime.now(timezone.utc).replace(microsecond=0)
                     message_delay = calibration_end_time - now + stack_delay
                     if message_delay.days < 0:
                         message_delay_in_seconds = 0  # Remove delay if block end is in the past
@@ -174,16 +175,16 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
         raise self.retry()
 
 
-@app.task(name='celery.process_image', reject_on_worker_lost=True, max_retries=5)
-def process_image(file_info: dict, runtime_context: dict):
+@app.task(name='celery.process_image', bind=True, reject_on_worker_lost=True, max_retries=5)
+def process_image(self, file_info: dict, runtime_context: dict):
     """
     :param file_info: Body of queue message: dict
     :param runtime_context: Context object with runtime environment info
     """
-    logger.info('Processing frame', extra_tags={'filename': file_info.get('filename')})
-    runtime_context = Context(runtime_context)
     try:
-        if realtime_utils.need_to_process_image(file_info, runtime_context):
+        logger.info('Processing frame', extra_tags={'filename': file_info.get('filename')})
+        runtime_context = Context(runtime_context)
+        if realtime_utils.need_to_process_image(file_info, runtime_context, self):
             if 'path' in file_info:
                 filename = os.path.basename(file_info['path'])
             else:
@@ -193,6 +194,8 @@ def process_image(file_info: dict, runtime_context: dict):
             realtime_utils.increment_try_number(filename, db_address=runtime_context.db_address)
             stage_utils.run_pipeline_stages([file_info], runtime_context)
             realtime_utils.set_file_as_processed(filename, db_address=runtime_context.db_address)
+    except Retry:
+        raise
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
                      extra_tags={'file_info': file_info})

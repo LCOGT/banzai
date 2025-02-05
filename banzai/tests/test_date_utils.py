@@ -56,7 +56,7 @@ test_site_data = {
 @mock.patch('banzai.utils.date_utils.datetime.datetime')
 def test_get_dayobs(mock_datetime):
     for data in test_site_data.values():
-        mock_datetime.utcnow = mock.Mock(return_value=datetime(2019, 5, 1) + data['schedule_time'])
+        mock_datetime.now = mock.Mock(return_value=datetime(2019, 5, 1) + data['schedule_time'])
         assert date_utils.get_dayobs(data['timezone']) == data['dayobs']
 
 

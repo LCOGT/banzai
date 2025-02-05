@@ -1,3 +1,8 @@
+# I have archived this file here even though it is not in alembic format beacuse
+# this is one of the early database migrations we did when we changed banzai to track
+# instruments and cameras rather than just telescopes. Future migrations of this type
+# will use alembic.
+
 import argparse
 
 from sqlalchemy import create_engine
