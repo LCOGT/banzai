@@ -4,6 +4,8 @@ from banzai import dbs
 from banzai.utils import file_utils, import_utils, image_utils
 from banzai.data import HeaderOnly
 from banzai import logs
+import datetime
+
 
 logger = logs.get_logger()
 
@@ -22,7 +24,7 @@ def increment_try_number(path, db_address):
     dbs.commit_processed_image(image, db_address=db_address)
 
 
-def need_to_process_image(file_info, context):
+def need_to_process_image(file_info, context, task):
     """
     Figure out if we need to try to make a process a given file.
 
@@ -108,6 +110,12 @@ def need_to_process_image(file_info, context):
                 msg = 'The header in this queue message appears to not be complete enough to make a Frame object'
                 logger.error(msg, extra_tags={'filename': filename})
                 need_to_process = False
+            if context.delay_to_block_end and test_image.obstype in context.OBSTYPES_TO_DELAY:
+                if datetime.datetime.now() < test_image.block_end_date:
+                    logger.info('Observing Block in progress. Retrying 5 minutes after it completes',
+                                extra_tags={'filename': filename})
+                    delay = test_image.block_end_date - datetime.datetime.now() + datetime.timedelta(minutes=5)
+                    task.retry(countdown=delay.total_seconds())
         except Exception:
             logger.error('Issue creating Image object with given queue message', extra_tags={"filename": filename})
             logger.error(logs.format_exception())

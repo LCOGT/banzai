@@ -63,6 +63,33 @@ class LCOObservationFrame(ObservationFrame):
         return Time(self.primary_hdu.meta.get('DATE'), scale='utc').datetime
 
     @property
+    def block_end_date(self):
+        return Time(self.primary_hdu.meta.get('BLKEDATE'), scale='utc').datetime
+
+    @property
+    def proposal(self):
+        return self.primary_hdu.meta.get('PROPID')
+
+    @property
+    def blockid(self):
+        id = self.primary_hdu.meta.get('BLKUID')
+        if str(id).lower() in ['n/a', 'unknown', 'none', '']:
+            id = None
+        return id
+
+    @property
+    def public_date(self):
+        pubdat = self.primary_hdu.meta.get('L1PUBDAT')
+        if pubdat is None:
+            return pubdat
+        else:
+            return Time(pubdat).datetime
+
+    @public_date.setter
+    def public_date(self, value: datetime.datetime):
+        self.primary_hdu.meta['L1PUBDAT'] = date_utils.date_obs_to_string(value), '[UTC] Date the frame becomes public'
+
+    @property
     def configuration_mode(self):
         mode = self.meta.get('CONFMODE', 'default')
         if str(mode).lower() in ['n/a', '0', 'normal']:
@@ -106,19 +133,20 @@ class LCOObservationFrame(ObservationFrame):
         return self.primary_hdu.meta.get('CCDATEMP', 0.0)
 
     def save_processing_metadata(self, context):
-        datecreated = datetime.datetime.utcnow()
+        datecreated = datetime.datetime.now(datetime.timezone.utc)
         self.meta['DATE'] = (date_utils.date_obs_to_string(datecreated), '[UTC] Date this FITS file was written')
         self.meta['RLEVEL'] = (context.reduction_level, 'Reduction level')
 
         self.meta['PIPEVER'] = (context.PIPELINE_VERSION, 'Pipeline version')
 
-        if any(fnmatch(self.meta['PROPID'].lower(), public_proposal) for public_proposal in context.PUBLIC_PROPOSALS):
-            self.meta['L1PUBDAT'] = (self.meta['DATE-OBS'], '[UTC] Date the frame becomes public')
-        else:
-            # Wait to make public
-            date_observed = date_utils.parse_date_obs(self.meta['DATE-OBS'])
-            next_year = date_observed + datetime.timedelta(days=context.DATA_RELEASE_DELAY)
-            self.meta['L1PUBDAT'] = (date_utils.date_obs_to_string(next_year), '[UTC] Date the frame becomes public')
+        if self.public_date is None:
+            # Don't override the public date if it already exists
+            if any(fnmatch(self.meta['PROPID'].lower(), public_proposal) for public_proposal in context.PUBLIC_PROPOSALS):
+                self.public_date = self.dateobs
+            else:
+                # Wait to make public
+                next_year = self.dateobs + datetime.timedelta(days=context.DATA_RELEASE_DELAY)
+                self.public_date = next_year
 
     def get_output_filename(self, runtime_context):
         output_filename = self.filename.replace('00.fits', '{:02d}.fits'.format(int(runtime_context.reduction_level)))
@@ -171,6 +199,9 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
                              'is_master': self.is_master,
                              'is_bad': self.is_bad,
                              'frameid': output_product.frame_id,
+                             'blockid': self.blockid,
+                             'proposal': self.proposal,
+                             'public_date': self.public_date,
                              'attributes': {}}
         for attribute in self.grouping_criteria:
             record_attributes['attributes'][attribute] = str(getattr(self, attribute))
