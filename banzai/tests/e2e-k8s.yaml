@@ -111,10 +111,10 @@ spec:
     resources:
       requests:
         cpu: 4
-        memory: 5Gi
+        memory: 6Gi
       limits:
         cpu: 8
-        memory: 5Gi
+        memory: 6Gi
   - name: banzai-large-celery-workers
     image: banzai:test-latest
     imagePullPolicy: IfNotPresent
@@ -175,10 +175,10 @@ spec:
     resources:
       requests:
         cpu: 2
-        memory: 7Gi
+        memory: 8Gi
       limits:
         cpu: 3
-        memory: 7Gi
+        memory: 8Gi
   - name: banzai-listener
     image: banzai:test-latest
     imagePullPolicy: IfNotPresent
