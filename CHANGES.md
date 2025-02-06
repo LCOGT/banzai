@@ -1,3 +1,7 @@
+1.20.1 (2025-02-05)
+-------------------
+- Added tso proposals to be instantly public
+
 1.20.0 (2024-12-11)
 -------------------
 - Added functionality to delay processing until after the end of the observing block
