@@ -70,6 +70,10 @@ class LCOObservationFrame(ObservationFrame):
     def proposal(self):
         return self.primary_hdu.meta.get('PROPID')
 
+    @proposal.setter
+    def proposal(self, value):
+        self.primary_hdu.meta['PROPID'] = value
+
     @property
     def blockid(self):
         id = self.primary_hdu.meta.get('BLKUID')

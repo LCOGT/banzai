@@ -175,6 +175,11 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def proposal(self):
         pass
 
+    @proposal.setter
+    @abc.abstractmethod
+    def proposal(self, value):
+        pass
+
     @property
     @abc.abstractmethod
     def blockid(self):
