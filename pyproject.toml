@@ -49,13 +49,13 @@ dependencies = [
   "emcee",
   "scikit-image",
   "cosmic-conn>=0.2.8",
-  "alembic"
+  "alembic",
+  "mock",
 ]
 
 [project.optional-dependencies]
 test = [
     "pytest>=4.0",
-    "mock",
     "coverage",
     "pytest-astropy"
 ]
