@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:23.5.2-0
+FROM continuumio/miniconda3:25.1.1-2
 
 #  In principle I could remove the gcc to shrink the image, but pytorch is already so large it doesn't make much difference
 RUN apt-get -y update && apt-get -y install gcc && \

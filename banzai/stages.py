@@ -54,6 +54,12 @@ class Stage(abc.ABC):
                     processed_images.append(processed_image)
             except Exception:
                 logger.error(logs.format_exception())
+                if isinstance(image_set, Iterable):
+                    for image in image_set:
+                        logger.error('Reduction stopped', extra_tags={'filename': image})
+                else:
+                    logger.error('Reduction stopped', extra_tags={'filename': image})
+
         return processed_images
 
     @abc.abstractmethod

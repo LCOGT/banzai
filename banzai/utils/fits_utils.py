@@ -93,10 +93,9 @@ def get_primary_header(filename) -> Optional[fits.Header]:
 @retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
 def download_from_s3(file_info, context, is_raw_frame=False):
     frame_id = file_info.get('frameid')
-
     logger.info(f"Downloading file {file_info.get('filename')} from archive. ID: {frame_id}.",
                 extra_tags={'filename': file_info.get('filename'),
-                            'attempt_number': download_from_s3.retry.statistics['attempt_number']})
+                            'attempt_number': download_from_s3.statistics['attempt_number']})
 
     if is_raw_frame:
         url = f'{context.RAW_DATA_FRAME_URL}/{frame_id}/?include_related_frames=false'

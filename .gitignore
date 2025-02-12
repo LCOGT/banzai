@@ -75,3 +75,4 @@ distribute-*.tar.gz
 *.iml
 
 .coverage.subprocess
+test.db
