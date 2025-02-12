@@ -15,13 +15,13 @@ jobs:
 
           - name: Documentation build
             os: ubuntu-latest
-            python-version: 3.9
+            python-version: 3.12
             toxenv: build_docs
 
-          - name: Python 3.9 with minimal dependencies
+          - name: Python 3.12 with minimal dependencies
             os: ubuntu-latest
-            python-version: '3.9'
-            toxenv: py39-test
+            python-version: '3.12'
+            toxenv: py12-test
             
           - name: Python 3.10 with minimal dependencies
             os: ubuntu-latest
@@ -32,10 +32,20 @@ jobs:
             os: ubuntu-latest
             python-version: '3.11'
             toxenv: py311-test
+          
+          - name: Python 3.12 with minimal dependencies
+            os: ubuntu-latest
+            python-version: '3.10'
+            toxenv: py310-test
+
+          - name: Python 3.13 with minimal dependencies
+            os: ubuntu-latest
+            python-version: '3.11'
+            toxenv: py311-test
 
           - name: Code style checks
             os: ubuntu-latest
-            python-version: 3.9
+            python-version: 3.12
             toxenv: codestyle
 
     steps:
