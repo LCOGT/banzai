@@ -15,7 +15,6 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def __init__(self, hdu_list: list, file_path: str, frame_id: int = None, hdu_order: list = None):
         self._hdus = hdu_list
         self._file_path = file_path
-        self.ra, self.dec = fits_utils.parse_ra_dec(hdu_list[0].meta)
         self.instrument = None
         self.frame_id = frame_id
         self.hdu_order = hdu_order
@@ -90,6 +89,26 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     def save_processing_metadata(self, context):
         pass
 
+    @property
+    @abc.abstractmethod
+    def ra(self):
+        pass
+    
+    @ra.setter
+    @abc.abstractmethod
+    def ra(self, value):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def dec(self):
+        pass
+    
+    @dec.setter
+    @abc.abstractmethod
+    def dec(self, value):
+        pass
+    
     @property
     @abc.abstractmethod
     def bias_level(self):
@@ -179,7 +198,17 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def proposal(self, value):
         pass
+    
+    @property
+    @abc.abstractmethod
+    def object(self):
+        pass
 
+    @object.setter
+    @abc.abstractmethod
+    def object(self, value):
+        pass
+    
     @property
     @abc.abstractmethod
     def blockid(self):
