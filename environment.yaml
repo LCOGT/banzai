@@ -156,6 +156,7 @@ dependencies:
   - zfp=1.0.1
   - zipp=3.21.0
   - pip:
+      - alembic==1.14.1
       - astropy==5.3.4
       - astropy-healpix==1.1.0
       - cosmic-conn==0.4.1

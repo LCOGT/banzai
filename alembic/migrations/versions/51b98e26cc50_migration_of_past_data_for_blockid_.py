@@ -20,15 +20,15 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = '8e35c490a971'
 
 
-def parse_public_date(date_to_parse):
-    date_formats = ['%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ']
+def parse_date(date_to_parse):
+    date_formats = ['%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%d %H:%M:%S.%f']
     for date_format in date_formats:
         try:
-            public_date = datetime.datetime.strptime(date_to_parse, date_format)
+            parsed_date = datetime.datetime.strptime(date_to_parse, date_format)
             break
         except ValueError:
             continue
-    return public_date
+    return parsed_date
 
 
 def upgrade() -> None:
@@ -38,43 +38,32 @@ def upgrade() -> None:
         auth_header = None
 
     connection = op.get_bind()
-    offset = 0
-    batch_size = 1000
-    query_str = "SELECT id, frameid, filename, type, dateobs, camera FROM calimages INNER JOIN instruments"
-    query_str += "ON calimages.instrument_id = instruments.id ORDER BY dateobs LIMIT :limit OFFSET :offset"
-    more_data = True
-    while more_data:
-        # Get all of the frames from all of the cameras for all obstypes in this batch
-        rows = connection.execute(text(query_str, {"limit": batch_size, "offset": offset})).fetchall()
 
-        for row in rows:
-            instruments = list(set(row.camera for row in rows))
-            obstypes = list(set(row.type for row in rows))
-        start = min([row.dateobs for row in rows])
-        end = max([row.dateobs for row in rows])
-        params = {'instruments': instruments, 'obstypes': obstypes, 'start': start, 'end': end}
-        request_results = requests.get('https://archive-api.lco.global/frames/aggregate/', params=params, headers=auth_header)
-        request_results = request_results.json()['results']
-        if len(request_results) == 0:
-            more_data = False
-            break
-        request_results[0]['public_date']
-        hashed_results = {result['basename']: {'blockid': result['BLKUID'],
-                                               'proposal': result['proposal_id'],
-                                               'public_date': parse_public_date(result['public_date'])}
-                          for result in request_results}
-        for row in rows:
-            basename = row.filename.replace('.fits', '').replace('.fz', '')
-            values = {'id': row.id, 'public_date': hashed_results[basename]['public_date'],
-                      'proposal': hashed_results[basename]['proposal'],
-                      'blockid': hashed_results[basename]['blockid']}
-            query_str = 'blockid = :blockid, proposal = :proposal, public_date = :public_date'
-            if row.frameid is None:
-                query_str += ', frameid = :frameid'
-                values['frameid'] = request_results[0]['id']
-            connection.execute(text(f"UPDATE calimages SET {query_str} WHERE id = :id"), values)
+    query_str = "SELECT id, frameid, filename,type, dateobs FROM calimages"
+    # Get all of the frames from all of the cameras for all obstypes in this batch
+    rows = connection.execute(text(query_str)).fetchall()
+    for row in rows:
+        basename = row.filename.replace('.fits', '').replace('.fz', '')
+        if row.frameid is not None:
+            request_results = requests.get(f'https://archive-api.lco.global/frames/{row.frameid}', headers=auth_header)
+            request_results = request_results.json()
+        else:
+            params = {'basename_exact': basename, 'start': parse_date(row.dateobs) - datetime.timedelta(days=1), 
+                      'end': parse_date(row.dateobs) + datetime.timedelta(days=1)}
+            request_results = requests.get('https://archive-api.lco.global/frames/', params=params, headers=auth_header)
+            if len(request_results.json()['results']) == 0:
+                continue
+            request_results = request_results.json()['results'][0]
 
-        offset += batch_size
+        values = {'id': row.id,
+                  'public_date': parse_date(request_results['public_date']),
+                  'proposal': request_results['proposal_id'],
+                  'blockid': request_results['BLKUID']}
+        query_str = 'blockid = :blockid, proposal = :proposal, public_date = :public_date'
+        if row.frameid is None:
+            query_str += ', frameid = :frameid'
+            values['frameid'] = request_results['id']
+        connection.execute(text(f"UPDATE calimages SET {query_str} WHERE id = :id"), values)
 
 
 def downgrade() -> None:
