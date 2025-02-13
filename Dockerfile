@@ -9,6 +9,8 @@ RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
         && /usr/sbin/useradd -g 10000 -d /home/archive -M -N -u 10087 archive \
         && chown -R archive:domainusers /home/archive
 
+RUN chown -R 10087:10000 /opt/conda
+
 USER archive
 
 ENV HOME=/home/archive
@@ -16,13 +18,16 @@ ENV HOME=/home/archive
 WORKDIR /home/archive
 
 COPY environment.yaml .
+RUN conda init
+SHELL ["/bin/bash", "--login", "-c"]
 
-RUN  . /opt/conda/etc/profile.d/conda.sh && conda config --set remote_read_timeout_secs 900 && conda env create -p /home/archive/envs/banzai -f environment.yaml --solver=libmamba
+RUN conda activate base && conda config --set remote_read_timeout_secs 900 && conda env update -f environment.yaml --solver=libmamba
 
 COPY --chown=10087:10000 . /lco/banzai
 
-ENV PATH=/home/archive/envs/banzai/bin:$PATH
+RUN conda activate base && pip install --no-cache-dir /lco/banzai/ 
 
-RUN /home/archive/envs/banzai/bin/pip install --no-cache-dir /lco/banzai/ 
+# Don't ask me why but something about the install breaks sqlite but this fixes it
+RUN conda activate base && conda install libsqlite --force-reinstall -y
 
 RUN cp /lco/banzai/pytest.ini /home/archive/pytest.ini
