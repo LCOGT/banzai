@@ -11,7 +11,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = "lco-banzai"
-version = "1.20.2"
+version = "1.21.0"
 description = "Python data reduction package for LCOGT data"
 authors = [
   { name="Curtis McCully", email="cmccully@lco.global" },
