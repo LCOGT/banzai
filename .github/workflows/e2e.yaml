@@ -28,6 +28,8 @@ jobs:
       - name: Build docker image
         run: |
           docker build -t banzai:test-latest .
+          docker ps -a
+          sleep inf
 
       - name: Copy docker image to nodes
         run: |
