@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "lco-banzai"
-python = ">=3.10,<4"
+requires-python = ">=3.10,<4"
 version = "1.20.2"
 description = "Python data reduction package for LCOGT data"
 authors = [
@@ -62,6 +62,19 @@ docs = [
 [project.urls]
 "Source" = "https://github.com/lcogt/banzai"
 "Docs" = "https://banzai.readthedocs.io/en/latest/"
+
+[tool.poetry]
+packages = [
+  { include = "banzai" }
+]
+
+[[tool.poetry.source]]
+name = "pytorch_cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
+
+[tool.poetry.dependencies]
+torch = { source = "pytorch_cpu" }
 
 [tool.setuptools.packages.find]
 include = ["banzai*"]
