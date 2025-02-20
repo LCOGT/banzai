@@ -1,16 +1,12 @@
 [build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0",
+            "cython"]
+build-backend = "poetry.core.masonry.api"
 
-requires = ["setuptools",
-            "setuptools_scm",
-            "wheel",
-            "extension-helpers",
-            "oldest-supported-numpy",
-            "cython>=0.29.23,<3.0.0"]
-
-build-backend = 'setuptools.build_meta'
 
 [project]
 name = "lco-banzai"
+python = ">=3.10,<4"
 version = "1.20.2"
 description = "Python data reduction package for LCOGT data"
 authors = [
@@ -37,7 +33,7 @@ dependencies = [
   "kombu",
   "amqp",
   "requests",
-  "opensearch-py>=1",
+  "opensearch-py",
   "pytest>=4.0",
   "pyyaml",
   "psycopg2-binary",
