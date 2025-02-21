@@ -58,23 +58,36 @@ test = [
 docs = [
     "sphinx-astropy"
 ]
+cpu  = ["torch"]
+cuda = ["torch"]
 
 [project.urls]
 "Source" = "https://github.com/lcogt/banzai"
 "Docs" = "https://banzai.readthedocs.io/en/latest/"
+
 
 [tool.poetry]
 packages = [
   { include = "banzai" }
 ]
 
-[[tool.poetry.source]]
-name = "pytorch_cpu"
-url = "https://download.pytorch.org/whl/cpu"
-priority = "explicit"
-
 [tool.poetry.dependencies]
-torch = { source = "pytorch_cpu" }
+torch = [
+    { version = "^2.3", source = "pypi", markers = "sys_platform=='darwin'" },
+    { version = "^2.3", source = "pytorch-cpu", markers = "sys_platform!='darwin' and extra!='cuda'" },
+    { version = "^2.3", source = "pytorch-cuda", markers = "sys_platform!='darwin' and extra=='cuda'" }
+]
+
+
+[[tool.poetry.source]]
+    name     = "pytorch-cuda"
+    priority = "explicit"
+    url      = "https://download.pytorch.org/whl/cu121"
+
+[[tool.poetry.source]]
+    name     = "pytorch-cpu"
+    priority = "explicit"
+    url      = "https://download.pytorch.org/whl/cpu"
 
 [tool.setuptools.packages.find]
 include = ["banzai*"]
