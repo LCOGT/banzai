@@ -7,24 +7,11 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  linuxtest:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
         python-version: ['3.10', '3.11', '3.12', '3.13']
-        include:
-          - os: ubuntu-latest
-            python-version: '3.10'
-          - os: ubuntu-latest
-            python-version: '3.11'
-          - os: ubuntu-latest
-            python-version: '3.12'
-          - os: ubuntu-latest
-            python-version: '3.13'
-          - os: macos-latest
-            python-version: '3.12' 
-  
-    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -35,4 +22,20 @@ jobs:
       - name: Set up project
         run: poetry install -E cpu -E test
       - name: Run tests
-        run: poetry run --with test pytest --pyargs banzai.tests -m "not e2e"
+        run: poetry run pytest --pyargs banzai.tests -m "not e2e"
+  macos:  # New macOS job
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: ['3.12']  
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Set up project
+        run: poetry install -E cpu -E test
+      - name: Run tests
+        run: poetry run pytest --pyargs banzai.tests -m "not e2e"
