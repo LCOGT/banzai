@@ -85,6 +85,7 @@ spec:
       - name: REFERENCE_CATALOG_URL
         value: "http://phot-catalog.lco.gtn/"
     command:
+      - poetry
       - celery
       - -A
       - banzai
@@ -104,7 +105,7 @@ spec:
         command:
           - /bin/sh
           - -c
-          - "celery -A banzai status | grep -q '@celery-worker:.*OK'"
+          - "poetry celery -A banzai status | grep -q '@celery-worker:.*OK'"
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
@@ -149,6 +150,7 @@ spec:
       - name: REFERENCE_CATALOG_URL
         value: "http://phot-catalog.lco.gtn/"
     command:
+      - poetry
       - celery
       - -A
       - banzai
@@ -168,7 +170,7 @@ spec:
         command:
           - /bin/sh
           - -c
-          - 'celery -A banzai status | grep -q "large-celery-worker:.*OK"'
+          - 'poetry celery -A banzai status | grep -q "large-celery-worker:.*OK"'
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
@@ -211,6 +213,7 @@ spec:
       - name: "CELERY_LARGE_TASK_QUEUE_NAME"
         value: "e2e_large_task_queue"
     command:
+      - poetry
       - banzai_run_realtime_pipeline
       - --db-address=$(DB_ADDRESS)
       - --fpack

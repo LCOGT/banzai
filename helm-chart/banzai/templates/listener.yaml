@@ -33,6 +33,7 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           command:
+            - "poetry"
             - "banzai_create_db"
             - "--db-address=$(DB_ADDRESS)"
           # Populate the instruments table
@@ -52,6 +53,7 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           command:
+            - "poetry"
             - "banzai_update_db"
             - "--db-address=$(DB_ADDRESS)"
             - "--configdb-address={{ .Values.configdb_url }}"
@@ -71,6 +73,7 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           command:
+            - "poetry"
             - "banzai_populate_bpms"
             - "--db-address=$(DB_ADDRESS)"
           # create the db if it doesn't exist and populate the bpms in the db.
@@ -91,6 +94,7 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           command:
+            - "poetry"
             - "banzai_run_realtime_pipeline"
             - "--post-to-archive"
             - "--post-to-opensearch"
@@ -121,6 +125,7 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           command:
+            - "poetry"
             - "banzai_automate_stack_calibrations"
             - "--post-to-archive"
             - "--post-to-opensearch"

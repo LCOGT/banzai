@@ -16,7 +16,7 @@ RUN poetry install --directory=/lco/banzai -E cpu --no-root --no-cache
 
 COPY . /lco/banzai
 
-RUN poetry install --directory /lco/banzai --no-cache
+RUN poetry install --directory /lco/banzai -E cpu --no-cache
 
 USER archive
 

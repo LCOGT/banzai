@@ -60,6 +60,7 @@ docs = [
 ]
 cpu  = ["torch"]
 cuda = ["torch"]
+style = ["pycodestyle"]
 
 [project.urls]
 "Source" = "https://github.com/lcogt/banzai"

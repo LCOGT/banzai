@@ -39,6 +39,7 @@ spec:
                   cpu: "1"
                   memory: "1Gi"
               command:
+                - "poetry"
                 - "banzai_update_db"
                 - "--db-address=$(DB_ADDRESS)"
                 - "--configdb-address=$(CONFIGDB_URL)"
