@@ -16,8 +16,8 @@ from banzai.dbs import mark_frame, query_for_instrument
 from banzai.utils import file_utils
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.io import fits, ascii
-import pkg_resources
 from banzai.logs import get_logger
+import importlib.resouces
 
 # TODO: Mock out AWS calls here
 # TODO: Mock out archived fits queue structure as well
@@ -27,9 +27,9 @@ logger = get_logger()
 app.conf.update(CELERY_TASK_ALWAYS_EAGER=True)
 
 TEST_PACKAGE = 'banzai.tests'
-TEST_FRAMES = ascii.read(pkg_resources.resource_filename(TEST_PACKAGE, 'data/test_data.dat'))
+TEST_FRAMES = ascii.read(os.path.join(importlib.resources.files(TEST_PACKAGE), 'data/test_data.dat'))
 
-PRECAL_FRAMES = ascii.read(pkg_resources.resource_filename(TEST_PACKAGE, 'data/test_precals.dat'))
+PRECAL_FRAMES = ascii.read(os.path.join(importlib.resources.files(TEST_PACKAGE), 'data/test_precals.dat'))
 
 DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
 # Use the LCO filenaming convention to infer the sites
@@ -38,7 +38,7 @@ INSTRUMENTS = set([os.path.join(frame[:3], frame.split('-')[1]) for frame in TES
 
 DAYS_OBS = set([os.path.join(frame[:3], frame.split('-')[1], frame.split('-')[2]) for frame in TEST_FRAMES['filename']])
 
-CONFIGDB_FILENAME = pkg_resources.resource_filename(TEST_PACKAGE, 'data/configdb_example.json')
+CONFIGDB_FILENAME = os.path.join(importlib.resources.files(TEST_PACKAGE), 'data/configdb_example.json')
 
 
 def celery_join():
@@ -165,9 +165,9 @@ def observation_portal_side_effect(*args, **kwargs):
     site = kwargs['params']['site']
     start = datetime.strftime(parse(kwargs['params']['start_after']).replace(tzinfo=None).date(), '%Y%m%d')
     filename = 'test_obs_portal_response_{site}_{start}.json'.format(site=site, start=start)
-    filename = pkg_resources.resource_filename(TEST_PACKAGE, 'data/{filename}'.format(filename=filename))
+    filename = os.path.join(importlib.resources.files(TEST_PACKAGE), 'data/{filename}'.format(filename=filename))
     if not os.path.exists(filename):
-        filename = pkg_resources.resource_filename(TEST_PACKAGE, 'data/test_obs_portal_null.json')
+        filename = os.path.join(importlib.resources.files(TEST_PACKAGE), 'data/test_obs_portal_null.json')
     return FakeResponse(filename)
 
 
