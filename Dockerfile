@@ -6,7 +6,7 @@ RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
 
 RUN pip install poetry --no-cache
 
-RUN apt-get -y update && apt-get -y install gcc && \
+RUN apt-get -y update && apt-get -y install gcc procps && \
         apt-get autoclean && \
         rm -rf /var/lib/apt/lists/*
 
