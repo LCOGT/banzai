@@ -1,6 +1,7 @@
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0",
-            "cython"]
+            "cython", "extension-helpers",
+            "numpy>=1.24"]
 build-backend = "poetry.core.masonry.api"
 
 
@@ -47,6 +48,7 @@ dependencies = [
   "cosmic-conn>=0.2.8",
   "alembic",
   "mock",
+  'torch'
 ]
 
 [project.optional-dependencies]
@@ -71,6 +73,9 @@ style = ["pycodestyle"]
 packages = [
   { include = "banzai" }
 ]
+include = [
+    { path = "**/*.so", format = "wheel" },
+]
 
 [tool.poetry.dependencies]
 torch = [
@@ -89,6 +94,9 @@ torch = [
     name     = "pytorch-cpu"
     priority = "explicit"
     url      = "https://download.pytorch.org/whl/cpu"
+
+[tool.poetry.build]
+script = "build.py"
 
 [tool.setuptools.packages.find]
 include = ["banzai*"]
