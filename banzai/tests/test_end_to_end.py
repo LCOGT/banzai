@@ -17,7 +17,7 @@ from banzai.utils import file_utils
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.io import fits, ascii
 from banzai.logs import get_logger
-import importlib.resouces
+import importlib.resources
 
 # TODO: Mock out AWS calls here
 # TODO: Mock out archived fits queue structure as well
