@@ -10,11 +10,7 @@ RUN apt-get -y update && apt-get -y install gcc && \
         apt-get autoclean && \
         rm -rf /var/lib/apt/lists/*
 
-USER archive
-
-ENV HOME=/home/archive
-
-WORKDIR /home/archive
+RUN poetry config virtualenvs.create false
 
 COPY --chown=10087:10000 pyproject.toml poetry.lock /lco/banzai/
 
@@ -25,3 +21,9 @@ COPY --chown=10087:10000 . /lco/banzai
 RUN poetry install --directory /lco/banzai -E cpu --no-cache
 
 RUN cp /lco/banzai/pytest.ini /home/archive/pytest.ini
+
+USER archive
+
+ENV HOME=/home/archive
+
+WORKDIR /home/archive

@@ -31,7 +31,6 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           command:
-            - "poetry"
             - "celery"
             - "-A"
             - "banzai"

@@ -6,5 +6,12 @@
 import banzai.logs  # noqa: F401
 # ----------------------------------------------------------------------------
 
+try:
+    import importlib.metadata as metadata
+except ImportError:
+    import importlib_metadata as metadata  # For older Python
+
+__version__ = metadata.version("lco-banzai")
+
 from banzai import utils
 __all__ = ['utils']
