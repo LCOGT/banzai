@@ -105,7 +105,7 @@ spec:
         command:
           - /bin/sh
           - -c
-          - "poetry celery -A banzai status | grep -q '@celery-worker:.*OK'"
+          - "celery -A banzai status | grep -q '@celery-worker:.*OK'"
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
@@ -170,7 +170,7 @@ spec:
         command:
           - /bin/sh
           - -c
-          - 'poetry celery -A banzai status | grep -q "large-celery-worker:.*OK"'
+          - 'celery -A banzai status | grep -q "large-celery-worker:.*OK"'
       initialDelaySeconds: 5
       periodSeconds: 1
       timeoutSeconds: 10
