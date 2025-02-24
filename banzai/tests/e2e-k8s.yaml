@@ -85,7 +85,6 @@ spec:
       - name: REFERENCE_CATALOG_URL
         value: "http://phot-catalog.lco.gtn/"
     command:
-      - poetry
       - celery
       - -A
       - banzai
@@ -150,7 +149,6 @@ spec:
       - name: REFERENCE_CATALOG_URL
         value: "http://phot-catalog.lco.gtn/"
     command:
-      - poetry
       - celery
       - -A
       - banzai
@@ -213,7 +211,6 @@ spec:
       - name: "CELERY_LARGE_TASK_QUEUE_NAME"
         value: "e2e_large_task_queue"
     command:
-      - poetry
       - banzai_run_realtime_pipeline
       - --db-address=$(DB_ADDRESS)
       - --fpack
