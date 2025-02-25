@@ -5,6 +5,9 @@ build:
   tools:
     python: "3.12"
 
+sphinx:
+  configuration: docs/conf.py
+
 commands:
   pre_build:
     - pip install poetry
