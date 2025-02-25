@@ -10,4 +10,4 @@ build:
   commands:
     - pip install poetry
     - poetry install -E docs
-    - poetry run sphinx-build -b html ${READTHEDOCS_OUTPUT}/html/
+    - poetry run sphinx-build -b html docs/ ${READTHEDOCS_OUTPUT}/html/
