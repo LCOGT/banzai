@@ -5,9 +5,6 @@ build:
   tools:
     python: "3.12"
 
-python:
-  install:
-    - method: []
 commands:
   pre_build:
     - pip install poetry
