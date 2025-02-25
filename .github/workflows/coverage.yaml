@@ -1,0 +1,24 @@
+name: Coverage
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Or macos-latest if needed
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up 
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12' # Specify your desired version
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Set up project
+        run: poetry install -E cpu -E test
+      - name: Run coverage
+        run: poetry run pytest --pyargs banzai.tests -m "not e2e" --cov banzai --cov-config="setup.cfg"

@@ -1,3 +1,9 @@
+1.20.2 (2025-02-10)
+-------------------
+- Bugfix to logging on reduction stopped
+- Updated the alembic scripts because the migration was taking too long
+- Dependencies and package build are now managed by poetry
+
 1.20.1 (2025-02-05)
 -------------------
 - Added tso proposals to be instantly public

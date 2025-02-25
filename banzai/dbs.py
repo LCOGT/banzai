@@ -11,7 +11,7 @@ import os.path
 import datetime
 from dateutil.parser import parse
 import requests
-from sqlalchemy import create_engine, pool, type_coerce, cast, func
+from sqlalchemy import create_engine, pool, func
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float
 from sqlalchemy.ext.declarative import declarative_base
@@ -348,8 +348,8 @@ def get_master_cal_record(image, calibration_type, master_selection_criteria, db
     for criterion in master_selection_criteria:
         # We have to cast to strings according to the sqlalchemy docs for version 1.3:
         # https://docs.sqlalchemy.org/en/latest/core/type_basics.html?highlight=json#sqlalchemy.types.JSON
-        calibration_criteria &= cast(CalibrationImage.attributes[criterion], String) ==\
-                                type_coerce(str(getattr(image, criterion)), JSON)
+        calibration_criteria &= CalibrationImage.attributes[criterion].as_string() ==\
+                                str(getattr(image, criterion))
 
     # During real-time reduction, we want to avoid using different master calibrations for the same block,
     # therefore we make sure the the calibration frame used was created before the block start time

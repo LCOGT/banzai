@@ -3,10 +3,15 @@
 # Packages may add whatever they like to this file, but
 # should keep this content at the top.
 # ----------------------------------------------------------------------------
-from ._astropy_init import *  # noqa
 import banzai.logs  # noqa: F401
 # ----------------------------------------------------------------------------
 
-if not _ASTROPY_SETUP_:  # noqa
-    from banzai import utils
+try:
+    import importlib.metadata as metadata
+except ImportError:
+    import importlib_metadata as metadata  # For older Python
+
+__version__ = metadata.version("lco-banzai")
+
+from banzai import utils
 __all__ = ['utils']

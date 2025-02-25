@@ -19,7 +19,7 @@ a.out
 */version.py
 */cython_version.py
 htmlcov
-.coverage
+.coverage*
 MANIFEST
 .ipynb_checkpoints
 env
@@ -75,3 +75,4 @@ distribute-*.tar.gz
 *.iml
 
 .coverage.subprocess
+test.db

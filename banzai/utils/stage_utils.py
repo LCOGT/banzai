@@ -57,7 +57,6 @@ def run_pipeline_stages(image_paths: list, runtime_context: Context, calibration
         images = stage.run(images)
 
         if not images:
-            logger.error('Reduction stopped', extra_tags={'filename': image_paths})
             return
 
     for image in images:
