@@ -1,4 +1,4 @@
-name: Python CI
+name: Code Style
 
 on:
   push:
@@ -21,4 +21,4 @@ jobs:
       - name: Set up project
         run: poetry install -E cpu -E style
       - name: Code Style
-        run: poetry pycodestyle banzai --count --max-line-length=120
+        run: poetry run pycodestyle --count --max-line-length=120

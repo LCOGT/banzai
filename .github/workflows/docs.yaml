@@ -1,4 +1,4 @@
-name: Python CI
+name: Docs
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: pip install poetry
       - name: Set up project
-        run: poetry install -E cpu -E test
+        run: poetry install -E cpu -E docs
       - name: Build Docs
-        run: poetry sphinx-build -W -b html . _build/html
+        run: poetry run sphinx-build -W -b html docs docs/_build/html
             

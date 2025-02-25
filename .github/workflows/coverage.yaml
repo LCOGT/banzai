@@ -1,4 +1,4 @@
-name: Python CI
+name: Coverage
 
 on:
   push:
@@ -21,4 +21,4 @@ jobs:
       - name: Set up project
         run: poetry install -E cpu -E test
       - name: Run coverage
-        run: poetry run pytest --pyargs banzai.tests --cov banzai --cov-config="setup.cfg"
+        run: poetry run pytest --pyargs banzai.tests -m "not e2e" --cov banzai --cov-config="setup.cfg"

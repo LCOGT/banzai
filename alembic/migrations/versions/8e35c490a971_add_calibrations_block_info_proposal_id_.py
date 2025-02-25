@@ -1,7 +1,7 @@
 """Add calibrations block info, proposal id, and public date to CalibrationImage
 
 Revision ID: 8e35c490a971
-Revises: 
+Revises:
 Create Date: 2025-01-31 12:19:03.407606
 
 """

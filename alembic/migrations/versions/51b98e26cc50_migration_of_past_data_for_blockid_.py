@@ -48,7 +48,7 @@ def upgrade() -> None:
             request_results = requests.get(f'https://archive-api.lco.global/frames/{row.frameid}', headers=auth_header)
             request_results = request_results.json()
         else:
-            params = {'basename_exact': basename, 'start': parse_date(row.dateobs) - datetime.timedelta(days=1), 
+            params = {'basename_exact': basename, 'start': parse_date(row.dateobs) - datetime.timedelta(days=1),
                       'end': parse_date(row.dateobs) + datetime.timedelta(days=1)}
             request_results = requests.get('https://archive-api.lco.global/frames/', params=params, headers=auth_header)
             if len(request_results.json()['results']) == 0:
