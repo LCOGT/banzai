@@ -12,5 +12,4 @@ build:
       - pip install poetry
       - poetry install -E docs --no-root
   commands:
-    build:
       - poetry run sphinx-build -b html docs/ _build/html
