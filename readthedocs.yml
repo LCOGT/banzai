@@ -7,9 +7,7 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.12"
-  jobs:
-    pre_install:
-      - pip install poetry
-      - poetry install -E docs --no-root
   commands:
-      - poetry run sphinx-build -b html docs/ _build/html
+    - pip install poetry
+    - poetry install -E docs --no-root
+    - poetry run sphinx-build -b html docs/ _build/html
