@@ -11,7 +11,6 @@ build:
     pre_install:
       - pip install poetry
       - poetry install -E docs --no-root
-
-commands:
-  build:
-    - poetry run sphinx-build -b html docs/ _build/html
+  commands:
+    build:
+      - poetry run sphinx-build -b html docs/ _build/html
