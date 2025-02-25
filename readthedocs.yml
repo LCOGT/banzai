@@ -9,5 +9,5 @@ build:
     python: "3.12"
   commands:
     - pip install poetry
-    - poetry install -E docs --no-root
+    - poetry install -E docs
     - poetry run sphinx-build -b html docs/ _build/html
