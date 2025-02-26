@@ -104,7 +104,7 @@ def download_from_s3(file_info, context, is_raw_frame=False):
         url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}/?include_related_frames=false'
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
     response = requests.get(url, headers=archive_auth_header).json()
-    try: 
+    try:
         response.raise_fot_status()
     except requests.exceptions.HTTPError as e:
         message = 'Error downloading file from archive.'
