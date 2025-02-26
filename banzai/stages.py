@@ -56,9 +56,9 @@ class Stage(abc.ABC):
                 logger.error(logs.format_exception())
                 if isinstance(image_set, Iterable):
                     for image in image_set:
-                        logger.error('Reduction stopped', extra_tags={'filename': image})
+                        logger.error('Reduction stopped', image=image)
                 else:
-                    logger.error('Reduction stopped', extra_tags={'filename': image})
+                    logger.error('Reduction stopped', image=image)
 
         return processed_images
 

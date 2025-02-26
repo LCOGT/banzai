@@ -104,6 +104,15 @@ def download_from_s3(file_info, context, is_raw_frame=False):
         url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}/?include_related_frames=false'
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
     response = requests.get(url, headers=archive_auth_header).json()
+    try: 
+        response.raise_fot_status()
+    except requests.exceptions.HTTPError as e:
+        message = 'Error downloading file from archive.'
+        if int(response.status_code) == 429:
+            message =+ ' Rate limited.'
+            logger.error(message, extra_tags={'filename': file_info.get('filename'),
+                         'attempt_number': download_from_s3.statistics['attempt_number']})
+            raise e
     buffer = io.BytesIO()
     buffer.write(requests.get(response['url'], stream=True).content)
     buffer.seek(0)

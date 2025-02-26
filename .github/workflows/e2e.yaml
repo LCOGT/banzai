@@ -34,6 +34,8 @@ jobs:
           kind load docker-image banzai:test-latest
 
       - name: Start banzai
+        env:
+          AUTH_TOKEN: ${{ secrets.ArchiveAuthToken }}
         run: |
           cat banzai/tests/e2e-k8s.yaml
 

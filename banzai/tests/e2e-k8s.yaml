@@ -84,6 +84,11 @@ spec:
         value: "e2e_task_queue"
       - name: REFERENCE_CATALOG_URL
         value: "http://phot-catalog.lco.gtn/"
+      - name: AUTH_TOKEN
+        valueFrom:
+          fieldRef:
+            fieldPath: hostEnv['AUTH_TOKEN']
+
     command:
       - celery
       - -A
@@ -148,6 +153,10 @@ spec:
         value: "e2e_large_task_queue"
       - name: REFERENCE_CATALOG_URL
         value: "http://phot-catalog.lco.gtn/"
+      - name: AUTH_TOKEN
+        valueFrom:
+          fieldRef:
+            fieldPath: hostEnv['AUTH_TOKEN']
     command:
       - celery
       - -A
@@ -210,6 +219,10 @@ spec:
         value: "http://phot-catalog.lco.gtn/"
       - name: "CELERY_LARGE_TASK_QUEUE_NAME"
         value: "e2e_large_task_queue"
+      - name: AUTH_TOKEN
+        valueFrom:
+          fieldRef:
+            fieldPath: hostEnv['AUTH_TOKEN']
     command:
       - banzai_run_realtime_pipeline
       - --db-address=$(DB_ADDRESS)
