@@ -1,3 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: banzai-shared-pvc
+  labels:
+    group: banzai-e2e-test
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -131,10 +144,17 @@ spec:
       restartPolicy: Always
       securityContext:
         fsGroup: 10000
+      volumes:
+        - name: banzai-shared-volume
+          persistentVolumeClaim:
+            claimName: banzai-shared-pvc
       containers:
         - name: banzai-celery-workers
           image: banzai:test-latest
           imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: banzai-shared-volume
+              mountPath: /archive
           env:
             - name: DB_ADDRESS
               value: "sqlite:////archive/engineering/test.db?timeout=30"
@@ -214,10 +234,17 @@ spec:
       restartPolicy: Always
       securityContext:
         fsGroup: 10000
+      volumes:
+        - name: banzai-shared-volume
+          persistentVolumeClaim:
+            claimName: banzai-shared-pvc
       containers:
         - name: banzai-large-celery-workers
           image: banzai:test-latest
           imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: banzai-shared-volume
+              mountPath: /archive
           env:
             - name: DB_ADDRESS
               value: "sqlite:////archive/engineering/test.db?timeout=30"
@@ -297,10 +324,17 @@ spec:
       restartPolicy: Always
       securityContext:
         fsGroup: 10000
+      volumes:
+        - name: banzai-shared-volume
+          persistentVolumeClaim:
+            claimName: banzai-shared-pvc
       containers:
         - name: banzai-listener
           image: banzai:test-latest
           imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: banzai-shared-volume
+              mountPath: /archive
           env:
             - name: DB_ADDRESS
               value: "sqlite:////archive/engineering/test.db?timeout=30"
