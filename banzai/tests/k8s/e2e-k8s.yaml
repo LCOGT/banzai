@@ -1,0 +1,341 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banzai-redis-deployment
+  labels:
+    app: banzai-redis
+    group: banzai-e2e-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banzai-redis
+  template:
+    metadata:
+      labels:
+        app: banzai-redis
+    spec:
+      securityContext:
+        fsGroup: 10000
+      containers:
+        - name: banzai-redis
+          image: redis:5.0.3
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 0.1
+              memory: 512Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - 'redis-cli ping | grep -q "PONG"'
+            initialDelaySeconds: 5
+            periodSeconds: 1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: banzai-redis
+  labels:
+    app: banzai-redis
+    group: banzai-e2e-test
+spec:
+  selector:
+    app: banzai-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banzai-fits-exchange-deployment
+  labels:
+    app: banzai-fits-exchange
+    group: banzai-e2e-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banzai-fits-exchange
+  template:
+    metadata:
+      labels:
+        app: banzai-fits-exchange
+    spec:
+      securityContext:
+        fsGroup: 10000
+      containers:
+        - name: banzai-fits-exchange
+          image: rabbitmq:3.12.3
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 1
+              memory: 512Mi
+            limits:
+              cpu: 4
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - "-q"
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 1
+            timeoutSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: banzai-fits-exchange
+  labels:
+    app: banzai-fits-exchange
+    group: banzai-e2e-test
+spec:
+  selector:
+    app: banzai-fits-exchange
+  ports:
+    - port: 5672
+      targetPort: 5672
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banzai-celery-workers-deployment
+  labels:
+    app: banzai-celery-workers
+    group: banzai-e2e-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banzai-celery-workers
+  template:
+    metadata:
+      labels:
+        app: banzai-celery-workers
+    spec:
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 10000
+      containers:
+        - name: banzai-celery-workers
+          image: banzai:test-latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_ADDRESS
+              value: "sqlite:////archive/engineering/test.db?timeout=30"
+            - name: RETRY_DELAY
+              value: "0"
+            - name: TASK_HOST
+              value: "redis://banzai-redis:6379/0"  # Adjust if needed
+            - name: BANZAI_WORKER_LOGLEVEL
+              value: debug
+            - name: CALIBRATE_PROPOSAL_ID
+              value: "calibrate"
+            - name: OBSERVATION_PORTAL_URL
+              value: "http://internal-observation-portal.lco.gtn/api/observations/"
+            - name: API_ROOT
+              value: "https://archive-api.lco.global/"
+            - name: OMP_NUM_THREADS
+              value: "1"
+            - name: FITS_EXCHANGE
+              value: "fits_files"
+            - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
+              value: "1"
+            - name: CELERY_TASK_QUEUE_NAME
+              value: "e2e_task_queue"
+            - name: REFERENCE_CATALOG_URL
+              value: "http://phot-catalog.lco.gtn/"
+          command:
+            - celery
+            - -A
+            - banzai
+            - worker
+            - --hostname
+            - "banzai-celery-worker"
+            - --concurrency
+            - "4"
+            - -l
+            - "info"
+            - "-Q"
+            - "$(CELERY_TASK_QUEUE_NAME)"
+            - "-n"
+            - "celery-worker"
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "celery -A banzai status | grep -q '@celery-worker:.*OK'"
+            initialDelaySeconds: 5
+            periodSeconds: 1
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 4
+              memory: 6Gi
+            limits:
+              cpu: 8
+              memory: 6Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banzai-large-celery-workers-deployment
+  labels:
+    app: banzai-large-celery-workers
+    group: banzai-e2e-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banzai-large-celery-workers
+  template:
+    metadata:
+      labels:
+        app: banzai-large-celery-workers
+    spec:
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 10000
+      containers:
+        - name: banzai-large-celery-workers
+          image: banzai:test-latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_ADDRESS
+              value: "sqlite:////archive/engineering/test.db?timeout=30"
+            - name: RETRY_DELAY
+              value: "0"
+            - name: TASK_HOST
+              value: "redis://banzai-redis:6379/0"  # Adjust if needed
+            - name: BANZAI_WORKER_LOGLEVEL
+              value: debug
+            - name: CALIBRATE_PROPOSAL_ID
+              value: "calibrate"
+            - name: OBSERVATION_PORTAL_URL
+              value: "http://internal-observation-portal.lco.gtn/api/observations/"
+            - name: API_ROOT
+              value: "https://archive-api.lco.global/"
+            - name: OMP_NUM_THREADS
+              value: "2"
+            - name: FITS_EXCHANGE
+              value: "fits_files"
+            - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
+              value: "1"
+            - name: CELERY_TASK_QUEUE_NAME
+              value: "e2e_large_task_queue"
+            - name: REFERENCE_CATALOG_URL
+              value: "http://phot-catalog.lco.gtn/"
+          command:
+            - celery
+            - -A
+            - banzai
+            - worker
+            - --hostname
+            - "banzai-celery-worker"
+            - --concurrency
+            - "1"
+            - -l
+            - "info"
+            - "-Q"
+            - "$(CELERY_TASK_QUEUE_NAME)"
+            - "-n"
+            - "large-celery-worker"
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - 'celery -A banzai status | grep -q "large-celery-worker:.*OK"'
+            initialDelaySeconds: 5
+            periodSeconds: 1
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 2
+              memory: 8Gi
+            limits:
+              cpu: 3
+              memory: 8Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banzai-listener-deployment
+  labels:
+    app: banzai-listener
+    group: banzai-e2e-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banzai-listener
+  template:
+    metadata:
+      labels:
+        app: banzai-listener
+    spec:
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 10000
+      containers:
+        - name: banzai-listener
+          image: banzai:test-latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_ADDRESS
+              value: "sqlite:////archive/engineering/test.db?timeout=30"
+            - name: FITS_BROKER
+              value: "banzai-fits-exchange"
+            - name: TASK_HOST
+              value: "redis://banzai-redis:6379/0"
+            - name: CALIBRATE_PROPOSAL_ID
+              value: "calibrate"
+            - name: OBSERVATION_PORTAL_URL
+              value: "http://internal-observation-portal.lco.gtn/api/observations/"
+            - name: API_ROOT
+              value: "https://archive-api.lco.global/"
+            - name: FITS_EXCHANGE
+              value: "fits_files"
+            - name: OPENTSDB_PYTHON_METRICS_TEST_MODE
+              value: "1"
+            - name: CELERY_TASK_QUEUE_NAME
+              value: "e2e_task_queue"
+            - name: REFERENCE_CATALOG_URL
+              value: "http://phot-catalog.lco.gtn/"
+            - name: CELERY_LARGE_TASK_QUEUE_NAME
+              value: "e2e_large_task_queue"
+          command:
+            - banzai_run_realtime_pipeline
+            - --db-address=$(DB_ADDRESS)
+            - --fpack
+            - --broker-url=banzai-fits-exchange
+          resources:
+            requests:
+              cpu: 0.1
+              memory: 1Gi
+            limits:
+              cpu: 1
+              memory: 1Gi
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - 'ps -u archive | grep -q "banzai_run_real"'
+            initialDelaySeconds: 5
+            periodSeconds: 1
+            timeoutSeconds: 10
