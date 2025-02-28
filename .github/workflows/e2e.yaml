@@ -43,13 +43,13 @@ jobs:
           # Wait for banzai to be ready
           kubectl wait --for=condition=Ready --timeout=60m pods -l group=banzai-e2e-test
           
-          LISTENER_POD=$(kubectl get pods -l app=banzai-listener-deployment -o jsonpath='{.items[0].metadata.name}')
+          LISTENER_POD=$(kubectl get pods -l app=banzai-listener -o jsonpath='{.items[0].metadata.name}')
           echo "LISTENER_POD=${LISTENER_POD}" >> $GITHUB_ENV
 
-          WORKERS_POD=$(kubectl get pods -l app=banzai-celery-workers-deployment -o jsonpath='{.items[0].metadata.name}')
+          WORKERS_POD=$(kubectl get pods -l app=banzai-celery-workers -o jsonpath='{.items[0].metadata.name}')
           echo "WORKERS_POD=${WORKERS_POD}" >> $GITHUB_ENV
           
-          LARGE_WORKERS_POD=$(kubectl get pods -l app=banzai-large-celery-workers-deployment -o jsonpath='{.items[0].metadata.name}')
+          LARGE_WORKERS_POD=$(kubectl get pods -l app=banzai-large-celery-workers -o jsonpath='{.items[0].metadata.name}')
           echo "LARGE_WORKERS_POD=${LARGE_WORKERS_POD}" >> $GITHUB_ENV
           
       - name: Test Super Bias Creation
