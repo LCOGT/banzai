@@ -103,7 +103,7 @@ def download_from_s3(file_info, context, is_raw_frame=False):
     else:
         url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}/?include_related_frames=false'
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
-    response = requests.get(url, headers=archive_auth_header).json()
+    response = requests.get(url, headers=archive_auth_header)
     try:
         response.raise_fot_status()
     except requests.exceptions.HTTPError as e:
@@ -114,7 +114,7 @@ def download_from_s3(file_info, context, is_raw_frame=False):
                          'attempt_number': download_from_s3.statistics['attempt_number']})
             raise e
     buffer = io.BytesIO()
-    buffer.write(requests.get(response['url'], stream=True).content)
+    buffer.write(requests.get(response.json()['url'], stream=True).content)
     buffer.seek(0)
     return buffer
 
