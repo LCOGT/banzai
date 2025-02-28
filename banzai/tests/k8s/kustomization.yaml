@@ -6,50 +6,30 @@ resources:
 
 patches:
   - patch: |-
-      apiVersion: apps/v1
-      kind: Deployment
+      apiVersion: v1
+      kind: Pod
       metadata:
-        name: banzai-listener-deployment
+        name: banzai-e2e-test
       spec:
-        template:
-          spec:
-            containers:
-              - name: banzai-listener
-                env:
-                  - name: AUTH_TOKEN
-                    valueFrom:
-                      secretKeyRef:
-                        name: auth-token-secret
-                        key: auth-token
-  - patch: |-
-      apiVersion: apps/v1
-      kind: Deployment
-      metadata:
-        name: banzai-celery-workers-deployment
-      spec:
-        template:
-          spec:
-            containers:
-              - name: banzai-celery-workers
-                env:
-                  - name: AUTH_TOKEN
-                    valueFrom:
-                      secretKeyRef:
-                        name: auth-token-secret
-                        key: auth-token
-  - patch: |-
-      apiVersion: apps/v1
-      kind: Deployment
-      metadata:
-        name: banzai-large-celery-workers-deployment
-      spec:
-        template:
-          spec:
-            containers:
-              - name: banzai-large-celery-workers
-                env:
-                  - name: AUTH_TOKEN
-                    valueFrom:
-                      secretKeyRef:
-                        name: auth-token-secret
-                        key: auth-token
+        containers:
+          - name: banzai-listener
+            env:
+              - name: AUTH_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: auth-token-secret
+                    key: auth-token
+          - name: banzai-celery-workers
+            env:
+              - name: AUTH_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: auth-token-secret
+                    key: auth-token
+          - name: banzai-large-celery-workers
+            env:
+              - name: AUTH_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: auth-token-secret
+                    key: auth-token
