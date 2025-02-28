@@ -105,7 +105,7 @@ def download_from_s3(file_info, context, is_raw_frame=False):
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
     response = requests.get(url, headers=archive_auth_header)
     try:
-        response.raise_fot_status()
+        response.raise_for_status()
     except requests.exceptions.HTTPError as e:
         message = 'Error downloading file from archive.'
         if int(response.status_code) == 429:
