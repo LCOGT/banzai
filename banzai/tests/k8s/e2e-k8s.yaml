@@ -37,6 +37,7 @@ spec:
                 - 'redis-cli ping | grep -q "PONG"'
             initialDelaySeconds: 5
             periodSeconds: 1
+            timeoutSeconds: 60
 
 ---
 apiVersion: v1
@@ -93,7 +94,7 @@ spec:
                 - ping
             initialDelaySeconds: 5
             periodSeconds: 1
-            timeoutSeconds: 10
+            timeoutSeconds: 60
 ---
 apiVersion: v1
 kind: Service
@@ -182,7 +183,7 @@ spec:
                 - "celery -A banzai status | grep -q '@celery-worker:.*OK'"
             initialDelaySeconds: 5
             periodSeconds: 1
-            timeoutSeconds: 10
+            timeoutSeconds: 60
           resources:
             requests:
               cpu: 4
@@ -265,7 +266,7 @@ spec:
                 - 'celery -A banzai status | grep -q "large-celery-worker:.*OK"'
             initialDelaySeconds: 5
             periodSeconds: 1
-            timeoutSeconds: 10
+            timeoutSeconds: 60
           resources:
             requests:
               cpu: 2
@@ -343,4 +344,4 @@ spec:
                 - 'ps -u archive | grep -q "banzai_run_real"'
             initialDelaySeconds: 5
             periodSeconds: 1
-            timeoutSeconds: 10
+            timeoutSeconds: 60
