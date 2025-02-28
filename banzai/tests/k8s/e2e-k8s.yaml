@@ -14,6 +14,7 @@ spec:
     metadata:
       labels:
         app: banzai-redis
+        group: banzai-e2e-test
     spec:
       securityContext:
         fsGroup: 10000
@@ -69,6 +70,7 @@ spec:
     metadata:
       labels:
         app: banzai-fits-exchange
+        group: banzai-e2e-test
     spec:
       securityContext:
         fsGroup: 10000
@@ -123,6 +125,7 @@ spec:
     metadata:
       labels:
         app: banzai-celery-workers
+        group: banzai-e2e-test
     spec:
       restartPolicy: Always
       securityContext:
@@ -205,6 +208,7 @@ spec:
     metadata:
       labels:
         app: banzai-large-celery-workers
+        group: banzai-e2e-test
     spec:
       restartPolicy: Always
       securityContext:
@@ -287,6 +291,7 @@ spec:
     metadata:
       labels:
         app: banzai-listener
+        group: banzai-e2e-test
     spec:
       restartPolicy: Always
       securityContext:
