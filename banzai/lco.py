@@ -67,7 +67,7 @@ class LCOObservationFrame(ObservationFrame):
                 except (ValueError, TypeError) as e:
                     coord = np.nan
         return coord
-    
+
     @dec.setter
     def dec(self, value):
         if value is None:
@@ -132,7 +132,7 @@ class LCOObservationFrame(ObservationFrame):
     @proposal.setter
     def proposal(self, value):
         self.primary_hdu.meta['PROPID'] = value
-    
+
     @property
     def object(self):
         return self.meta['OBJECT']
@@ -140,7 +140,7 @@ class LCOObservationFrame(ObservationFrame):
     @object.setter
     def object(self, value):
         self.meta['OBJECT'] = value
-    
+
     @property
     def blockid(self):
         id = self.primary_hdu.meta.get('BLKUID')

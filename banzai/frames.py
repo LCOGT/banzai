@@ -93,7 +93,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def ra(self):
         pass
-    
+
     @ra.setter
     @abc.abstractmethod
     def ra(self, value):
@@ -103,12 +103,12 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def dec(self):
         pass
-    
+
     @dec.setter
     @abc.abstractmethod
     def dec(self, value):
         pass
-    
+
     @property
     @abc.abstractmethod
     def bias_level(self):
@@ -198,7 +198,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def proposal(self, value):
         pass
-    
+
     @property
     @abc.abstractmethod
     def object(self):
@@ -208,7 +208,7 @@ class ObservationFrame(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def object(self, value):
         pass
-    
+
     @property
     @abc.abstractmethod
     def blockid(self):
