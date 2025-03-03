@@ -26,15 +26,15 @@ class LCOObservationFrame(ObservationFrame):
     @property
     def ra(self):
         try:
-            coord = Angle(self.meta.get('CRVAl1'), unit='degree')
+            coord = Angle(self.meta.get('CRVAl1'), unit='degree').deg
         except (ValueError, TypeError):
             # Fallback to RA and DEC
             try:
-                coord = Angle(self.meta.get('RA'), unit='hourangle')
+                coord = Angle(self.meta.get('RA'), unit='hourangle').deg
             except (ValueError, TypeError):
             # Fallback to Cat-RA and CAT-DEC
                 try:
-                    coord = Angle(self.meta.get('CAT-RA'), unit='hourangle')
+                    coord = Angle(self.meta.get('CAT-RA'), unit='hourangle').deg
                 except (ValueError, TypeError) as e:
                     coord = np.nan
         return coord
@@ -55,15 +55,15 @@ class LCOObservationFrame(ObservationFrame):
     @property
     def dec(self):
         try:
-            coord = Angle(self.meta.get('CRVAl2'), unit='degree')
+            coord = Angle(self.meta.get('CRVAl2'), unit='degree').deg
         except (ValueError, TypeError):
             # Fallback to RA and DEC
             try:
-                coord = Angle(self.meta.get('DEC'), unit='degree')
+                coord = Angle(self.meta.get('DEC'), unit='degree').deg
             except (ValueError, TypeError):
             # Fallback to Cat-RA and CAT-DEC
                 try:
-                    coord = Angle(self.meta.get('CAT-DEC'), unit='degree')
+                    coord = Angle(self.meta.get('CAT-DEC'), unit='degree').deg
                 except (ValueError, TypeError) as e:
                     coord = np.nan
         return coord
