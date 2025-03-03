@@ -1,10 +1,148 @@
 [build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0",
+            "cython", "extension-helpers",
+            "numpy>=1.24"]
+build-backend = "poetry.core.masonry.api"
 
-requires = ["setuptools",
-            "setuptools_scm",
-            "wheel",
-            "extension-helpers",
-            "oldest-supported-numpy",
-            "cython>=0.29.23,<3.0.0"]
 
-build-backend = 'setuptools.build_meta'
+[project]
+name = "lco-banzai"
+requires-python = ">=3.10,<4"
+version = "1.20.2"
+description = "Python data reduction package for LCOGT data"
+authors = [
+  { name="Curtis McCully", email="cmccully@lco.global" },
+]
+license = {text="GPL-3.0-or-later"}
+readme = "README.rst"
+keywords = ["astronomy", "reduction", "LCOGT"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Operating System :: OS Independent"
+]
+dependencies = [
+  "astropy>=6.0",
+  "scipy",
+  "sqlalchemy>=1.3.0b1",
+  "logutils",
+  "numpy>=1.24",
+  "cython",
+  "lcogt_logging",
+  "photutils",
+  "bottleneck",
+  "kombu",
+  "amqp",
+  "requests",
+  "opensearch-py",
+  "pytest>=4.0",
+  "pyyaml",
+  "psycopg2-binary",
+  "celery[redis]>5",
+  "apscheduler",
+  "ocs_ingester>=3.0.4,<4.0.0",
+  "tenacity>=8.5",
+  "python-dateutil",
+  "emcee",
+  "scikit-image",
+  "cosmic-conn>=0.2.8",
+  "alembic",
+  "mock",
+  'torch'
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=4.0",
+    "coverage",
+    "pytest-astropy"
+]
+docs = [
+    "sphinx-astropy"
+]
+cpu  = ["torch"]
+cuda = ["torch"]
+style = ["pycodestyle"]
+
+[project.urls]
+"Source" = "https://github.com/lcogt/banzai"
+"Docs" = "https://banzai.readthedocs.io/en/latest/"
+
+
+[tool.poetry]
+packages = [
+  { include = "banzai" }
+]
+include = [
+    { path = "**/*.so", format = "wheel" },
+]
+
+[tool.poetry.dependencies]
+torch = [
+    { version = "^2.3", source = "pypi", markers = "sys_platform=='darwin'" },
+    { version = "^2.3", source = "pytorch-cpu", markers = "sys_platform!='darwin' and extra!='cuda'" },
+    { version = "^2.3", source = "pytorch-cuda", markers = "sys_platform!='darwin' and extra=='cuda'" }
+]
+
+
+[[tool.poetry.source]]
+    name     = "pytorch-cuda"
+    priority = "explicit"
+    url      = "https://download.pytorch.org/whl/cu121"
+
+[[tool.poetry.source]]
+    name     = "pytorch-cpu"
+    priority = "explicit"
+    url      = "https://download.pytorch.org/whl/cpu"
+
+[tool.poetry.build]
+script = "build.py"
+
+[tool.setuptools.packages.find]
+include = ["banzai*"]
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.package-data]
+"banzai.tests" = ["data/*"]
+
+[project.scripts]
+    banzai_reduce_individual_frame = "banzai.main:reduce_single_frame"
+    banzai_reduce_directory = "banzai.main:reduce_directory"
+    banzai_make_master_calibrations = "banzai.main:make_master_calibrations"
+    banzai_automate_stack_calibrations = "banzai.main:start_stacking_scheduler"
+    banzai_run_realtime_pipeline = "banzai.main:run_realtime_pipeline"
+    banzai_mark_frame_as_good = "banzai.main:mark_frame_as_good"
+    banzai_mark_frame_as_bad = "banzai.main:mark_frame_as_bad"
+    banzai_update_db = "banzai.main:update_db"
+    banzai_add_instrument = "banzai.main:add_instrument"
+    banzai_add_site = "banzai.main:add_site"
+    banzai_add_super_calibration = "banzai.main:add_super_calibration"
+    banzai_populate_bpms = "banzai.main:add_bpms_from_archive"
+    banzai_create_db = "banzai.main:create_db"
+
+[tool.coverage.run]
+source = ["banzai"] 
+omit = [
+  "banzai/_astropy_init*",
+  "banzai/conftest*",
+  "banzai/cython_version*",
+  "banzai/setup_package*",
+  "banzai/*/setup_package*",
+  "banzai/*/*/setup_package*",
+  "banzai/tests/*",
+  "banzai/*/tests/*",
+  "banzai/*/*/tests/*",
+  "banzai/version*"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "except ImportError",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "def main\\(.*\\):",
+  "pragma: py{ignore_python_version}"
+]

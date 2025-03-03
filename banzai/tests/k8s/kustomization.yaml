@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - e2e-k8s.yaml
+
+patches:
+  - patch: |-
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: banzai-e2e-test
+      spec:
+        containers:
+          - name: banzai-listener
+            env:
+              - name: AUTH_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: auth-token-secret
+                    key: auth-token
+          - name: banzai-celery-workers
+            env:
+              - name: AUTH_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: auth-token-secret
+                    key: auth-token
+          - name: banzai-large-celery-workers
+            env:
+              - name: AUTH_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: auth-token-secret
+                    key: auth-token
