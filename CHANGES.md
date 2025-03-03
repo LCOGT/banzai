@@ -1,3 +1,8 @@
+1.21.0 (2025-02-12)
+-------------------
+- Added the ability to change the proposal of a frame before saving
+- Refactored how RA and Dec are pulled from the header so that they can be overridden
+
 1.20.2 (2025-02-10)
 -------------------
 - Bugfix to logging on reduction stopped

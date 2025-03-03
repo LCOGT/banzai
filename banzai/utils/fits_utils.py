@@ -51,30 +51,6 @@ def table_to_fits(table):
     return hdu
 
 
-def parse_ra_dec(header):
-    try:
-        coord = SkyCoord(header.get('CRVAl1'), header.get('CRVAL2'), unit=(units.degree, units.degree))
-        ra = coord.ra.deg
-        dec = coord.dec.deg
-    except (ValueError, TypeError):
-        # Fallback to RA and DEC
-        try:
-            coord = SkyCoord(header.get('RA'), header.get('DEC'), unit=(units.hourangle, units.degree))
-            ra = coord.ra.deg
-            dec = coord.dec.deg
-        except (ValueError, TypeError):
-            # Fallback to Cat-RA and CAT-DEC
-            try:
-                coord = SkyCoord(header.get('CAT-RA'), header.get('CAT-DEC'), unit=(units.hourangle, units.degree))
-                ra = coord.ra.deg
-                dec = coord.dec.deg
-            except (ValueError, TypeError) as e:
-                logger.error('Could not get initial pointing guess. {0}'.format(e),
-                             extra_tags={'filename': header.get('ORIGNAME')})
-                ra, dec = np.nan, np.nan
-    return ra, dec
-
-
 def get_primary_header(filename) -> Optional[fits.Header]:
     try:
         header = fits.getheader(filename, ext=0)

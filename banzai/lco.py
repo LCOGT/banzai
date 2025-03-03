@@ -8,6 +8,7 @@ from astropy.io import fits
 
 from astropy.time import Time
 from astropy.table import Table
+from astropy.coordinates import Angle
 import hashlib
 
 from banzai import dbs
@@ -21,6 +22,64 @@ class LCOObservationFrame(ObservationFrame):
     def get_output_directory(self, runtime_context) -> str:
         return os.path.join(runtime_context.processed_path, self.instrument.site,
                             self.instrument.camera, self.epoch, 'processed')
+
+    @property
+    def ra(self):
+        try:
+            coord = Angle(self.meta.get('CRVAl1'), unit='degree').deg
+        except (ValueError, TypeError):
+            # Fallback to RA and DEC
+            try:
+                coord = Angle(self.meta.get('RA'), unit='hourangle').deg
+            except (ValueError, TypeError):
+            # Fallback to Cat-RA and CAT-DEC
+                try:
+                    coord = Angle(self.meta.get('CAT-RA'), unit='hourangle').deg
+                except (ValueError, TypeError) as e:
+                    coord = np.nan
+        return coord
+
+    @ra.setter
+    def ra(self, value):
+        if value is None:
+            coord = 'N/A'
+            if 'CRVAL1' in self.meta:
+                self.meta.pop('CRVAL1')
+        else:
+            self.meta['CRVAL1'] = float(value)
+            coord = Angle(value, unit='degree')
+            coord = coord.to('hourangle').to_string(sep=':', pad=True)
+        self.meta['RA'] = coord
+        self.meta['CAT-RA'] = coord
+
+    @property
+    def dec(self):
+        try:
+            coord = Angle(self.meta.get('CRVAl2'), unit='degree').deg
+        except (ValueError, TypeError):
+            # Fallback to RA and DEC
+            try:
+                coord = Angle(self.meta.get('DEC'), unit='degree').deg
+            except (ValueError, TypeError):
+            # Fallback to Cat-RA and CAT-DEC
+                try:
+                    coord = Angle(self.meta.get('CAT-DEC'), unit='degree').deg
+                except (ValueError, TypeError) as e:
+                    coord = np.nan
+        return coord
+
+    @dec.setter
+    def dec(self, value):
+        if value is None:
+            coord = 'N/A'
+            if 'CRVAL2' in self.meta:
+                self.meta.pop('CRVAL2')
+        else:
+            self.meta['CRVAL2'] = float(value)
+            coord = Angle(value, unit='degree')
+            coord = coord.to_string(sep=':', pad=True)
+        self.meta['DEC'] = coord
+        self.meta['CAT-DEC'] = coord
 
     @property
     def n_amps(self):
@@ -69,6 +128,18 @@ class LCOObservationFrame(ObservationFrame):
     @property
     def proposal(self):
         return self.primary_hdu.meta.get('PROPID')
+
+    @proposal.setter
+    def proposal(self, value):
+        self.primary_hdu.meta['PROPID'] = value
+
+    @property
+    def object(self):
+        return self.meta['OBJECT']
+
+    @object.setter
+    def object(self, value):
+        self.meta['OBJECT'] = value
 
     @property
     def blockid(self):

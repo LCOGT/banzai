@@ -4,13 +4,8 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 on:
   push:
-    branches:
-      - "**"
     tags:
       - "*"
-  pull_request:
-    branches:
-      - master
 
 jobs:
   build-push:
