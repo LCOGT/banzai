@@ -358,7 +358,6 @@ def build_master_calibration_criteria(image, calibration_type, master_selection_
 
 
 def query_calibrations(image, calibration_criteria, db_address):
-    calibration_image = None
     with get_session(db_address=db_address) as db_session:
         if 'postgres' in db_session.bind.dialect.name:
             order_func = func.abs(func.extract("epoch", CalibrationImage.dateobs) -
@@ -367,9 +366,9 @@ def query_calibrations(image, calibration_criteria, db_address):
             order_func = func.abs(func.julianday(CalibrationImage.dateobs) - func.julianday(image.dateobs))
         else:
             raise NotImplementedError("Only postgres and sqlite are supported")
-        if calibration_image is None:
-            image_filter = db_session.query(CalibrationImage).filter(calibration_criteria)
-            calibration_image = image_filter.order_by(order_func).first()
+        image_filter = db_session.query(CalibrationImage).filter(calibration_criteria)
+        calibration_image = image_filter.order_by(order_func).first()
+    return calibration_image
 
 
 def get_master_cal_record(image, calibration_type, master_selection_criteria, db_address,
