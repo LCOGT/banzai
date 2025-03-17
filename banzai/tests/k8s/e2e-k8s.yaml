@@ -14,27 +14,8 @@ spec:
     fsGroup: 10000
 
   containers:
-  - name: banzai-redis
-    image: redis:5.0.3
-    imagePullPolicy: IfNotPresent
-    resources:
-      requests:
-        cpu: 0.1
-        memory: 512Mi
-      limits:
-        cpu: 1
-        memory: 512Mi
-    readinessProbe:
-      exec:
-        command:
-          - /bin/sh
-          - -c 
-          - 'redis-cli ping | grep -q "PONG"'
-      initialDelaySeconds: 5
-      periodSeconds: 1
-      timeoutSeconds: 60
   - name: banzai-fits-exchange
-    image: rabbitmq:3.12.3
+    image: rabbitmq:4.1-rc
     imagePullPolicy: IfNotPresent
     resources:
       requests:
@@ -66,7 +47,7 @@ spec:
       - name: RETRY_DELAY
         value: "0"
       - name: TASK_HOST
-        value: "redis://localhost:6379/0"
+        value: "pyamqp://guest@localhost//"
       - name: BANZAI_WORKER_LOGLEVEL
         value: debug
       - name: CALIBRATE_PROPOSAL_ID
@@ -130,7 +111,7 @@ spec:
       - name: RETRY_DELAY
         value: "0"
       - name: TASK_HOST
-        value: "redis://localhost:6379/0"
+        value: "pyamqp://guest@localhost//"
       - name: BANZAI_WORKER_LOGLEVEL
         value: debug
       - name: CALIBRATE_PROPOSAL_ID
@@ -194,7 +175,7 @@ spec:
       - name: FITS_BROKER
         value: "localhost"
       - name: TASK_HOST
-        value: "redis://localhost:6379/0"
+        value: "pyamqp://guest@localhost//"
       - name: CALIBRATE_PROPOSAL_ID
         value: "calibrate"
       - name: OBSERVATION_PORTAL_URL

@@ -34,7 +34,7 @@ def configure_workers(**kwargs):
 
 app = Celery('banzai')
 app.config_from_object('banzai.celeryconfig')
-app.conf.update(broker_url=os.getenv('TASK_HOST', 'redis://localhost:6379/0'),
+app.conf.update(broker_url=os.getenv('TASK_HOST', 'pyamqp://guest@localhost//'),
                 worker_hijack_root_logger=False)
 celery_task_queue_name = os.getenv('CELERY_TASK_QUEUE_NAME', 'celery')
 
