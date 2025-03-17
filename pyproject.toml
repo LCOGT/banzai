@@ -48,7 +48,8 @@ dependencies = [
   "cosmic-conn>=0.2.8",
   "alembic",
   "mock",
-  'torch'
+  'torch',
+  'extension-helpers',
 ]
 
 [project.optional-dependencies]
