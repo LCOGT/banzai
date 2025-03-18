@@ -51,11 +51,11 @@ spec:
           resources:
             requests:
               cpu: "0.5"
-              memory: "14Gi"
-              ephemeral-storage: "60Gi"
+              memory: "10Gi"
+              ephemeral-storage: "40Gi"
             limits:
               cpu: "2"
-              memory: "14Gi"
+              memory: "10Gi"
           volumeMounts:
             - name: tmp
               mountPath: /tmp
@@ -63,7 +63,7 @@ spec:
       volumes:
         - name: tmp
           emptyDir:
-            sizeLimit: 60Gi
+            sizeLimit: 40Gi
     {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

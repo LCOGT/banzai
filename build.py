@@ -10,12 +10,11 @@ import os
 from setuptools import Distribution
 from setuptools.command.build_ext import build_ext
 
-
 def build() -> None:
     ext_modules = get_extensions()
 
     distribution = Distribution({
-        "name": "lco-banzai",
+        "name": "package",
         "ext_modules": ext_modules
     })
     cmd = build_ext(distribution)
