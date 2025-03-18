@@ -140,10 +140,7 @@ class CalibrationUser(Stage):
         return dbs.cal_record_to_file_info(
             dbs.get_master_cal_record(image, self.calibration_type, self.master_selection_criteria,
                                       self.runtime_context.db_address,
-                                      use_only_older_calibrations=self.runtime_context.use_only_older_calibrations,
-                                      prefer_same_block_cals=self.runtime_context.prefer_same_block_cals,
-                                      prefer_same_proposal_cals=self.runtime_context.prefer_same_proposal_cals,
-                                      check_public_cals=self.runtime_context.check_public_cals)
+                                      use_only_older_calibrations=self.runtime_context.use_only_older_calibrations)
         )
 
 
