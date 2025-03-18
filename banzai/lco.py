@@ -142,6 +142,13 @@ class LCOObservationFrame(ObservationFrame):
         self.meta['OBJECT'] = value
 
     @property
+    def blockid(self):
+        id = self.primary_hdu.meta.get('BLKUID')
+        if str(id).lower() in ['n/a', 'unknown', 'none', '']:
+            id = None
+        return id
+
+    @property
     def public_date(self):
         pubdat = self.primary_hdu.meta.get('L1PUBDAT')
         if pubdat is None:
@@ -263,6 +270,9 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
                              'is_master': self.is_master,
                              'is_bad': self.is_bad,
                              'frameid': output_product.frame_id,
+                             'blockid': self.blockid,
+                             'proposal': self.proposal,
+                             'public_date': self.public_date,
                              'attributes': {}}
         for attribute in self.grouping_criteria:
             record_attributes['attributes'][attribute] = str(getattr(self, attribute))

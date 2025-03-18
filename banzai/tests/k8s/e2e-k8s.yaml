@@ -24,16 +24,15 @@ spec:
       limits:
         cpu: 1
         memory: 512Mi
-    startupProbe:
+    readinessProbe:
       exec:
         command:
           - /bin/sh
           - -c 
           - 'redis-cli ping | grep -q "PONG"'
       initialDelaySeconds: 5
-      periodSeconds: 5
-      timeoutSeconds: 120
-      failureThreshold: 120
+      periodSeconds: 1
+      timeoutSeconds: 60
   - name: banzai-fits-exchange
     image: rabbitmq:3.12.3
     imagePullPolicy: IfNotPresent
@@ -44,16 +43,15 @@ spec:
       limits:
         cpu: 4
         memory: 512Mi
-    startupProbe:
+    readinessProbe:
       exec:
         command:
           - rabbitmq-diagnostics
           - "-q"
           - ping
       initialDelaySeconds: 5
-      periodSeconds: 5
-      timeoutSeconds: 120
-      failureThreshold: 120
+      periodSeconds: 1
+      timeoutSeconds: 60
   - name: banzai-celery-workers
     image: banzai:test-latest
     imagePullPolicy: IfNotPresent
@@ -102,16 +100,15 @@ spec:
       - "$(CELERY_TASK_QUEUE_NAME)"
       - "-n"
       - "celery-worker"
-    startupProbe:
+    readinessProbe:
       exec:
         command:
           - /bin/sh
           - -c
           - "celery -A banzai status | grep -q '@celery-worker:.*OK'"
       initialDelaySeconds: 5
-      periodSeconds: 5
-      timeoutSeconds: 120
-      failureThreshold: 120
+      periodSeconds: 1
+      timeoutSeconds: 60
     resources:
       requests:
         cpu: 4
@@ -167,16 +164,15 @@ spec:
       - "$(CELERY_TASK_QUEUE_NAME)"
       - "-n"
       - "large-celery-worker"
-    startupProbe:
+    readinessProbe:
       exec:
         command:
           - /bin/sh
           - -c
           - 'celery -A banzai status | grep -q "large-celery-worker:.*OK"'
       initialDelaySeconds: 5
-      periodSeconds: 5
-      timeoutSeconds: 120
-      failureThreshold: 120
+      periodSeconds: 1
+      timeoutSeconds: 60
     resources:
       requests:
         cpu: 2
@@ -227,5 +223,14 @@ spec:
       limits:
         cpu: 1
         memory: 1Gi
+    readinessProbe:
+      exec:
+        command:
+          - /bin/sh
+          - -c
+          - 'ps -u archive | grep -q "banzai_run_real"'
+      initialDelaySeconds: 5
+      periodSeconds: 1
+      timeoutSeconds: 60
   dnsPolicy: ClusterFirst
   restartPolicy: Never

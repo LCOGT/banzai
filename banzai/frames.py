@@ -211,6 +211,11 @@ class ObservationFrame(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
+    def blockid(self):
+        pass
+
+    @property
+    @abc.abstractmethod
     def public_date(self):
         pass
 
