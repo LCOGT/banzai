@@ -1,3 +1,8 @@
+1.22.0 (2025-03-17)
+-------------------
+- Reverted the addition of prefer-same-block-cals, check-public-cals, and prefer-same-proposal-cals
+  banzai imaging does not use them so refactoring to inject them only in floyds
+
 1.21.0 (2025-02-12)
 -------------------
 - Added the ability to change the proposal of a frame before saving
