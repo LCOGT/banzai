@@ -73,9 +73,6 @@ class CalibrationImage(Base):
     good_until = Column(DateTime, default=datetime.datetime(3000, 1, 1))
     good_after = Column(DateTime, default=datetime.datetime(1000, 1, 1))
     attributes = Column(JSON)
-    blockid = Column(Integer, nullable=True)
-    proposal = Column(String(50), nullable=True)
-    public_date = Column(DateTime, nullable=True)
 
 
 class Instrument(Base):
@@ -337,9 +334,8 @@ def cal_record_to_file_info(record):
     return file_info
 
 
-def get_master_cal_record(image, calibration_type, master_selection_criteria, db_address,
-                          use_only_older_calibrations=False, prefer_same_block_cals=False, check_public_cals=False,
-                          prefer_same_proposal_cals=False):
+def build_master_calibration_criteria(image, calibration_type, master_selection_criteria,
+                                      use_only_older_calibrations):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
     calibration_criteria &= CalibrationImage.instrument_id == image.instrument.id
     calibration_criteria &= CalibrationImage.is_master.is_(True)
@@ -358,8 +354,10 @@ def get_master_cal_record(image, calibration_type, master_selection_criteria, db
 
     calibration_criteria &= CalibrationImage.good_after <= image.dateobs
     calibration_criteria &= CalibrationImage.good_until >= image.dateobs
+    return calibration_criteria
 
-    calibration_image = None
+
+def query_calibrations(image, calibration_criteria, db_address):
     with get_session(db_address=db_address) as db_session:
         if 'postgres' in db_session.bind.dialect.name:
             order_func = func.abs(func.extract("epoch", CalibrationImage.dateobs) -
@@ -368,20 +366,16 @@ def get_master_cal_record(image, calibration_type, master_selection_criteria, db
             order_func = func.abs(func.julianday(CalibrationImage.dateobs) - func.julianday(image.dateobs))
         else:
             raise NotImplementedError("Only postgres and sqlite are supported")
-        if prefer_same_block_cals:
-            block_criteria = CalibrationImage.blockid == image.blockid
-            image_filter = db_session.query(CalibrationImage).filter(calibration_criteria & block_criteria)
-            calibration_image = image_filter.order_by(order_func).first()
-        if calibration_image is None and prefer_same_proposal_cals:
-            proposal_criteria = CalibrationImage.proposal == image.proposal
-            image_filter = db_session.query(CalibrationImage).filter(calibration_criteria & proposal_criteria)
-            calibration_image = image_filter.order_by(order_func).first()
-        if check_public_cals:
-            calibration_criteria &= CalibrationImage.public_date <= datetime.datetime.now(datetime.timezone.utc)
-        if calibration_image is None:
-            image_filter = db_session.query(CalibrationImage).filter(calibration_criteria)
-            calibration_image = image_filter.order_by(order_func).first()
+        image_filter = db_session.query(CalibrationImage).filter(calibration_criteria)
+        calibration_image = image_filter.order_by(order_func).first()
+    return calibration_image
 
+
+def get_master_cal_record(image, calibration_type, master_selection_criteria, db_address,
+                          use_only_older_calibrations=False):
+    calibration_criteria = build_master_calibration_criteria(image, calibration_type, master_selection_criteria,
+                                                             use_only_older_calibrations)
+    calibration_image = query_calibrations(image, calibration_criteria, db_address)
     return calibration_image
 
 
