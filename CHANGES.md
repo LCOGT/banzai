@@ -1,3 +1,7 @@
+1.24.1 (2025-04-29)
+-------------------
+- Automatically build linux/arm64 (Mac on Apple silicon) on tag
+
 1.24.0 (2025-03-19)
 -------------------
 - Reversion back to 1.22.0 once memory issues were resolved.
