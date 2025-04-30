@@ -10,6 +10,7 @@ name = "lco-banzai"
 requires-python = ">=3.10,<4"
 version = "1.24.1"
 description = "Python data reduction package for LCOGT data"
+
 authors = [
   { name="Curtis McCully", email="cmccully@lco.global" },
 ]
@@ -45,8 +46,12 @@ dependencies = [
   "scikit-image",
   "cosmic-conn>=0.2.8",
   "mock",
-  'torch',
   'extension-helpers',
+  "torch",
+  # Not strictly needed to run the code. This is only to build the Mac (arm) 
+  # version since wheels exist for this version.
+  "numcodecs (<0.16.0) ; python_version < '3.11'",
+  "numcodecs (>=0.16.0) ; python_version >= '3.11'",
 ]
 
 [project.optional-dependencies]
@@ -58,8 +63,10 @@ test = [
 docs = [
     "sphinx-astropy"
 ]
-cpu  = ["torch"]
+
+cpu = ["torch"]
 cuda = ["torch"]
+
 style = ["pycodestyle"]
 
 [project.urls]
@@ -77,21 +84,20 @@ include = [
 
 [tool.poetry.dependencies]
 torch = [
-    { version = "^2.3", source = "pypi", markers = "sys_platform=='darwin'" },
-    { version = "^2.3", source = "pytorch-cpu", markers = "sys_platform!='darwin' and extra!='cuda'" },
-    { version = "^2.3", source = "pytorch-cuda", markers = "sys_platform!='darwin' and extra=='cuda'" }
-]
-
-
-[[tool.poetry.source]]
-    name     = "pytorch-cuda"
-    priority = "explicit"
-    url      = "https://download.pytorch.org/whl/cu121"
+    { markers = "sys_platform == 'darwin'", source = "PyPI"},
+    { markers = "sys_platform != 'darwin' and extra == 'cpu' and extra != 'cuda'", source = "pytorch-cpu"},
+    { markers = "sys_platform != 'darwin' and extra == 'cuda' and extra != 'cpu'", source = "pytorch-cuda"},
+ ]
 
 [[tool.poetry.source]]
-    name     = "pytorch-cpu"
-    priority = "explicit"
-    url      = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "explicit"
+
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
 
 [tool.poetry.build]
 script = "build.py"
