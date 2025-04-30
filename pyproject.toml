@@ -48,7 +48,7 @@ dependencies = [
   "mock",
   'torch',
   'extension-helpers',
-  "numcodecs >=0.16.0; python_version >= '3.11'",
+  "numcodecs (>=0.16.0); python_version >= '3.11'",
 ]
 
 [project.optional-dependencies]
