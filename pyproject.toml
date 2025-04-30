@@ -10,6 +10,7 @@ name = "lco-banzai"
 requires-python = ">=3.10,<4"
 version = "1.24.1"
 description = "Python data reduction package for LCOGT data"
+
 authors = [
   { name="Curtis McCully", email="cmccully@lco.global" },
 ]
@@ -47,6 +48,7 @@ dependencies = [
   "mock",
   'torch',
   'extension-helpers',
+  "numcodecs >=0.16.0; python_version >= '3.11'",
 ]
 
 [project.optional-dependencies]
@@ -77,21 +79,27 @@ include = [
 
 [tool.poetry.dependencies]
 torch = [
-    { version = "^2.3", source = "pypi", markers = "sys_platform=='darwin'" },
+    { version = "^2.3", source = "PyPI", markers = "sys_platform=='darwin'" },
     { version = "^2.3", source = "pytorch-cpu", markers = "sys_platform!='darwin' and extra!='cuda'" },
     { version = "^2.3", source = "pytorch-cuda", markers = "sys_platform!='darwin' and extra=='cuda'" }
 ]
 
 
 [[tool.poetry.source]]
-    name     = "pytorch-cuda"
-    priority = "explicit"
-    url      = "https://download.pytorch.org/whl/cu121"
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "explicit"
+
 
 [[tool.poetry.source]]
-    name     = "pytorch-cpu"
-    priority = "explicit"
-    url      = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
+
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
 
 [tool.poetry.build]
 script = "build.py"
