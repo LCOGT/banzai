@@ -10,7 +10,7 @@ on:
 jobs:
   build-push:
 
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     permissions:
       contents: write
@@ -23,7 +23,10 @@ jobs:
     steps:
       - name: "Checkout"
         uses: actions/checkout@v3
-
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v2
@@ -50,7 +53,7 @@ jobs:
 
       - name: Build and also push Dockerimage
         id: build-and-push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
