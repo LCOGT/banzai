@@ -38,6 +38,7 @@ spec:
             - "--without-heartbeat"
             - "--without-gossip"
             - "--without-mingle"
+            - "--task-events"
             - "--concurrency"
             - "1"
             - "-l"
