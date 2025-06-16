@@ -1,3 +1,8 @@
+1.24.2 (2025-06-12)
+-------------------
+- Turn on celery events in deployment to use in flower
+- Minor bugfix if we get rate limited by the archive
+
 1.24.1 (2025-04-29)
 -------------------
 - Automatically build linux/arm64 (Mac on Apple silicon) on tag
