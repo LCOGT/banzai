@@ -8,7 +8,7 @@ build-backend = "poetry.core.masonry.api"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.10,<4"
-version = "1.24.2"
+version = "1.24.3"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
@@ -23,7 +23,7 @@ classifiers = [
   "Operating System :: OS Independent"
 ]
 dependencies = [
-  "astropy>=6.0",
+  "astropy (>=5)",
   "scipy",
   "sqlalchemy>=1.3.0b1",
   "logutils",

@@ -1,3 +1,7 @@
+1.24.3 (2025-06-17)
+-------------------
+- Reduced astropy requirement to >=5 for nres
+
 1.24.2 (2025-06-12)
 -------------------
 - Turn on celery events in deployment to use in flower
