@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 # Make a non-privledged user to run the pipeline
 RUN mkdir /home/archive && /usr/sbin/groupadd -g 10000 "domainusers" \
