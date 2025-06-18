@@ -1,3 +1,7 @@
+1.24.4 (2025-06-18)
+-------------------
+- Exclude astropy 7.1 from depedencies as it produced files cfitsio could not open
+
 1.24.3 (2025-06-17)
 -------------------
 - Reduced astropy requirement to >=5 for nres
