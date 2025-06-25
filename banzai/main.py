@@ -127,9 +127,9 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
         parser.add_argument(*argument['args'], **argument['kwargs'])
 
     if parse_system_args:
-        args = parser.parse_args()
+        args, _ = parser.parse_known_args()
     else:
-        args = parser.parse_args([])
+        args, _ = parser.parse_known_args([])
     logs.set_log_level(args.log_level)
 
     add_settings_to_context(args, settings)
@@ -230,7 +230,7 @@ def mark_frame(mark_as):
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     logs.set_log_level(args.log_level)
 
     logger.info("Marking the frame {filename} as {mark_as}".format(filename=args.filename, mark_as=mark_as))
@@ -249,7 +249,7 @@ def add_instrument():
     parser.add_argument("--ny", help='Number of pixels in y direction', required=True)
     parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
                         help='Database address: Should be in SQLAlchemy format')
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     instrument = {'site': args.site,
                   'camera': args.camera,
                   'type': args.instrument_type,
@@ -268,7 +268,7 @@ def add_site():
     parser.add_argument("--elevation", help="Elevation of site (m)", required=True)
     parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
                         help='Database address: Should be in SQLAlchemy format')
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     site = {'code': args.site,
             'longitude': args.longitude,
             'latitude': args.latitude,
@@ -297,7 +297,7 @@ def update_db():
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     logs.set_log_level(args.log_level)
 
     try:
@@ -314,7 +314,7 @@ def add_super_calibration():
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     add_settings_to_context(args, settings)
     logs.set_log_level(args.log_level)
     frame_factory = import_utils.import_attribute(settings.FRAME_FACTORY)()
@@ -346,7 +346,7 @@ def add_bpms_from_archive():
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     add_settings_to_context(args, settings)
     # Query the archive for all bpm files
     url = f'{settings.ARCHIVE_FRAME_URL}/?OBSTYPE=BPM&limit=1000'
@@ -385,7 +385,31 @@ def create_db():
     parser.add_argument('--db-address', dest='db_address',
                         default='sqlite3:///test.db',
                         help='Database address: Should be in SQLAlchemy form')
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     logs.set_log_level(args.log_level)
 
     dbs.create_db(args.db_address)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(required=True)
+    sub_commands = [
+        reduce_single_frame,
+        make_master_calibrations,
+        start_stacking_scheduler,
+        run_realtime_pipeline,
+        start_listener,
+        mark_frame,
+        add_instrument,
+        add_site,
+        mark_frame_as_good,
+        mark_frame_as_bad,
+        update_db,
+        add_super_calibration,
+        add_bpms_from_archive,
+        create_db,
+    ]
+    for f in sub_commands:
+        subparsers.add_parser(f.__name__).set_defaults(func=f)
+    args, _ = parser.parse_known_args()
+    args.func()
