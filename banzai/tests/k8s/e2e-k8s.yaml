@@ -28,7 +28,7 @@ spec:
       exec:
         command:
           - /bin/sh
-          - -c 
+          - -c
           - 'redis-cli ping | grep -q "PONG"'
       initialDelaySeconds: 5
       periodSeconds: 5
@@ -90,7 +90,7 @@ spec:
     command:
       - celery
       - -A
-      - banzai
+      - banzai.scheduling
       - worker
       - --hostname
       - "banzai-celery-worker"
@@ -107,7 +107,7 @@ spec:
         command:
           - /bin/sh
           - -c
-          - "celery -A banzai status | grep -q '@celery-worker:.*OK'"
+          - "celery -A banzai.scheduling status | grep -q '@celery-worker:.*OK'"
       initialDelaySeconds: 5
       periodSeconds: 5
       timeoutSeconds: 120
@@ -155,7 +155,7 @@ spec:
     command:
       - celery
       - -A
-      - banzai
+      - banzai.scheduling
       - worker
       - --hostname
       - "banzai-celery-worker"
