@@ -48,10 +48,15 @@ dependencies = [
   "mock",
   'extension-helpers',
   "torch",
-  # Not strictly needed to run the code. This is only to build the Mac (arm) 
+  # Not strictly needed to run the code. This is only to build the Mac (arm)
   # version since wheels exist for this version.
   "numcodecs (<0.16.0) ; python_version < '3.11'",
   "numcodecs (>=0.16.0) ; python_version >= '3.11'",
+  "opentelemetry-distro>=0.55b1",
+  "opentelemetry-api>=1.34.1",
+  "opentelemetry-sdk>=1.34.1",
+  "opentelemetry-exporter-otlp-proto-http>=1.34.1",
+  "opentelemetry-exporter-otlp-proto-grpc>=1.34.1",
 ]
 
 [project.optional-dependencies]

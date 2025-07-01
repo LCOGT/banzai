@@ -13,6 +13,7 @@ from astropy import units
 from tenacity import retry, wait_exponential, stop_after_attempt
 import io
 import os
+from banzai.utils.metrics import add_span_attribute, trace_function
 
 logger = logs.get_logger()
 
@@ -67,8 +68,11 @@ def get_primary_header(filename) -> Optional[fits.Header]:
 # Stop after 4 attempts, and back off exponentially with a minimum wait time of 4 seconds, and a maximum of 10.
 # If it fails after 4 attempts, "reraise" the original exception back up to the caller.
 @retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
+@trace_function("download_from_s3")
 def download_from_s3(file_info, context, is_raw_frame=False):
     frame_id = file_info.get('frameid')
+    add_span_attribute('frame_id', frame_id)
+    add_span_attribute('frame_filename', file_info.get('filename'))
     logger.info(f"Downloading file {file_info.get('filename')} from archive. ID: {frame_id}.",
                 extra_tags={'filename': file_info.get('filename'),
                             'attempt_number': download_from_s3.statistics['attempt_number']})
@@ -91,8 +95,9 @@ def download_from_s3(file_info, context, is_raw_frame=False):
                          'attempt_number': download_from_s3.statistics['attempt_number']})
             raise e
     buffer = io.BytesIO()
-    buffer.write(requests.get(response.json()['url'], stream=True).content)
+    bytes = buffer.write(requests.get(response.json()['url'], stream=True).content)
     buffer.seek(0)
+    add_span_attribute('downloaded_bytes', bytes)
     return buffer
 
 
