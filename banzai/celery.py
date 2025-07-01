@@ -7,11 +7,12 @@ from kombu import Queue
 from celery.exceptions import Retry
 from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, stage_utils
-from banzai.utils.metrics import trace_celery_task, add_span_attribute, add_span_event
+from banzai.utils.metrics import add_span_attribute, add_span_event
 from celery.signals import worker_process_init
 from banzai.context import Context
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
 from banzai.utils.date_utils import get_stacking_date_range
+from opentelemetry.instrumentation.celery import CeleryInstrumentor
 import logging
 
 
@@ -25,8 +26,9 @@ RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 # https://distributedpython.com/posts/three-ideas-to-customise-celery-logging-handlers/
 
 
-@worker_process_init.connect
+@worker_process_init.connect(weak=False)
 def configure_workers(**kwargs):
+    CeleryInstrumentor().instrument()
     # We need to do this because of how the metrics library uses threads and how celery spawns workers.
     from importlib import reload
     from opentsdb_python_metrics import metric_wrappers
@@ -59,7 +61,6 @@ logging.getLogger('celery.bootsteps').setLevel(logging.WARNING)
 
 
 @app.task(name='celery.schedule_calibration_stacking', reject_on_worker_lost=True, max_retries=5)
-@trace_celery_task()
 def schedule_calibration_stacking(site: str, runtime_context: dict,
                                   min_date: str = None, max_date: str = None, frame_types=None):
     logger.info('Scheduling when to stack frames.', extra_tags={'site': site})
@@ -153,7 +154,6 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
 
 
 @app.task(name='celery.stack_calibrations', bind=True, default_retry_delay=RETRY_DELAY, reject_on_worker_lost=True)
-@trace_celery_task()
 def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, frame_type: str,
                        runtime_context: dict, observations: list):
     try:
@@ -208,7 +208,6 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
 
 
 @app.task(name='celery.process_image', bind=True, reject_on_worker_lost=True, max_retries=5)
-@trace_celery_task()
 def process_image(self, file_info: dict, runtime_context: dict):
     """
     :param file_info: Body of queue message: dict

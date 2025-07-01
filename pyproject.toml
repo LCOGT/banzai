@@ -57,6 +57,7 @@ dependencies = [
   "opentelemetry-sdk>=1.34.1",
   "opentelemetry-exporter-otlp-proto-http>=1.34.1",
   "opentelemetry-exporter-otlp-proto-grpc>=1.34.1",
+  "opentelemetry-instrumentation-celery>=0.55b1",
 ]
 
 [project.optional-dependencies]
