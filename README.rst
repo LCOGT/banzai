@@ -74,7 +74,7 @@ agnostic as it uses SQLAlchemy. To create a new database to run BANZAI, run
 .. code-block:: python
 
     from banzai.dbs import create_db
-    create_db('.', db_address='sqlite:///banzai.db')
+    create_db('sqlite:///banzai.db')
 
 This will create an sqlite3 database file in your current directory called `banzai.db`.
 
