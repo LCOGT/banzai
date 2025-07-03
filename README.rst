@@ -59,7 +59,8 @@ BANZAI has a variety of console entry points:
 * `banzai_migrate_db`: Migrate data from a database from before 0.16.0 to the current database format
 * `banzai_add_instrument`: Add an instrument to the database
 * `banzai_add_site`: Add a site to the database
-* `banzai_add_bpm`: Add a BPM to the database
+* `banzai_add_super_calibration`: Add a super calibration frame to the database
+* `banzai_populate_bpms`: Automatically populate the db with bpms from the archive
 * `banzai_create_db`: Initialize a database to be used when running the pipeline
 
 You can see more about the parameters the commands take by adding a `--help` to any command of interest.
@@ -82,13 +83,12 @@ If you are not running this at LCO, you will have to add the instrument of inter
 by running `banzai_add_instrument` before you can process any data.
 
 By default, BANZAI requires a bad pixel mask. You can create one that BANZAI can use by using the tool
-`here <https://github.com/LCOGT/pixel-mask-gen>`_. If the bad pixel mask is in the current directory when you
-create the database it will get automatically added. Otherwise run
+`here <https://github.com/LCOGT/pixel-mask-gen>`_.
+To add a local bpm to the database, run
 
-.. code-block:: python
+.. code-block:: bash
 
-    from banzai.dbs import populate_calibration_table_with_bpms
-    populate_calibration_table_with_bpms('/directory/with/bad/pixel/mask', db_address='sqlite://banzai.db')
+    banzai_add_super_calibration path/to/bpm/file --skip-ingester --db-address path/to/db
 
 Generally, you have to reduce individual bias frames first by running `banzai_reduce_individual_frame` command.
 If the processing went well, you can mark them as good in the database using `banzai_mark_frame_as_good`.
