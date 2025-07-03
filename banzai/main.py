@@ -86,7 +86,7 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
     """
     parser = argparse.ArgumentParser(description=parser_description)
 
-    parser.add_argument("--processed-path", default='/archive/engineering',
+    parser.add_argument("--processed-path", default=os.getenv("DATA_ROOT", '/archive/engineering'),
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
