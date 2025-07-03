@@ -314,31 +314,45 @@ def add_super_calibration():
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
+    parser.add_argument('--skip-ingester', dest='skip_ingester', action='store_true')
+    parser.add_argument('--frame-id', dest='frame_id', help="Frame ID for this calibration frame, if sourced from the archive.")
     args = parser.parse_args()
     add_settings_to_context(args, settings)
     logs.set_log_level(args.log_level)
     frame_factory = import_utils.import_attribute(settings.FRAME_FACTORY)()
+
     try:
         cal_image = frame_factory.open({'path': args.filepath}, args)
     except Exception:
         logger.error(f"Calibration file not able to be opened by BANZAI. Aborting... {logs.format_exception()}",
                      extra_tags={'filename': args.filepath})
-        cal_image = None
+        return
+
+    if args.skip_ingester:
+        logger.debug("Skipped posting frame to archive. Saving to database.", extra_tags={'frameid': args.frame_id})
+        cal_image.frameid = args.frame_id
 
     # upload calibration file via ingester
-    if cal_image is not None:
+    else:
         with open(args.filepath, 'rb') as f:
             logger.debug("Posting calibration file to s3 archive")
             ingester_response = file_utils.post_to_ingester(f, cal_image, args.filepath)
+        frame_id = ingester_response['frameid']
+        logger.debug("File posted to s3 archive. Saving to database.", extra_tags={'frameid': frame_id})
+        cal_image.frameid = frame_id
 
-        logger.debug("File posted to s3 archive. Saving to database.",
-                     extra_tags={'frameid': ingester_response['frameid']})
-        cal_image.frame_id = ingester_response['frameid']
-        cal_image.is_bad = False
-        cal_image.is_master = True
-        dbs.save_calibration_info(cal_image.to_db_record(DataProduct(None, filename=os.path.basename(args.filepath),
-                                                                     filepath=os.path.dirname(args.filepath))),
-                                  args.db_address)
+    cal_image.is_bad = False
+    cal_image.is_master = True
+    dbs.save_calibration_info(
+        cal_image.to_db_record(
+            DataProduct(
+                None,
+                filename=os.path.basename(args.filepath),
+                filepath=os.path.dirname(args.filepath)
+            )
+        ),
+        args.db_address
+    )
 
 
 def add_bpms_from_archive():
