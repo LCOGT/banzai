@@ -315,7 +315,6 @@ def add_super_calibration():
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--skip-ingester', dest='skip_ingester', action='store_true')
-    parser.add_argument('--frame-id', dest='frame_id', help="Frame ID for this calibration frame, if sourced from the archive.")
     args = parser.parse_args()
     add_settings_to_context(args, settings)
     logs.set_log_level(args.log_level)
@@ -329,8 +328,7 @@ def add_super_calibration():
         return
 
     if args.skip_ingester:
-        logger.debug("Skipped posting frame to archive. Saving to database.", extra_tags={'frameid': args.frame_id})
-        cal_image.frameid = args.frame_id
+        logger.debug("Skipped posting frame to archive. Saving to database.")
 
     # upload calibration file via ingester
     else:
