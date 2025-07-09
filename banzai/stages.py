@@ -33,7 +33,11 @@ class Stage(abc.ABC):
         return grouping_criteria
 
     def run(self, images):
-        with create_manual_span(self.stage_name, {"context": self.runtime_context.__dict__}):
+        if self.runtime_context:
+            traced_context = self.runtime_context.__dict__
+        else:
+            traced_context = {}
+        with create_manual_span(self.stage_name, {"context": traced_context}):
             if not images:
                 return images
             if self.group_by_attributes or self.process_by_group:
