@@ -12,7 +12,12 @@ from celery.signals import worker_process_init
 from banzai.context import Context
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
 from banzai.utils.date_utils import get_stacking_date_range
-from opentelemetry.instrumentation.celery import CeleryInstrumentor
+try:
+    from opentelemetry.instrumentation.celery import CeleryInstrumentor
+    OPENTELEMETRY_AVAILABLE = True
+except:
+    OPENTELEMETRY_AVAILABLE = False
+
 import logging
 
 
@@ -28,7 +33,8 @@ RETRY_DELAY = int(os.getenv('RETRY_DELAY', 600))
 
 @worker_process_init.connect(weak=False)
 def configure_workers(**kwargs):
-    CeleryInstrumentor().instrument()
+    if OPENTELEMETRY_AVAILABLE:
+        CeleryInstrumentor().instrument()
     # We need to do this because of how the metrics library uses threads and how celery spawns workers.
     from importlib import reload
     from opentsdb_python_metrics import metric_wrappers
