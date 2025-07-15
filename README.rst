@@ -67,7 +67,7 @@ BANZAI can be deployed in two ways: an active pipeline that
 processes data as it arrives or a manual pipeline that is run from the command line.
 
 For a runnable example of BANZAI in manual pipeline mode, refer to `this jupyter notebook
-<https://github.com/LCOGT/banzai/blob/main/docs/manual_reduction.ipynb>`_:
+<docs/manual_reduction.ipynb>`_:
 
 The main requirement to run BANZAI is that the database has been set up. BANZAI is database type
 agnostic as it uses SQLAlchemy. To create a new database to run BANZAI, run
