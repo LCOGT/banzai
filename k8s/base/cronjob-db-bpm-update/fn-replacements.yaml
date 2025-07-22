@@ -1,0 +1,20 @@
+apiVersion: fn.kpt.dev/v1alpha1
+kind: ApplyReplacements
+metadata: # kpt-merge: /cronjob
+  name: cronjob
+  annotations:
+    config.kubernetes.io/local-config: "true"
+    internal.kpt.dev/upstream-identifier: 'fn.kpt.dev|ApplyReplacements|default|cronjob'
+replacements:
+  - source:
+      kind: CronJob
+      fieldPath: metadata.name
+    targets:
+      - select:
+          kind: CronJob
+        fieldPaths:
+          - metadata.labels.[app.kubernetes.io/component]
+          - spec.jobTemplate.metadata.labels.[app.kubernetes.io/component]
+          - spec.jobTemplate.spec.template.metadata.labels.[app.kubernetes.io/component]
+        options:
+          create: true
