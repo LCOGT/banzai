@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/namespace.json
+apiVersion: v1
+kind: Namespace
+metadata: # kpt-merge: /example
+  name: banzai
+  annotations:
+    internal.kpt.dev/upstream-identifier: '|Namespace|default|example'

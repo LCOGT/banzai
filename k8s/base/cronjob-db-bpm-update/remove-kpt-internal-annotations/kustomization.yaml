@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+metadata: # kpt-merge: /remove-kpt-internal-annotations
+  name: remove-kpt-internal-annotations
+  annotations:
+    config.kubernetes.io/local-config: "true"
+    internal.kpt.dev/upstream-identifier: 'kustomize.config.k8s.io|Component|default|remove-kpt-internal-annotations'
+patches:
+  - target:
+      annotationSelector: internal.kpt.dev/upstream-identifier
+    patch: |-
+      - op: remove
+        path: /metadata/annotations/internal.kpt.dev~1upstream-identifier

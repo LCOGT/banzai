@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/deployment-apps-v1.json
+apiVersion: apps/v1
+kind: Deployment
+metadata: # kpt-merge: /example
+  # Name will be used as the value for the `app.kubernetes.io/component`
+  # selector label and updated automatically by `kpt fn render`.
+  # So no need to set those manually.
+  name: listener
+  labels:
+    app.kubernetes.io/component: listener
+  annotations:
+    internal.kpt.dev/upstream-identifier: 'apps|Deployment|default|example'
+spec:
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: listener
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: listener
+    spec:
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+      containers:
+        - name: listener
+          image: "banzai"
+          command:
+            - "banzai_run_realtime_pipeline"
+            - "--post-to-archive"
+            - "--post-to-opensearch"
+            - "--opensearch-url=$(OPENSEARCH_URL)"
+            - "--fpack"
+            - "--rlevel=91"
+            - "--db-address=$(DB_ADDRESS)"
+            - "--broker-url=$(FITS_BROKER)"
+            - "--queue-name=$(QUEUE_NAME)"
+            - "--no-file-cache"
+          envFrom:
+            - configMapRef:
+                name: env
+                optional: false
+            - secretRef:
+                name: db-env
+                optional: true
+            - secretRef:
+                name: rabbitmq-env
+                optional: true
+            - secretRef:
+                name: archive-api-env
+                optional: true
+            - secretRef:
+                name: env
+                optional: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+              readOnly: false

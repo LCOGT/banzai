@@ -1,0 +1,36 @@
+apiVersion: skaffold/v4beta10
+kind: Config
+metadata:
+  name: banzai
+build:
+  tagPolicy:
+    gitCommit:
+      variant: Tags
+  artifacts:
+    - image: banzai
+      custom:
+        buildCommand: skaffold-builder-buildx
+        dependencies:
+          dockerfile:
+            path: Dockerfile
+manifests:
+  kustomize:
+    paths:
+      - k8s/envs/local/
+deploy:
+  kubectl: {}
+  logs:
+    prefix: podAndContainer
+---
+apiVersion: skaffold/v4beta10
+kind: Config
+metadata:
+  name: banzai-deps
+manifests:
+  kustomize:
+    paths:
+      - k8s/envs/local/deps/
+deploy:
+  kubectl: {}
+  logs:
+    prefix: podAndContainer
