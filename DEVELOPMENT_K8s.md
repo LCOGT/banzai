@@ -48,13 +48,13 @@ skaffold -m banzai-deps run
 Configure secret environment variables (e.g. `AUTH_TOKEN`) needed by Banzai in:
 
 ```file
-./k8s/envs/local/settings/secrets.env
+./k8s/envs/local/secrets.env
 ```
 
 Envrionment variables that should be checked into VCS are set in:
 
 ```file
-./k8s/envs/local/settings/settings.env
+./k8s/envs/local/settings.env
 ```
 
 Deploy Banzai:
