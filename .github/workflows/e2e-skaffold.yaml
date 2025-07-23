@@ -1,0 +1,79 @@
+name: E2E Tests w/ devenv
+
+on:
+  pull_request:
+    branches:
+        - '*'
+
+jobs:
+  test:
+    runs-on:
+      - banzai-runner
+    defaults:
+      run:
+        shell: bash -leo pipefail {0}
+    steps:
+      # Install Nix
+      - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |-
+            accept-flake-config = true
+        env:
+          NIX_INSTALLER_NIX_PACKAGE_URL: https://releases.nixos.org/nix/nix-2.29.1/nix-2.29.1-x86_64-linux.tar.xz
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install docker buildx plugin
+        run: |-
+          nix profile install nixpkgs#docker-buildx
+
+      - name: Install direnv with Nix
+        run: |-
+          nix profile install nixpkgs#direnv
+          echo 'eval "$(direnv export bash)"' | cat - ~/.bashrc > temp && mv temp ~/.bashrc
+
+      - name: Allow direnv
+        run: |-
+          direnv allow
+
+      - name: Debug
+        run: |-
+          sleep inf
+
+      - name: Spin Up Cluster
+        run: devenv-k8s-cluster-up
+
+      - name: Start Banzai Dependencies
+        run: skaffold -m banzai-deps run
+
+      - name: Start Banzai
+        run: |-
+          echo 'AUTH=${{ secrets.ArchiveAuthToken }}' >> ./k8s/envs/local/secrets.env
+
+          skaffold -m banzai run
+
+      - name: Initialize DB
+        run: |-
+          skaffold-banzai-init-db
+
+      - name: Test Super Bias Creation
+        run: |-
+          skaffold-banzai-e2e-master-bias
+
+      - name: Test Super Dark Creation
+        run: |-
+          skaffold-banzai-e2e-master-dark
+
+      - name: Test Super Flat Creation
+        run: |-
+          skaffold-banzai-e2e-master-flat
+
+      - name: Test Science Frame Creation
+        run: |-
+          skaffold-banzai-e2e-master-science-files
+
+      - name: Cleanup
+        run: |-
+          devenv-k8s-cluster-down
