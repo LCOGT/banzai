@@ -28,6 +28,8 @@ jobs:
       - name: Install docker buildx plugin
         run: |-
           nix profile install nixpkgs#docker-buildx
+          mkdir -p ~/.docker/cli-plugins
+          ln -sfn $(which docker-buildx) ~/.docker/cli-plugins/docker-buildx
 
       - name: Install direnv with Nix
         run: |-
@@ -37,10 +39,6 @@ jobs:
       - name: Allow direnv
         run: |-
           direnv allow
-
-      - name: Debug
-        run: |-
-          sleep inf
 
       - name: Spin Up Cluster
         run: devenv-k8s-cluster-up
