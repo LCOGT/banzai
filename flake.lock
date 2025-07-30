@@ -31,22 +31,6 @@
         "type": "github"
       }
     },
-    "deploy-repo-template": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1725037657,
-        "narHash": "sha256-p1ZfPG60DqmcUGJX8rkCVFr0Wh7ZVLCn/BoM6IGTbOo=",
-        "ref": "refs/heads/main",
-        "rev": "82058b4c22070bdb386e13b0edadb45742dc3b2e",
-        "revCount": 17,
-        "type": "git",
-        "url": "https://github.com/LCOGT/deploy-repo-template.git"
-      },
-      "original": {
-        "type": "git",
-        "url": "https://github.com/LCOGT/deploy-repo-template.git"
-      }
-    },
     "devenv": {
       "inputs": {
         "cachix": "cachix",
@@ -71,7 +55,6 @@
     },
     "devenv-k8s": {
       "inputs": {
-        "deploy-repo-template": "deploy-repo-template",
         "devenv": "devenv",
         "devenv-root": "devenv-root",
         "flake-parts": "flake-parts_2",
@@ -83,11 +66,11 @@
         "skaffold": "skaffold"
       },
       "locked": {
-        "lastModified": 1741209498,
-        "narHash": "sha256-DwDrVqd1Z7sFn4dIWkqPTSKYFTE6LgoITEha8Q42eUM=",
+        "lastModified": 1753835308,
+        "narHash": "sha256-k5VsIN4gPhftWNW+UzTsZlOBobUgGUZSq2q6PeEvBuo=",
         "owner": "LCOGT",
         "repo": "devenv-k8s",
-        "rev": "e897d5c64ff5a05d0f452233939ebed541419bb3",
+        "rev": "f2d80d3cc902b0f7ab8a17edf0d356f8f7b785ae",
         "type": "github"
       },
       "original": {
