@@ -229,11 +229,17 @@ class LCOObservationFrame(ObservationFrame):
     def write(self, runtime_context):
         self.save_processing_metadata(runtime_context)
         output_products = self.get_output_data_products(runtime_context)
+        archive_success = True
         for data_product in output_products:
             if runtime_context.post_to_archive:
                 archived_image_info = file_utils.post_to_ingester(data_product.file_buffer, self,
                                                                   data_product.filename, meta=data_product.meta)
-                data_product.frame_id = archived_image_info.get('frameid')
+                if not archived_image_info.get('frameid'):
+                    logger.error('Failed to post to archive: %s', data_product.filename)
+                    archive_success = False
+                    data_product.frame_id = None
+                else:
+                    data_product.frame_id = archived_image_info['frameid']
 
             if not runtime_context.no_file_cache:
                 os.makedirs(self.get_output_directory(runtime_context), exist_ok=True)
@@ -243,7 +249,7 @@ class LCOObservationFrame(ObservationFrame):
 
             data_product.file_buffer.seek(0)
             md5 = hashlib.md5(data_product.file_buffer.read()).hexdigest()
-            dbs.save_processed_image(data_product.filename, md5, db_address=runtime_context.db_address)
+            dbs.save_processed_image(data_product.filename, md5, db_address=runtime_context.db_address, success=archive_success)
         return output_products
 
 
