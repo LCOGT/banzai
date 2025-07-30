@@ -285,10 +285,10 @@ def commit_processed_image(processed_image, db_address):
         db_session.commit()
 
 
-def save_processed_image(path, md5, db_address):
+def save_processed_image(path, md5, db_address, success=True):
     filename = os.path.basename(path)
     output_record = get_processed_image(filename, db_address)
-    output_record.success = True
+    output_record.success = success
     output_record.checksum = md5
     commit_processed_image(output_record, db_address)
 
