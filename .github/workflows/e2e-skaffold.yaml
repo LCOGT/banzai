@@ -52,10 +52,6 @@ jobs:
 
           skaffold -m banzai run
 
-      - name: Initialize DB
-        run: |-
-          skaffold-banzai-init-db
-
       - name: Test Super Bias Creation
         run: |-
           skaffold-banzai-e2e-master-bias
