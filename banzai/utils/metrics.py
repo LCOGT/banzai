@@ -89,6 +89,12 @@ class TracingManager:
         """Check if tracing is enabled."""
         return self._enabled
 
+    def get_current_span(self):
+        tracer = self.get_tracer()
+        if tracer:
+            return trace.get_current_span()
+        return None
+
 
 def get_tracing_manager() -> TracingManager:
     """Get the global tracing manager instance."""
@@ -169,15 +175,9 @@ def add_span_attribute(key: str, value: Any):
     if not manager.is_enabled():
         return
 
-    try:
-        tracer = manager.get_tracer()
-        if tracer:
-            current_span = tracer.get_current_span()
-            if current_span and current_span.is_recording():
-                current_span.set_attribute(key, str(value))
-    except Exception:
-        # Silently ignore errors to avoid breaking the application
-        pass
+    current_span = manager.get_current_span()
+    if current_span and current_span.is_recording():
+        current_span.set_attribute(key, str(value))
 
 
 def add_span_event(name: str, attributes: Optional[dict] = None):
@@ -189,18 +189,12 @@ def add_span_event(name: str, attributes: Optional[dict] = None):
     if not manager.is_enabled():
         return
 
-    try:
-        tracer = manager.get_tracer()
-        if tracer:
-            current_span = tracer.get_current_span()
-            if current_span and current_span.is_recording():
-                event_attributes = {}
-                if attributes:
-                    event_attributes = {k: str(v) for k, v in attributes.items()}
-                current_span.add_event(name, event_attributes)
-    except Exception:
-        # Silently ignore errors to avoid breaking the application
-        pass
+    current_span = manager.get_current_span()
+    if current_span and current_span.is_recording():
+        event_attributes = {}
+        if attributes:
+            event_attributes = {k: str(v) for k, v in attributes.items()}
+        current_span.add_event(name, event_attributes)
 
 
 def create_manual_span(span_name: str, attributes: Optional[dict] = None):
