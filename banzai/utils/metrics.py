@@ -24,10 +24,12 @@ try:
     OPENTELEMETRY_AVAILABLE = True
 except ImportError:
     OPENTELEMETRY_AVAILABLE = False
-    # Create placeholder classes for when OpenTelemetry is not available
+    # Placeholder for opentelemetry.trace
     trace = None
 
 logger = logging.getLogger(__name__)
+
+_tracing_manager = None
 
 
 class TracingManager:
@@ -86,10 +88,6 @@ class TracingManager:
     def is_enabled(self) -> bool:
         """Check if tracing is enabled."""
         return self._enabled
-
-
-# Global tracing manager instance
-_tracing_manager = None
 
 
 def get_tracing_manager() -> TracingManager:
@@ -172,9 +170,11 @@ def add_span_attribute(key: str, value: Any):
         return
 
     try:
-        current_span = trace.get_current_span()
-        if current_span and current_span.is_recording():
-            current_span.set_attribute(key, str(value))
+        tracer = manager.get_tracer()
+        if tracer:
+            current_span = tracer.get_current_span()
+            if current_span and current_span.is_recording():
+                current_span.set_attribute(key, str(value))
     except Exception:
         # Silently ignore errors to avoid breaking the application
         pass
@@ -190,12 +190,14 @@ def add_span_event(name: str, attributes: Optional[dict] = None):
         return
 
     try:
-        current_span = trace.get_current_span()
-        if current_span and current_span.is_recording():
-            event_attributes = {}
-            if attributes:
-                event_attributes = {k: str(v) for k, v in attributes.items()}
-            current_span.add_event(name, event_attributes)
+        tracer = manager.get_tracer()
+        if tracer:
+            current_span = tracer.get_current_span()
+            if current_span and current_span.is_recording():
+                event_attributes = {}
+                if attributes:
+                    event_attributes = {k: str(v) for k, v in attributes.items()}
+                current_span.add_event(name, event_attributes)
     except Exception:
         # Silently ignore errors to avoid breaking the application
         pass
