@@ -1,4 +1,5 @@
 import pytest
+import mock
 import numpy as np
 from astropy.table import Table
 from astropy.io.fits import ImageHDU, Header
@@ -408,3 +409,28 @@ def test_propid_not_public():
     test_frame.save_processing_metadata(context)
 
     assert test_frame.meta['L1PUBDAT'] != (date_obs, '[UTC] Date the frame becomes public')
+
+@mock.patch('banzai.lco.dbs.save_processed_image')
+@mock.patch('banzai.lco.file_utils.post_to_ingester', return_value={})
+def test_ingester_response_empty(mock_post_to_ingester, _mock_dbs):
+    hdu_list = [FakeCCDData(meta=Header({
+        'PROPID': 'unittest',
+        'DATE-OBS': '2025-08-20T00:00:00',
+    }))]
+    test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
+    context = FakeContext(post_to_archive=True)
+    with pytest.raises(RuntimeError):
+        test_frame.write(context)
+    assert mock_post_to_ingester.called
+
+@mock.patch('banzai.lco.dbs.save_processed_image')
+@mock.patch('banzai.lco.file_utils.post_to_ingester', return_value={"frameid": "12345"})
+def test_ingester_response_with_frameid(mock_post_to_ingester, _mock_dbs):
+    hdu_list = [FakeCCDData(meta=Header({
+        'PROPID': 'unittest',
+        'DATE-OBS': '2025-08-20T00:00:00',
+    }))]
+    test_frame = FakeLCOObservationFrame(hdu_list=hdu_list)
+    context = FakeContext(post_to_archive=True, no_file_cache=True)
+    test_frame.write(context)
+    assert mock_post_to_ingester.called
