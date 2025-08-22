@@ -1,3 +1,7 @@
+1.24.5 (2025-08-21)
+-------------------
+- Throw an exception when the ingester fails rather than creating an empty frame object.
+
 1.24.4 (2025-06-18)
 -------------------
 - Exclude astropy 7.1 from depedencies as it produced files cfitsio could not open
