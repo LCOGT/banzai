@@ -26,10 +26,13 @@ htmlcov
 MANIFEST
 .ipynb_checkpoints
 env
+.venv
+venv2
 
 # Sphinx
 docs/api
 docs/_build
+docs/example_reduction
 
 # Eclipse editor project files
 .project
@@ -68,6 +71,10 @@ distribute-*.tar.gz
 .project
 .pydevproject
 .settings
+.envrc
+.docker-compose-env
+example_data
+justfile
 
 # Mac OSX
 .DS_Store
