@@ -280,6 +280,8 @@ def get_processed_image(path, db_address):
 
 
 def commit_processed_image(processed_image, db_address):
+    logger.info('SKIPPING updating the db with processed image')
+    return
     with get_session(db_address=db_address) as db_session:
         db_session.add(processed_image)
         db_session.commit()
