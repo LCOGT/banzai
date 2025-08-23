@@ -15,6 +15,9 @@ a.out
 # add a non-generated .c extension, use `git add -f filename.c`.
 *.c
 
+# Files created/used in the example reduction notebook
+docs/example_reduction
+
 # Other generated files
 */version.py
 */cython_version.py
