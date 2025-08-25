@@ -314,7 +314,7 @@ def add_super_calibration():
     parser.add_argument('--db-address', dest='db_address',
                         default='mysql://cmccully:password@localhost/test',
                         help='Database address: Should be in SQLAlchemy form')
-    parser.add_argument('--skip-ingester', dest='skip_ingester', action='store_true')
+    parser.add_argument('--upload-to-archive', dest='upload_to_archive', action='store_true')
     args = parser.parse_args()
     add_settings_to_context(args, settings)
     logs.set_log_level(args.log_level)
@@ -327,17 +327,15 @@ def add_super_calibration():
                      extra_tags={'filename': args.filepath})
         return
 
-    if args.skip_ingester:
-        logger.debug("Skipped posting frame to archive. Saving to database.")
-
-    # upload calibration file via ingester
-    else:
+    # Upload calibration file via ingester if requested
+    if args.upload_to_archive:
         with open(args.filepath, 'rb') as f:
-            logger.debug("Posting calibration file to s3 archive")
+            logger.info("Posting calibration file to s3 archive and saving to database")
             ingester_response = file_utils.post_to_ingester(f, cal_image, args.filepath)
         frame_id = ingester_response['frameid']
-        logger.debug("File posted to s3 archive. Saving to database.", extra_tags={'frameid': frame_id})
         cal_image.frameid = frame_id
+    else:
+        logger.info("Skipping archive upload. Saving to database only.")
 
     cal_image.is_bad = False
     cal_image.is_master = True
