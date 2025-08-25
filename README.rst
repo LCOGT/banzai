@@ -88,7 +88,7 @@ To add a local bpm to the database, run
 
 .. code-block:: bash
 
-    banzai_add_super_calibration path/to/bpm/file --skip-ingester --db-address path/to/db
+    banzai_add_super_calibration path/to/bpm/file --db-address path/to/db
 
 Generally, you have to reduce individual bias frames first by running `banzai_reduce_individual_frame` command.
 If the processing went well, you can mark them as good in the database using `banzai_mark_frame_as_good`.
