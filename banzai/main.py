@@ -393,7 +393,7 @@ def create_db():
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--db-address', dest='db_address',
-                        default='sqlite3:///test.db',
+                        default='sqlite:///test.db',
                         help='Database address: Should be in SQLAlchemy form')
     args = parser.parse_args()
     logs.set_log_level(args.log_level)
