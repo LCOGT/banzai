@@ -1,5 +1,5 @@
 Banzai
-------
+^^^^^^
 
 .. include:: overview.rst
 
