@@ -1,4 +1,3 @@
-********
 Overview
 ********
 
@@ -7,20 +6,20 @@ and produce science quality data products. BANZAI is capable of reducing single 
 fits files. For historical data, BANZAI can also reduce the data cubes that were produced by the Sinistro cameras.
 
 Bad Pixel Mask
---------------
+==============
 - 1: Known bad pixel
 - 2: Saturated pixel
 - 4: Flat field does not have enough signal
 - 8: Cosmic ray
 
 Stages
-------
+======
 BANZAI is comprised of different stages, each corresponding to a single reduction step, which are chained together
 to process images. The individual stages are described below, in the order that they are executed.
 
 
 Overscan Subtraction
-====================
+--------------------
 We currently use the header the keyword ``BIASSEC`` to identify the overscan region. If this keyword is set to
 "Unknown", then we simply skip subtracting the overscan. We estimate a single overscan value for the whole image
 (rather than row by row).
@@ -29,7 +28,7 @@ from the average value from the bias frames.
 
 
 Crosstalk
-=========
+---------
 Currently, only 1-meter imagesr are read out using multiple amplifiers. These frames do have significant
 crosstalk between amplifiers, which is removed using linear coefficients that relate each
 quadrant to every other quadrant. These values are read from the ``CRSTLK{i}{j}`` keywords in the header.
@@ -37,13 +36,13 @@ These coefficients are hard coded for historical data.
 
 
 Gain
-====
+----
 All pixels in the frame are multiplied by the gain, using the ``GAIN`` header keyword. Thus, the science
 frames output by BANZAI are all in units of electrons.
 
 
 Mosaic
-======
+------
 If the file it multi-extension BANZAI produces a single mosaiced frame.
 This relies on the ``DETSEC`` header keywords to mosaic the extensions together.
 
@@ -54,13 +53,13 @@ that have an extra light sensitive row.
 
 
 Trim
-====
+----
 After being mosaiced, the data is trimmed to a useable region for science. This is set
 based on the ``TRIMSEC`` header keyword.
 
 
 Bias Subtraction
-================
+----------------
 Full frame bias images are subtracted from each of the darks, flat field images, and science frames.
 The super bias frame that was taken closest in time to the current data will be used.
 This will add a few counts of noise to each pixel, but it solves two problems. First, if there is systematic
@@ -72,7 +71,7 @@ raised.
 
 
 Dark Subtraction
-================
+----------------
 Full-frame super dark frames, scaled to the exposure time of the frame,
 are subtracted from all flat-field and science images. The most recent
 super dark frame is used. Often this is taken on the same day. If no dark frame exists for this
@@ -90,14 +89,14 @@ The final temperature scaling factor will be stored in the ``DRKTSCAL`` keyword 
 
 
 Flat Field Correction
-=====================
+---------------------
 Super flat field images (normalized to unity using the inner quarter of the image)
 are divided out of every science frame. The most recent
 super flat-field image for the given telescope, filter, and binning is used. If no flat field exists,
 the data will not be reduced and an exception will be raised.
 
 Cosmic Ray Detection
-====================
+--------------------
 We use a convolutional neural network to detect cosmic rays in our images. Our model is packaged as Cosmic-CoNN
 and is available at https://github.com/cy-xu/cosmic-conn. We have adopted a mask threshold score of 0.5 from the network.
 This produces a false discovery rate (false positive pixels / false + true positive pixels) of 5%. At this threshold,
@@ -105,7 +104,7 @@ our models are 94% complete for our training data. Pixels flagged as cosmic-ray 
 8 bit in the mask.
 
 Source Detection
-================
+----------------
 Source detection uses the "astropy.photutils" image segmentation.
 This is similar to Source Extractor, but is written purely in Python. This allows more customization than the original SExtractor.
 
@@ -138,7 +137,7 @@ Flags are as follows:
 
 
 Astrometry
-==========
+----------
 The WCS is found by using Astrometry.net (Lang et al. 2012, ascl:1208.001, http://astrometry.net).
 We use the catalog from the source detection (the previous step) as input.
 
@@ -158,7 +157,7 @@ coordinates with non-linear distortion terms included and those without are ~5 a
 
 
 Photometric Calibration
-=======================
+-----------------------
 BANZAI currently estimates a photometric zeropoint and color term for the g, r, i, and z filters. We adopt the Atlas
 All-Sky Stellar Reference Catalog (ATLAS-REFCAT2; Tonry et al. 2018, ApJ, 867, 105). We fit a color term based on the
 nearest filter to maximize the applicability for non-stellar SEDs. The following colors terms are fit: g: g-r,
@@ -168,7 +167,7 @@ reduced data product have no color term applied.
 
 
 Super Calibration Frames
--------------------------
+========================
 BANZAI also contains routines to create the super bias, dark and flat frames required for the reduction of
 science frames.  Before we describe how these are created, we introduce an important statistical metric used
 throughout the BANZAI pipeline.
@@ -186,7 +185,7 @@ take a mean of the remaining pixels as usual.
 
 
 Super Bias Creation
-====================
+--------------------
 For all instruments, we take many full-frame bias exposures every afternoon and morning. The afternoon and morning sets
 of bias frames are typically reduced together for quality control and to increase statistics.
 
@@ -204,7 +203,7 @@ frames in any significant way.
 
 
 Super Dark Creation
-====================
+--------------------
 For all instruments, we take full-frame dark exposures every afternoon and morning. Like the bias frames,
 the afternoon and morning dark frames are combined together to increase statistics. Typically, a
 total of 10x900s images are taken.
@@ -220,7 +219,7 @@ read noise so it will not affect the noise properties of the final science frame
 
 
 Super Flat Field Creation
-==========================
+--------------------------
 Twilight flats are taken every day. However, flat-field images for every filter are not taken daily,
 because twilight is not long enough to take all of them in a single night. Instead the choice of filter is rotated,
 based on the necessary exposure time to get a high signal to noise image and the popularity of the
@@ -240,11 +239,11 @@ dark frames. We again choose to reject 3 rstd outliers.
 
 
 Quality Control
----------------
+===============
 
 
 Header Checker
-==============
+--------------
 The header sanity test first checks if any of the following principal FITS
 header keywords are either missing or set to ``'N/A'``:
 ``RA``, ``DEC``, ``CAT-RA``, ``CAT-DEC``,
@@ -262,21 +261,21 @@ exposure time values.
 
 
 Thousands Test
-==============
+--------------
 There is a known issue with the Sinistro cameras where a large fraction of pixels report values of exactly 1000.
 This test measures the fraction of 1000-valued pixels in each Sininstro frame, and if this fraction is above
 20%, the frame is rejected.
 
 
 Saturation Test
-===============
+---------------
 A pixel is considered saturated if its values is greater than the ``SATURATE`` header kewyword.
 This test measures the fraction of saturated pixels in each Sininstro frame, and if this fraction is above
 5%, the frame is rejected.
 
 
 Pattern Noise Detector
-======================
+----------------------
 Occasionally, if a camera is failing, it may exhibit highly structured electrical pattern noise. Although this
 is not a common occurrence, it is still desirable to detect the issue as soon as possible.
 
@@ -289,7 +288,7 @@ The method than searches for groups of 3 or more adjacent pixels that have an SN
 all pixels are in these groups, then the frame is considered to have pattern noise.
 
 Pointing Test
-=============
+-------------
 This test computes the offset between the requested RA and declination from the header
 (given by either ``OFST-RA`` and ``OFST-DEC``, or ``CAT-RA`` and ``CAT-DEC``)
 with the actual RA and declination of the observation (``CRVAL1`` and ``CRVAL2``).
@@ -297,7 +296,7 @@ The test is considered failed if the offset is above 300", and a warning is prov
 
 
 Super Calibration Comparison
-=============================
+-----------------------------
 
 When a calibration frame is processed by BANZAI, it can be compared to the temporally nearest
 previous super to check
