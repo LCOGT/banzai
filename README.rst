@@ -44,19 +44,17 @@ BANZAI in a virtual environment.
 
 Usage
 -----
+
 BANZAI has a variety of console entry points:
 
 * `banzai_reduce_individual_frame`: Process a single frame
 * `banzai_reduce_directory`: Process all frames in a directory
 * `banzai_make_master_calibrations`: Make a master calibration frame by stacking previously processed individual calibration frames.
-* `banzai_e2e_stack_calibrations`: Convenience script for stacking calibration frames in the end-to-end tests
 * `banzai_automate_stack_calibrations`: Start the scheduler that sets when to create master calibration frames
 * `banzai_run_realtime_pipeline`: Start the listener to detect and process incoming frames
 * `banzai_mark_frame_as_good`: Mark a calibration frame as good in the database
 * `banzai_mark_frame_as_bad`: Mark a calibration frame as bad in the database
 * `banzai_update_db`: Update the instrument table by querying the ConfigDB
-* `banzai_run_end_to_end_tests`: A wrapper to run the end-to-end tests
-* `banzai_migrate_db`: Migrate data from a database from before 0.16.0 to the current database format
 * `banzai_add_instrument`: Add an instrument to the database
 * `banzai_add_site`: Add a site to the database
 * `banzai_add_super_calibration`: Add a super calibration frame to the database
@@ -65,9 +63,11 @@ BANZAI has a variety of console entry points:
 
 You can see more about the parameters the commands take by adding a `--help` to any command of interest.
 
-
-BANZAI can be deployed in two ways, an active pipeline that
+BANZAI can be deployed in two ways: an active pipeline that
 processes data as it arrives or a manual pipeline that is run from the command line.
+
+For a runnable example of BANZAI in manual pipeline mode, refer to `this jupyter notebook
+<docs/example_reduction.ipynb>`_:
 
 The main requirement to run BANZAI is that the database has been set up. BANZAI is database type
 agnostic as it uses SQLAlchemy. To create a new database to run BANZAI, run
@@ -75,9 +75,9 @@ agnostic as it uses SQLAlchemy. To create a new database to run BANZAI, run
 .. code-block:: python
 
     from banzai.dbs import create_db
-    create_db('sqlite:///banzai.db')
+    create_db('sqlite:///banzai-test.db')
 
-This will create an sqlite3 database file in your current directory called `banzai.db`.
+This will create an sqlite3 database file in your current directory called `banzai-test.db`.
 
 If you are not running this at LCO, you will have to add the instrument of interest to your database
 by running `banzai_add_instrument` before you can process any data.
@@ -103,13 +103,11 @@ See the `docker-compose.yml` file for details on this setup.
 
 Tests
 -----
-Unit tests can be run using the tox test automation tool, which will automatically build and install
-the required dependencies in a virtual environment, then run the tests.
-The end-to-end tests require more setup, so to run only the unit tests locally run:
+Unit tests can be run using pytest. The end-to-end tests require more setup, so to run only the unit tests locally run:
 
 .. code-block:: bash
 
-    tox -e test -- -m 'not e2e'
+    pytest -m 'not e2e'
 
 The `-m` is short for marker. The following markers are defined if you only want to run a subset of the tests:
 

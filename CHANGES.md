@@ -1,3 +1,8 @@
+1.24.6 (2025-08-28)
+-------------------
+- Add a notebook with a runnable example of a manual reduction procedure
+- Allow adding calibration files to the database without also uploading to the archive
+
 1.24.5 (2025-08-21)
 -------------------
 - Throw an exception when the ingester fails rather than creating an empty frame object.
