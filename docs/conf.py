@@ -29,6 +29,8 @@ from importlib import import_module
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+highlight_language = 'python3'
+
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
@@ -108,7 +110,7 @@ exclude_patterns = ['_build']
 #show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+#pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
