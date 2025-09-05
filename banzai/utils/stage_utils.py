@@ -1,6 +1,7 @@
 from banzai.utils import import_utils
 from banzai.context import Context
 from banzai.logs import get_logger
+from banzai.metrics import trace_function
 
 logger = get_logger()
 
@@ -38,6 +39,7 @@ def get_stages_for_individual_frame(ordered_stages, last_stage=None, extra_stage
     return stages_todo
 
 
+@trace_function("run_pipeline_stages")
 def run_pipeline_stages(image_paths: list, runtime_context: Context, calibration_maker: bool = False):
     frame_factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)()
     images = [frame_factory.open(image_path, runtime_context) for image_path in image_paths]

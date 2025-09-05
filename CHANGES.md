@@ -1,3 +1,7 @@
+1.25.0 (2025-09-05)
+-------------------
+- Added infrastructure to push metrics to opentelemetry dbs
+
 1.24.6 (2025-08-28)
 -------------------
 - Add a notebook with a runnable example of a manual reduction procedure

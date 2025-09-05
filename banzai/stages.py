@@ -4,6 +4,7 @@ from collections.abc import Iterable
 
 from banzai import logs
 from banzai.frames import ObservationFrame
+from banzai.metrics import add_telemetry_span_attribute, add_telemetry_span_event, create_manual_telemetry_span
 
 logger = logs.get_logger()
 
@@ -32,35 +33,43 @@ class Stage(abc.ABC):
         return grouping_criteria
 
     def run(self, images):
-        if not images:
-            return images
-        if self.group_by_attributes or self.process_by_group:
-            images.sort(key=self.get_grouping)
-            image_sets = [list(image_set) for _, image_set in itertools.groupby(images, self.get_grouping)]
+        if self.runtime_context:
+            traced_context = self.runtime_context.__dict__
         else:
-            # Treat each image individually
-            image_sets = images
-
-        processed_images = []
-        for image_set in image_sets:
-            try:
-                if isinstance(image_set, Iterable):
-                    image = image_set[0]
-                else:
-                    image = image_set
-                logger.info('Running {0}'.format(self.stage_name), image=image)
-                processed_image = self.do_stage(image_set)
-                if processed_image is not None:
-                    processed_images.append(processed_image)
-            except Exception:
-                logger.error(logs.format_exception())
-                if isinstance(image_set, Iterable):
-                    for image in image_set:
+            traced_context = {}
+        with create_manual_telemetry_span(self.stage_name, {"context": traced_context}):
+            if not images:
+                return images
+            if self.group_by_attributes or self.process_by_group:
+                images.sort(key=self.get_grouping)
+                image_sets = [list(image_set) for _, image_set in itertools.groupby(images, self.get_grouping)]
+            else:
+                # Treat each image individually
+                image_sets = images
+            add_telemetry_span_attribute("image_set_length", len(image_sets))
+            processed_images = []
+            for image_set in image_sets:
+                try:
+                    if isinstance(image_set, Iterable):
+                        image = image_set[0]
+                    else:
+                        image = image_set
+                    logger.info('Running {0}'.format(self.stage_name), image=image)
+                    add_telemetry_span_event(f"stage started for image {image}")
+                    processed_image = self.do_stage(image_set)
+                    if processed_image is not None:
+                        processed_images.append(processed_image)
+                except Exception:
+                    logger.error(logs.format_exception())
+                    if isinstance(image_set, Iterable):
+                        for image in image_set:
+                            logger.error('Reduction stopped', image=image)
+                    else:
                         logger.error('Reduction stopped', image=image)
-                else:
-                    logger.error('Reduction stopped', image=image)
+                    add_telemetry_span_event("reduction stopped")
 
-        return processed_images
+            add_telemetry_span_attribute("processed_image_set_length", len(processed_images))
+            return processed_images
 
     @abc.abstractmethod
     def do_stage(self, images) -> ObservationFrame:

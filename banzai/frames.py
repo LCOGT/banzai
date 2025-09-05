@@ -1,12 +1,13 @@
 from banzai import dbs
 from banzai.data import HeaderOnly, CCDData
-from banzai.utils import fits_utils, file_utils
+from banzai.utils import fits_utils
 import numpy as np
 from astropy.io import fits
 import abc
 import os
 from typing import Optional
 from banzai.logs import get_logger
+from banzai.metrics import trace_function
 
 logger = get_logger()
 
@@ -321,6 +322,7 @@ class CalibrationFrame(metaclass=abc.ABCMeta):
     def to_db_record(self, output_product):
         pass
 
+    @trace_function("write_CalibrationFrame")
     def write(self, data_products, runtime_context):
         for product in data_products:
             dbs.save_calibration_info(self.to_db_record(product), runtime_context.db_address)
