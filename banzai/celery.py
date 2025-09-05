@@ -142,7 +142,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
                     else:
                         queue_name = runtime_context.CELERY_TASK_QUEUE_NAME
 
-                    stack_calibrations.apply_async(args=(stacking_min_date, stacking_max_date, instrument.id, 
+                    stack_calibrations.apply_async(args=(stacking_min_date, stacking_max_date, instrument.id,
                                                          frame_type, vars(runtime_context), blocks_for_calibration),
                                                    countdown=message_delay_in_seconds, queue=queue_name)
                     add_telemetry_span_event("scheduled_stacking_task", {
