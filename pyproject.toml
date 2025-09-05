@@ -8,7 +8,7 @@ build-backend = "poetry.core.masonry.api"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.10,<4"
-version = "1.24.4"
+version = "1.24.6"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
@@ -72,7 +72,12 @@ test = [
     "pytest-astropy"
 ]
 docs = [
-    "sphinx-astropy"
+    "sphinx-astropy",
+    "sphinx_rtd_theme",
+    "sphinx-pyproject",
+    "sphinx-autobuild",
+    "nbsphinx",
+    "ipykernel",
 ]
 
 cpu = ["torch"]

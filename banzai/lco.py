@@ -235,7 +235,10 @@ class LCOObservationFrame(ObservationFrame):
             if runtime_context.post_to_archive:
                 archived_image_info = file_utils.post_to_ingester(data_product.file_buffer, self,
                                                                   data_product.filename, meta=data_product.meta)
-                data_product.frame_id = archived_image_info.get('frameid')
+                try:
+                    data_product.frame_id = archived_image_info['frameid']
+                except KeyError:
+                    raise RuntimeError("Archive ingester response did not contain a frameid, cannot continue")
 
             if not runtime_context.no_file_cache:
                 os.makedirs(self.get_output_directory(runtime_context), exist_ok=True)
