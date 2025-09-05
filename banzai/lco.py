@@ -16,7 +16,7 @@ from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData, DataProduct
 from banzai.frames import ObservationFrame, CalibrationFrame, logger, FrameFactory
 from banzai.utils import date_utils, fits_utils, image_utils, file_utils
 from banzai.utils.image_utils import Section
-from banzai.utils.metrics import trace_function
+from banzai.metrics import trace_function
 
 
 class LCOObservationFrame(ObservationFrame):

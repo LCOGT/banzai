@@ -1,7 +1,7 @@
 from banzai.utils import import_utils
 from banzai.context import Context
 from banzai.logs import get_logger
-from banzai.utils.metrics import trace_function
+from banzai.metrics import trace_function
 
 logger = get_logger()
 

@@ -10,7 +10,8 @@ Tracing Environment Variables
 
 import os
 import functools
-import logging
+from banzai.logs import get_logger
+import banzai
 from typing import Optional, Any, Callable
 
 try:
@@ -27,7 +28,7 @@ except ImportError:
     # Placeholder for opentelemetry.trace
     trace = None
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 _tracing_manager = None
 
@@ -50,7 +51,7 @@ class TracingManager:
             # Create resource with service information
             resource = Resource.create({
                 "service.name": "banzai-pipeline",
-                "service.version": '1.0.0', # Possible populate this will Banzi version?
+                "service.version": banzai.__version__,
             })
 
             # Create tracer provider
@@ -166,7 +167,7 @@ def trace_function(
     return decorator
 
 
-def add_span_attribute(key: str, value: Any):
+def add_telemetry_span_attribute(key: str, value: Any):
     """
     Add an attribute to the current active span.
     value will be converted to string using str()
@@ -180,7 +181,7 @@ def add_span_attribute(key: str, value: Any):
         current_span.set_attribute(key, str(value))
 
 
-def add_span_event(name: str, attributes: Optional[dict] = None):
+def add_telemetry_span_event(name: str, attributes: Optional[dict] = None):
     """
     Add an event to the current active span.
 
@@ -197,7 +198,7 @@ def add_span_event(name: str, attributes: Optional[dict] = None):
         current_span.add_event(name, event_attributes)
 
 
-def create_manual_span(span_name: str, attributes: Optional[dict] = None):
+def create_manual_telemetry_span(span_name: str, attributes: Optional[dict] = None):
     """
     Create a manual span context manager.
 

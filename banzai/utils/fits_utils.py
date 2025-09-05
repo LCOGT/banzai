@@ -8,12 +8,10 @@ from banzai import logs
 
 import numpy as np
 from astropy.io import fits
-from astropy.coordinates import SkyCoord
-from astropy import units
 from tenacity import retry, wait_exponential, stop_after_attempt
 import io
 import os
-from banzai.utils.metrics import add_span_attribute, trace_function
+from banzai.metrics import add_telemetry_span_attribute, trace_function
 
 logger = logs.get_logger()
 
@@ -71,8 +69,8 @@ def get_primary_header(filename) -> Optional[fits.Header]:
 @trace_function("download_from_s3")
 def download_from_s3(file_info, context, is_raw_frame=False):
     frame_id = file_info.get('frameid')
-    add_span_attribute('frame_id', frame_id)
-    add_span_attribute('frame_filename', file_info.get('filename'))
+    add_telemetry_span_attribute('frame_id', frame_id)
+    add_telemetry_span_attribute('frame_filename', file_info.get('filename'))
     logger.info(f"Downloading file {file_info.get('filename')} from archive. ID: {frame_id}.",
                 extra_tags={'filename': file_info.get('filename'),
                             'attempt_number': download_from_s3.statistics['attempt_number']})
@@ -97,7 +95,7 @@ def download_from_s3(file_info, context, is_raw_frame=False):
     buffer = io.BytesIO()
     bytes = buffer.write(requests.get(response.json()['url'], stream=True).content)
     buffer.seek(0)
-    add_span_attribute('downloaded_bytes', bytes)
+    add_telemetry_span_attribute('downloaded_bytes', bytes)
     return buffer
 
 

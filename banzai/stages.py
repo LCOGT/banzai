@@ -4,7 +4,7 @@ from collections.abc import Iterable
 
 from banzai import logs
 from banzai.frames import ObservationFrame
-from banzai.utils.metrics import add_span_attribute, add_span_event, create_manual_span
+from banzai.metrics import add_telemetry_span_attribute, add_telemetry_span_event, create_manual_telemetry_span
 
 logger = logs.get_logger()
 
@@ -37,7 +37,7 @@ class Stage(abc.ABC):
             traced_context = self.runtime_context.__dict__
         else:
             traced_context = {}
-        with create_manual_span(self.stage_name, {"context": traced_context}):
+        with create_manual_telemetry_span(self.stage_name, {"context": traced_context}):
             if not images:
                 return images
             if self.group_by_attributes or self.process_by_group:
@@ -46,7 +46,7 @@ class Stage(abc.ABC):
             else:
                 # Treat each image individually
                 image_sets = images
-            add_span_attribute("image_set_length", len(image_sets))
+            add_telemetry_span_attribute("image_set_length", len(image_sets))
             processed_images = []
             for image_set in image_sets:
                 try:
@@ -55,7 +55,7 @@ class Stage(abc.ABC):
                     else:
                         image = image_set
                     logger.info('Running {0}'.format(self.stage_name), image=image)
-                    add_span_event(f"stage started for image {image}")
+                    add_telemetry_span_event(f"stage started for image {image}")
                     processed_image = self.do_stage(image_set)
                     if processed_image is not None:
                         processed_images.append(processed_image)
@@ -66,9 +66,9 @@ class Stage(abc.ABC):
                             logger.error('Reduction stopped', image=image)
                     else:
                         logger.error('Reduction stopped', image=image)
-                    add_span_event("reduction stopped")
+                    add_telemetry_span_event("reduction stopped")
 
-            add_span_attribute("processed_image_set_length", len(processed_images))
+            add_telemetry_span_attribute("processed_image_set_length", len(processed_images))
             return processed_images
 
     @abc.abstractmethod

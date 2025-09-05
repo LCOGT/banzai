@@ -47,11 +47,11 @@ You can add tracing to any function using decorators. A good example
 is the [download_from_s3](https://github.com/LCOGT/banzai/blob/3910c11eaeaa0c2035f051b99af0b49c75f2702b/banzai/utils/fits_utils.py#L71) function:
 
 ```python
-from banzai.utils.metrics import add_span_attribute, trace_function
+from banzai.metrics import add_telemetry_span_attribute, trace_function
 
 @trace_function("download_from_s3")
 def download_from_s3(file_info, context, is_raw_frame=False):
     frame_id = file_info.get('frameid')
-    add_span_attribute('frame_id', frame_id)
-    add_span_attribute('frame_filename', file_info.get('filename'))
+    add_telemetry_span_attribute('frame_id', frame_id)
+    add_telemetry_span_attribute('frame_filename', file_info.get('filename'))
 ```

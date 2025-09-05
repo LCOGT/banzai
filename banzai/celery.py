@@ -7,7 +7,7 @@ from kombu import Queue
 from celery.exceptions import Retry
 from banzai import dbs, calibrations, logs
 from banzai.utils import date_utils, realtime_utils, stage_utils
-from banzai.utils.metrics import add_span_attribute, add_span_event
+from banzai.metrics import add_telemetry_span_attribute, add_telemetry_span_event
 from celery.signals import worker_process_init
 from banzai.context import Context
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
@@ -15,7 +15,7 @@ from banzai.utils.date_utils import get_stacking_date_range
 try:
     from opentelemetry.instrumentation.celery import CeleryInstrumentor
     OPENTELEMETRY_AVAILABLE = True
-except:
+except ImportError:
     OPENTELEMETRY_AVAILABLE = False
 
 import logging
@@ -70,10 +70,10 @@ logging.getLogger('celery.bootsteps').setLevel(logging.WARNING)
 def schedule_calibration_stacking(site: str, runtime_context: dict,
                                   min_date: str = None, max_date: str = None, frame_types=None):
     logger.info('Scheduling when to stack frames.', extra_tags={'site': site})
-    add_span_attribute("site", site)
-    add_span_attribute("min_date", min_date or "auto")
-    add_span_attribute("max_date", max_date or "auto")
-    add_span_attribute("frame_types", str(frame_types) if frame_types else "auto")
+    add_telemetry_span_attribute("site", site)
+    add_telemetry_span_attribute("min_date", min_date or "auto")
+    add_telemetry_span_attribute("max_date", max_date or "auto")
+    add_telemetry_span_attribute("frame_types", str(frame_types) if frame_types else "auto")
     try:
         runtime_context = Context(runtime_context)
 
@@ -87,7 +87,8 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
             block_min_date = min_date
             block_max_date = max_date
 
-        calibration_blocks = get_calibration_blocks_for_time_range(site, block_max_date, block_min_date, runtime_context)
+        calibration_blocks = get_calibration_blocks_for_time_range(site, block_max_date, block_min_date,
+                                                                   runtime_context)
 
         if frame_types is None:
             frame_types = list(runtime_context.CALIBRATION_STACKER_STAGES.keys())
@@ -111,7 +112,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
                                         'max_date': stacking_max_date,
                                         'instrument': instrument.camera,
                                         'frame_type': frame_type})
-                add_span_event("checking_calibration_blocks", {
+                add_telemetry_span_event("checking_calibration_blocks", {
                     "instrument": instrument.camera,
                     "frame_type": frame_type,
                     "stacking_min_date": stacking_min_date,
@@ -141,10 +142,10 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
                     else:
                         queue_name = runtime_context.CELERY_TASK_QUEUE_NAME
 
-                    stack_calibrations.apply_async(args=(stacking_min_date, stacking_max_date, instrument.id, frame_type,
-                                                         vars(runtime_context), blocks_for_calibration),
+                    stack_calibrations.apply_async(args=(stacking_min_date, stacking_max_date, instrument.id, 
+                                                         frame_type, vars(runtime_context), blocks_for_calibration),
                                                    countdown=message_delay_in_seconds, queue=queue_name)
-                    add_span_event("scheduled_stacking_task", {
+                    add_telemetry_span_event("scheduled_stacking_task", {
                         "instrument": instrument.camera,
                         "frame_type": frame_type,
                         "countdown_seconds": message_delay_in_seconds,
@@ -165,11 +166,11 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
     try:
         runtime_context = Context(runtime_context)
         instrument = dbs.get_instrument_by_id(instrument_id, db_address=runtime_context.db_address)
-        add_span_attribute("instrument_id", instrument_id)
-        add_span_attribute("frame_type", frame_type)
-        add_span_attribute("min_date", min_date)
-        add_span_attribute("max_date", max_date)
-        add_span_attribute("observation_count", len(observations))
+        add_telemetry_span_attribute("instrument_id", instrument_id)
+        add_telemetry_span_attribute("frame_type", frame_type)
+        add_telemetry_span_attribute("min_date", min_date)
+        add_telemetry_span_attribute("max_date", max_date)
+        add_telemetry_span_attribute("observation_count", len(observations))
         logger.info('Checking if we are ready to stack',
                     extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
                                 'instrument': instrument.name, 'frame_type': frame_type})
@@ -183,9 +184,10 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
                 if frame_type.upper() == configuration['type']:
                     for instrument_config in configuration['instrument_configs']:
                         expected_image_count += instrument_config['exposure_count']
-        logger.info('expected image count: {0}, completed image count: {1}'.format(str(expected_image_count), str(completed_image_count)))
-        add_span_attribute("expected_image_count", expected_image_count)
-        add_span_attribute("completed_image_count", completed_image_count)
+        logger.info('expected image count: {0}, completed image count: {1}'.format(str(expected_image_count),
+                                                                                   str(completed_image_count)))
+        add_telemetry_span_attribute("expected_image_count", expected_image_count)
+        add_telemetry_span_attribute("completed_image_count", completed_image_count)
         if completed_image_count < expected_image_count and self.request.retries < 3:
             logger.info('Number of processed images less than expected. '
                         'Expected: {}, Completed: {}'.format(expected_image_count, completed_image_count),
@@ -194,15 +196,19 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
             retry = True
         else:
             logger.info('Starting to stack', extra_tags={'site': instrument.site, 'min_date': min_date,
-                                                          'max_date': max_date, 'instrument': instrument.camera,
-                                                          'frame_type': frame_type})
-            add_span_event("starting_calibration_stacking", {
+                                                         'max_date': max_date, 'instrument': instrument.camera,
+                                                         'frame_type': frame_type})
+            add_telemetry_span_event("starting_calibration_stacking", {
                 "site": instrument.site,
                 "instrument": instrument.camera,
                 "frame_type": frame_type
             })
             calibrations.make_master_calibrations(instrument, frame_type, min_date, max_date, runtime_context)
-            add_span_event("completed_calibration_stacking")
+            add_telemetry_span_event("completed_calibration_stacking", {
+                "site": instrument.site,
+                "instrument": instrument.camera,
+                "frame_type": frame_type
+            })
             retry = False
     except Exception:
         logger.error("Exception making master frames: {error}".format(error=logs.format_exception()),
@@ -221,8 +227,8 @@ def process_image(self, file_info: dict, runtime_context: dict):
     """
     try:
         logger.info('Processing frame', extra_tags={'filename': file_info.get('filename')})
-        add_span_attribute("filename", file_info.get('filename', 'unknown'))
-        add_span_attribute("file_path", file_info.get('path', 'unknown'))
+        add_telemetry_span_attribute("filename", file_info.get('filename', 'unknown'))
+        add_telemetry_span_attribute("file_path", file_info.get('path', 'unknown'))
         runtime_context = Context(runtime_context)
         if realtime_utils.need_to_process_image(file_info, runtime_context, self):
             if 'path' in file_info:
@@ -230,12 +236,12 @@ def process_image(self, file_info: dict, runtime_context: dict):
             else:
                 filename = file_info.get('filename')
             logger.info('Reducing frame', extra_tags={'filename': filename})
-            add_span_event("starting_frame_reduction", {"filename": filename})
+            add_telemetry_span_event("starting_frame_reduction", {"filename": filename})
             # Increment the number of tries for this file
             realtime_utils.increment_try_number(filename, db_address=runtime_context.db_address)
             stage_utils.run_pipeline_stages([file_info], runtime_context)
             realtime_utils.set_file_as_processed(filename, db_address=runtime_context.db_address)
-            add_span_event("completed_frame_reduction", {"filename": filename})
+            add_telemetry_span_event("completed_frame_reduction", {"filename": filename})
     except Retry:
         raise
     except Exception:
