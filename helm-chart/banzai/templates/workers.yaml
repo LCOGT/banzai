@@ -33,7 +33,7 @@ spec:
           command:
             - "celery"
             - "-A"
-            - "banzai"
+            - "banzai.scheduling"
             - "worker"
             - "--without-heartbeat"
             - "--without-gossip"
