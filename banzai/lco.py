@@ -16,6 +16,7 @@ from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData, DataProduct
 from banzai.frames import ObservationFrame, CalibrationFrame, logger, FrameFactory
 from banzai.utils import date_utils, fits_utils, image_utils, file_utils
 from banzai.utils.image_utils import Section
+from banzai.metrics import trace_function
 
 
 class LCOObservationFrame(ObservationFrame):
@@ -226,6 +227,7 @@ class LCOObservationFrame(ObservationFrame):
         output_product = DataProduct.from_fits(output_fits, output_filename, self.get_output_directory(runtime_context))
         return [output_product]
 
+    @trace_function("write_LcoObservationFrame")
     def write(self, runtime_context):
         self.save_processing_metadata(runtime_context)
         output_products = self.get_output_data_products(runtime_context)
@@ -233,7 +235,10 @@ class LCOObservationFrame(ObservationFrame):
             if runtime_context.post_to_archive:
                 archived_image_info = file_utils.post_to_ingester(data_product.file_buffer, self,
                                                                   data_product.filename, meta=data_product.meta)
-                data_product.frame_id = archived_image_info.get('frameid')
+                try:
+                    data_product.frame_id = archived_image_info['frameid']
+                except KeyError:
+                    raise RuntimeError("Archive ingester response did not contain a frameid, cannot continue")
 
             if not runtime_context.no_file_cache:
                 os.makedirs(self.get_output_directory(runtime_context), exist_ok=True)
@@ -280,6 +285,7 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
     def dark_temperature_coefficient(self):
         return self.meta.get('DRKTCOEF', 0.0)
 
+    @trace_function("write_LCOCalibrationFrame")
     def write(self, runtime_context):
         output_products = LCOObservationFrame.write(self, runtime_context)
         CalibrationFrame.write(self, output_products, runtime_context)

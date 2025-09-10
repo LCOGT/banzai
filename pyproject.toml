@@ -8,7 +8,7 @@ build-backend = "poetry.core.masonry.api"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.10,<4"
-version = "1.24.4"
+version = "1.25.0"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
@@ -48,11 +48,22 @@ dependencies = [
   "mock",
   'extension-helpers',
   "torch",
-  # Not strictly needed to run the code. This is only to build the Mac (arm) 
+  # Not strictly needed to run the code. This is only to build the Mac (arm)
   # version since wheels exist for this version.
   "numcodecs (<0.16.0) ; python_version < '3.11'",
   "numcodecs (>=0.16.0) ; python_version >= '3.11'",
 ]
+
+[tool.poetry.group.otel]
+optional = true
+
+[tool.poetry.group.otel.dependencies]
+opentelemetry-distro = "^0.55b1"
+opentelemetry-api = "^1.34.1"
+opentelemetry-sdk = "^1.34.1"
+opentelemetry-exporter-otlp-proto-http = "^1.34.1"
+opentelemetry-exporter-otlp-proto-grpc = "^1.34.1"
+opentelemetry-instrumentation-celery = "^0.55b1"
 
 [project.optional-dependencies]
 test = [
@@ -61,7 +72,12 @@ test = [
     "pytest-astropy"
 ]
 docs = [
-    "sphinx-astropy"
+    "sphinx-astropy",
+    "sphinx_rtd_theme",
+    "sphinx-pyproject",
+    "sphinx-autobuild",
+    "nbsphinx",
+    "ipykernel",
 ]
 
 cpu = ["torch"]
@@ -127,7 +143,7 @@ zip-safe = false
     banzai_create_db = "banzai.main:create_db"
 
 [tool.coverage.run]
-source = ["banzai"] 
+source = ["banzai"]
 omit = [
   "banzai/_astropy_init*",
   "banzai/conftest*",
