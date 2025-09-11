@@ -172,7 +172,7 @@ spec:
         command:
           - /bin/sh
           - -c
-          - 'celery -A banzai status | grep -q "large-celery-worker:.*OK"'
+          - 'celery -A banzai.scheduling status | grep -q "large-celery-worker:.*OK"'
       initialDelaySeconds: 5
       periodSeconds: 5
       timeoutSeconds: 120
