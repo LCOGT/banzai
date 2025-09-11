@@ -1,0 +1,58 @@
+apiVersion: kpt.dev/v1
+kind: Kptfile
+metadata:
+  name: rabbitmq
+  annotations:
+    config.kubernetes.io/local-config: "true"
+upstream:
+  type: git
+  git:
+    repo: https://github.com/LCOGT/kpt-pkg-catalog
+    directory: /helm-chart
+    ref: main
+  updateStrategy: resource-merge
+upstreamLock:
+  type: git
+  git:
+    repo: https://github.com/LCOGT/kpt-pkg-catalog
+    directory: /helm-chart
+    ref: main
+    commit: 6086ca76a72cfa89714913a0ae2550f7938bcde7
+pipeline:
+  mutators:
+    - image: gcr.io/kpt-fn/starlark:v0.5.0
+      configMap:
+        source: |-
+          output = "rendered.yaml"
+          new = []
+
+          for r in ctx.resource_list["items"]:
+            path = r.get("metadata", {}).get("annotations", {}).get("internal.config.kubernetes.io/path", "")
+            if path == output:
+              continue
+            new.append(r)
+
+          ctx.resource_list["items"] = new
+      name: reset-rendered
+    - image: gcr.io/kpt-fn/render-helm-chart:v0.2.2
+      configPath: ./charts.yaml
+      name: render-helm-chart
+    - image: gcr.io/kpt-fn/starlark:v0.5.0
+      configMap:
+        source: |-
+          output = "rendered.yaml"
+
+          index = 0
+          for r in ctx.resource_list["items"]:
+            path = r.get("metadata", {}).get("annotations", {}).get("internal.config.kubernetes.io/path", "")
+
+            if path in set(["charts.yaml", "Kptfile", "kustomization.yaml"]):
+              continue
+
+            if path.startswith("remove-kpt-internal-annotations/"):
+              continue
+
+            r["metadata"]["annotations"]["internal.config.kubernetes.io/path"] = output
+            r["metadata"]["annotations"]["internal.config.kubernetes.io/index"] = "%d" % index
+            index = index + 1
+      name: output-to-file

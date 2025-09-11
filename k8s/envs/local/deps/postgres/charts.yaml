@@ -1,0 +1,31 @@
+apiVersion: kpt.dev/v1
+kind: RenderHelmChart
+metadata: # kpt-merge: /example
+  name: postgres
+  annotations:
+    config.kubernetes.io/local-config: "true"
+    internal.kpt.dev/upstream-identifier: kpt.dev|RenderHelmChart|default|example
+# See https://catalog.kpt.dev/render-helm-chart/v0.2/
+helmCharts:
+  - chartArgs:
+      repo: oci://registry-1.docker.io/bitnamicharts
+      name: postgresql
+      version: 12.12.10
+    templateOptions:
+      apiVersions:
+        - v1.26.15
+      releaseName: postgresql
+      namespace: banzai-deps
+      includeCRDs: true
+      skipTests: true
+      values:
+        valuesInline:
+          # Chart values go here
+          architecture: standalone
+          primary:
+            persistence:
+              size: 512Mi
+          auth:
+            database: banzai
+            username: banzai
+            password: banzai

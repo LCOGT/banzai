@@ -1,0 +1,20 @@
+apiVersion: kpt.dev/v1
+kind: Kptfile
+metadata:
+  name: remove-kpt-internal-annotations
+  annotations:
+    config.kubernetes.io/local-config: "true"
+upstream:
+  type: git
+  git:
+    repo: https://github.com/LCOGT/kpt-pkg-catalog
+    directory: /remove-kpt-internal-annotations
+    ref: main
+  updateStrategy: resource-merge
+upstreamLock:
+  type: git
+  git:
+    repo: https://github.com/LCOGT/kpt-pkg-catalog
+    directory: /remove-kpt-internal-annotations
+    ref: main
+    commit: 9471f7891b764d27fef2e84c0c6450de0004bca9
