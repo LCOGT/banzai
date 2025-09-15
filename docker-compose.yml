@@ -35,7 +35,7 @@ services:
     image: ${DOCKER_IMG}
     network_mode: "bridge"
     container_name: banzai-celery-workers
-    entrypoint: ["celery", "-A", "banzai", "worker",
+    entrypoint: ["celery", "-A", "banzai.scheduling", "worker",
                  "--hostname", "banzai-celery-worker",
                  "-l", "debug", "-c", "4"]
     mem_limit: '8g'

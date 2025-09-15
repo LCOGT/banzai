@@ -21,7 +21,7 @@ from banzai.lco import LCOFrameFactory
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
-from banzai.celery import process_image, app, schedule_calibration_stacking
+from banzai.scheduling import process_image, app, schedule_calibration_stacking
 from banzai.data import DataProduct
 from celery.schedules import crontab
 import celery

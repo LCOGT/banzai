@@ -10,7 +10,7 @@ from dateutil.parser import parse
 
 from banzai import settings
 from types import ModuleType
-from banzai.celery import app, schedule_calibration_stacking
+from banzai.scheduling import app, schedule_calibration_stacking
 from banzai.dbs import get_session, CalibrationImage, get_timezone, populate_instrument_tables
 from banzai.dbs import mark_frame, query_for_instrument
 from banzai.utils import file_utils
