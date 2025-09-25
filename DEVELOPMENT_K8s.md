@@ -79,6 +79,9 @@ This is also available as `skaffold-banzai-init-db` as a shortcut.
 
 ### Integration Tests
 
+**WIP:** This still needs some work. Tests run, but file creation validation requires a shared PVC
+between the `debug` and `worker` Pods.
+
 Integration tests can be run in the `debug` Pod.
 
 
