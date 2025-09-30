@@ -11,8 +11,8 @@ from astropy.io import fits
 from kombu import Connection, Exchange
 
 
-def post_to_archive_queue(filename, path, broker_url, exchange_name, **kwargs):
-    """Post file to RabbitMQ queue."""
+def post_to_processing_queue(filename, path, broker_url, exchange_name, **kwargs):
+    """Post file to RabbitMQ listener queue for processing"""
     exchange = Exchange(exchange_name, type='fanout')
     with Connection(broker_url) as conn:
         producer = conn.Producer(exchange=exchange)
@@ -32,14 +32,12 @@ def main():
     exchange_name = 'fits_files'
 
     # Get container path from environment variable
-    container_base_path = '/data/raw'
+    container_base_path = '/data/raw' # Should match
 
     # Find FITS files
     fits_files = []
     for pattern in ['*.fits', '*.fits.fz']:
         fits_files.extend(glob.glob(os.path.join(directory, pattern)))
-
-    # fits_files = [fits_files[1]]
 
     print(f'File to process: {len(fits_files)}')
 
@@ -54,7 +52,7 @@ def main():
                 # Use container path instead of host path
                 container_path = f'{container_base_path}/{os.path.basename(filepath)}'
 
-                post_to_archive_queue(
+                post_to_processing_queue(
                     filename=os.path.basename(filepath),
                     path=container_path,
                     broker_url=broker_url,

@@ -325,7 +325,7 @@ class CalibrationFrame(metaclass=abc.ABCMeta):
     @trace_function("write_CalibrationFrame")
     def write(self, data_products, runtime_context):
         for product in data_products:
-            dbs.save_calibration_info(self.to_db_record(product), runtime_context.db_address)
+            dbs.save_calibration_info(self.to_db_record(product), runtime_context.cal_db_address)
 
 
 class FrameFactory:

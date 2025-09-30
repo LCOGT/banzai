@@ -45,8 +45,6 @@ def need_to_process_image(file_info, context, task):
     If the file has changed, we reset the success flags and the number of tries to zero.
     We only attempt to make images if the instrument is in the database and passes the given criteria.
     """
-    logger.info('Skipping need_to_process_image check; just do the processing.')
-    return True
     if 'path' not in file_info and 'frameid' not in file_info:
         logger.error('Ill formed queue message. Aborting')
         return False

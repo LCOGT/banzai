@@ -103,6 +103,8 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
     parser.add_argument('--db-address', dest='db_address',
                         default='sqlite:///banzai-test.db',
                         help='Database address: Should be in SQLAlchemy form')
+    parser.add_argument('--calibration-db-address', dest='cal_db_address',
+                        help='Optional separate database address for getting calibration files. Defaults to using the same address as --db-address.')
     parser.add_argument('--opensearch-url', dest='opensearch_url',
                         default='https://opensearch.lco.global/')
     parser.add_argument('--os-index', dest='opensearch_qc_index', default='banzai_qc',
@@ -133,6 +135,11 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
     logs.set_log_level(args.log_level)
 
     add_settings_to_context(args, settings)
+
+    # If a separate calibration db address is not provided, fall back to using the primary db address
+    if getattr(args, 'cal_db_address', None) is None:
+        args.cal_db_address = args.db_address
+
     return Context(args)
 
 
@@ -399,3 +406,25 @@ def create_db():
     logs.set_log_level(args.log_level)
 
     dbs.create_db(args.db_address)
+
+def create_local_db():
+    """
+    Create a local database and populate it with sites and instruments from the calibration database.
+    """
+    parser = argparse.ArgumentParser(description="Create a local database and populate it with sites and instruments from the calibration database")
+    parser.add_argument('--local-db-address', dest='local_db_address',
+                        default='sqlite:///banzai-local.db',
+                        help='Local database address: Should be in SQLAlchemy form')
+    parser.add_argument('--cal-db-address', dest='cal_db_address', required=True,
+                        help='Calibration database address: Should be in SQLAlchemy form')
+    parser.add_argument('--site', dest='site', required=True,
+                        help='Site code to replicate (e.g., ogg, lsc)')
+    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
+                                                                'critical', 'fatal', 'error'])
+
+    args = parser.parse_args()
+    logs.set_log_level(args.log_level)
+
+    logger.info(f"Creating local database for site {args.site}")
+    dbs.create_local_db(args.local_db_address, args.cal_db_address, args.site)
+    logger.info("Finished creating local database")

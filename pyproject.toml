@@ -141,6 +141,7 @@ zip-safe = false
     banzai_add_super_calibration = "banzai.main:add_super_calibration"
     banzai_populate_bpms = "banzai.main:add_bpms_from_archive"
     banzai_create_db = "banzai.main:create_db"
+    banzai_create_local_db = "banzai.main:create_local_db"
 
 [tool.coverage.run]
 source = ["banzai"]

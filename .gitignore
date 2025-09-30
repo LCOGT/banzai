@@ -15,9 +15,6 @@ a.out
 # add a non-generated .c extension, use `git add -f filename.c`.
 *.c
 
-# Files created/used in the example reduction notebook
-docs/example_reduction
-
 # Other generated files
 */version.py
 */cython_version.py
@@ -72,9 +69,12 @@ distribute-*.tar.gz
 .pydevproject
 .settings
 .envrc
-.docker-compose-env
-example_data
 justfile
+
+# Local Banzai Setup
+.local-banzai-env
+example_data
+local_banzai
 
 # Mac OSX
 .DS_Store

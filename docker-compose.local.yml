@@ -22,7 +22,6 @@ services:
       - ${HOST_DATA_DIR}:/data
       - ${HOST_PROCESSED_DIR}:/output
     environment:
-      - DB_ADDRESS=${DB_ADDRESS}
       - TASK_HOST=${TASK_HOST}
       - FITS_BROKER=${FITS_BROKER}
       - FITS_EXCHANGE=${FITS_EXCHANGE}
@@ -46,7 +45,6 @@ services:
       - ${HOST_DATA_DIR}:/data
       - ${HOST_PROCESSED_DIR}:/output
     environment:
-      - DB_ADDRESS=${DB_ADDRESS}
       - TASK_HOST=${TASK_HOST}
       - FITS_BROKER=${FITS_BROKER}
       - FITS_EXCHANGE=${FITS_EXCHANGE}
@@ -72,6 +70,7 @@ services:
       - ${HOST_PROCESSED_DIR}:/output
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
+      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
@@ -84,5 +83,6 @@ services:
     entrypoint: ["banzai_run_realtime_pipeline", "--fpack", "--no-bpm",
                  "--broker-url=${FITS_BROKER_URL}",
                  "--db-address=${DB_ADDRESS}",
+                 "--calibration-db-address=${CAL_DB_ADDRESS}",
                  "--processed-path=/data/output"]
     restart: unless-stopped
