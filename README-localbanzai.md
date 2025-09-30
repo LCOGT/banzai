@@ -1,53 +1,50 @@
-# Local Banzai Notes
+# Running Banzai Locally
 
-To run:
+## Set env variables
+
+First copy `.local-banzai-env.default` to a new file `.local-banzai-env` and provide values for the databases,
+site, and api auth token.
+
+Traditionally, banzai relies on a single database to store information about sites, instruments, calibration files, and
+processed data. This is the default behavior if the `CAL_DB_ADDRESS` is not supplied, or if it is equal to `DB_ADDRESS`.
+
+The use case for LCO's local banzai setup assumes that calibration files are processed and managed elsewhere, which
+allows us to use a remote database to source any super calibrations needed for local reductions (via `CAL_DB_ADDRESS`),
+with all other db activity happening on a local sqlite database (via `DB_ADDRESS`)
+
+Note that these db addresses are defined here relative to the docker container. Since we map the host's `$HOST_DATA_DIR`
+to the container's `/data`, the value for `DB_ADDRESS` should be something like `sqlite:////data/<db_name>`, and should
+exist in the host directory `$HOST_DATA_DIR/<db_name>`.
+
+## Create the local database
+
+If using a separate calibration database, we need to copy the site/instrument information into our local db for
+reference. This can be done with the following:
 
 ``` bash
-docker compose -f docker-compose.local.yml --env-file .docker-compose-env up -d --build
+banzai_create_local_db --site $SITE_ID --db-address $LOCAL_DB_ADDRESS --cal-db-address $CAL_DB_ADDRESS
 ```
 
-This requires an env file called .docker-compose-env that should look like this:
+Note that the `$LOCAL_DB_ADDRESS` is different than `$DB_ADDRESS` defined in the env file above. The local address should
+use a path relative to the host directory rather than the container. For example, if the `$HOST_DATA_DIR` is
+`local_banzai`, the local db address might look like `sqlite:///local_banzai/<db_name>`.
 
-``` shellscript
-# .docker-compose-env
+## Start the banzai containers
 
-# Database Address
-DB_ADDRESS=
+The container configuration is defined in docker-compose.local.yml. Run it with the env file specified:
 
-# API Configuration
-API_ROOT=https://archive-api.lco.global/
-AUTH_TOKEN=""
-
-# Data Paths
-HOST_DATA_DIR=./example_data # this maps to /data in the container, and should contain unprocessed data in a subdirectory `raw`
-HOST_PROCESSED_DIR=./example_data/output # path where processed data will be saved on the host
-
-# Container Networking
-FITS_BROKER=rabbitmq
-FITS_BROKER_URL=amqp://rabbitmq:5672
-FITS_EXCHANGE=fits_files
-TASK_HOST=redis://redis:6379/0
-
-# Celery Configuration
-CELERY_TASK_QUEUE_NAME=e2e_task_queue
-CELERY_LARGE_TASK_QUEUE_NAME=e2e_large_task_queue
-
-# Worker Configuration
-BANZAI_WORKER_LOGLEVEL=debug
-OMP_NUM_THREADS=2
-OPENTSDB_PYTHON_METRICS_TEST_MODE=1
+``` bash
+docker compose -f docker-compose.local.yml --env-file .local-banzai-env up -d --build
 ```
 
-In order to send images to be processed, run:
+## Processing images
+
+Images for the site defined in $SITE_ID can be processed by notifying the listener queue. The raw files must be stored
+in `$HOST_DATA_DIR`. The following example demonstrates a command to process images stored in the `raw/` subdirectory
+using the `queue_images.py` helper script.
 
 ```bash
-python queue_images.py <host_data_dir>/raw
+python queue_images.py <host_data_dir>/raw/
 ```
 
-The data to be processed should be in the directory `${HOST_DATA_DIR}/raw`. The output will be saved in `./${HOST_PROCESSED_DIR}`.
-
-## Temporary modifications
-
-The following changes remove the database write operations that track whether a file has been processed already.
-`dbs.py` in commit_processed_image, line 283-84: added logging and premature return that stops function from running
-`utils/realtime_utils.py` in need_to_process_image, line 48-49: added logging and premature return that stops function from running
+The output will be saved in `./${HOST_PROCESSED_DIR}`.

@@ -1,6 +1,6 @@
 
 # Database Configuration
-DB_ADDRESS=sqlite:////data/banzai.db    # Used in the docker container, not the host.
+DB_ADDRESS=sqlite:////data/banzai.db    # Path for the docker container, not the host.
 CAL_DB_ADDRESS=""                       # This is the db for sourcing calibration files
 SITE_ID=""
 
