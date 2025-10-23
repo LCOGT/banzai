@@ -5,10 +5,11 @@ from collections.abc import Iterable
 from collections import OrderedDict
 
 from banzai import logs
+from banzai.exceptions import FrameNotAvailableError
 
 import numpy as np
 from astropy.io import fits
-from tenacity import retry, wait_exponential, stop_after_attempt
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_not_exception_type
 import io
 import os
 from banzai.metrics import add_telemetry_span_attribute, trace_function
@@ -65,7 +66,13 @@ def get_primary_header(filename) -> Optional[fits.Header]:
 
 # Stop after 4 attempts, and back off exponentially with a minimum wait time of 4 seconds, and a maximum of 10.
 # If it fails after 4 attempts, "reraise" the original exception back up to the caller.
-@retry(wait=wait_exponential(multiplier=2, min=4, max=10), stop=stop_after_attempt(4), reraise=True)
+# Don't retry FrameNotAvailableError - these are frames that don't exist in the archive.
+@retry(
+    wait=wait_exponential(multiplier=2, min=4, max=10),
+    stop=stop_after_attempt(4),
+    retry=retry_if_not_exception_type(FrameNotAvailableError),
+    reraise=True
+)
 @trace_function("download_from_s3")
 def download_from_s3(file_info, context, is_raw_frame=False):
     frame_id = file_info.get('frameid')
@@ -82,7 +89,7 @@ def download_from_s3(file_info, context, is_raw_frame=False):
         url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}/?include_related_frames=false'
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
     logger.info(f'{url}, {archive_auth_header}')
-    response = requests.get(url, headers=archive_auth_header)
+    response = requests.get(url, headers=archive_auth_header, timeout=30)
     try:
         response.raise_for_status()
     except requests.exceptions.HTTPError as e:
@@ -92,8 +99,26 @@ def download_from_s3(file_info, context, is_raw_frame=False):
             logger.error(message, extra_tags={'filename': file_info.get('filename'),
                          'attempt_number': download_from_s3.statistics['attempt_number']})
             raise e
+
+    # Parse the JSON response
+    response_data = response.json()
+
+    # Check for "Not found" response - don't retry these
+    if 'detail' in response_data and response_data['detail'] == 'Not found.':
+        logger.warning(f"Frame {frame_id} not found in archive for {file_info.get('filename')}")
+        raise FrameNotAvailableError(f"Frame {frame_id} not found in archive")
+
+    # Check if 'url' field exists in the response
+    if 'url' not in response_data:
+        logger.error(f"Archive API response missing 'url' field for frame {frame_id}. "
+                    f"Response: {response_data}",
+                    extra_tags={'filename': file_info.get('filename'),
+                               'frame_id': frame_id,
+                               'attempt_number': download_from_s3.statistics['attempt_number']})
+        raise ValueError(f"Archive API response missing 'url' field. Response: {response_data}")
+
     buffer = io.BytesIO()
-    bytes = buffer.write(requests.get(response.json()['url'], stream=True).content)
+    bytes = buffer.write(requests.get(response_data['url'], stream=True, timeout=60).content)
     buffer.seek(0)
     add_telemetry_span_attribute('downloaded_bytes', bytes)
     return buffer

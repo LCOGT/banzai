@@ -550,6 +550,7 @@ def replicate_instrument(instrument_record, db_address):
     """
     Replicate an instrument record to the target database, preserving the original ID.
     We don't use the add_instrument method because that method doesn't allow specifying the ID.
+    If the instrument already exists, it will be updated.
 
     Parameters
     ----------
@@ -559,15 +560,22 @@ def replicate_instrument(instrument_record, db_address):
         Target database address
     """
     with get_session(db_address=db_address) as db_session:
-        # Create new instrument with original ID
-        new_instrument = Instrument(
-            id=instrument_record.id,  # Preserve original ID
-            site=instrument_record.site,
-            camera=instrument_record.camera,
-            type=instrument_record.type,
-            name=instrument_record.name,
-            nx=instrument_record.nx,
-            ny=instrument_record.ny
-        )
-        db_session.add(new_instrument)
+        # Use add_or_update_record to handle both insert and update cases
+        equivalence_criteria = {
+            'site': instrument_record.site,
+            'camera': instrument_record.camera,
+            'name': instrument_record.name
+        }
+
+        record_attributes = {
+            'id': instrument_record.id,  # Preserve original ID
+            'site': instrument_record.site,
+            'camera': instrument_record.camera,
+            'type': instrument_record.type,
+            'name': instrument_record.name,
+            'nx': instrument_record.nx,
+            'ny': instrument_record.ny
+        }
+
+        add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
         db_session.commit()

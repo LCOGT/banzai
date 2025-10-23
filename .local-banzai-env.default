@@ -2,7 +2,13 @@
 # Database Configuration
 DB_ADDRESS=sqlite:////data/banzai.db    # Path for the docker container, not the host.
 CAL_DB_ADDRESS=""                       # This is the db for sourcing calibration files
+
+# Calibration Cache Configuration
+CACHE_DB_ADDRESS=""
+CACHE_FILES_ROOT=""
+USE_CACHE_FOR_CALIBRATIONS=""
 SITE_ID=""
+SYNC_INTERVAL=""
 
 # API Configuration
 API_ROOT=https://archive-api.lco.global/

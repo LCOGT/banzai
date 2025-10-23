@@ -9,6 +9,10 @@ settings.py: Settings script for banzai.
 import os
 import banzai
 
+BANZAI_LOCAL_CAL_DB_ADDRESS = 'sqlite:///local_banzai/calibrations_cache/calibrations.db'
+BANZAI_CALIBRATIONS_CACHE_ROOT = './local_banzai/calibrations_cache/files'
+BANZAI_USE_CACHE_DB = True
+
 FRAME_SELECTION_CRITERIA = [('type', 'not contains', 'FLOYDS'), ('type', 'not contains', 'NRES')]
 
 FRAME_FACTORY = 'banzai.lco.LCOFrameFactory'

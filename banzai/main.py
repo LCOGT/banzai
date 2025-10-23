@@ -8,6 +8,7 @@ Author
 October 2015
 """
 import argparse
+import os
 import os.path
 import logging
 import traceback
@@ -135,6 +136,18 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
     logs.set_log_level(args.log_level)
 
     add_settings_to_context(args, settings)
+
+    # Check if we should use cache for calibrations
+    use_cache = os.getenv('USE_CACHE_FOR_CALIBRATIONS', 'false').lower() == 'true'
+
+    if use_cache:
+        # Override cal_db_address to use local cache
+        cache_db_address = os.getenv('CACHE_DB_ADDRESS')
+        if cache_db_address:
+            logger.info(f'Using calibration cache at {cache_db_address}')
+            args.cal_db_address = cache_db_address
+        else:
+            logger.warning('USE_CACHE_FOR_CALIBRATIONS=true but CACHE_DB_ADDRESS not set')
 
     # If a separate calibration db address is not provided, fall back to using the primary db address
     if getattr(args, 'cal_db_address', None) is None:

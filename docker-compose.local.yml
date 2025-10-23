@@ -58,6 +58,22 @@ services:
     command: ["celery", "-A", "banzai", "worker", "--hostname", "banzai-large-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_LARGE_TASK_QUEUE_NAME}"]
     restart: unless-stopped
 
+  banzai-cache-sync:
+    build: .
+    container_name: banzai-cache-sync-local
+    volumes:
+      - ${HOST_DATA_DIR}:/data
+    environment:
+      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS}
+      - CACHE_DB_ADDRESS=${CACHE_DB_ADDRESS}
+      - CACHE_FILES_ROOT=/data/calibrations_cache/files
+      - SITE_ID=${SITE_ID}
+      - SYNC_INTERVAL=${SYNC_INTERVAL:-300}
+      - API_ROOT=${API_ROOT}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+    command: ["python", "-m", "banzai.cache.sync_daemon"]
+    restart: unless-stopped
+
   banzai-listener:
     build: .
     container_name: banzai-listener-local
@@ -70,7 +86,7 @@ services:
       - ${HOST_PROCESSED_DIR}:/output
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
-      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
+      - CAL_DB_ADDRESS=${CACHE_DB_ADDRESS:-${CAL_DB_ADDRESS:-${DB_ADDRESS}}}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
@@ -80,9 +96,11 @@ services:
       - FITS_BROKER_URL=${FITS_BROKER_URL}
       - FITS_EXCHANGE=${FITS_EXCHANGE}
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
+      - USE_CACHE_FOR_CALIBRATIONS=${USE_CACHE_FOR_CALIBRATIONS:-false}
+      - CACHE_DB_ADDRESS=${CACHE_DB_ADDRESS}
     entrypoint: ["banzai_run_realtime_pipeline", "--fpack", "--no-bpm",
                  "--broker-url=${FITS_BROKER_URL}",
                  "--db-address=${DB_ADDRESS}",
-                 "--calibration-db-address=${CAL_DB_ADDRESS}",
+                 "--calibration-db-address=${CACHE_DB_ADDRESS}",
                  "--processed-path=/data/output"]
     restart: unless-stopped

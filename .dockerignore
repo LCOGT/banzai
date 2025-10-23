@@ -59,6 +59,9 @@ distribute-*.tar.gz
 # VS Code
 .vscode
 
+# Local banzai runtime data
+local_banzai
+
 # Other
 .cache
 .tox
