@@ -66,11 +66,11 @@
         "skaffold": "skaffold"
       },
       "locked": {
-        "lastModified": 1754519935,
-        "narHash": "sha256-v86wZsc5EcHm65UnmC+F3MrvmChAtYEdYfQ7Zd6Td20=",
+        "lastModified": 1761345407,
+        "narHash": "sha256-7OMrdRgZo0kmYijDE4HMhRk/BvzJ9ipyewq0drVsM8o=",
         "owner": "LCOGT",
         "repo": "devenv-k8s",
-        "rev": "1c84d8a0b0bed74206285ca438e277f4cb78583d",
+        "rev": "b30fc540dad482df428f502be245efb9a2117161",
         "type": "github"
       },
       "original": {
@@ -540,13 +540,14 @@
       "locked": {
         "lastModified": 1711736775,
         "narHash": "sha256-wRzy040KH+IfgK+g3Dj4Re4hb1S+G3xaxJ41TrsPEvE=",
-        "owner": "jashandeep-sohi",
+        "owner": "LCOGT",
         "repo": "skaffold",
         "rev": "e57813c8e738a0a347f8732221961584e025b6a5",
         "type": "github"
       },
       "original": {
-        "owner": "jashandeep-sohi",
+        "owner": "LCOGT",
+        "ref": "fix/multi-module-status",
         "repo": "skaffold",
         "type": "github"
       }
