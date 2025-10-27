@@ -21,7 +21,7 @@ from banzai.lco import LCOFrameFactory
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
-from banzai.celery import process_image, app, schedule_calibration_stacking
+from banzai.scheduling import process_image, app, schedule_calibration_stacking
 from banzai.data import DataProduct
 from celery.schedules import crontab
 import celery
@@ -86,7 +86,7 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
     """
     parser = argparse.ArgumentParser(description=parser_description)
 
-    parser.add_argument("--processed-path", default='/archive/engineering',
+    parser.add_argument("--processed-path", default=os.getenv("DATA_ROOT", '/archive/engineering'),
                         help='Top level directory where the processed data will be stored')
     parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
                                                                 'critical', 'fatal', 'error'])
@@ -101,7 +101,7 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
                         help='Continue processing a file even if a master calibration does not exist?')
     parser.add_argument('--rlevel', dest='reduction_level', default=91, type=int, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
+                        default='sqlite:///banzai-test.db',
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--opensearch-url', dest='opensearch_url',
                         default='https://opensearch.lco.global/')
@@ -225,7 +225,7 @@ def mark_frame(mark_as):
     parser.add_argument('--filename', dest='filename', required=True,
                         help='Name of calibration file to be marked')
     parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
+                        default='sqlite:///banzai-test.db',
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
@@ -247,7 +247,7 @@ def add_instrument():
                         help="Instrument type (e.g. 1m0-SciCam-Sinistro)", required=True)
     parser.add_argument("--nx", help='Number of pixels in x direction', required=True)
     parser.add_argument("--ny", help='Number of pixels in y direction', required=True)
-    parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
+    parser.add_argument('--db-address', dest='db_address', default='sqlite:///banzai-test.db',
                         help='Database address: Should be in SQLAlchemy format')
     args = parser.parse_args()
     instrument = {'site': args.site,
@@ -266,7 +266,7 @@ def add_site():
     parser.add_argument("--latitude", help='Latitude (deg)', required=True)
     parser.add_argument("--timezone", help="Time zone relative to UTC", required=True)
     parser.add_argument("--elevation", help="Elevation of site (m)", required=True)
-    parser.add_argument('--db-address', dest='db_address', default='sqlite:///test.db',
+    parser.add_argument('--db-address', dest='db_address', default='sqlite:///banzai-test.db',
                         help='Database address: Should be in SQLAlchemy format')
     args = parser.parse_args()
     site = {'code': args.site,
@@ -295,7 +295,7 @@ def update_db():
                         default='http://configdb.lco.gtn/sites/',
                         help='URL of the configdb with instrument information')
     parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
+                        default='sqlite:///banzai-test.db',
                         help='Database address: Should be in SQLAlchemy form')
     args = parser.parse_args()
     logs.set_log_level(args.log_level)
@@ -312,39 +312,49 @@ def add_super_calibration():
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
+                        default='sqlite:///banzai-test.db',
                         help='Database address: Should be in SQLAlchemy form')
+    parser.add_argument('--upload-to-archive', dest='upload_to_archive', action='store_true')
     args = parser.parse_args()
     add_settings_to_context(args, settings)
     logs.set_log_level(args.log_level)
     frame_factory = import_utils.import_attribute(settings.FRAME_FACTORY)()
+
     try:
         cal_image = frame_factory.open({'path': args.filepath}, args)
     except Exception:
         logger.error(f"Calibration file not able to be opened by BANZAI. Aborting... {logs.format_exception()}",
                      extra_tags={'filename': args.filepath})
-        cal_image = None
+        return
 
-    # upload calibration file via ingester
-    if cal_image is not None:
+    # Upload calibration file via ingester if requested
+    if args.upload_to_archive:
         with open(args.filepath, 'rb') as f:
-            logger.debug("Posting calibration file to s3 archive")
+            logger.info("Posting calibration file to s3 archive and saving to database")
             ingester_response = file_utils.post_to_ingester(f, cal_image, args.filepath)
+        frame_id = ingester_response['frameid']
+        cal_image.frameid = frame_id
+    else:
+        logger.info("Skipping archive upload. Saving to database only.")
 
-        logger.debug("File posted to s3 archive. Saving to database.",
-                     extra_tags={'frameid': ingester_response['frameid']})
-        cal_image.frame_id = ingester_response['frameid']
-        cal_image.is_bad = False
-        cal_image.is_master = True
-        dbs.save_calibration_info(cal_image.to_db_record(DataProduct(None, filename=os.path.basename(args.filepath),
-                                                                     filepath=os.path.dirname(args.filepath))),
-                                  args.db_address)
+    cal_image.is_bad = False
+    cal_image.is_master = True
+    dbs.save_calibration_info(
+        cal_image.to_db_record(
+            DataProduct(
+                None,
+                filename=os.path.basename(args.filepath),
+                filepath=os.path.dirname(args.filepath)
+            )
+        ),
+        args.db_address
+    )
 
 
 def add_bpms_from_archive():
     parser = argparse.ArgumentParser(description="Add bad pixel mask from a given archive api")
     parser.add_argument('--db-address', dest='db_address',
-                        default='mysql://cmccully:password@localhost/test',
+                        default='sqlite:///banzai-test.db',
                         help='Database address: Should be in SQLAlchemy form')
     logger.info("Loading BPMs from archive" )
     args = parser.parse_args()
@@ -385,7 +395,7 @@ def create_db():
     parser.add_argument("--log-level", default='debug', choices=['debug', 'info', 'warning',
                                                                  'critical', 'fatal', 'error'])
     parser.add_argument('--db-address', dest='db_address',
-                        default='sqlite3:///test.db',
+                        default='sqlite:///banzai-test.db',
                         help='Database address: Should be in SQLAlchemy form')
     args = parser.parse_args()
     logs.set_log_level(args.log_level)

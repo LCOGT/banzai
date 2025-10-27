@@ -10,7 +10,7 @@ from dateutil.parser import parse
 
 from banzai import settings
 from types import ModuleType
-from banzai.celery import app, schedule_calibration_stacking
+from banzai.scheduling import app, schedule_calibration_stacking
 from banzai.dbs import get_session, CalibrationImage, get_timezone, populate_instrument_tables
 from banzai.dbs import mark_frame, query_for_instrument
 from banzai.utils import file_utils
@@ -31,7 +31,7 @@ TEST_FRAMES = ascii.read(os.path.join(importlib.resources.files(TEST_PACKAGE), '
 
 PRECAL_FRAMES = ascii.read(os.path.join(importlib.resources.files(TEST_PACKAGE), 'data/test_precals.dat'))
 
-DATA_ROOT = os.path.join(os.sep, 'archive', 'engineering')
+DATA_ROOT = os.getenv('DATA_ROOT', os.path.join(os.sep, 'archive', 'engineering'))
 # Use the LCO filenaming convention to infer the sites
 SITES = set([frame[:3] for frame in TEST_FRAMES['filename']])
 INSTRUMENTS = set([os.path.join(frame[:3], frame.split('-')[1]) for frame in TEST_FRAMES['filename']])

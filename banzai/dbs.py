@@ -288,7 +288,6 @@ def commit_processed_image(processed_image, db_address):
 def save_processed_image(path, md5, db_address):
     filename = os.path.basename(path)
     output_record = get_processed_image(filename, db_address)
-    output_record.success = True
     output_record.checksum = md5
     commit_processed_image(output_record, db_address)
 
