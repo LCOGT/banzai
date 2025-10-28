@@ -101,6 +101,59 @@ science images using the `banzai_reduce_individual_frame` command.
 To run the pipeline in its active mode, you need to setup a task queue and a filename queue.
 See the `docker-compose.yml` file for details on this setup.
 
+Running at Site
+---------------
+
+For deploying BANZAI at an observatory site with local processing, use the containerized setup with
+`docker-compose-site.yml`. This configuration allows you to process incoming data locally while sourcing
+calibration files from a remote database.
+
+Environment Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+First copy `.site-banzai-env.default` to `.site-banzai-env` and configure the following variables:
+
+* Database addresses (local SQLite for processing, remote PostgreSQL for calibrations)
+* Site ID and API authentication token
+* Data directory paths
+
+The use case for LCO's site deployment assumes that calibration files are processed and managed centrally,
+allowing the use of a remote database to source super calibrations (via `CAL_DB_ADDRESS`),
+with all other database activity on a local SQLite database (via `DB_ADDRESS`).
+
+Note that database addresses in the environment file are relative to the Docker container. Since `$HOST_DATA_DIR`
+is mapped to the container's `/data`, the `DB_ADDRESS` should be something like `sqlite:////data/<db_name>`.
+
+Create the Local Database
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If using a separate calibration database, copy the site/instrument information to your local database:
+
+.. code-block:: bash
+
+    banzai_create_local_db --site $SITE_ID --db-address $LOCAL_DB_ADDRESS --cal-db-address $CAL_DB_ADDRESS
+
+Note that `$LOCAL_DB_ADDRESS` should use a path relative to the host directory. For example, if `$HOST_DATA_DIR` is
+`site_banzai`, the address might be `sqlite:///site_banzai/<db_name>`.
+
+Start the Containers
+~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+    docker compose -f docker-compose-site.yml --env-file .site-banzai-env up -d --build
+
+Process Images
+~~~~~~~~~~~~~~
+
+Queue images for processing using the helper script. Raw files must be in `$HOST_DATA_DIR`:
+
+.. code-block:: bash
+
+    python queue_images.py <host_data_dir>/raw/
+
+Processed output will be saved in `${HOST_PROCESSED_DIR}`.
+
 Tests
 -----
 Unit tests can be run using pytest. The end-to-end tests require more setup, so to run only the unit tests locally run:
