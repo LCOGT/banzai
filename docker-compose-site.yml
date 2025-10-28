@@ -1,0 +1,106 @@
+services:
+  redis:
+    image: redis:7
+    container_name: banzai-redis
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: banzai-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: unless-stopped
+
+  banzai-worker:
+    build: .
+    container_name: banzai-worker
+    depends_on:
+      - redis
+      - rabbitmq
+    volumes:
+      - ${HOST_DATA_DIR}:/data
+      - ${HOST_PROCESSED_DIR}:/output
+    environment:
+      - TASK_HOST=${TASK_HOST}
+      - FITS_BROKER=${FITS_BROKER}
+      - FITS_EXCHANGE=${FITS_EXCHANGE}
+      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME}
+      - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
+      - OMP_NUM_THREADS=${OMP_NUM_THREADS}
+      - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
+      - API_ROOT=${API_ROOT}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - DATA_ROOT=/output
+    command: ["celery", "-A", "banzai", "worker", "--hostname", "banzai-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_TASK_QUEUE_NAME}"]
+    restart: unless-stopped
+
+  banzai-large-worker:
+    build: .
+    container_name: banzai-large-worker
+    depends_on:
+      - redis
+      - rabbitmq
+    volumes:
+      - ${HOST_DATA_DIR}:/data
+      - ${HOST_PROCESSED_DIR}:/output
+    environment:
+      - TASK_HOST=${TASK_HOST}
+      - FITS_BROKER=${FITS_BROKER}
+      - FITS_EXCHANGE=${FITS_EXCHANGE}
+      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME}
+      - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
+      - OMP_NUM_THREADS=${OMP_NUM_THREADS}
+      - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
+      - API_ROOT=${API_ROOT}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - DATA_ROOT=/output
+    command: ["celery", "-A", "banzai", "worker", "--hostname", "banzai-large-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_LARGE_TASK_QUEUE_NAME}"]
+    restart: unless-stopped
+
+  banzai-cache-sync:
+    build: .
+    container_name: banzai-cache-sync
+    volumes:
+      - ${HOST_DATA_DIR}:/data
+    environment:
+      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS}
+      - CACHE_DB_ADDRESS=${CACHE_DB_ADDRESS}
+      - CACHE_FILES_ROOT=/data/calibrations_cache/files
+      - SITE_ID=${SITE_ID}
+      - SYNC_INTERVAL=${SYNC_INTERVAL:-300}
+      - API_ROOT=${API_ROOT}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+    command: ["python", "-m", "banzai.cache.sync_daemon"]
+    restart: unless-stopped
+
+  banzai-listener:
+    build: .
+    container_name: banzai-listener
+    depends_on:
+      - redis
+      - rabbitmq
+      - banzai-worker
+    volumes:
+      - ${HOST_DATA_DIR}:/data
+      - ${HOST_PROCESSED_DIR}:/output
+    environment:
+      - DB_ADDRESS=${DB_ADDRESS}
+      - CAL_DB_ADDRESS=${CACHE_DB_ADDRESS:-${CAL_DB_ADDRESS:-${DB_ADDRESS}}}
+      - API_ROOT=${API_ROOT}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
+      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME}
+      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME}
+      - TASK_HOST=${TASK_HOST}
+      - FITS_BROKER_URL=${FITS_BROKER_URL}
+      - FITS_EXCHANGE=${FITS_EXCHANGE}
+      - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
+      - USE_CACHE_FOR_CALIBRATIONS=${USE_CACHE_FOR_CALIBRATIONS:-false}
+      - CACHE_DB_ADDRESS=${CACHE_DB_ADDRESS}
+    entrypoint: ["banzai_run_realtime_pipeline", "--fpack", "--no-bpm",
+                 "--broker-url=${FITS_BROKER_URL}",
+                 "--db-address=${DB_ADDRESS}",
+                 "--calibration-db-address=${CACHE_DB_ADDRESS}",
+                 "--processed-path=/data/output"]
+    restart: unless-stopped

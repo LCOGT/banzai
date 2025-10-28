@@ -1,0 +1,34 @@
+
+# Database Configuration
+DB_ADDRESS=sqlite:////data/banzai.db    # Path for the docker container, not the host.
+CAL_DB_ADDRESS=""                       # This is the db for sourcing calibration files
+
+# Calibration Cache Configuration
+CACHE_DB_ADDRESS=""
+CACHE_FILES_ROOT=""
+USE_CACHE_FOR_CALIBRATIONS=""
+SITE_ID=""
+SYNC_INTERVAL=""
+
+# API Configuration
+API_ROOT=https://archive-api.lco.global/
+AUTH_TOKEN=
+
+# Data Paths
+HOST_DATA_DIR=./site_banzai # this maps to /data in the container, and should contain unprocessed data in a subdirectory `raw`
+HOST_PROCESSED_DIR=./site_banzai/output # path where processed data will be saved on the host
+
+# Container Networking
+FITS_BROKER=rabbitmq
+FITS_BROKER_URL=amqp://rabbitmq:5672
+FITS_EXCHANGE=fits_files
+TASK_HOST=redis://redis:6379/0
+
+# Celery Configuration
+CELERY_TASK_QUEUE_NAME=e2e_task_queue
+CELERY_LARGE_TASK_QUEUE_NAME=e2e_large_task_queue
+
+# Worker Configuration
+BANZAI_WORKER_LOGLEVEL=debug
+OMP_NUM_THREADS=2
+OPENTSDB_PYTHON_METRICS_TEST_MODE=1

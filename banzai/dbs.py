@@ -455,3 +455,127 @@ def populate_instrument_tables(db_address, configdb_address):
         add_site(site, db_address)
     for instrument in instruments:
         add_instrument(instrument, db_address)
+
+def create_local_db(local_db_address, aws_db_address, site_id):
+    """
+    Create a local SQLite database and populate it with sites and instruments
+    copied over from the AWS calibration database for a specific site.
+
+    Parameters
+    ----------
+    local_db_address : str
+        SQLAlchemy address for the local SQLite database
+    aws_db_address : str
+        SQLAlchemy address for the AWS PostgreSQL database
+    site_code : str
+        Site code to replicate (e.g., 'ogg', 'lsc')
+    """
+
+    # Check if local database file already exists (for SQLite)
+    if 'sqlite' in local_db_address and '://' in local_db_address:
+        db_path = local_db_address.split(':///')[-1]
+        if os.path.exists(db_path):
+            logger.error(f"Database file {db_path} already exists. Please remove it first.")
+            return
+
+    # Create the local database structure
+    logger.info(f"Creating local database at {local_db_address}")
+    create_db(local_db_address)
+
+    # Get site from AWS database
+    logger.info(f"Fetching site {site_id} from AWS database")
+    site_record = get_site(site_id, aws_db_address)
+
+    # Get instruments for this site from AWS database
+    #
+    # The following block could have been replaced with a simpler single line:
+    # `instrument_records = get_instruments_at_site(site_id, aws_db_address)`
+    # but the postgres db in AWS appears to have two instruments (ID 3211 & 235)
+    # that violate the unique site/camera/name constraint defined in the
+    # Instruments db class. This leads to an error if we try to copy over both
+    # of those instruments.
+    #
+    # As a workaround, instead of copying all instruments, we copy over the
+    # subset with a unique site/camera/name attribute group, selecting
+    # the latest version in the case of duplicates.
+    logger.info(f"Fetching instruments for site {site_id} from AWS database")
+    with get_session(db_address=aws_db_address) as db_session:
+        # Get the latest instrument for each (site, camera, name) combination
+        subquery = db_session.query(
+            func.max(Instrument.id).label('max_id')
+        ).filter(
+            Instrument.site == site_id
+        ).group_by(
+            Instrument.site, Instrument.camera, Instrument.name
+        ).subquery()
+
+        instrument_records = db_session.query(Instrument).join(
+            subquery, Instrument.id == subquery.c.max_id
+        ).all()
+
+    # Replicate site to local database
+    logger.info(f"Replicating site {site_id} to local database")
+    replicate_site(site_record, local_db_address)
+
+    # Replicate instruments to local database
+    logger.info(f"Replicating {len(instrument_records)} instruments to local database")
+    for instrument in instrument_records:
+        replicate_instrument(instrument, local_db_address)
+
+    logger.info(f"Successfully created local database with {len(instrument_records)} instruments from site {site_id}")
+
+
+def replicate_site(site_record, db_address):
+    """
+    Replicate a site record to the target database, preserving the original ID.
+
+    Parameters
+    ----------
+    site_record : Site
+        Source site record from SQLAlchemy query
+    db_address : str
+        Target database address
+    """
+    site_dict = {
+        'code': site_record.id,  # Site ID is the site code
+        'timezone': site_record.timezone,
+        'longitude': site_record.longitude,
+        'latitude': site_record.latitude,
+        'elevation': site_record.elevation
+    }
+    add_site(site_dict, db_address)
+
+
+def replicate_instrument(instrument_record, db_address):
+    """
+    Replicate an instrument record to the target database, preserving the original ID.
+    We don't use the add_instrument method because that method doesn't allow specifying the ID.
+    If the instrument already exists, it will be updated.
+
+    Parameters
+    ----------
+    instrument_record : Instrument
+        Source instrument record from SQLAlchemy query
+    db_address : str
+        Target database address
+    """
+    with get_session(db_address=db_address) as db_session:
+        # Use add_or_update_record to handle both insert and update cases
+        equivalence_criteria = {
+            'site': instrument_record.site,
+            'camera': instrument_record.camera,
+            'name': instrument_record.name
+        }
+
+        record_attributes = {
+            'id': instrument_record.id,  # Preserve original ID
+            'site': instrument_record.site,
+            'camera': instrument_record.camera,
+            'type': instrument_record.type,
+            'name': instrument_record.name,
+            'nx': instrument_record.nx,
+            'ny': instrument_record.ny
+        }
+
+        add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
+        db_session.commit()

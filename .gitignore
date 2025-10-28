@@ -15,9 +15,6 @@ a.out
 # add a non-generated .c extension, use `git add -f filename.c`.
 *.c
 
-# Files created/used in the example reduction notebook
-docs/example_reduction
-
 # Other generated files
 */version.py
 */cython_version.py
@@ -26,10 +23,13 @@ htmlcov
 MANIFEST
 .ipynb_checkpoints
 env
+.venv
+venv2
 
 # Sphinx
 docs/api
 docs/_build
+docs/example_reduction
 
 # Eclipse editor project files
 .project
@@ -68,6 +68,14 @@ distribute-*.tar.gz
 .project
 .pydevproject
 .settings
+.envrc
+justfile
+
+# Local Banzai Setup
+.site-banzai-env
+example_data
+local_banzai
+site_banzai
 
 # Mac OSX
 .DS_Store

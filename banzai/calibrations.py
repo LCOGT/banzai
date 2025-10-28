@@ -139,7 +139,7 @@ class CalibrationUser(Stage):
     def get_calibration_file_info(self, image):
         return dbs.cal_record_to_file_info(
             dbs.get_master_cal_record(image, self.calibration_type, self.master_selection_criteria,
-                                      self.runtime_context.db_address,
+                                      self.runtime_context.cal_db_address,
                                       use_only_older_calibrations=self.runtime_context.use_only_older_calibrations)
         )
 
@@ -188,7 +188,7 @@ def make_master_calibrations(instrument, frame_type, min_date, max_date, runtime
                   'max_date': max_date}
     logger.info("Making master frames", extra_tags=extra_tags)
     calibration_frames_info = dbs.get_individual_cal_frames(instrument, frame_type, min_date, max_date,
-                                                            db_address=runtime_context.db_address)
+                                                            db_address=runtime_context.cal_db_address)
     if len(calibration_frames_info) == 0:
         logger.info("No calibration frames found to stack", extra_tags=extra_tags)
     try:
