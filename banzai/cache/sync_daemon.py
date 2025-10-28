@@ -75,6 +75,7 @@ def run_sync_daemon():
         # Only create database if it doesn't exist
         if not db_exists:
             logger.info('Creating new cache database...')
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
             dbs.create_local_db(cache_db, source_db, site_id)
 
         logger.info('Cache database ready')

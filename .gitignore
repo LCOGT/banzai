@@ -72,9 +72,10 @@ distribute-*.tar.gz
 justfile
 
 # Local Banzai Setup
-.local-banzai-env
+.site-banzai-env
 example_data
 local_banzai
+site_banzai
 
 # Mac OSX
 .DS_Store

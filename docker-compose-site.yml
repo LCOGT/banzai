@@ -1,12 +1,12 @@
 services:
   redis:
     image: redis:7
-    container_name: banzai-redis-local
+    container_name: banzai-redis
     restart: unless-stopped
 
   rabbitmq:
     image: rabbitmq:3.12-management
-    container_name: banzai-rabbitmq-local
+    container_name: banzai-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -14,7 +14,7 @@ services:
 
   banzai-worker:
     build: .
-    container_name: banzai-worker-local
+    container_name: banzai-worker
     depends_on:
       - redis
       - rabbitmq
@@ -37,7 +37,7 @@ services:
 
   banzai-large-worker:
     build: .
-    container_name: banzai-large-worker-local
+    container_name: banzai-large-worker
     depends_on:
       - redis
       - rabbitmq
@@ -60,7 +60,7 @@ services:
 
   banzai-cache-sync:
     build: .
-    container_name: banzai-cache-sync-local
+    container_name: banzai-cache-sync
     volumes:
       - ${HOST_DATA_DIR}:/data
     environment:
@@ -76,7 +76,7 @@ services:
 
   banzai-listener:
     build: .
-    container_name: banzai-listener-local
+    container_name: banzai-listener
     depends_on:
       - redis
       - rabbitmq
