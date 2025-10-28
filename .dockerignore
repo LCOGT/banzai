@@ -83,3 +83,10 @@ site_banzai
 .tmp
 
 .tox
+
+k8s/
+skaffold.yaml
+flake.nix
+flake.lock
+develop.sh
+.envrc

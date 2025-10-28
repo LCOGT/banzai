@@ -87,3 +87,7 @@ site_banzai
 
 .coverage.subprocess
 test.db
+
+.devenv
+.pre-commit-config.yaml
+.direnv

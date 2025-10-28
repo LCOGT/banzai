@@ -7,7 +7,7 @@ from unittest.mock import ANY
 from astropy.io.fits import Header
 from celery.exceptions import Retry
 
-from banzai.celery import stack_calibrations, schedule_calibration_stacking
+from banzai.scheduling import stack_calibrations, schedule_calibration_stacking
 from banzai.settings import CALIBRATION_STACK_DELAYS
 from banzai.utils import date_utils
 from banzai.context import Context
@@ -188,10 +188,10 @@ class TestMain():
         self.fake_blocks_response_json = fake_blocks_response_json
         self.fake_inst = FakeInstrument(site='coj', camera='2m0-SciCam-Spectral', enclosure='clma', telescope='2m0a')
 
-    @mock.patch('banzai.celery.stack_calibrations.apply_async')
-    @mock.patch('banzai.celery.dbs.get_instruments_at_site')
-    @mock.patch('banzai.celery.get_calibration_blocks_for_time_range')
-    @mock.patch('banzai.celery.filter_calibration_blocks_for_type')
+    @mock.patch('banzai.scheduling.stack_calibrations.apply_async')
+    @mock.patch('banzai.scheduling.dbs.get_instruments_at_site')
+    @mock.patch('banzai.scheduling.get_calibration_blocks_for_time_range')
+    @mock.patch('banzai.scheduling.filter_calibration_blocks_for_type')
     def test_submit_stacking_tasks_to_queue_no_delay(self, mock_filter_blocks, mock_get_blocks, mock_get_instruments,
                                                      mock_stack_calibrations, setup):
         mock_get_instruments.return_value = [self.fake_inst]
@@ -204,10 +204,10 @@ class TestMain():
                                                    countdown=0,
                                                    queue=self.context.CELERY_TASK_QUEUE_NAME)
 
-    @mock.patch('banzai.celery.stack_calibrations.apply_async')
-    @mock.patch('banzai.celery.dbs.get_instruments_at_site')
-    @mock.patch('banzai.celery.get_calibration_blocks_for_time_range')
-    @mock.patch('banzai.celery.filter_calibration_blocks_for_type')
+    @mock.patch('banzai.scheduling.stack_calibrations.apply_async')
+    @mock.patch('banzai.scheduling.dbs.get_instruments_at_site')
+    @mock.patch('banzai.scheduling.get_calibration_blocks_for_time_range')
+    @mock.patch('banzai.scheduling.filter_calibration_blocks_for_type')
     def test_submit_stacking_tasks_to_queue_with_delay(self, mock_filter_blocks, mock_get_blocks, mock_get_instruments,
                                                        mock_stack_calibrations, setup):
         mock_get_instruments.return_value = [self.fake_inst]
@@ -223,8 +223,8 @@ class TestMain():
                                                    queue=self.context.CELERY_TASK_QUEUE_NAME)
 
     @mock.patch('banzai.calibrations.make_master_calibrations')
-    @mock.patch('banzai.celery.dbs.get_individual_cal_frames')
-    @mock.patch('banzai.celery.dbs.get_instrument_by_id')
+    @mock.patch('banzai.scheduling.dbs.get_individual_cal_frames')
+    @mock.patch('banzai.scheduling.dbs.get_instrument_by_id')
     def test_stack_calibrations(self, mock_get_instrument, mock_get_calibration_images, mock_make_master_cals, setup):
         mock_get_instrument.return_value = self.fake_inst
         nx, ny = 102, 105
@@ -238,8 +238,8 @@ class TestMain():
         mock_make_master_cals.assert_called_with(self.fake_inst, self.frame_type, self.min_date, self.max_date, ANY)
 
     @mock.patch('banzai.calibrations.make_master_calibrations')
-    @mock.patch('banzai.celery.dbs.get_individual_cal_frames')
-    @mock.patch('banzai.celery.dbs.get_instrument_by_id')
+    @mock.patch('banzai.scheduling.dbs.get_individual_cal_frames')
+    @mock.patch('banzai.scheduling.dbs.get_instrument_by_id')
     def test_stack_calibrations_not_enough_images(self, mock_get_instrument, mock_get_calibration_images, mock_maker, setup):
         mock_get_instrument.return_value = self.fake_inst
         mock_get_calibration_images.return_value = [FakeLCOObservationFrame(hdu_list=[FakeCCDData()])]

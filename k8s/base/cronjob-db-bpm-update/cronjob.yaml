@@ -1,0 +1,73 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/cronjob-batch-v1.json
+apiVersion: batch/v1
+kind: CronJob
+metadata: # kpt-merge: /example
+  name: db-bpm-update
+  labels:
+    app.kubernetes.io/component: db-bpm-update
+  annotations:
+    internal.kpt.dev/upstream-identifier: 'batch|CronJob|default|example'
+spec:
+  schedule: "@daily"
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 3
+  startingDeadlineSeconds: 120
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          initContainers:
+            # Create the db if it doesn't exist
+            - name: init-db
+              image: "banzai"
+              command:
+                - "banzai_create_db"
+                - "--db-address=$(DB_ADDRESS)"
+              envFrom:
+                - configMapRef:
+                    name: env
+                    optional: false
+                - secretRef:
+                    name: db-env
+                    optional: true
+                - secretRef:
+                    name: rabbitmq-env
+                    optional: true
+                - secretRef:
+                    name: archive-api-env
+                    optional: true
+                - secretRef:
+                    name: env
+                    optional: true
+          containers:
+            - name: default
+              image: "banzai"
+              command:
+                - "banzai_populate_bpms"
+                - "--db-address=$(DB_ADDRESS)"
+              envFrom:
+                - configMapRef:
+                    name: env
+                    optional: false
+                - secretRef:
+                    name: db-env
+                    optional: true
+                - secretRef:
+                    name: rabbitmq-env
+                    optional: true
+                - secretRef:
+                    name: archive-api-env
+                    optional: true
+                - secretRef:
+                    name: env
+                    optional: true
+        metadata:
+          labels:
+            app.kubernetes.io/component: db-bpm-update
+    metadata:
+      labels:
+        app.kubernetes.io/component: db-bpm-update

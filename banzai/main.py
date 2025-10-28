@@ -22,7 +22,7 @@ from banzai.lco import LCOFrameFactory
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
-from banzai.celery import process_image, app, schedule_calibration_stacking
+from banzai.scheduling import process_image, app, schedule_calibration_stacking
 from banzai.data import DataProduct
 from celery.schedules import crontab
 import celery
@@ -376,10 +376,11 @@ def add_bpms_from_archive():
     parser.add_argument('--db-address', dest='db_address',
                         default='sqlite:///banzai-test.db',
                         help='Database address: Should be in SQLAlchemy form')
+    logger.info("Loading BPMs from archive" )
     args = parser.parse_args()
     add_settings_to_context(args, settings)
     # Query the archive for all bpm files
-    url = f'{settings.ARCHIVE_FRAME_URL}/?OBSTYPE=BPM&limit=1000'
+    url = f'{settings.ARCHIVE_FRAME_URL}/?OBSTYPE=BPM&limit=1000&include_related_frames=false'
     archive_auth_header = settings.ARCHIVE_AUTH_HEADER
     response = requests.get(url, headers=archive_auth_header)
     response.raise_for_status()
@@ -390,6 +391,7 @@ def add_bpms_from_archive():
     for frame in results:
         frame['frameid'] = frame['id']
         try:
+            logger.info(f"Loading frame {frame.get('id')}")
             bpm_image = frame_factory.open(frame, args)
             if bpm_image is not None:
                 bpm_image.is_master = True
