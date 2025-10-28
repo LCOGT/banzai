@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/pod-v1.json
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug
+spec:
+  restartPolicy: Never
+  volumes:
+    - name: tmp
+      emptyDir:
+        sizeLimit: 1Gi
+  containers:
+    - name: default
+      image: banzai
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+      envFrom:
+        - configMapRef:
+            name: env
+            optional: false
+        - secretRef:
+            name: db-env
+            optional: true
+        - secretRef:
+            name: rabbitmq-env
+            optional: true
+        - secretRef:
+            name: env
+            optional: true
+      command:
+        - "sleep"
+        - "inf"

@@ -1,0 +1,66 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base/
+  - ./pod-debug.yaml
+
+namespace: banzai
+
+configMapGenerator:
+  - name: env
+    behavior: merge
+    envs:
+      - ./settings.env
+
+secretGenerator:
+  - name: env
+    envs:
+      - ./secrets.env
+
+patches:
+  # E2E tests need workers to have very specific hostnames
+  - target:
+      kind: Deployment
+      name: workers
+    patch: |-
+      - path: /spec/template/spec/containers/0/command/-
+        op: add
+        value: "--hostname=celery-worker"
+
+  - target:
+      kind: Deployment
+      name: workers-large
+    patch: |-
+      - path: /spec/template/spec/containers/0/command/-
+        op: add
+        value: "--hostname=large-celery-worker"
+
+  # Disable listener. It requires an Archive API to push messages to a RabbitMQ
+  # Exchange. Not an option right now.
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: listener
+      spec:
+        replicas: 0
+
+  # Disable cronjobs in dev environment. These can always be run manually using
+  # kubectl -n banzai create job --from=cronjob/...
+  - patch: |-
+        apiVersion: batch/v1
+        kind: CronJob
+        metadata:
+          name: db-instrument-update
+        spec:
+          suspend: true
+
+  - patch: |-
+        apiVersion: batch/v1
+        kind: CronJob
+        metadata:
+          name: db-bpm-update
+        spec:
+          suspend: true
+

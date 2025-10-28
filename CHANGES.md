@@ -1,3 +1,7 @@
+1.27.0 (2025-10-27)
+-------------------
+- Setup BANZAI to be deployable via Skaffold
+
 1.26.0 (2025-09-15)
 -------------------
 - Renamed banzai.celery to be banzai.scheduling to be more general and to ensure python 3.13
