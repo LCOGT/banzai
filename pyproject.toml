@@ -142,6 +142,7 @@ zip-safe = false
     banzai_populate_bpms = "banzai.main:add_bpms_from_archive"
     banzai_create_db = "banzai.main:create_db"
     banzai_create_local_db = "banzai.main:create_local_db"
+    banzai_download_worker = "banzai.cache.download_worker:run_download_worker_daemon"
 
 [tool.coverage.run]
 source = ["banzai"]
