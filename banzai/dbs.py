@@ -13,7 +13,8 @@ from dateutil.parser import parse
 import requests
 from sqlalchemy import create_engine, pool, func, make_url
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float, Text
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
@@ -114,6 +115,43 @@ class ProcessedImage(Base):
     checksum = Column(CHAR(32), index=True, default='0'*32)
     success = Column(Boolean, default=False)
     tries = Column(Integer, default=0)
+
+
+class PendingDownload(Base):
+    """
+    Download Queue for Calibration Files
+
+    This table acts as a queue for calibration files that need to be downloaded
+    from the archive. Records are created by database triggers when new calibrations
+    are replicated that match the site's filter criteria.
+    """
+    __tablename__ = 'pending_downloads'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    calimage_id = Column(Integer, ForeignKey('calimages.id'), index=True, nullable=False)
+    status = Column(String(20), default='pending', index=True)
+    # Status values: 'pending', 'downloading', 'completed', 'failed'
+    retry_count = Column(Integer, default=0)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    completed_at = Column(DateTime, nullable=True)
+
+
+class CacheConfig(Base):
+    """
+    Cache Configuration for Site Deployments
+
+    Stores site-specific configuration for the calibration cache system.
+    Used by database triggers to filter which calibrations should be downloaded.
+    Typically one record per site deployment.
+    """
+    __tablename__ = 'cache_config'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    site_id = Column(String(15), nullable=False)
+    instrument_types = Column(ARRAY(String), nullable=False)
+    # instrument_types examples: ['qhy', 'sinistro'] or ['*'] for all
+    cache_root = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
 
 def parse_configdb(configdb_address):
@@ -580,3 +618,109 @@ def replicate_instrument(instrument_record, db_address):
 
         add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
         db_session.commit()
+
+
+def get_pending_downloads(db_address, status='pending', limit=10):
+    """
+    Get pending downloads from the queue.
+
+    Parameters
+    ----------
+    db_address : str
+        Database address
+    status : str, optional
+        Filter by status (default: 'pending')
+    limit : int, optional
+        Maximum number of records to return (default: 10)
+
+    Returns
+    -------
+    list of PendingDownload
+        List of pending download records
+    """
+    with get_session(db_address=db_address) as db_session:
+        query = db_session.query(PendingDownload)
+        if status:
+            query = query.filter(PendingDownload.status == status)
+        downloads = query.order_by(PendingDownload.created_at).limit(limit).all()
+    return downloads
+
+
+def get_cache_config(db_address):
+    """
+    Get the cache configuration for the site.
+
+    Parameters
+    ----------
+    db_address : str
+        Database address
+
+    Returns
+    -------
+    CacheConfig or None
+        The cache configuration record, or None if not configured
+    """
+    with get_session(db_address=db_address) as db_session:
+        config = db_session.query(CacheConfig).first()
+    return config
+
+
+def update_pending_download_status(download_id, status, db_address, error_message=None):
+    """
+    Update the status of a pending download.
+
+    Parameters
+    ----------
+    download_id : int
+        ID of the pending download
+    status : str
+        New status ('pending', 'downloading', 'completed', 'failed')
+    db_address : str
+        Database address
+    error_message : str, optional
+        Error message if status is 'failed'
+    """
+    with get_session(db_address=db_address) as db_session:
+        download = db_session.query(PendingDownload).get(download_id)
+        if download:
+            download.status = status
+            if error_message:
+                download.error_message = error_message
+            if status == 'completed':
+                download.completed_at = datetime.datetime.utcnow()
+            if status == 'failed':
+                download.retry_count += 1
+            db_session.commit()
+
+
+def initialize_cache_config(db_address, site_id, instrument_types, cache_root):
+    """
+    Initialize or update the cache configuration for a site.
+
+    Parameters
+    ----------
+    db_address : str
+        Database address
+    site_id : str
+        Site identifier (e.g., 'lsc', 'ogg', 'cpt')
+    instrument_types : list of str
+        List of instrument types to cache, or ['*'] for all
+    cache_root : str
+        Root directory for cached calibration files
+
+    Returns
+    -------
+    CacheConfig
+        The cache configuration record
+    """
+    with get_session(db_address=db_address) as db_session:
+        equivalence_criteria = {'site_id': site_id}
+        record_attributes = {
+            'site_id': site_id,
+            'instrument_types': instrument_types,
+            'cache_root': cache_root,
+            'updated_at': datetime.datetime.utcnow()
+        }
+        config = add_or_update_record(db_session, CacheConfig, equivalence_criteria, record_attributes)
+        db_session.commit()
+    return config
