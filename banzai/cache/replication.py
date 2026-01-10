@@ -6,7 +6,7 @@ for the BANZAI calibration cache system.
 """
 
 import os
-from sqlalchemy import text
+from sqlalchemy import text, create_engine
 from banzai import dbs
 from banzai.logs import get_logger
 
@@ -77,9 +77,11 @@ def setup_subscription(local_db_address, aws_connection_string, site_id,
     """
 
     try:
-        with dbs.get_session(local_db_address) as session:
-            session.execute(text(subscription_sql))
-            session.commit()
+        # CREATE SUBSCRIPTION cannot run in a transaction block
+        # Use raw connection with autocommit enabled
+        engine = create_engine(local_db_address)
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+            conn.execute(text(subscription_sql))
         logger.info(f"Successfully created subscription: {subscription_name}")
     except Exception as e:
         logger.error(f"Failed to create subscription: {e}")
@@ -169,8 +171,6 @@ def install_triggers(db_address, triggers_file='sql/triggers.sql'):
     Install PostgreSQL trigger functions from SQL file.
 
     Reads and executes the triggers SQL file to install:
-    - queue_calibration_download() trigger
-    - cleanup_old_calibration_versions() trigger
     - preserve_local_filepath() trigger
 
     Parameters
@@ -259,9 +259,11 @@ def drop_subscription(db_address, subscription_name, drop_slot=True):
     drop_sql += ";"
 
     try:
-        with dbs.get_session(db_address) as session:
-            session.execute(text(drop_sql))
-            session.commit()
+        # DROP SUBSCRIPTION cannot run in a transaction block
+        # Use raw connection with autocommit enabled
+        engine = create_engine(db_address)
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+            conn.execute(text(drop_sql))
         logger.info(f"Successfully dropped subscription: {subscription_name}")
     except Exception as e:
         logger.error(f"Failed to drop subscription: {e}")

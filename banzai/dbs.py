@@ -117,25 +117,6 @@ class ProcessedImage(Base):
     tries = Column(Integer, default=0)
 
 
-class PendingDownload(Base):
-    """
-    Download Queue for Calibration Files
-
-    This table acts as a queue for calibration files that need to be downloaded
-    from the archive. Records are created by database triggers when new calibrations
-    are replicated that match the site's filter criteria.
-    """
-    __tablename__ = 'pending_downloads'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    calimage_id = Column(Integer, ForeignKey('calimages.id'), index=True, nullable=False)
-    status = Column(String(20), default='pending', index=True)
-    # Status values: 'pending', 'downloading', 'completed', 'failed'
-    retry_count = Column(Integer, default=0)
-    error_message = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
-    completed_at = Column(DateTime, nullable=True)
-
-
 class CacheConfig(Base):
     """
     Cache Configuration for Site Deployments
@@ -620,32 +601,6 @@ def replicate_instrument(instrument_record, db_address):
         db_session.commit()
 
 
-def get_pending_downloads(db_address, status='pending', limit=10):
-    """
-    Get pending downloads from the queue.
-
-    Parameters
-    ----------
-    db_address : str
-        Database address
-    status : str, optional
-        Filter by status (default: 'pending')
-    limit : int, optional
-        Maximum number of records to return (default: 10)
-
-    Returns
-    -------
-    list of PendingDownload
-        List of pending download records
-    """
-    with get_session(db_address=db_address) as db_session:
-        query = db_session.query(PendingDownload)
-        if status:
-            query = query.filter(PendingDownload.status == status)
-        downloads = query.order_by(PendingDownload.created_at).limit(limit).all()
-    return downloads
-
-
 def get_cache_config(db_address):
     """
     Get the cache configuration for the site.
@@ -663,34 +618,6 @@ def get_cache_config(db_address):
     with get_session(db_address=db_address) as db_session:
         config = db_session.query(CacheConfig).first()
     return config
-
-
-def update_pending_download_status(download_id, status, db_address, error_message=None):
-    """
-    Update the status of a pending download.
-
-    Parameters
-    ----------
-    download_id : int
-        ID of the pending download
-    status : str
-        New status ('pending', 'downloading', 'completed', 'failed')
-    db_address : str
-        Database address
-    error_message : str, optional
-        Error message if status is 'failed'
-    """
-    with get_session(db_address=db_address) as db_session:
-        download = db_session.query(PendingDownload).get(download_id)
-        if download:
-            download.status = status
-            if error_message:
-                download.error_message = error_message
-            if status == 'completed':
-                download.completed_at = datetime.datetime.utcnow()
-            if status == 'failed':
-                download.retry_count += 1
-            db_session.commit()
 
 
 def initialize_cache_config(db_address, site_id, instrument_types, cache_root):

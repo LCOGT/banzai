@@ -1,4 +1,40 @@
 services:
+  postgresql:
+    image: postgres:14
+    container_name: banzai-postgresql
+    ports:
+    - "5442:5432"
+    environment:
+      - POSTGRES_DB=banzai_local
+      - POSTGRES_USER=banzai
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - ${HOST_DATA_DIR}/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banzai -d banzai_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  banzai-cache-init:
+    build: .
+    container_name: banzai-cache-init
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    volumes:
+      - ${HOST_DATA_DIR}:/data
+    environment:
+      - DB_ADDRESS=${DB_ADDRESS}
+      - AWS_DB_ADDRESS=${AWS_DB_ADDRESS:-}
+      - SITE_ID=${SITE_ID}
+      - INSTRUMENT_TYPES_TO_CACHE=${INSTRUMENT_TYPES_TO_CACHE:-*}
+      - CACHE_FILES_ROOT=${CACHE_FILES_ROOT:-/data/calibrations}
+      - PUBLICATION_NAME=${PUBLICATION_NAME:-banzai_calibrations}
+    command: ["banzai_cache_init"]
+    restart: "no"
+
   redis:
     image: redis:7
     container_name: banzai-redis
@@ -16,12 +52,18 @@ services:
     build: .
     container_name: banzai-worker
     depends_on:
-      - redis
-      - rabbitmq
+      banzai-cache-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     volumes:
       - ${HOST_DATA_DIR}:/data
       - ${HOST_PROCESSED_DIR}:/output
     environment:
+      - DB_ADDRESS=${DB_ADDRESS}
+      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - TASK_HOST=${TASK_HOST}
       - FITS_BROKER=${FITS_BROKER}
       - FITS_EXCHANGE=${FITS_EXCHANGE}
@@ -39,12 +81,18 @@ services:
     build: .
     container_name: banzai-large-worker
     depends_on:
-      - redis
-      - rabbitmq
+      banzai-cache-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     volumes:
       - ${HOST_DATA_DIR}:/data
       - ${HOST_PROCESSED_DIR}:/output
     environment:
+      - DB_ADDRESS=${DB_ADDRESS}
+      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - TASK_HOST=${TASK_HOST}
       - FITS_BROKER=${FITS_BROKER}
       - FITS_EXCHANGE=${FITS_EXCHANGE}
@@ -62,9 +110,14 @@ services:
     build: .
     container_name: banzai-listener
     depends_on:
-      - redis
-      - rabbitmq
-      - banzai-worker
+      banzai-cache-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      banzai-worker:
+        condition: service_started
     volumes:
       - ${HOST_DATA_DIR}:/data
       - ${HOST_PROCESSED_DIR}:/output
@@ -85,4 +138,21 @@ services:
                  "--db-address=${DB_ADDRESS}",
                  "--calibration-db-address=${CAL_DB_ADDRESS}",
                  "--processed-path=/output"]
+    restart: unless-stopped
+
+  banzai-download-worker:
+    build: .
+    container_name: banzai-download-worker
+    depends_on:
+      banzai-cache-init:
+        condition: service_completed_successfully
+    volumes:
+      - ${HOST_DATA_DIR}:/data
+    environment:
+      - DB_ADDRESS=${DB_ADDRESS}
+      - CACHE_FILES_ROOT=${CACHE_FILES_ROOT:-/data/calibrations}
+      - API_ROOT=${API_ROOT}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - DOWNLOAD_WORKER_POLL_INTERVAL=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}
+    command: ["banzai_download_worker"]
     restart: unless-stopped
