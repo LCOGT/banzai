@@ -1,21 +1,20 @@
 """
 Download worker for calibration file caching.
 
-This module implements an event-driven download worker that processes calibration
-files queued by PostgreSQL triggers. The worker runs as a daemon, continuously
-polling the pending_downloads queue and downloading FITS files from the archive.
+This module implements a worker-driven download system that queries the database
+directly to determine which calibration files should be cached. The worker polls
+the database periodically, compares needed files with cached files, and downloads
+or deletes files as necessary.
 
 Part of the PostgreSQL replication-based calibration cache system.
-See docs/postgresql_replication_cache_design.md for architecture details.
 """
 
 import os
 import sys
 import time
-import datetime
-from io import BytesIO
 
 from astropy.io import fits
+from sqlalchemy import text
 
 from banzai import dbs, logs
 from banzai.utils import fits_utils
@@ -26,15 +25,16 @@ logger = logs.get_logger()
 
 class DownloadWorker:
     """
-    Event-driven calibration file download worker.
+    Worker-driven calibration file download system.
 
-    Continuously polls the pending_downloads queue and downloads FITS files
-    from the archive API. Updates the database with local file paths and
-    performs automatic cleanup of old versions.
+    Queries the database directly to determine which calibration files should
+    be cached, compares with filesystem state, and downloads/deletes files
+    as needed. Uses a flat directory structure with all calibration files
+    stored in a single directory.
 
     Attributes:
         db_address: Database connection string for local site database
-        cache_root: Root directory for calibration file storage
+        cache_root: Root directory for calibration file storage (flat structure)
         runtime_context: Runtime context with archive API configuration
     """
 
@@ -53,161 +53,382 @@ class DownloadWorker:
 
         logger.info(f"Initialized download worker with cache_root: {cache_root}")
 
-    def run(self, poll_interval=10):
+    def get_cache_config(self):
         """
-        Main worker loop.
+        Get cache configuration from database.
 
-        Continuously polls for pending downloads, processes them, and performs
-        cleanup. Runs indefinitely until interrupted.
+        Returns:
+            CacheConfig object with site_id and instrument_types, or None if not configured
+        """
+        with dbs.get_session(self.db_address) as session:
+            config = session.query(dbs.CacheConfig).first()
+        return config
+
+    def get_calibrations_to_cache(self):
+        """
+        Query for top 2 versions of each calibration configuration.
+
+        Executes a ranking query to find the 2 most recent calibrations for each
+        unique combination of (instrument, type, config_mode, binning, filter).
+        Only returns calibrations matching the site's filter configuration.
+
+        Returns:
+            dict: {filename: CalibrationImage} mapping filenames to database records.
+                  Each CalibrationImage has: id, filename, type, frameid, instrument_id,
+                  attributes (JSON with config_mode, binning, filter)
+        """
+        config = self.get_cache_config()
+        if not config:
+            logger.warning("No cache configuration found - cache_config table may not be initialized")
+            return {}
+
+        # SQL query to rank calibrations and select top 2 per configuration
+        ranking_sql = """
+        WITH ranked_cals AS (
+            SELECT
+                c.id,
+                c.filename,
+                c.type,
+                c.instrument_id,
+                c.filepath,
+                c.frameid,
+                ROW_NUMBER() OVER (
+                    PARTITION BY
+                        c.instrument_id,
+                        c.type,
+                        c.attributes->>'configuration_mode',
+                        c.attributes->>'binning',
+                        CASE WHEN c.type IN ('SKYFLAT', 'FLAT')
+                            THEN c.attributes->>'filter'
+                            ELSE NULL
+                        END
+                    ORDER BY c.dateobs DESC, c.id DESC
+                ) as version_rank
+            FROM calimages c
+            JOIN instruments i ON c.instrument_id = i.id
+            WHERE
+                c.is_master = true
+                AND c.is_bad = false
+                AND i.site = :site_id
+                AND (
+                    :instrument_types = ARRAY['*']
+                    OR i.type = ANY(:instrument_types)
+                )
+        )
+        SELECT id, filename, type, filepath, frameid
+        FROM ranked_cals
+        WHERE version_rank <= 1;
+        """
+
+        try:
+            with dbs.get_session(self.db_address) as session:
+                # Execute query with parameters
+                results = session.execute(
+                    text(ranking_sql),
+                    {
+                        'site_id': config.site_id,
+                        'instrument_types': config.instrument_types
+                    }
+                ).fetchall()
+
+                # Build dict of filename -> CalibrationImage
+                needed = {}
+                for row in results:
+                    cal = session.query(dbs.CalibrationImage).get(row.id)
+                    if cal:
+                        needed[cal.filename] = cal
+
+                logger.info(f"Found {len(needed)} calibrations that should be cached")
+                return needed
+
+        except Exception as e:
+            logger.error(f"Error querying calibrations to cache: {e}", exc_info=True)
+            return {}
+
+    def get_cached_files(self):
+        """
+        Scan filesystem and return set of filenames currently on disk.
+
+        Returns:
+            set: Filenames found in cache directory
+        """
+        if os.path.exists(self.cache_root):
+            try:
+                files = set(os.listdir(self.cache_root))
+                # Filter out any non-FITS files or temp files
+                files = {f for f in files if f.endswith('.fits') or f.endswith('.fits.fz')}
+                logger.debug(f"Found {len(files)} files in cache directory")
+                return files
+            except Exception as e:
+                logger.error(f"Error scanning cache directory: {e}", exc_info=True)
+                return set()
+        else:
+            logger.info(f"Cache directory does not exist yet: {self.cache_root}")
+            return set()
+
+    def log_calibration_summary(self, needed_cals, log_details=False):
+        """
+        Log summary of calibration configurations.
 
         Args:
-            poll_interval: Seconds to wait between queue polls (default: 10)
+            needed_cals: Dict of {filename: CalibrationImage} for needed calibrations
+            log_details: If True, log detailed per-configuration breakdown
+        """
+        if not needed_cals:
+            return
+
+        # Count by type
+        type_counts = {}
+        for cal in needed_cals.values():
+            type_counts[cal.type] = type_counts.get(cal.type, 0) + 1
+
+        # Log summary
+        logger.info(f"Calibration summary ({len(needed_cals)} total files):")
+        for cal_type in sorted(type_counts.keys()):
+            logger.info(f"  {cal_type}: {type_counts[cal_type]} files")
+
+        # Log detailed breakdown if requested
+        if log_details:
+            logger.info("Configuration breakdown:")
+            # Group by configuration
+            configs = {}
+            for cal in needed_cals.values():
+                # Build config key
+                instrument_id = cal.instrument_id
+                cal_type = cal.type
+                config_mode = cal.attributes.get('configuration_mode', 'unknown')
+                binning = cal.attributes.get('binning', 'unknown')
+                filter_name = cal.attributes.get('filter', '') if cal_type in ('SKYFLAT', 'FLAT') else ''
+
+                if filter_name:
+                    config_key = f"  instrument_{instrument_id}/{cal_type}/{config_mode}/{binning}/{filter_name}"
+                else:
+                    config_key = f"  instrument_{instrument_id}/{cal_type}/{config_mode}/{binning}"
+
+                configs[config_key] = configs.get(config_key, 0) + 1
+
+            for config_key in sorted(configs.keys()):
+                logger.info(f"{config_key}: {configs[config_key]} file(s)")
+
+    def safe_to_delete(self, filename, needed_cals, files_on_disk):
+        """
+        Check if it's safe to delete this calibration file.
+
+        A file is only safe to delete if we have 2+ OTHER files for the same
+        configuration already on disk. This prevents deleting the only working
+        calibration if a download fails.
+
+        Args:
+            filename: Filename of the calibration to potentially delete
+            needed_cals: Dict of {filename: CalibrationImage} for all needed calibrations
+            files_on_disk: Set of filenames currently cached
+
+        Returns:
+            bool: True if safe to delete, False otherwise
+        """
+        # Get the calibration info for the file we want to delete
+        # It's not in needed_cals (that's why we want to delete it), so we need to query it
+        with dbs.get_session(self.db_address) as session:
+            cal_to_delete = session.query(dbs.CalibrationImage)\
+                .filter_by(filename=filename).first()
+
+            if not cal_to_delete:
+                logger.warning(f"Cannot find calibration record for {filename}, skipping deletion")
+                return False
+
+            # Find all calibrations for the same configuration in needed_cals
+            same_config = []
+            for needed_cal in needed_cals.values():
+                # Check if this calibration is the same configuration
+                if (needed_cal.instrument_id == cal_to_delete.instrument_id and
+                    needed_cal.type == cal_to_delete.type and
+                    needed_cal.attributes.get('configuration_mode') == cal_to_delete.attributes.get('configuration_mode') and
+                    needed_cal.attributes.get('binning') == cal_to_delete.attributes.get('binning')):
+
+                    # For SKYFLAT/FLAT types, also check filter
+                    if cal_to_delete.type in ('SKYFLAT', 'FLAT'):
+                        if needed_cal.attributes.get('filter') == cal_to_delete.attributes.get('filter'):
+                            same_config.append(needed_cal)
+                    else:
+                        same_config.append(needed_cal)
+
+            # Count how many of these are actually on disk
+            files_for_config_on_disk = [
+                cal for cal in same_config
+                if cal.filename in files_on_disk
+            ]
+
+            # Safe to delete if we have 2+ other files on disk
+            return len(files_for_config_on_disk) >= 2
+
+    def run(self, poll_interval=10):
+        """
+        Main worker loop - query-based approach.
+
+        Continuously polls the database to determine which files should be cached,
+        compares with filesystem state, and downloads/deletes files as needed.
+
+        Args:
+            poll_interval: Seconds to wait between polls (default: 10)
         """
         logger.info("Starting download worker")
 
         while True:
             try:
-                # Get pending downloads
-                pending = self.get_pending_downloads(limit=10)
+                # What SHOULD be cached (from database)
+                needed = self.get_calibrations_to_cache()  # {filename: CalibrationImage}
 
-                if not pending:
-                    # No work to do, sleep and continue
-                    time.sleep(poll_interval)
-                    continue
+                # Log summary of calibrations every poll
+                self.log_calibration_summary(needed, log_details=False)
 
-                logger.info(f"Processing {len(pending)} pending downloads")
+                # What IS cached (from filesystem)
+                cached = self.get_cached_files()  # set of filenames
 
-                # Process each download
-                for download in pending:
-                    try:
-                        self.process_download(download)
-                    except Exception as e:
-                        # Log error but continue processing other downloads
-                        logger.error(f"Error processing download {download.id}: {e}", exc_info=True)
+                # Download missing files
+                to_download = set(needed.keys()) - cached
+                if to_download:
+                    logger.info(f"Need to download {len(to_download)} files")
+                    # Log detailed breakdown when starting downloads
+                    self.log_calibration_summary(needed, log_details=True)
+                    for filename in to_download:
+                        cal_info = needed[filename]
+                        try:
+                            self.download_calibration(cal_info)
+                        except Exception as e:
+                            logger.error(f"Failed to download {filename}: {e}", exc_info=True)
 
-                # Cleanup old files after processing batch
-                try:
-                    self.cleanup_old_files()
-                except Exception as e:
-                    logger.error(f"Error during cleanup: {e}", exc_info=True)
+                # Delete outdated files (with safety check)
+                to_delete = cached - set(needed.keys())
+                if to_delete:
+                    for filename in to_delete:
+                        if self.safe_to_delete(filename, needed, cached):
+                            try:
+                                self.delete_calibration(filename)
+                                # Update cached set after successful deletion
+                                cached.discard(filename)
+                            except Exception as e:
+                                logger.error(f"Failed to delete {filename}: {e}", exc_info=True)
+
+                # Sleep before next poll
+                time.sleep(poll_interval)
 
             except KeyboardInterrupt:
-                logger.info("Download worker interrupted by user")
+                logger.info("Download worker interrupted")
                 break
             except Exception as e:
-                logger.error(f"Unexpected error in worker loop: {e}", exc_info=True)
-                # Back off on errors to avoid rapid failure loops
-                time.sleep(30)
+                logger.error(f"Error in worker loop: {e}", exc_info=True)
+                time.sleep(30)  # Back off on errors
 
         logger.info("Download worker stopped")
 
-    def get_pending_downloads(self, limit=10):
+    def download_calibration(self, cal_info):
         """
-        Get pending downloads from queue.
+        Download a single calibration file and update filepath.
 
-        Queries the pending_downloads table for downloads with status='pending',
-        ordered by creation time (oldest first).
+        Downloads the FITS file from the archive, validates it, saves to disk
+        atomically (using temp file + rename), and updates the database with
+        the local file path.
 
         Args:
-            limit: Maximum number of downloads to return (default: 10)
-
-        Returns:
-            List of PendingDownload objects
-        """
-        with dbs.get_session(self.db_address) as session:
-            return session.query(dbs.PendingDownload)\
-                .filter_by(status='pending')\
-                .order_by(dbs.PendingDownload.created_at)\
-                .limit(limit)\
-                .all()
-
-    def process_download(self, download):
-        """
-        Process a single download.
-
-        Downloads the FITS file from the archive, validates it, saves to disk,
-        and updates the database with the local file path.
-
-        Args:
-            download: PendingDownload object to process
+            cal_info: CalibrationImage object with id, filename, frameid, type
 
         Raises:
             FrameNotAvailableError: If frame cannot be downloaded from archive
-            ValueError: If downloaded file is invalid
+            ValueError: If frameid is NULL or downloaded file is invalid
             Exception: For other errors during download
         """
+        local_path = os.path.join(self.cache_root, cal_info.filename)
+
+        # Skip if already exists (race condition protection)
+        if os.path.exists(local_path):
+            logger.info(f"File already exists: {cal_info.filename}, updating database")
+            with dbs.get_session(self.db_address) as session:
+                cal_record = session.query(dbs.CalibrationImage).get(cal_info.id)
+                if cal_record and cal_record.filepath != self.cache_root:
+                    cal_record.filepath = self.cache_root
+                    session.commit()
+            return
+
+        # Check for NULL frameid
+        if cal_info.frameid is None:
+            logger.warning(f"Skipping {cal_info.filename} (type: {cal_info.type}) - NULL frameid in database")
+            return
+
+        # Create cache directory if needed
+        os.makedirs(self.cache_root, exist_ok=True)
+
+        # Download from archive
+        logger.info(f"Downloading {cal_info.filename} (frameid: {cal_info.frameid}, type: {cal_info.type})")
+
+        file_info = {
+            'frameid': cal_info.frameid,
+            'filename': cal_info.filename
+        }
+
+        # Download file to buffer
+        buffer = fits_utils.download_from_s3(
+            file_info,
+            self.runtime_context,
+            is_raw_frame=False
+        )
+
+        # Write to temp file first (atomic operation)
+        temp_path = local_path + '.tmp'
         try:
-            # Mark as downloading
-            self.mark_downloading(download.id)
-
-            # Get calibration record
-            cal = self.get_calibration(download.calimage_id)
-
-            if cal is None:
-                raise ValueError(f"Calibration {download.calimage_id} not found")
-
-            # Determine local paths
-            local_dir = os.path.join(self.cache_root, cal.type)
-            local_path = os.path.join(local_dir, cal.filename)
-
-            # Skip if already downloaded
-            if os.path.exists(local_path):
-                logger.info(f"File already exists: {cal.filename}, updating database")
-                with dbs.get_session(self.db_address) as session:
-                    cal_record = session.query(dbs.CalibrationImage).get(cal.id)
-                    if cal_record:
-                        cal_record.filepath = local_dir
-                        session.commit()
-                self.mark_completed(download.id)
-                return
-
-            # Create directory if needed
-            os.makedirs(local_dir, exist_ok=True)
-
-            # Download from archive API
-            logger.info(f"Downloading {cal.filename} (frameid: {cal.frameid}, type: {cal.type})")
-
-            file_info = {
-                'frameid': cal.frameid,
-                'filename': cal.filename
-            }
-
-            # Download file
-            buffer = fits_utils.download_from_s3(
-                file_info,
-                self.runtime_context,
-                is_raw_frame=False
-            )
-
-            # Save to disk
-            with open(local_path, 'wb') as f:
+            with open(temp_path, 'wb') as f:
                 f.write(buffer.read())
             buffer.close()
 
             # Validate FITS file
-            if not self.validate_fits(local_path):
-                os.remove(local_path)
-                raise ValueError("Invalid FITS file")
+            if not self.validate_fits(temp_path):
+                os.remove(temp_path)
+                raise ValueError(f"Invalid FITS file: {cal_info.filename}")
 
-            # Update filepath in database (store directory, not full path)
+            # Atomic rename to final location
+            os.rename(temp_path, local_path)
+
+            # Update database with filepath
             with dbs.get_session(self.db_address) as session:
-                cal_record = session.query(dbs.CalibrationImage).get(cal.id)
+                cal_record = session.query(dbs.CalibrationImage).get(cal_info.id)
                 if cal_record:
-                    cal_record.filepath = local_dir
+                    cal_record.filepath = self.cache_root
                     session.commit()
 
-            # Mark download complete
-            self.mark_completed(download.id)
-            logger.info(f"Successfully downloaded {cal.filename} to {local_dir}")
+            logger.info(f"Successfully downloaded {cal_info.filename}")
 
-        except FrameNotAvailableError as e:
-            # Frame not available in archive (expected for some calibrations)
-            logger.warning(f"Frame not available: {e}")
-            self.mark_failed(download.id, str(e))
         except Exception as e:
-            # Other errors - retry up to max attempts
-            logger.error(f"Download failed for {download.id}: {e}", exc_info=True)
-            self.mark_failed(download.id, str(e))
+            # Clean up temp file if it exists
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            raise
+
+    def delete_calibration(self, filename):
+        """
+        Delete a calibration file and clear filepath in database.
+
+        Removes the file from disk and sets filepath=NULL in the database.
+
+        Args:
+            filename: Name of the file to delete
+        """
+        file_path = os.path.join(self.cache_root, filename)
+
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                logger.info(f"Deleted file: {filename}")
+            except Exception as e:
+                logger.error(f"Failed to delete file {filename}: {e}")
+                raise
+
+        # Clear filepath in database
+        with dbs.get_session(self.db_address) as session:
+            cal = session.query(dbs.CalibrationImage)\
+                .filter_by(filename=filename).first()
+            if cal:
+                cal.filepath = None
+                session.commit()
+                logger.info(f"Cleared filepath in database for {filename}")
 
     def validate_fits(self, filepath):
         """
@@ -234,113 +455,6 @@ class DownloadWorker:
         except Exception as e:
             logger.warning(f"FITS validation failed for {filepath}: {e}")
             return False
-
-    def cleanup_old_files(self):
-        """
-        Remove files marked for deletion.
-
-        Finds calibrations where filepath=NULL (marked for deletion by version
-        cleanup trigger) and removes the corresponding files from disk. Searches
-        all calibration type directories since we don't know where the file was.
-        """
-        with dbs.get_session(self.db_address) as session:
-            # Find calibrations marked for cleanup (filepath=NULL)
-            cals_to_delete = session.query(dbs.CalibrationImage)\
-                .filter(dbs.CalibrationImage.filepath == None)\
-                .all()
-
-            if not cals_to_delete:
-                return
-
-            logger.info(f"Cleaning up {len(cals_to_delete)} old calibration files")
-
-            # Try to find and delete each file
-            for cal in cals_to_delete:
-                # Try common calibration type directories
-                for cal_type in ['BIAS', 'DARK', 'SKYFLAT', 'FLAT', 'BPM', 'READNOISE']:
-                    potential_path = os.path.join(self.cache_root, cal_type, cal.filename)
-
-                    if os.path.exists(potential_path):
-                        try:
-                            os.remove(potential_path)
-                            logger.info(f"Deleted old calibration: {cal.filename}")
-                        except Exception as e:
-                            logger.error(f"Failed to delete {cal.filename}: {e}")
-                        break  # File found and processed, move to next calibration
-
-    def get_calibration(self, calimage_id):
-        """
-        Get calibration record from database.
-
-        Args:
-            calimage_id: ID of CalibrationImage record
-
-        Returns:
-            CalibrationImage object or None if not found
-        """
-        with dbs.get_session(self.db_address) as session:
-            return session.query(dbs.CalibrationImage).get(calimage_id)
-
-    def mark_downloading(self, download_id):
-        """
-        Mark download as in progress.
-
-        Updates the status to 'downloading' to indicate work has started.
-
-        Args:
-            download_id: ID of PendingDownload record
-        """
-        with dbs.get_session(self.db_address) as session:
-            download = session.query(dbs.PendingDownload).get(download_id)
-            if download:
-                download.status = 'downloading'
-                session.commit()
-
-    def mark_completed(self, download_id):
-        """
-        Mark download as completed.
-
-        Updates the status to 'completed' and records completion timestamp.
-
-        Args:
-            download_id: ID of PendingDownload record
-        """
-        with dbs.get_session(self.db_address) as session:
-            download = session.query(dbs.PendingDownload).get(download_id)
-            if download:
-                download.status = 'completed'
-                download.completed_at = datetime.datetime.utcnow()
-                session.commit()
-
-    def mark_failed(self, download_id, error_msg):
-        """
-        Mark download as failed.
-
-        Increments retry count and stores error message. If under max retries,
-        resets status to 'pending' for automatic retry. Otherwise marks as 'failed'.
-
-        Args:
-            download_id: ID of PendingDownload record
-            error_msg: Error message describing the failure
-        """
-        max_retries = 3
-
-        with dbs.get_session(self.db_address) as session:
-            download = session.query(dbs.PendingDownload).get(download_id)
-            if download:
-                download.retry_count += 1
-                download.error_message = error_msg
-
-                # Retry if under max attempts, otherwise mark as failed
-                if download.retry_count < max_retries:
-                    download.status = 'pending'  # Retry
-                    logger.info(f"Download {download_id} will be retried "
-                              f"(attempt {download.retry_count + 1}/{max_retries})")
-                else:
-                    download.status = 'failed'
-                    logger.error(f"Download {download_id} failed after {max_retries} attempts")
-
-                session.commit()
 
 
 def run_download_worker_daemon():
