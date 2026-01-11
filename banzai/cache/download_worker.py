@@ -22,6 +22,9 @@ from banzai.exceptions import FrameNotAvailableError
 
 logger = logs.get_logger()
 
+# Heartbeat interval for idle cache status logging (5 minutes)
+HEARTBEAT_INTERVAL = 300
+
 
 class DownloadWorker:
     """
@@ -50,6 +53,12 @@ class DownloadWorker:
         self.db_address = db_address
         self.cache_root = cache_root
         self.runtime_context = runtime_context
+
+        # Logging state tracking
+        self._last_needed_count = None
+        self._last_cached_count = None
+        self._last_summary_time = 0
+        self._startup = True
 
         logger.info(f"Initialized download worker with cache_root: {cache_root}")
 
@@ -138,7 +147,7 @@ class DownloadWorker:
                     if cal:
                         needed[cal.filename] = cal
 
-                logger.info(f"Found {len(needed)} calibrations that should be cached")
+                logger.debug(f"Found {len(needed)} calibrations that should be cached")
                 return needed
 
         except Exception as e:
@@ -209,6 +218,15 @@ class DownloadWorker:
 
             for config_key in sorted(configs.keys()):
                 logger.info(f"{config_key}: {configs[config_key]} file(s)")
+
+    def _get_type_summary(self, needed_cals):
+        """Build compact type summary string like 'TYPE:count, TYPE:count, ...'."""
+        if not needed_cals:
+            return "empty"
+        type_counts = {}
+        for cal in needed_cals.values():
+            type_counts[cal.type] = type_counts.get(cal.type, 0) + 1
+        return ", ".join(f"{t}:{c}" for t, c in sorted(type_counts.items()))
 
     def reconcile_orphaned_filepaths(self, needed_filenames):
         """
@@ -312,18 +330,48 @@ class DownloadWorker:
                 # What SHOULD be cached (from database)
                 needed = self.get_calibrations_to_cache()  # {filename: CalibrationImage}
 
-                # Log summary of calibrations every poll
-                self.log_calibration_summary(needed, log_details=False)
-
                 # What IS cached (from filesystem)
                 cached = self.get_cached_files()  # set of filenames
 
-                # Download missing files
+                # Determine what's changed
+                needed_count = len(needed)
+                cached_count = len(cached)
                 to_download = set(needed.keys()) - cached
-                if to_download:
-                    logger.info(f"Need to download {len(to_download)} files")
-                    # Log detailed breakdown when starting downloads
+                to_delete = cached - set(needed.keys())
+                now = time.time()
+
+                # Smart logging based on state
+                if self._startup:
+                    # Startup: full summary
+                    logger.info(f"Initial cache state: {cached_count}/{needed_count} files cached")
+                    self.log_calibration_summary(needed, log_details=False)
+                    self._startup = False
+                    self._last_summary_time = now
+                elif to_download or to_delete:
+                    # Downloads/deletes needed: full summary + details
+                    logger.info(f"Cache sync needed: {len(to_download)} to download, "
+                                f"{len(to_delete)} to delete")
                     self.log_calibration_summary(needed, log_details=True)
+                    self._last_summary_time = now
+                elif (needed_count != self._last_needed_count or
+                      cached_count != self._last_cached_count):
+                    # State changed (counts differ): brief update
+                    logger.info(f"Cache state changed: {cached_count}/{needed_count} files cached "
+                                f"(was {self._last_cached_count}/{self._last_needed_count})")
+                    self._last_summary_time = now
+                elif now - self._last_summary_time >= HEARTBEAT_INTERVAL:
+                    # Heartbeat (5 min since last summary): single line with type breakdown
+                    type_summary = self._get_type_summary(needed)
+                    logger.info(f"Cache healthy: {cached_count}/{needed_count} files cached "
+                                f"({type_summary})")
+                    self._last_summary_time = now
+
+                # Update tracking state
+                self._last_needed_count = needed_count
+                self._last_cached_count = cached_count
+
+                # Download missing files
+                if to_download:
                     for filename in to_download:
                         cal_info = needed[filename]
                         try:
@@ -332,7 +380,6 @@ class DownloadWorker:
                             logger.error(f"Failed to download {filename}: {e}", exc_info=True)
 
                 # Delete outdated files (with safety check)
-                to_delete = cached - set(needed.keys())
                 if to_delete:
                     for filename in to_delete:
                         if self.safe_to_delete(filename, needed, cached):
