@@ -117,7 +117,7 @@ class DownloadWorker:
         )
         SELECT id, filename, type, filepath, frameid
         FROM ranked_cals
-        WHERE version_rank <= 1;
+        WHERE version_rank <= 2;
         """
 
         try:
@@ -209,6 +209,40 @@ class DownloadWorker:
 
             for config_key in sorted(configs.keys()):
                 logger.info(f"{config_key}: {configs[config_key]} file(s)")
+
+    def reconcile_orphaned_filepaths(self, needed_filenames):
+        """
+        Clear filepath for database rows that shouldn't be cached.
+
+        Finds calibrations with filepath set to our cache_root but whose
+        filename is not in the set of files that should be cached. This
+        handles cases where filepath was incorrectly set or where the file
+        was deleted outside the worker's control.
+
+        Args:
+            needed_filenames: Set of filenames that should be cached
+        """
+        with dbs.get_session(self.db_address) as session:
+            # Set application_name so trigger allows the update
+            session.execute(text("SET LOCAL application_name = 'banzai_download_worker'"))
+
+            # Find rows with filepath pointing to our cache_root
+            # but not in the needed set
+            cals_with_filepath = session.query(dbs.CalibrationImage).filter(
+                dbs.CalibrationImage.filepath == self.cache_root
+            ).all()
+
+            orphaned_count = 0
+            for cal in cals_with_filepath:
+                if cal.filename not in needed_filenames:
+                    logger.info(f"Clearing orphaned filepath for {cal.filename} "
+                               f"(filepath set but not in needed cache set)")
+                    cal.filepath = None
+                    orphaned_count += 1
+
+            if orphaned_count > 0:
+                session.commit()
+                logger.info(f"Cleared {orphaned_count} orphaned filepath(s)")
 
     def safe_to_delete(self, filename, needed_cals, files_on_disk):
         """
@@ -308,6 +342,9 @@ class DownloadWorker:
                                 cached.discard(filename)
                             except Exception as e:
                                 logger.error(f"Failed to delete {filename}: {e}", exc_info=True)
+
+                # Clear orphaned filepaths (rows with filepath set but not in needed set)
+                self.reconcile_orphaned_filepaths(set(needed.keys()))
 
                 # Sleep before next poll
                 time.sleep(poll_interval)
@@ -422,7 +459,9 @@ class DownloadWorker:
                 raise
 
         # Clear filepath in database
+        # Set application_name so trigger allows the update
         with dbs.get_session(self.db_address) as session:
+            session.execute(text("SET LOCAL application_name = 'banzai_download_worker'"))
             cal = session.query(dbs.CalibrationImage)\
                 .filter_by(filename=filename).first()
             if cal:

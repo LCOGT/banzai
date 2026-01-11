@@ -19,7 +19,14 @@
 CREATE OR REPLACE FUNCTION preserve_local_filepath()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- If local filepath exists, don't let replication overwrite it
+    -- Allow download worker to clear filepath by checking application_name
+    -- This enables the worker to clear filepath when deleting files or reconciling orphaned records
+    IF current_setting('application_name', true) = 'banzai_download_worker' THEN
+        RETURN NEW;
+    END IF;
+
+    -- For all other contexts (including replication), preserve local filepath
+    -- This prevents replication from AWS (where filepath=NULL) from clearing local paths
     IF OLD.filepath IS NOT NULL AND NEW.filepath IS NULL THEN
         NEW.filepath := OLD.filepath;
     END IF;
