@@ -12,6 +12,8 @@ Part of the PostgreSQL replication-based calibration cache system.
 import os
 import sys
 import time
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 from astropy.io import fits
 from sqlalchemy import text
@@ -24,6 +26,22 @@ logger = logs.get_logger()
 
 # Heartbeat interval for idle cache status logging (5 minutes)
 HEARTBEAT_INTERVAL = 300
+
+
+@dataclass
+class CachedCalibrationInfo:
+    """
+    Lightweight data container for calibration info needed by download worker.
+
+    This is intentionally not an ORM object - it holds a snapshot of the data
+    needed for caching decisions, avoiding SQLAlchemy detached object issues.
+    """
+    id: int
+    filename: str
+    type: str
+    frameid: Optional[int]
+    instrument_id: int
+    attributes: Dict[str, Any]
 
 
 class DownloadWorker:
@@ -82,9 +100,7 @@ class DownloadWorker:
         Only returns calibrations matching the site's filter configuration.
 
         Returns:
-            dict: {filename: CalibrationImage} mapping filenames to database records.
-                  Each CalibrationImage has: id, filename, type, frameid, instrument_id,
-                  attributes (JSON with config_mode, binning, filter)
+            dict: {filename: CachedCalibrationInfo} mapping filenames to calibration data.
         """
         config = self.get_cache_config()
         if not config:
@@ -140,12 +156,21 @@ class DownloadWorker:
                     }
                 ).fetchall()
 
-                # Build dict of filename -> CalibrationImage
+                # Build dict of filename -> CachedCalibrationInfo
+                # Convert ORM objects to dataclass while session is open
                 needed = {}
                 for row in results:
                     cal = session.query(dbs.CalibrationImage).get(row.id)
                     if cal:
-                        needed[cal.filename] = cal
+                        info = CachedCalibrationInfo(
+                            id=cal.id,
+                            filename=cal.filename,
+                            type=cal.type,
+                            frameid=cal.frameid,
+                            instrument_id=cal.instrument_id,
+                            attributes=dict(cal.attributes) if cal.attributes else {}
+                        )
+                        needed[info.filename] = info
 
                 logger.debug(f"Found {len(needed)} calibrations that should be cached")
                 return needed
@@ -180,7 +205,7 @@ class DownloadWorker:
         Log summary of calibration configurations.
 
         Args:
-            needed_cals: Dict of {filename: CalibrationImage} for needed calibrations
+            needed_cals: Dict of {filename: CachedCalibrationInfo} for needed calibrations
             log_details: If True, log detailed per-configuration breakdown
         """
         if not needed_cals:
@@ -272,7 +297,7 @@ class DownloadWorker:
 
         Args:
             filename: Filename of the calibration to potentially delete
-            needed_cals: Dict of {filename: CalibrationImage} for all needed calibrations
+            needed_cals: Dict of {filename: CachedCalibrationInfo} for all needed calibrations
             files_on_disk: Set of filenames currently cached
 
         Returns:
@@ -414,7 +439,7 @@ class DownloadWorker:
         the local file path.
 
         Args:
-            cal_info: CalibrationImage object with id, filename, frameid, type
+            cal_info: CachedCalibrationInfo with id, filename, frameid, type
 
         Raises:
             FrameNotAvailableError: If frame cannot be downloaded from archive
