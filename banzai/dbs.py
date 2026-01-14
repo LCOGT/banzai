@@ -11,7 +11,7 @@ import os.path
 import datetime
 from dateutil.parser import parse
 import requests
-from sqlalchemy import create_engine, pool, func
+from sqlalchemy import create_engine, pool, func, make_url
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float
 from sqlalchemy.ext.declarative import declarative_base
@@ -472,10 +472,10 @@ def create_local_db(local_db_address, aws_db_address, site_id):
     """
 
     # Check if local database file already exists (for SQLite)
-    if 'sqlite' in local_db_address and '://' in local_db_address:
-        db_path = local_db_address.split(':///')[-1]
-        if os.path.exists(db_path):
-            logger.error(f"Database file {db_path} already exists. Please remove it first.")
+    url = make_url(local_db_address)
+    if url.drivername.startswith('sqlite') and url.database:
+        if os.path.exists(url.database):
+            logger.error(f"Database file {url.database} already exists. Please remove it first.")
             return
 
     # Create the local database structure

@@ -72,7 +72,7 @@ distribute-*.tar.gz
 justfile
 
 # Local Banzai Setup
-.site-banzai-env
+site-banzai-env
 example_data
 local_banzai
 site_banzai

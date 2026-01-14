@@ -101,7 +101,7 @@ science images using the `banzai_reduce_individual_frame` command.
 To run the pipeline in its active mode, you need to setup a task queue and a filename queue.
 See the `docker-compose.yml` file for details on this setup.
 
-Running at Site
+Running Locally
 ---------------
 
 For deploying BANZAI at an observatory site with local processing, use the containerized setup with
@@ -111,7 +111,7 @@ calibration files from a remote database.
 Environment Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-First copy `.site-banzai-env.default` to `.site-banzai-env` and configure the following variables:
+First copy `site-banzai-env.default` to `site-banzai-env` and configure the following variables:
 
 * Database addresses (local SQLite for processing, remote PostgreSQL for calibrations)
 * Site ID and API authentication token
@@ -141,7 +141,7 @@ Start the Containers
 
 .. code-block:: bash
 
-    docker compose -f docker-compose-site.yml --env-file .site-banzai-env up -d --build
+    docker compose -f docker-compose-site.yml --env-file site-banzai-env up -d --build
 
 Process Images
 ~~~~~~~~~~~~~~
