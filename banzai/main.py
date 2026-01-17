@@ -102,9 +102,10 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
                         help='Continue processing a file even if a master calibration does not exist?')
     parser.add_argument('--rlevel', dest='reduction_level', default=91, type=int, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',
-                        default='sqlite:///banzai-test.db',
+                        default=settings.DB_ADDRESS,
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--calibration-db-address', dest='cal_db_address',
+                        default=settings.CAL_DB_ADDRESS,
                         help='Optional separate database address for getting calibration files. Defaults to using the same address as --db-address.')
     parser.add_argument('--opensearch-url', dest='opensearch_url',
                         default='https://opensearch.lco.global/')
@@ -136,10 +137,6 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
     logs.set_log_level(args.log_level)
 
     add_settings_to_context(args, settings)
-
-    # If a separate calibration db address is not provided, fall back to using the primary db address
-    if getattr(args, 'cal_db_address', None) is None:
-        args.cal_db_address = args.db_address
 
     return Context(args)
 
