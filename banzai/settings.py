@@ -168,3 +168,7 @@ REFERENCE_CATALOG_URL = os.getenv('REFERENCE_CATALOG_URL', 'http://phot-catalog.
 # Primary definition of these env vars is in site-banzai-env
 DB_ADDRESS = os.getenv('DB_ADDRESS', 'sqlite:///banzai-test.db')
 CAL_DB_ADDRESS = os.getenv('CAL_DB_ADDRESS') or DB_ADDRESS
+
+# Lowercase aliases for runtime context compatibility
+db_address = DB_ADDRESS
+cal_db_address = CAL_DB_ADDRESS
