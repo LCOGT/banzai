@@ -12,6 +12,7 @@ Part of the PostgreSQL replication-based calibration cache system.
 import os
 import sys
 import time
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
@@ -91,6 +92,17 @@ class DownloadWorker:
             config = session.query(dbs.CacheConfig).first()
         return config
 
+    def _get_config_key(self, cal):
+        """Build grouping key for calibration ranking."""
+        attrs = cal.attributes or {}
+        return (
+            cal.instrument_id,
+            cal.type,
+            attrs.get('configuration_mode'),
+            attrs.get('binning'),
+            attrs.get('filter') if cal.type in ('SKYFLAT', 'FLAT') else None
+        )
+
     def get_calibrations_to_cache(self):
         """
         Query for top 2 versions of each calibration configuration.
@@ -107,61 +119,35 @@ class DownloadWorker:
             logger.warning("No cache configuration found - cache_config table may not be initialized")
             return {}
 
-        # SQL query to rank calibrations and select top 2 per configuration
-        ranking_sql = """
-        WITH ranked_cals AS (
-            SELECT
-                c.id,
-                c.filename,
-                c.type,
-                c.instrument_id,
-                c.filepath,
-                c.frameid,
-                ROW_NUMBER() OVER (
-                    PARTITION BY
-                        c.instrument_id,
-                        c.type,
-                        c.attributes->>'configuration_mode',
-                        c.attributes->>'binning',
-                        CASE WHEN c.type IN ('SKYFLAT', 'FLAT')
-                            THEN c.attributes->>'filter'
-                            ELSE NULL
-                        END
-                    ORDER BY c.dateobs DESC, c.id DESC
-                ) as version_rank
-            FROM calimages c
-            JOIN instruments i ON c.instrument_id = i.id
-            WHERE
-                c.is_master = true
-                AND c.is_bad = false
-                AND i.site = :site_id
-                AND (
-                    :instrument_types = ARRAY['*']
-                    OR i.type = ANY(:instrument_types)
-                )
-        )
-        SELECT id, filename, type, filepath, frameid
-        FROM ranked_cals
-        WHERE version_rank <= 2;
-        """
-
         try:
             with dbs.get_session(self.db_address) as session:
-                # Execute query with parameters
-                results = session.execute(
-                    text(ranking_sql),
-                    {
-                        'site_id': config.site_id,
-                        'instrument_types': config.instrument_types
-                    }
-                ).fetchall()
+                # Build ORM query for calibrations at this site
+                query = session.query(dbs.CalibrationImage)\
+                    .join(dbs.Instrument)\
+                    .filter(
+                        dbs.CalibrationImage.is_master == True,
+                        dbs.CalibrationImage.is_bad == False,
+                        dbs.Instrument.site == config.site_id
+                    )
 
-                # Build dict of filename -> CachedCalibrationInfo
-                # Convert ORM objects to dataclass while session is open
+                # Handle wildcard vs specific instrument types
+                if config.instrument_types != ['*']:
+                    query = query.filter(dbs.Instrument.type.in_(config.instrument_types))
+
+                all_cals = query.all()
+
+                # Group calibrations by config key
+                grouped = defaultdict(list)
+                for cal in all_cals:
+                    key = self._get_config_key(cal)
+                    grouped[key].append(cal)
+
+                # Rank each group and take top 2
                 needed = {}
-                for row in results:
-                    cal = session.query(dbs.CalibrationImage).get(row.id)
-                    if cal:
+                for key, cals in grouped.items():
+                    # Sort by (dateobs, id) descending and take top 2
+                    sorted_cals = sorted(cals, key=lambda c: (c.dateobs, c.id), reverse=True)
+                    for cal in sorted_cals[:2]:
                         info = CachedCalibrationInfo(
                             id=cal.id,
                             filename=cal.filename,
