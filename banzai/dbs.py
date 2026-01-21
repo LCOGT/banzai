@@ -14,7 +14,6 @@ import requests
 from sqlalchemy import create_engine, pool, func, make_url
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float, Text
-from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
@@ -128,7 +127,7 @@ class CacheConfig(Base):
     __tablename__ = 'cache_config'
     id = Column(Integer, primary_key=True, autoincrement=True)
     site_id = Column(String(15), nullable=False)
-    instrument_types = Column(ARRAY(String), nullable=False)
+    instrument_types = Column(JSON, nullable=False)
     # instrument_types examples: ['qhy', 'sinistro'] or ['*'] for all
     cache_root = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
