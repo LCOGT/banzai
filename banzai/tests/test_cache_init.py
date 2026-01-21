@@ -68,19 +68,30 @@ class TestRunInitialization:
             init.run_initialization()
         assert exc_info.value.code == 0
 
+    @mock.patch('banzai.cache.init.check_subscription_exists')
+    @mock.patch('banzai.cache.replication.setup_subscription')
     @mock.patch('banzai.dbs.initialize_cache_config')
     @mock.patch('banzai.cache.replication.install_triggers')
     @mock.patch('banzai.dbs.create_db')
     @mock.patch('banzai.cache.init.is_already_initialized', return_value=False)
     @mock.patch.dict(os.environ, {'DB_ADDRESS': 'sqlite:///test.db', 'SITE_ID': 'lsc'}, clear=True)
     def test_runs_all_steps_in_order_without_aws(self, mock_is_init, mock_create_db,
-                                                  mock_install_triggers, mock_init_config):
+                                                  mock_install_triggers, mock_init_config,
+                                                  mock_setup_sub, mock_check_sub):
         with pytest.raises(SystemExit) as exc_info:
             init.run_initialization()
         assert exc_info.value.code == 0
         mock_create_db.assert_called_once_with('sqlite:///test.db')
         mock_install_triggers.assert_called_once_with('sqlite:///test.db')
-        mock_init_config.assert_called_once()
+        mock_init_config.assert_called_once_with(
+            db_address='sqlite:///test.db',
+            site_id='lsc',
+            instrument_types=['*'],
+            cache_root='/data/calibrations'
+        )
+        # Verify AWS-related functions are NOT called when AWS_DB_ADDRESS not provided
+        mock_setup_sub.assert_not_called()
+        mock_check_sub.assert_not_called()
 
     @mock.patch('banzai.dbs.initialize_cache_config')
     @mock.patch('banzai.cache.replication.install_triggers')
@@ -99,10 +110,20 @@ class TestRunInitialization:
         with pytest.raises(SystemExit) as exc_info:
             init.run_initialization()
         assert exc_info.value.code == 0
-        mock_create_db.assert_called_once()
-        mock_setup_sub.assert_called_once()
-        mock_install_triggers.assert_called_once()
-        mock_init_config.assert_called_once()
+        mock_create_db.assert_called_once_with('sqlite:///test.db')
+        mock_setup_sub.assert_called_once_with(
+            local_db_address='sqlite:///test.db',
+            aws_connection_string='postgresql://aws/db',
+            site_id='lsc',
+            publication_name='banzai_calibrations'
+        )
+        mock_install_triggers.assert_called_once_with('sqlite:///test.db')
+        mock_init_config.assert_called_once_with(
+            db_address='sqlite:///test.db',
+            site_id='lsc',
+            instrument_types=['*'],
+            cache_root='/data/calibrations'
+        )
 
     @mock.patch('banzai.dbs.initialize_cache_config')
     @mock.patch('banzai.cache.replication.install_triggers')
@@ -126,8 +147,121 @@ class TestRunInitialization:
     @mock.patch('banzai.dbs.create_db')
     @mock.patch('banzai.cache.init.is_already_initialized', return_value=False)
     @mock.patch.dict(os.environ, {'DB_ADDRESS': 'sqlite:///test.db', 'SITE_ID': 'lsc'}, clear=True)
-    def test_exits_with_code_1_on_exception(self, mock_is_init, mock_create_db):
+    def test_exits_with_code_1_on_create_db_exception(self, mock_is_init, mock_create_db):
         mock_create_db.side_effect = Exception("Database error")
         with pytest.raises(SystemExit) as exc_info:
             init.run_initialization()
         assert exc_info.value.code == 1
+
+    @mock.patch('banzai.cache.replication.setup_subscription')
+    @mock.patch('banzai.cache.init.check_subscription_exists', return_value=False)
+    @mock.patch('banzai.dbs.create_db')
+    @mock.patch('banzai.cache.init.is_already_initialized', return_value=False)
+    @mock.patch.dict(os.environ, {
+        'DB_ADDRESS': 'sqlite:///test.db',
+        'AWS_DB_ADDRESS': 'postgresql://aws/db',
+        'SITE_ID': 'lsc'
+    }, clear=True)
+    def test_exits_with_code_1_on_setup_subscription_exception(self, mock_is_init, mock_create_db,
+                                                                mock_check_sub, mock_setup_sub):
+        mock_setup_sub.side_effect = Exception("Replication error")
+        with pytest.raises(SystemExit) as exc_info:
+            init.run_initialization()
+        assert exc_info.value.code == 1
+
+    @mock.patch('banzai.cache.replication.install_triggers')
+    @mock.patch('banzai.dbs.create_db')
+    @mock.patch('banzai.cache.init.is_already_initialized', return_value=False)
+    @mock.patch.dict(os.environ, {'DB_ADDRESS': 'sqlite:///test.db', 'SITE_ID': 'lsc'}, clear=True)
+    def test_exits_with_code_1_on_install_triggers_exception(self, mock_is_init, mock_create_db,
+                                                              mock_install_triggers):
+        mock_install_triggers.side_effect = Exception("Trigger installation error")
+        with pytest.raises(SystemExit) as exc_info:
+            init.run_initialization()
+        assert exc_info.value.code == 1
+
+    @mock.patch('banzai.dbs.initialize_cache_config')
+    @mock.patch('banzai.cache.replication.install_triggers')
+    @mock.patch('banzai.dbs.create_db')
+    @mock.patch('banzai.cache.init.is_already_initialized', return_value=False)
+    @mock.patch.dict(os.environ, {'DB_ADDRESS': 'sqlite:///test.db', 'SITE_ID': 'lsc'}, clear=True)
+    def test_exits_with_code_1_on_initialize_cache_config_exception(self, mock_is_init, mock_create_db,
+                                                                     mock_install_triggers, mock_init_config):
+        mock_init_config.side_effect = Exception("Config initialization error")
+        with pytest.raises(SystemExit) as exc_info:
+            init.run_initialization()
+        assert exc_info.value.code == 1
+
+    @mock.patch('banzai.dbs.initialize_cache_config')
+    @mock.patch('banzai.cache.replication.install_triggers')
+    @mock.patch('banzai.dbs.create_db')
+    @mock.patch('banzai.cache.init.is_already_initialized', return_value=False)
+    @mock.patch.dict(os.environ, {
+        'DB_ADDRESS': 'sqlite:///test.db',
+        'SITE_ID': 'lsc',
+        'INSTRUMENT_TYPES_TO_CACHE': '1m0-SciCam-Sinistro,2m0-FLOYDS'
+    }, clear=True)
+    def test_parses_comma_separated_instrument_types(self, mock_is_init, mock_create_db,
+                                                      mock_install_triggers, mock_init_config):
+        with pytest.raises(SystemExit) as exc_info:
+            init.run_initialization()
+        assert exc_info.value.code == 0
+        mock_init_config.assert_called_once_with(
+            db_address='sqlite:///test.db',
+            site_id='lsc',
+            instrument_types=['1m0-SciCam-Sinistro', '2m0-FLOYDS'],
+            cache_root='/data/calibrations'
+        )
+
+    @mock.patch('banzai.dbs.initialize_cache_config')
+    @mock.patch('banzai.cache.replication.install_triggers')
+    @mock.patch('banzai.dbs.create_db')
+    @mock.patch('banzai.cache.init.is_already_initialized', return_value=False)
+    @mock.patch.dict(os.environ, {
+        'DB_ADDRESS': 'sqlite:///test.db',
+        'SITE_ID': 'lsc',
+        'INSTRUMENT_TYPES_TO_CACHE': '*'
+    }, clear=True)
+    def test_parses_wildcard_instrument_types(self, mock_is_init, mock_create_db,
+                                               mock_install_triggers, mock_init_config):
+        with pytest.raises(SystemExit) as exc_info:
+            init.run_initialization()
+        assert exc_info.value.code == 0
+        mock_init_config.assert_called_once_with(
+            db_address='sqlite:///test.db',
+            site_id='lsc',
+            instrument_types=['*'],
+            cache_root='/data/calibrations'
+        )
+
+    @mock.patch('banzai.dbs.initialize_cache_config')
+    @mock.patch('banzai.cache.replication.install_triggers')
+    @mock.patch('banzai.cache.replication.setup_subscription')
+    @mock.patch('banzai.cache.init.check_subscription_exists', return_value=False)
+    @mock.patch('banzai.dbs.create_db')
+    @mock.patch('banzai.cache.init.is_already_initialized', return_value=False)
+    @mock.patch.dict(os.environ, {
+        'DB_ADDRESS': 'sqlite:///test.db',
+        'AWS_DB_ADDRESS': 'postgresql://aws/db',
+        'SITE_ID': 'ogg',
+        'PUBLICATION_NAME': 'custom_publication',
+        'CACHE_FILES_ROOT': '/custom/cache/path'
+    }, clear=True)
+    def test_uses_custom_publication_name_and_cache_root(self, mock_is_init, mock_create_db,
+                                                          mock_check_sub, mock_setup_sub,
+                                                          mock_install_triggers, mock_init_config):
+        with pytest.raises(SystemExit) as exc_info:
+            init.run_initialization()
+        assert exc_info.value.code == 0
+        mock_setup_sub.assert_called_once_with(
+            local_db_address='sqlite:///test.db',
+            aws_connection_string='postgresql://aws/db',
+            site_id='ogg',
+            publication_name='custom_publication'
+        )
+        mock_init_config.assert_called_once_with(
+            db_address='sqlite:///test.db',
+            site_id='ogg',
+            instrument_types=['*'],
+            cache_root='/custom/cache/path'
+        )
