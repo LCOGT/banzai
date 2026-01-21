@@ -167,6 +167,14 @@ class FakeInstrument(object):
         self.ny = 4096
 
 
+class FakeCacheConfig:
+    """Fake CacheConfig for cache testing."""
+    def __init__(self, site_id='cpt', instrument_types=None, cache_root='/tmp/cals'):
+        self.site_id = site_id
+        self.instrument_types = instrument_types or ['*']
+        self.cache_root = cache_root
+
+
 class FakeCalImage:
     def __init__(self):
         self.frameid = 1234
