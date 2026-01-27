@@ -299,6 +299,11 @@ class DownloadWorker:
                 logger.warning(f"Cannot find calibration record for {filename}, skipping deletion")
                 return False
 
+            # If we can't determine attributes, don't delete (safe default)
+            if cal_to_delete.attributes is None:
+                logger.warning(f"Calibration {filename} has no attributes, skipping deletion")
+                return False
+
             # Find all calibrations for the same configuration in needed_cals
             same_config = []
             for needed_cal in needed_cals.values():

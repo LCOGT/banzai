@@ -478,10 +478,9 @@ def test_safe_to_delete_considers_filter_for_flat_type(mock_get_session, tmp_pat
 def test_safe_to_delete_handles_null_attributes(mock_get_session, tmp_path):
     """Test safe_to_delete when CalibrationImage.attributes is None.
 
-    This test verifies that the code handles null attributes gracefully.
-    Currently, the implementation raises AttributeError when attributes is None.
-    This test documents this behavior - a fix should make this test pass with
-    result=False (safe default when attributes can't be compared).
+    When a calibration has null attributes (can happen with legacy data or
+    partial replication), safe_to_delete should return False as a safe default
+    rather than crashing with AttributeError.
     """
     mock_session = mock.MagicMock()
     # Create a calibration with None attributes (can happen with legacy data)
@@ -512,10 +511,9 @@ def test_safe_to_delete_handles_null_attributes(mock_get_session, tmp_path):
 
     worker = make_worker(tmp_path)
 
-    # Test that null attributes raises AttributeError (current behavior)
-    # This should be fixed in the implementation to handle gracefully
-    with pytest.raises(AttributeError):
-        worker.safe_to_delete('old_bias.fits', needed_cals, files_on_disk)
+    # Should return False (safe default) when attributes are null
+    result = worker.safe_to_delete('old_bias.fits', needed_cals, files_on_disk)
+    assert result is False
 
 
 # --- CachedCalibrationInfo tests ---
