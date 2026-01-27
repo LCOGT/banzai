@@ -55,7 +55,6 @@ RAW_FRAME_ID = 90985172
 RAW_FRAME_FILENAME = 'lsc0m476-sq34-20260121-0190-e00.fits.fz'
 
 
-@pytest.mark.e2e
 @pytest.mark.e2e_site
 class TestSiteE2E:
     """E2E tests for site deployment caching system.
