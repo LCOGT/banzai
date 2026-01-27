@@ -188,6 +188,30 @@ After all of the containers are up, run
 
     docker exec banzai-listener pytest --pyargs banzai.tests "-m e2e"
 
+Site Deployment E2E Tests
+~~~~~~~~~~~~~~~~~~~~~~~~~
+The site E2E tests validate the full site deployment caching system, including PostgreSQL
+logical replication, calibration file caching, and frame reduction. These tests require
+Docker and an LCO archive API token.
+
+To run the site E2E tests:
+
+.. code-block:: bash
+
+    # Copy and configure the environment file
+    cp banzai/tests/site_e2e/site_e2e.env.template banzai/tests/site_e2e/site_e2e.env
+    # Edit site_e2e.env and add your AUTH_TOKEN
+
+    # Run the tests
+    pytest -m e2e_site banzai/tests/site_e2e/ -v -s
+
+The following markers can be used to run subsets of the site E2E tests:
+
+* e2e_site: All site deployment tests
+* e2e_site_startup: Publication DB and site deployment startup tests
+* e2e_site_cache: Cache synchronization tests
+* e2e_site_reduction: Frame reduction tests
+
 License
 -------
 This project is Copyright (c) Las Cumbres Observatory and licensed under the terms of GPLv3. See the LICENSE file for more information.
