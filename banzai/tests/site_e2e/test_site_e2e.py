@@ -30,6 +30,7 @@ import subprocess
 import time
 
 import pytest
+import requests
 from sqlalchemy import create_engine, text
 
 from banzai import dbs
@@ -164,17 +165,25 @@ class TestSiteE2E:
         os.makedirs(raw_dir, exist_ok=True)
 
         # Download raw frame from archive API
+        # Step 1: Get frame metadata (the API returns JSON with a 'url' field for the actual file)
         raw_frame_path = os.path.join(raw_dir, RAW_FRAME_FILENAME)
-        download_url = f"{archive_api_url}frames/{RAW_FRAME_ID}/?key={auth_token}"
+        api_url = f"{archive_api_url}frames/{RAW_FRAME_ID}/"
+        headers = {"Authorization": f"Token {auth_token}"}
 
-        result = subprocess.run(
-            ['curl', '-L', '-o', raw_frame_path, download_url],
-            capture_output=True,
-            text=True,
-            timeout=120
-        )
+        response = requests.get(api_url, headers=headers, timeout=30)
+        assert response.status_code == 200, f"Failed to get frame metadata: {response.status_code} {response.text}"
 
-        assert result.returncode == 0, f"Failed to download raw frame: {result.stderr}"
+        frame_data = response.json()
+        fits_url = frame_data.get('url')
+        assert fits_url, f"No 'url' field in frame metadata: {frame_data.keys()}"
+
+        # Step 2: Download actual FITS file from the URL
+        fits_response = requests.get(fits_url, timeout=120)
+        assert fits_response.status_code == 200, f"Failed to download FITS file: {fits_response.status_code}"
+
+        with open(raw_frame_path, 'wb') as f:
+            f.write(fits_response.content)
+
         assert os.path.exists(raw_frame_path), f"Raw frame not downloaded: {raw_frame_path}"
         assert os.path.getsize(raw_frame_path) > 0, f"Downloaded raw frame is empty"
 
@@ -203,50 +212,73 @@ class TestSiteE2E:
 
     @pytest.mark.e2e_site_reduction
     def test_07_reduction_completes(self, site_deployment, data_dir, local_db_address):
-        """Verify reduction completed successfully."""
-        output_dir = os.path.join(data_dir, 'output')
+        """Verify reduction completed successfully.
 
-        # Wait for output file to appear
-        # The processed filename will have a different suffix (e91 for reduced)
-        expected_output_pattern = 'lsc0m476-sq34-20260121-0190'
+        This test is data-agnostic: it finds whatever raw files were queued,
+        reads their headers to determine the expected output location, and
+        verifies that processed output appears.
+        """
+        from astropy.io import fits
+
+        raw_dir = os.path.join(data_dir, 'raw')
+        assert os.path.exists(raw_dir), f"Raw directory not found: {raw_dir}"
+
+        raw_files = [f for f in os.listdir(raw_dir) if f.endswith('.fits.fz')]
+        assert len(raw_files) > 0, f"No raw FITS files found in {raw_dir}"
+
         timeout = 300  # 5 minutes for reduction
         poll_interval = 10
 
-        start_time = time.time()
-        output_file = None
+        # Track results for each raw file
+        results = {}
 
-        while time.time() - start_time < timeout:
-            if os.path.exists(output_dir):
-                for filename in os.listdir(output_dir):
-                    if expected_output_pattern in filename and filename.endswith('.fits.fz'):
-                        output_file = os.path.join(output_dir, filename)
-                        break
+        for raw_file in raw_files:
+            raw_path = os.path.join(raw_dir, raw_file)
 
-            if output_file and os.path.exists(output_file):
-                break
+            # Read headers to determine output location
+            with fits.open(raw_path) as hdul:
+                header = hdul['SCI'].header
+                site = header['SITEID'].strip().lower()
+                instrument = header['INSTRUME'].strip().lower()
+                # Use DAY-OBS (observing night) not DATE-OBS (UTC timestamp)
+                # DAY-OBS matches the date in the filename and banzai's output path
+                day_obs = header['DAY-OBS'].replace('-', '')
 
-            time.sleep(poll_interval)
+            # Banzai output structure: {base}/{site}/{instrument}/{date}/processed/
+            output_dir = os.path.join(data_dir, 'output', site, instrument, day_obs, 'processed')
 
-        # If no output file found, check the processedimages table as fallback
-        if output_file is None:
-            with dbs.get_session(local_db_address) as session:
-                # Query for processed image record
-                result = session.execute(text("""
-                    SELECT filename FROM processedimages
-                    WHERE filename LIKE :pattern
-                """), {'pattern': f'%{expected_output_pattern}%'})
-                row = result.fetchone()
+            # Reduced filename: e00 -> e91
+            expected_output = raw_file.replace('-e00.fits.fz', '-e91.fits.fz')
+            expected_output_path = os.path.join(output_dir, expected_output)
 
-                if row:
-                    pytest.skip(
-                        f"Reduction record found in DB ({row.filename}) but output file not in expected location. "
-                        "This may indicate a path configuration issue."
-                    )
+            # Wait for output to appear
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                if os.path.exists(expected_output_path) and os.path.getsize(expected_output_path) > 0:
+                    results[raw_file] = ('success', expected_output_path)
+                    break
+                time.sleep(poll_interval)
+            else:
+                # Timeout - check DB for diagnostic info
+                with dbs.get_session(local_db_address) as session:
+                    pattern = raw_file.replace('-e00.fits.fz', '%')
+                    result = session.execute(text("""
+                        SELECT filename, success FROM processedimages
+                        WHERE filename LIKE :pattern
+                    """), {'pattern': pattern})
+                    rows = result.fetchall()
 
-        assert output_file is not None, (
-            f"Reduction did not complete within {timeout}s. "
-            f"No output file matching '{expected_output_pattern}' found in {output_dir}"
-        )
+                if rows:
+                    db_info = ", ".join(f"{r.filename} (success={r.success})" for r in rows)
+                    results[raw_file] = ('db_only', f"DB records: {db_info}, expected path: {expected_output_path}")
+                else:
+                    results[raw_file] = ('missing', f"No output or DB record, expected: {expected_output_path}")
+
+        # Report results
+        failures = [(f, info) for f, (status, info) in results.items() if status != 'success']
+        if failures:
+            failure_msg = "\n".join(f"  {f}: {info}" for f, info in failures)
+            pytest.fail(f"Reduction failed for {len(failures)}/{len(raw_files)} files:\n{failure_msg}")
 
     @pytest.mark.e2e_site_cache
     def test_08_add_older_calibrations(self, publication_db_address):
