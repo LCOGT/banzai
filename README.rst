@@ -60,6 +60,7 @@ BANZAI has a variety of console entry points:
 * `banzai_add_super_calibration`: Add a super calibration frame to the database
 * `banzai_populate_bpms`: Automatically populate the db with bpms from the archive
 * `banzai_create_db`: Initialize a database to be used when running the pipeline
+* `banzai_create_local_db`: Initialize a local database for site deployment, copying site/instrument info from a remote calibration database
 
 You can see more about the parameters the commands take by adding a `--help` to any command of interest.
 
@@ -93,13 +94,13 @@ To add a local bpm to the database, run
 Generally, you have to reduce individual bias frames first by running `banzai_reduce_individual_frame` command.
 If the processing went well, you can mark them as good in the database using `banzai_mark_frame_as_good`.
 Once you have individually processed bias frames, you can create a master calibration using
-`banzai_stack_calibrations`. This master calibration will then be available for future reductions of
+`banzai_make_master_calibrations`. This master calibration will then be available for future reductions of
 other observation types. Next, similarly reduce individual dark frames and then stack them to
 create a master dark frame. Then, the same for skyflats. At this point, you will be able to process
 science images using the `banzai_reduce_individual_frame` command.
 
 To run the pipeline in its active mode, you need to setup a task queue and a filename queue.
-See the `docker-compose.yml` file for details on this setup.
+See the `docker-compose-site.yml` file for details on this setup.
 
 Running Locally
 ---------------

@@ -108,15 +108,6 @@ def download_from_s3(file_info, context, is_raw_frame=False):
         logger.warning(f"Frame {frame_id} not found in archive for {file_info.get('filename')}")
         raise FrameNotAvailableError(f"Frame {frame_id} not found in archive")
 
-    # Check if 'url' field exists in the response
-    if 'url' not in response_data:
-        logger.error(f"Archive API response missing 'url' field for frame {frame_id}. "
-                    f"Response: {response_data}",
-                    extra_tags={'filename': file_info.get('filename'),
-                               'frame_id': frame_id,
-                               'attempt_number': download_from_s3.statistics['attempt_number']})
-        raise ValueError(f"Archive API response missing 'url' field. Response: {response_data}")
-
     buffer = io.BytesIO()
     bytes = buffer.write(requests.get(response_data['url'], stream=True, timeout=60).content)
     buffer.seek(0)

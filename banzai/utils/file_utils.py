@@ -11,11 +11,20 @@ from banzai.logs import get_logger
 logger = get_logger()
 
 
-def post_to_archive_queue(filename, frameid, broker_url, exchange_name='fits_files', **kwargs):
+def post_to_archive_queue(filename, broker_url, exchange_name='fits_files', **kwargs):
+    """Post file to RabbitMQ listener queue for processing.
+
+    kwargs should include either 'frameid' (int) or 'path' (str), plus any
+    additional metadata like SITEID, INSTRUME.
+    """
     exchange = Exchange(exchange_name, type='fanout')
     with Connection(broker_url) as conn:
         producer = conn.Producer(exchange=exchange)
-        body = {'filename': filename, 'frameid': f'{frameid:d}'}
+        body = {'filename': filename}
+        if 'frameid' in kwargs:
+            body['frameid'] = f'{kwargs.pop("frameid"):d}'
+        if 'path' in kwargs:
+            body['path'] = kwargs.pop('path')
         body.update(kwargs)
         producer.publish(body)
         producer.release()

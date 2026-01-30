@@ -10,18 +10,7 @@ import argparse
 import os
 import glob
 from astropy.io import fits
-from kombu import Connection, Exchange
-
-
-def post_to_processing_queue(filename, path, broker_url, exchange_name, **kwargs):
-    """Post file to RabbitMQ listener queue for processing"""
-    exchange = Exchange(exchange_name, type='fanout')
-    with Connection(broker_url) as conn:
-        producer = conn.Producer(exchange=exchange)
-        body = {'filename': filename, 'path': path}
-        body.update(kwargs)
-        producer.publish(body)
-        producer.release()
+from banzai.utils.file_utils import post_to_archive_queue
 
 
 def main():
@@ -55,11 +44,11 @@ def main():
                 # Use container path instead of host path
                 container_path = f'{args.container_path}/{os.path.basename(filepath)}'
 
-                post_to_processing_queue(
+                post_to_archive_queue(
                     filename=os.path.basename(filepath),
-                    path=container_path,
                     broker_url=args.broker_url,
                     exchange_name=args.exchange,
+                    path=container_path,
                     SITEID=siteid,
                     INSTRUME=instrume
                 )
