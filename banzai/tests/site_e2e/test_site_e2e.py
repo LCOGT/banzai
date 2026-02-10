@@ -187,9 +187,9 @@ class TestSiteE2E:
         assert os.path.getsize(raw_frame_path) > 0, f"Downloaded raw frame is empty"
 
         # Queue the frame for processing via RabbitMQ
-        # queue_images.py is at the repo root
+        # queue_images.py is in the scripts/ directory at repo root
         repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-        queue_script = os.path.join(repo_root, 'queue_images.py')
+        queue_script = os.path.join(repo_root, 'scripts', 'queue_images.py')
         fits_exchange = os.environ.get('FITS_EXCHANGE', 'fits_files')
 
         result = subprocess.run(
