@@ -241,6 +241,14 @@ def insert_additional_calibrations(db_address: str) -> None:
     with dbs.get_session(db_address) as session:
         print(f"Inserting {len(ADDITIONAL_CALIBRATIONS)} additional calibration images")
         for cal_data in ADDITIONAL_CALIBRATIONS:
+            # Skip if already exists (idempotent for reruns)
+            existing = session.query(dbs.CalibrationImage).filter(
+                dbs.CalibrationImage.id == cal_data['id']
+            ).first()
+            if existing:
+                print(f"  - {cal_data['type']}: {cal_data['filename']} (already exists, skipping)")
+                continue
+
             cal = dbs.CalibrationImage(
                 id=cal_data['id'],
                 type=cal_data['type'],

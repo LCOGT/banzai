@@ -308,7 +308,11 @@ def publication_db(publication_db_address):
     """
     compose_file = SITE_E2E_DIR / "publication_db" / "docker-compose.yml"
 
-    print("\n[Publication DB] Starting...")
+    # Ensure clean state by removing any leftover volumes from previous runs
+    print("\n[Publication DB] Cleaning up any previous state...")
+    run_docker_compose(compose_file, "down", "-v", "--remove-orphans")
+
+    print("[Publication DB] Starting...")
     result = run_docker_compose(compose_file, "up", "-d")
     if result.returncode != 0:
         pytest.fail(f"Failed to start publication DB: {result.stderr}")
@@ -353,12 +357,27 @@ def site_deployment(publication_db, data_dir):
             f"Copy site_e2e.env.template and fill in required values."
         )
 
+    # Ensure clean state by removing any leftover volumes from previous runs
+    print("\n[Site Deployment] Cleaning up any previous state...")
+    run_docker_compose(
+        compose_file,
+        "--env-file", str(env_file),
+        "down", "-v", "--remove-orphans",
+        cwd=repo_root
+    )
+
+    # Clean data directories to remove stale cached files
+    for subdir in ["calibrations", "output", "postgres"]:
+        d = data_dir / subdir
+        if d.exists():
+            shutil.rmtree(d, ignore_errors=True)
+
     # Ensure data directories exist
     (data_dir / "calibrations").mkdir(parents=True, exist_ok=True)
     (data_dir / "output").mkdir(parents=True, exist_ok=True)
     (data_dir / "postgres").mkdir(parents=True, exist_ok=True)
 
-    print("\n[Site Deployment] Starting...")
+    print("[Site Deployment] Starting...")
     result = run_docker_compose(
         compose_file,
         "--env-file", str(env_file),
