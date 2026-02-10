@@ -17,6 +17,8 @@ def post_to_archive_queue(filename, broker_url, exchange_name='fits_files', **kw
     kwargs should include either 'frameid' (int) or 'path' (str), plus any
     additional metadata like SITEID, INSTRUME.
     """
+    if 'frameid' not in kwargs and 'path' not in kwargs:
+        raise ValueError("post_to_archive_queue requires either 'frameid' or 'path' in kwargs")
     exchange = Exchange(exchange_name, type='fanout')
     with Connection(broker_url) as conn:
         producer = conn.Producer(exchange=exchange)

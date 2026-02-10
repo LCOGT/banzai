@@ -102,7 +102,7 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
                         help='Continue processing a file even if a master calibration does not exist?')
     parser.add_argument('--rlevel', dest='reduction_level', default=91, type=int, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',
-                        default=os.getenv('DB_ADDRESS', 'sqlite:////data/banzai.db'),
+                        default=os.getenv('DB_ADDRESS', 'sqlite:///banzai-test.db'),
                         help='Database address: Should be in SQLAlchemy form')
     parser.add_argument('--calibration-db-address', dest='cal_db_address',
                         default=os.getenv('CAL_DB_ADDRESS'),
@@ -430,5 +430,5 @@ def create_local_db():
     logs.set_log_level(args.log_level)
 
     logger.info(f"Creating local database for site {args.site}")
-    dbs.create_local_db(args.local_db_address, args.cal_db_address, args.site)
-    logger.info("Finished creating local database")
+    if dbs.create_local_db(args.local_db_address, args.cal_db_address, args.site):
+        logger.info("Finished creating local database")

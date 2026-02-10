@@ -88,7 +88,7 @@ def download_from_s3(file_info, context, is_raw_frame=False):
     else:
         url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}/?include_related_frames=false'
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
-    logger.info(f'{url}, {archive_auth_header}')
+    logger.info(f"Requesting archive URL {url} (auth header present: {bool(archive_auth_header)})")
     response = requests.get(url, headers=archive_auth_header, timeout=30)
     try:
         response.raise_for_status()

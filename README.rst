@@ -132,9 +132,9 @@ If using a separate calibration database, copy the site/instrument information t
 
 .. code-block:: bash
 
-    banzai_create_local_db --site $SITE_ID --db-address $LOCAL_DB_ADDRESS --cal-db-address $CAL_DB_ADDRESS
+    banzai_create_local_db --site $SITE_ID --local-db-address $DB_ADDRESS --cal-db-address $CAL_DB_ADDRESS
 
-Note that `$LOCAL_DB_ADDRESS` should use a path relative to the host directory. For example, if `$HOST_DATA_DIR` is
+Note that `$DB_ADDRESS` should use a path relative to the host directory. For example, if `$HOST_DATA_DIR` is
 `site_banzai`, the address might be `sqlite:///site_banzai/<db_name>`.
 
 Start the Containers

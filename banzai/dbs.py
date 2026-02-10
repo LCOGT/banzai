@@ -476,7 +476,7 @@ def create_local_db(local_db_address, aws_db_address, site_id):
     if url.drivername.startswith('sqlite') and url.database:
         if os.path.exists(url.database):
             logger.error(f"Database file {url.database} already exists. Please remove it first.")
-            return
+            return False
 
     # Create the local database structure
     logger.info(f"Creating local database at {local_db_address}")
@@ -523,6 +523,7 @@ def create_local_db(local_db_address, aws_db_address, site_id):
         replicate_instrument(instrument, local_db_address)
 
     logger.info(f"Successfully created local database with {len(instrument_records)} instruments from site {site_id}")
+    return True
 
 
 def replicate_site(site_record, db_address):

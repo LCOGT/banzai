@@ -84,5 +84,5 @@ services:
                  "--broker-url=${FITS_BROKER_URL}",
                  "--db-address=${DB_ADDRESS}",
                  "--calibration-db-address=${CAL_DB_ADDRESS}",
-                 "--processed-path=/data/output"]
+                 "--processed-path=/output"]
     restart: unless-stopped
