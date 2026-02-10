@@ -151,7 +151,7 @@ Queue images for processing using the helper script. Raw files must be in `$HOST
 
 .. code-block:: bash
 
-    python queue_images.py <host_data_dir>/raw/
+    python scripts/queue_images.py <host_data_dir>/raw/
 
 Processed output will be saved in `${HOST_PROCESSED_DIR}`.
 
