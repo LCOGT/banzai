@@ -75,9 +75,9 @@ def run_reduce_individual_frames(filename_pattern):
     logger.info('Reducing individual frames for filenames: {filenames}'.format(filenames=filename_pattern))
     for frame in TEST_FRAMES:
         if filename_pattern in frame['filename']:
-            file_utils.post_to_archive_queue(frame['filename'], frame['frameid'],
-                                             os.getenv('FITS_BROKER'),
+            file_utils.post_to_archive_queue(frame['filename'], os.getenv('FITS_BROKER'),
                                              exchange_name=os.getenv('FITS_EXCHANGE'),
+                                             frameid=frame['frameid'],
                                              SITEID=frame['site'], INSTRUME=frame['instrument'])
     celery_join()
     logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=filename_pattern))
@@ -91,7 +91,9 @@ def stack_calibrations(frame_type):
         min_date, max_date = get_min_and_max_dates(timezone, dayobs=dayobs)
         runtime_context = dict(processed_path=DATA_ROOT, log_level='debug', post_to_archive=False,
                                post_to_opensearch=False, fpack=True, reduction_level=91,
-                               db_address=os.environ['DB_ADDRESS'], opensearch_qc_index='banzai_qc',
+                               db_address=os.environ['DB_ADDRESS'],
+                               cal_db_address=os.getenv('CAL_DB_ADDRESS') or os.environ['DB_ADDRESS'],
+                               opensearch_qc_index='banzai_qc',
                                opensearch_url='https://opensearch.lco.global/',
                                no_bpm=False, ignore_schedulability=True, use_only_older_calibrations=False,
                                preview_mode=False, max_tries=5, broker_url=os.getenv('FITS_BROKER'),

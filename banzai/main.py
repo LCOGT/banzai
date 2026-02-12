@@ -8,6 +8,7 @@ Author
 October 2015
 """
 import argparse
+import os
 import os.path
 import logging
 import traceback
@@ -101,8 +102,11 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
                         help='Continue processing a file even if a master calibration does not exist?')
     parser.add_argument('--rlevel', dest='reduction_level', default=91, type=int, help='Reduction level')
     parser.add_argument('--db-address', dest='db_address',
-                        default='sqlite:///banzai-test.db',
+                        default=os.getenv('DB_ADDRESS', 'sqlite:///banzai-test.db'),
                         help='Database address: Should be in SQLAlchemy form')
+    parser.add_argument('--calibration-db-address', dest='cal_db_address',
+                        default=os.getenv('CAL_DB_ADDRESS'),
+                        help='Optional separate database address for getting calibration files. Defaults to using the same address as --db-address.')
     parser.add_argument('--opensearch-url', dest='opensearch_url',
                         default='https://opensearch.lco.global/')
     parser.add_argument('--os-index', dest='opensearch_qc_index', default='banzai_qc',
@@ -132,7 +136,12 @@ def parse_args(settings, extra_console_arguments=None, parser_description='Proce
         args = parser.parse_args([])
     logs.set_log_level(args.log_level)
 
+    # Default cal_db_address to db_address if not set or empty
+    if not args.cal_db_address:
+        args.cal_db_address = args.db_address
+
     add_settings_to_context(args, settings)
+
     return Context(args)
 
 
@@ -401,3 +410,25 @@ def create_db():
     logs.set_log_level(args.log_level)
 
     dbs.create_db(args.db_address)
+
+def create_local_db():
+    """
+    Create a local database and populate it with sites and instruments from the calibration database.
+    """
+    parser = argparse.ArgumentParser(description="Create a local database and populate it with sites and instruments from the calibration database")
+    parser.add_argument('--local-db-address', dest='local_db_address',
+                        default='sqlite:///banzai-local.db',
+                        help='Local database address: Should be in SQLAlchemy form')
+    parser.add_argument('--cal-db-address', dest='cal_db_address', required=True,
+                        help='Calibration database address: Should be in SQLAlchemy form')
+    parser.add_argument('--site', dest='site', required=True,
+                        help='Site code to replicate (e.g., ogg, lsc)')
+    parser.add_argument("--log-level", default='info', choices=['debug', 'info', 'warning',
+                                                                'critical', 'fatal', 'error'])
+
+    args = parser.parse_args()
+    logs.set_log_level(args.log_level)
+
+    logger.info(f"Creating local database for site {args.site}")
+    if dbs.create_local_db(args.local_db_address, args.cal_db_address, args.site):
+        logger.info("Finished creating local database")

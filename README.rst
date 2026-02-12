@@ -60,6 +60,7 @@ BANZAI has a variety of console entry points:
 * `banzai_add_super_calibration`: Add a super calibration frame to the database
 * `banzai_populate_bpms`: Automatically populate the db with bpms from the archive
 * `banzai_create_db`: Initialize a database to be used when running the pipeline
+* `banzai_create_local_db`: Initialize a local database for site deployment, copying site/instrument info from a remote calibration database
 
 You can see more about the parameters the commands take by adding a `--help` to any command of interest.
 
@@ -93,13 +94,66 @@ To add a local bpm to the database, run
 Generally, you have to reduce individual bias frames first by running `banzai_reduce_individual_frame` command.
 If the processing went well, you can mark them as good in the database using `banzai_mark_frame_as_good`.
 Once you have individually processed bias frames, you can create a master calibration using
-`banzai_stack_calibrations`. This master calibration will then be available for future reductions of
+`banzai_make_master_calibrations`. This master calibration will then be available for future reductions of
 other observation types. Next, similarly reduce individual dark frames and then stack them to
 create a master dark frame. Then, the same for skyflats. At this point, you will be able to process
 science images using the `banzai_reduce_individual_frame` command.
 
 To run the pipeline in its active mode, you need to setup a task queue and a filename queue.
-See the `docker-compose.yml` file for details on this setup.
+See the `docker-compose-site.yml` file for details on this setup.
+
+Running Locally
+---------------
+
+For deploying BANZAI at an observatory site with local processing, use the containerized setup with
+`docker-compose-site.yml`. This configuration allows you to process incoming data locally while sourcing
+calibration files from a remote database.
+
+Environment Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+First copy `site-banzai-env.default` to `site-banzai-env` and configure the following variables:
+
+* Database addresses (local SQLite for processing, remote PostgreSQL for calibrations)
+* Site ID and API authentication token
+* Data directory paths
+
+The use case for LCO's site deployment assumes that calibration files are processed and managed centrally,
+allowing the use of a remote database to source super calibrations (via `CAL_DB_ADDRESS`),
+with all other database activity on a local SQLite database (via `DB_ADDRESS`).
+
+Note that database addresses in the environment file are relative to the Docker container. Since `$HOST_DATA_DIR`
+is mapped to the container's `/data`, the `DB_ADDRESS` should be something like `sqlite:////data/<db_name>`.
+
+Create the Local Database
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If using a separate calibration database, copy the site/instrument information to your local database:
+
+.. code-block:: bash
+
+    banzai_create_local_db --site $SITE_ID --local-db-address $DB_ADDRESS --cal-db-address $CAL_DB_ADDRESS
+
+Note that `$DB_ADDRESS` should use a path relative to the host directory. For example, if `$HOST_DATA_DIR` is
+`site_banzai`, the address might be `sqlite:///site_banzai/<db_name>`.
+
+Start the Containers
+~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+    docker compose -f docker-compose-site.yml --env-file site-banzai-env up -d --build
+
+Process Images
+~~~~~~~~~~~~~~
+
+Queue images for processing using the helper script. Raw files must be in `$HOST_DATA_DIR`:
+
+.. code-block:: bash
+
+    python queue_images.py <host_data_dir>/raw/
+
+Processed output will be saved in `${HOST_PROCESSED_DIR}`.
 
 Tests
 -----

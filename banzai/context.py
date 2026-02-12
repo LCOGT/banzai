@@ -4,6 +4,7 @@ class Context:
             args_dict = vars(args)
         else:
             args_dict = args
+
         for key in args_dict:
             super(Context, self).__setattr__(key, args_dict[key])
 

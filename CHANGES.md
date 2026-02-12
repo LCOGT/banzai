@@ -1,3 +1,8 @@
+1.28.0 (2026-01-14)
+-------------------
+- Added support for local/site deployments with docker-compose-site.yml
+- Added configuration for using a separate calibration database (CAL_DB_ADDRESS)
+
 1.27.0 (2025-10-27)
 -------------------
 - Setup BANZAI to be deployable via Skaffold

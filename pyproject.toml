@@ -8,7 +8,7 @@ build-backend = "poetry.core.masonry.api"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.10,<4"
-version = "1.27.0"
+version = "1.28.0"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
@@ -100,20 +100,20 @@ include = [
 
 [tool.poetry.dependencies]
 torch = [
-    { markers = "sys_platform == 'darwin'", source = "PyPI"},
-    { markers = "sys_platform != 'darwin' and extra == 'cpu' and extra != 'cuda'", source = "pytorch-cpu"},
-    { markers = "sys_platform != 'darwin' and extra == 'cuda' and extra != 'cpu'", source = "pytorch-cuda"},
- ]
+    { version = "^2.3", source = "PyPI", markers = "sys_platform=='darwin'" },
+    { version = "^2.3", source = "pytorch-cpu", markers = "sys_platform!='darwin' and extra!='cuda'" },
+    { version = "^2.3", source = "pytorch-cuda", markers = "sys_platform!='darwin' and extra=='cuda'" }
+]
 
 [[tool.poetry.source]]
-name = "pytorch-cuda"
-url = "https://download.pytorch.org/whl/cu121"
-priority = "explicit"
+    name     = "pytorch-cuda"
+    priority = "explicit"
+    url      = "https://download.pytorch.org/whl/cu121"
 
 [[tool.poetry.source]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-priority = "explicit"
+    name     = "pytorch-cpu"
+    priority = "explicit"
+    url      = "https://download.pytorch.org/whl/cpu"
 
 [tool.poetry.build]
 script = "build.py"
@@ -141,6 +141,7 @@ zip-safe = false
     banzai_add_super_calibration = "banzai.main:add_super_calibration"
     banzai_populate_bpms = "banzai.main:add_bpms_from_archive"
     banzai_create_db = "banzai.main:create_db"
+    banzai_create_local_db = "banzai.main:create_local_db"
 
 [tool.coverage.run]
 source = ["banzai"]
