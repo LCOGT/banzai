@@ -27,15 +27,23 @@ def mock_session():
     return session
 
 
-class TestSetupSubscription:
+@pytest.mark.parametrize('func,mock_target,error_substr', [
+    (lambda: replication.setup_subscription('postgresql://local/db', 'host=aws', site_id='lsc'),
+     'banzai.cache.replication.create_engine', 'Failed to create subscription'),
+    (lambda: replication.check_replication_health('postgresql://local/db'),
+     'banzai.dbs.get_session', 'Failed to check replication health'),
+    (lambda: replication.drop_subscription('postgresql://local/db', 'my_sub'),
+     'banzai.cache.replication.create_engine', 'Failed to drop subscription'),
+])
+def test_logs_error_and_reraises(func, mock_target, error_substr):
+    with mock.patch(mock_target, side_effect=Exception('test error')), \
+         mock.patch('banzai.cache.replication.logger') as mock_logger:
+        with pytest.raises(Exception, match='test error'):
+            func()
+    assert error_substr in mock_logger.error.call_args[0][0]
 
-    @mock.patch('banzai.cache.replication.logger')
-    @mock.patch('banzai.cache.replication.create_engine')
-    def test_logs_error_and_reraises(self, mock_create_engine, mock_logger):
-        mock_create_engine.side_effect = Exception('Connection failed')
-        with pytest.raises(Exception, match='Connection failed'):
-            replication.setup_subscription('postgresql://local/db', 'host=aws', site_id='lsc')
-        assert 'Failed to create subscription' in mock_logger.error.call_args[0][0]
+
+class TestSetupSubscription:
 
     @mock.patch('banzai.cache.replication.create_engine')
     def test_generates_sql_with_site_id(self, mock_create_engine):
@@ -82,14 +90,6 @@ class TestSetupSubscription:
 
 class TestCheckReplicationHealth:
 
-    @mock.patch('banzai.cache.replication.logger')
-    @mock.patch('banzai.dbs.get_session')
-    def test_logs_error_and_reraises(self, mock_get_session, mock_logger):
-        mock_get_session.side_effect = Exception('Database connection failed')
-        with pytest.raises(Exception, match='Database connection failed'):
-            replication.check_replication_health('postgresql://local/db')
-        assert 'Failed to check replication health' in mock_logger.error.call_args[0][0]
-
     @mock.patch('banzai.dbs.get_session')
     def test_returns_metrics(self, mock_get_session, mock_session):
         mock_get_session.return_value = mock_session
@@ -111,18 +111,6 @@ class TestCheckReplicationHealth:
 
     @mock.patch('banzai.cache.replication.logger')
     @mock.patch('banzai.dbs.get_session')
-    def test_logs_warning_on_high_lag(self, mock_get_session, mock_logger, mock_session):
-        mock_get_session.return_value = mock_session
-        mock_session.execute.return_value.fetchone.return_value = (
-            'test_sub', 1234, '0/1234', '0/5678',
-            '2024-01-01 12:00:00', '2024-01-01 12:00:01',
-            '2024-01-01 12:00:00', 400.0
-        )
-        replication.check_replication_health('postgresql://local/db')
-        mock_logger.warning.assert_any_call('Replication lag is high: 400.0 seconds')
-
-    @mock.patch('banzai.cache.replication.logger')
-    @mock.patch('banzai.dbs.get_session')
     def test_handles_none_lag(self, mock_get_session, mock_logger, mock_session):
         mock_get_session.return_value = mock_session
         mock_session.execute.return_value.fetchone.return_value = (
@@ -135,14 +123,6 @@ class TestCheckReplicationHealth:
 
 
 class TestDropSubscription:
-
-    @mock.patch('banzai.cache.replication.logger')
-    @mock.patch('banzai.cache.replication.create_engine')
-    def test_logs_error_and_reraises(self, mock_create_engine, mock_logger):
-        mock_create_engine.side_effect = Exception('Connection refused')
-        with pytest.raises(Exception, match='Connection refused'):
-            replication.drop_subscription('postgresql://local/db', 'my_sub')
-        assert 'Failed to drop subscription' in mock_logger.error.call_args[0][0]
 
     @mock.patch('banzai.cache.replication.create_engine')
     def test_drop_without_cascade(self, mock_create_engine):

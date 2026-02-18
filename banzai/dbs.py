@@ -581,5 +581,3 @@ def replicate_instrument(instrument_record, db_address):
 
         add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
         db_session.commit()
-
-

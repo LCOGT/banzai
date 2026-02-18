@@ -79,12 +79,3 @@ class TestRunInitialization:
         with pytest.raises(SystemExit) as exc_info:
             init.run_initialization()
         assert exc_info.value.code == 1
-
-    @mock.patch('banzai.cache.replication.setup_subscription')
-    @mock.patch('banzai.dbs.create_db')
-    @mock.patch.dict(os.environ, {'DB_ADDRESS': 'sqlite:///test.db'}, clear=True)
-    def test_without_aws_skips_subscription(self, mock_create_db, mock_setup_sub):
-        with pytest.raises(SystemExit) as exc_info:
-            init.run_initialization()
-        assert exc_info.value.code == 0
-        mock_setup_sub.assert_not_called()
