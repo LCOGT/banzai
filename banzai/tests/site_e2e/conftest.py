@@ -21,17 +21,11 @@ def load_env_file(env_path):
     """Load KEY=VALUE environment variables from a file. Does not override existing vars."""
     if not env_path.exists():
         return
-    with open(env_path) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            if '=' in line:
-                key, _, value = line.partition('=')
-                key = key.strip()
-                value = value.strip()
-                if key and key not in os.environ:
-                    os.environ[key] = value
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith('#') and '=' in line:
+            key, _, value = line.partition('=')
+            os.environ.setdefault(key.strip(), value.strip())
 
 
 load_env_file(SITE_E2E_DIR / "site_e2e.env")
@@ -74,6 +68,13 @@ def run_docker_compose(compose_file, *args, cwd=None, env=None):
     merged_env = {**os.environ, **(env or {})}
     return subprocess.run(
         cmd, cwd=cwd, env=merged_env, capture_output=True, text=True, check=False
+    )
+
+
+def run_site_compose(*args):
+    """Run docker compose for the site deployment."""
+    return run_docker_compose(
+        SITE_COMPOSE_FILE, "--env-file", str(SITE_ENV_FILE), *args, cwd=REPO_ROOT
     )
 
 
@@ -198,10 +199,7 @@ def site_deployment(publication_db):
         pytest.fail("site_e2e.env not found. Copy site_e2e.env.template and fill in required values.")
 
     print("\n[Site Deployment] Cleaning up any previous state...")
-    run_docker_compose(
-        SITE_COMPOSE_FILE, "--env-file", str(SITE_ENV_FILE),
-        "down", "-v", "--remove-orphans", cwd=REPO_ROOT
-    )
+    run_site_compose("down", "-v", "--remove-orphans")
 
     for subdir in ["calibrations", "output", "postgres"]:
         d = DATA_DIR / subdir
@@ -210,10 +208,7 @@ def site_deployment(publication_db):
         d.mkdir(parents=True, exist_ok=True)
 
     print("[Site Deployment] Starting...")
-    result = run_docker_compose(
-        SITE_COMPOSE_FILE, "--env-file", str(SITE_ENV_FILE),
-        "up", "-d", "--build", cwd=REPO_ROOT
-    )
+    result = run_site_compose("up", "-d", "--build")
     if result.returncode != 0:
         pytest.fail(f"Failed to start site deployment: {result.stderr}")
 
@@ -222,10 +217,7 @@ def site_deployment(publication_db):
         SITE_COMPOSE_FILE, "banzai-cache-init", expected_code=0, timeout=180,
         cwd=REPO_ROOT, env={"ENV_FILE": str(SITE_ENV_FILE)}
     ):
-        logs = run_docker_compose(
-            SITE_COMPOSE_FILE, "--env-file", str(SITE_ENV_FILE),
-            "logs", "banzai-cache-init", cwd=REPO_ROOT
-        )
+        logs = run_site_compose("logs", "banzai-cache-init")
         pytest.fail(f"Cache init did not complete. Logs:\n{logs.stdout}\n{logs.stderr}")
 
     print("[Site Deployment] Waiting for services to be healthy...")
@@ -233,9 +225,7 @@ def site_deployment(publication_db):
         SITE_COMPOSE_FILE, timeout=120,
         cwd=REPO_ROOT, env={"ENV_FILE": str(SITE_ENV_FILE)}
     ):
-        logs = run_docker_compose(
-            SITE_COMPOSE_FILE, "--env-file", str(SITE_ENV_FILE), "logs", cwd=REPO_ROOT
-        )
+        logs = run_site_compose("logs")
         pytest.fail(f"Site services not healthy. Logs:\n{logs.stdout}\n{logs.stderr}")
 
     print("[Site Deployment] Ready")
@@ -259,10 +249,7 @@ def cleanup(request):
 
     print("[Cleanup] Stopping site deployment...")
     if SITE_COMPOSE_FILE.exists():
-        run_docker_compose(
-            SITE_COMPOSE_FILE, "--env-file", str(SITE_ENV_FILE),
-            "down", "-v", "--remove-orphans", cwd=REPO_ROOT
-        )
+        run_site_compose("down", "-v", "--remove-orphans")
 
     print("[Cleanup] Stopping publication database...")
     if pub_compose.exists():
