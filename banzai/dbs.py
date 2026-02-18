@@ -116,23 +116,6 @@ class ProcessedImage(Base):
     tries = Column(Integer, default=0)
 
 
-class CacheConfig(Base):
-    """
-    Cache Configuration for Site Deployments
-
-    Stores site-specific configuration for the calibration cache system.
-    Used by database triggers to filter which calibrations should be downloaded.
-    Typically one record per site deployment.
-    """
-    __tablename__ = 'cache_config'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    site_id = Column(String(15), nullable=False)
-    instrument_types = Column(JSON, nullable=False)
-    # instrument_types examples: ['qhy', 'sinistro'] or ['*'] for all
-    cache_root = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-
 
 def parse_configdb(configdb_address):
     """
@@ -600,53 +583,3 @@ def replicate_instrument(instrument_record, db_address):
         db_session.commit()
 
 
-def get_cache_config(db_address):
-    """
-    Get the cache configuration for the site.
-
-    Parameters
-    ----------
-    db_address : str
-        Database address
-
-    Returns
-    -------
-    CacheConfig or None
-        The cache configuration record, or None if not configured
-    """
-    with get_session(db_address=db_address) as db_session:
-        config = db_session.query(CacheConfig).first()
-    return config
-
-
-def initialize_cache_config(db_address, site_id, instrument_types, cache_root):
-    """
-    Initialize or update the cache configuration for a site.
-
-    Parameters
-    ----------
-    db_address : str
-        Database address
-    site_id : str
-        Site identifier (e.g., 'lsc', 'ogg', 'cpt')
-    instrument_types : list of str
-        List of instrument types to cache, or ['*'] for all
-    cache_root : str
-        Root directory for cached calibration files
-
-    Returns
-    -------
-    CacheConfig
-        The cache configuration record
-    """
-    with get_session(db_address=db_address) as db_session:
-        equivalence_criteria = {'site_id': site_id}
-        record_attributes = {
-            'site_id': site_id,
-            'instrument_types': instrument_types,
-            'cache_root': cache_root,
-            'updated_at': datetime.datetime.utcnow()
-        }
-        config = add_or_update_record(db_session, CacheConfig, equivalence_criteria, record_attributes)
-        db_session.commit()
-    return config

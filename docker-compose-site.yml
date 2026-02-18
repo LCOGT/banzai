@@ -29,8 +29,6 @@ services:
       - DB_ADDRESS=${DB_ADDRESS}
       - AWS_DB_ADDRESS=${AWS_DB_ADDRESS:-}
       - SITE_ID=${SITE_ID}
-      - INSTRUMENT_TYPES_TO_CACHE=${INSTRUMENT_TYPES_TO_CACHE:-*}
-      - CACHE_FILES_ROOT=${CACHE_FILES_ROOT:-/data/calibrations}
       - PUBLICATION_NAME=${PUBLICATION_NAME:-banzai_calibrations}
     command: ["banzai_cache_init"]
     restart: "no"
@@ -150,7 +148,9 @@ services:
       - ${HOST_DATA_DIR}:/data
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
-      - CACHE_FILES_ROOT=${CACHE_FILES_ROOT:-/data/calibrations}
+      - SITE_ID=${SITE_ID}
+      - INSTRUMENT_TYPES=${INSTRUMENT_TYPES:-*}
+      - PROCESSED_PATH=${PROCESSED_PATH:-/data/processed}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - DOWNLOAD_WORKER_POLL_INTERVAL=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}

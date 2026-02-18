@@ -5,7 +5,6 @@ This module provides functions for managing PostgreSQL logical replication
 for the BANZAI calibration cache system.
 """
 
-import os
 from sqlalchemy import text, create_engine
 from banzai import dbs
 from banzai.logs import get_logger
@@ -163,60 +162,6 @@ def check_replication_health(db_address):
 
     except Exception as e:
         logger.error(f"Failed to check replication health: {e}")
-        raise
-
-
-def install_triggers(db_address, triggers_file='sql/triggers.sql'):
-    """
-    Install PostgreSQL trigger functions from SQL file.
-
-    Reads and executes the triggers SQL file to install:
-    - preserve_local_filepath() trigger
-
-    Parameters
-    ----------
-    db_address : str
-        SQLAlchemy address for local PostgreSQL database
-    triggers_file : str, optional
-        Path to triggers SQL file relative to project root
-        (default: 'sql/triggers.sql')
-
-    Raises
-    ------
-    FileNotFoundError
-        If triggers file does not exist
-    Exception
-        If trigger installation fails
-
-    Notes
-    -----
-    The SQL file should contain idempotent CREATE OR REPLACE FUNCTION statements
-    and DROP TRIGGER IF EXISTS statements, so it's safe to run multiple times.
-    """
-    # Resolve path relative to project root
-    if not os.path.isabs(triggers_file):
-        # Get project root (3 levels up from this file: cache -> banzai -> project)
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        triggers_file = os.path.join(project_root, triggers_file)
-
-    if not os.path.exists(triggers_file):
-        raise FileNotFoundError(f"Triggers file not found: {triggers_file}")
-
-    logger.info(f"Installing triggers from: {triggers_file}")
-
-    # Read SQL file
-    with open(triggers_file, 'r') as f:
-        triggers_sql = f.read()
-
-    try:
-        with dbs.get_session(db_address) as session:
-            # Execute the entire SQL file
-            # Note: text() with multistatement=True allows multiple statements
-            session.execute(text(triggers_sql))
-            session.commit()
-        logger.info("Successfully installed triggers")
-    except Exception as e:
-        logger.error(f"Failed to install triggers: {e}")
         raise
 
 

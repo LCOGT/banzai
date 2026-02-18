@@ -12,7 +12,6 @@ replication : PostgreSQL replication management functions
 from banzai.cache.replication import (
     setup_subscription,
     check_replication_health,
-    install_triggers,
     drop_subscription,
     get_subscription_status
 )
@@ -20,7 +19,6 @@ from banzai.cache.replication import (
 __all__ = [
     'setup_subscription',
     'check_replication_health',
-    'install_triggers',
     'drop_subscription',
     'get_subscription_status'
 ]
