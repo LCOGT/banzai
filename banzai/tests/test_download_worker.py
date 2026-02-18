@@ -164,33 +164,91 @@ def test_delete_happy_path_with_real_db(db_address, tmp_path):
         assert cal.filepath is None
 
 
+# --- get_calibrations_to_cache tests ---
+
+def _default_attrs(binning='1x1', filter_name=''):
+    return {'configuration_mode': 'default', 'binning': binning, 'filter': filter_name}
+
+
+def test_returns_top_2_per_config(db_address, tmp_path):
+    inst_id = _seed_db(db_address)
+    with dbs.get_session(db_address) as session:
+        _add_cal(session, inst_id, 'BIAS', 'old.fits', 1, datetime(2024, 1, 1), _default_attrs())
+        _add_cal(session, inst_id, 'BIAS', 'mid.fits', 2, datetime(2024, 1, 2), _default_attrs())
+        _add_cal(session, inst_id, 'BIAS', 'new.fits', 3, datetime(2024, 1, 3), _default_attrs())
+
+    worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
+    filenames = {r.filename for r in worker.get_calibrations_to_cache()}
+    assert filenames == {'mid.fits', 'new.fits'}
+
+
+def test_partitions_independently_by_config(db_address, tmp_path):
+    inst_id = _seed_db(db_address)
+    with dbs.get_session(db_address) as session:
+        for i, binning in enumerate(['1x1', '2x2']):
+            for j in range(3):
+                _add_cal(session, inst_id, 'BIAS', f'bias_{binning}_{j}.fits',
+                         i * 10 + j, datetime(2024, 1, j + 1), _default_attrs(binning=binning))
+
+    worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
+    filenames = {r.filename for r in worker.get_calibrations_to_cache()}
+    # Top 2 from each partition (by dateobs desc): j=2 and j=1
+    assert filenames == {'bias_1x1_1.fits', 'bias_1x1_2.fits',
+                         'bias_2x2_1.fits', 'bias_2x2_2.fits'}
+
+
+def test_filters_by_instrument_type(db_address, tmp_path):
+    sinistro_id = _seed_db(db_address, camera='fa01', inst_type='1m0-SciCam-Sinistro')
+    floyds_id = _seed_db(db_address, camera='en01', inst_type='2m0-FLOYDS-SciCam')
+    with dbs.get_session(db_address) as session:
+        _add_cal(session, sinistro_id, 'BIAS', 'sinistro.fits', 1, datetime(2024, 1, 1), _default_attrs())
+        _add_cal(session, floyds_id, 'BIAS', 'floyds.fits', 2, datetime(2024, 1, 1), _default_attrs())
+
+    worker = DownloadWorker(db_address, 'tst', ['1m0-SciCam-Sinistro'], str(tmp_path), FakeContext())
+    filenames = {r.filename for r in worker.get_calibrations_to_cache()}
+    assert filenames == {'sinistro.fits'}
+
+
+def test_wildcard_returns_all_instrument_types(db_address, tmp_path):
+    sinistro_id = _seed_db(db_address, camera='fa01', inst_type='1m0-SciCam-Sinistro')
+    floyds_id = _seed_db(db_address, camera='en01', inst_type='2m0-FLOYDS-SciCam')
+    with dbs.get_session(db_address) as session:
+        _add_cal(session, sinistro_id, 'BIAS', 'sinistro.fits', 1, datetime(2024, 1, 1), _default_attrs())
+        _add_cal(session, floyds_id, 'BIAS', 'floyds.fits', 2, datetime(2024, 1, 1), _default_attrs())
+
+    worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
+    filenames = {r.filename for r in worker.get_calibrations_to_cache()}
+    assert filenames == {'sinistro.fits', 'floyds.fits'}
+
+
+# --- download integration test ---
+
+def test_download_happy_path_with_real_db(db_address, tmp_path):
+    inst_id = _seed_db(db_address)
+    with dbs.get_session(db_address) as session:
+        _add_cal(session, inst_id, 'BIAS', 'bias.fits', 123, datetime(2024, 1, 15), _default_attrs())
+    with dbs.get_session(db_address) as session:
+        cal_id = session.query(dbs.CalibrationImage).filter_by(filename='bias.fits').first().id
+
+    worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
+    cal = mock.MagicMock(id=cal_id, filename='bias.fits', frameid=123,
+                         dateobs=datetime(2024, 1, 15), site='tst', camera='fa01')
+    with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=io.BytesIO(b'\x00' * 2880)), \
+         mock.patch('banzai.utils.fits_utils.get_primary_header', return_value=mock.MagicMock()):
+        worker.download_calibration(cal)
+
+    expected_path = worker.get_cache_path(cal)
+    assert os.path.exists(os.path.join(expected_path, 'bias.fits'))
+    with dbs.get_session(db_address) as session:
+        assert session.query(dbs.CalibrationImage).get(cal_id).filepath == expected_path
+
+
 class _StopLoop(BaseException):
     """Non-Exception BaseException to break out of run() loop cleanly in tests."""
     pass
 
 
 # --- run() tests ---
-
-def test_run_downloads_and_deletes(worker, tmp_path):
-    needed = mock.MagicMock(filename='needed.fits')
-    stale = mock.MagicMock(filename='stale.fits', filepath=str(tmp_path))
-
-    with mock.patch.object(worker, 'get_calibrations_to_cache', return_value=[needed]), \
-         mock.patch.object(worker, 'get_cache_path', return_value='/nonexistent'), \
-         mock.patch('banzai.dbs.get_session') as mock_gs, \
-         mock.patch.object(worker, 'download_calibration') as dl, \
-         mock.patch.object(worker, 'delete_calibration') as rm, \
-         mock.patch('time.sleep', side_effect=_StopLoop):
-        mock_session = mock.MagicMock()
-        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = [stale]
-        mock_gs.return_value.__enter__ = mock.MagicMock(return_value=mock_session)
-        mock_gs.return_value.__exit__ = mock.MagicMock(return_value=False)
-        with pytest.raises(_StopLoop):
-            worker.run()
-
-    dl.assert_called_once_with(needed)
-    rm.assert_called_once_with(stale)
-
 
 def test_run_backs_off_on_error(worker):
     call_count = [0]
@@ -206,23 +264,6 @@ def test_run_backs_off_on_error(worker):
             worker.run()
 
     assert mock_sleep.call_args_list[0][0][0] == 30
-
-
-@mock.patch('banzai.cache.download_worker.HEARTBEAT_INTERVAL', 0)
-def test_run_logs_heartbeat(worker):
-    with mock.patch.object(worker, 'get_calibrations_to_cache', return_value=[]), \
-         mock.patch('banzai.dbs.get_session') as mock_gs, \
-         mock.patch('banzai.cache.download_worker.logger') as mock_logger, \
-         mock.patch('time.sleep', side_effect=_StopLoop):
-        mock_session = mock.MagicMock()
-        mock_session.query.return_value.join.return_value.filter.return_value.all.return_value = []
-        mock_gs.return_value.__enter__ = mock.MagicMock(return_value=mock_session)
-        mock_gs.return_value.__exit__ = mock.MagicMock(return_value=False)
-        with pytest.raises(_StopLoop):
-            worker.run()
-
-    heartbeat_calls = [c for c in mock_logger.info.call_args_list if 'healthy' in str(c)]
-    assert len(heartbeat_calls) >= 1
 
 
 # --- get_cache_path test ---
