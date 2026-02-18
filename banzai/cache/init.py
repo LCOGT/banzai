@@ -1,12 +1,10 @@
-"""
-Site Cache Initialization for Docker Compose Deployments
-
-Runs as a Docker Compose init container to set up the local database schema
-and optional PostgreSQL replication subscription before other services start.
-"""
+"""Runs as a Docker Compose init container to set up local DB schema and replication."""
 
 import os
 import sys
+
+from psycopg2 import errors as pg_errors
+from sqlalchemy.exc import ProgrammingError
 
 from banzai import dbs, logs
 from banzai.cache import replication
@@ -16,8 +14,6 @@ logger = logs.get_logger()
 
 def run_initialization():
     """
-    Run one-time site cache initialization.
-
     Environment Variables:
         DB_ADDRESS: Local PostgreSQL database address (required)
         AWS_DB_ADDRESS: AWS PostgreSQL connection string for replication (optional)
@@ -36,19 +32,17 @@ def run_initialization():
         sys.exit(1)
 
     try:
-        # Step 1: Create database schema
         logger.info("Creating database schema...")
         dbs.create_db(db_address)
         logger.info("Database schema created successfully")
 
-        # Step 2: Set up replication subscription (if AWS address provided)
         if aws_db_address:
             logger.info("Setting up replication subscription...")
             try:
                 replication.setup_subscription(db_address, aws_db_address, site_id=site_id)
                 logger.info("Replication subscription created successfully")
-            except Exception as e:
-                logger.info(f"Replication subscription already set up (skipping): {e}")
+            except (ProgrammingError, pg_errors.DuplicateObject):
+                logger.info("Replication subscription already exists, skipping")
         else:
             logger.info("AWS_DB_ADDRESS not set, skipping replication setup")
 
@@ -58,12 +52,3 @@ def run_initialization():
     except Exception as e:
         logger.error(f"Initialization failed: {e}", exc_info=True)
         sys.exit(1)
-
-
-def main():
-    """Entry point for console script."""
-    run_initialization()
-
-
-if __name__ == '__main__':
-    main()

@@ -4,7 +4,7 @@ import os
 import sys
 import time
 
-from sqlalchemy import func
+from sqlalchemy import cast, func, String
 
 from banzai import dbs, logs
 from banzai.utils import date_utils, fits_utils
@@ -24,15 +24,9 @@ class DownloadWorker:
     def get_calibrations_to_cache(self):
         """Return top 2 calibrations per config via SQL window function."""
         with dbs.get_session(self.db_address) as session:
-            is_sqlite = 'sqlite' in session.bind.dialect.name
-            if is_sqlite:
-                config_mode = func.json_extract(dbs.CalibrationImage.attributes, '$.configuration_mode')
-                binning = func.json_extract(dbs.CalibrationImage.attributes, '$.binning')
-                filter_col = func.json_extract(dbs.CalibrationImage.attributes, '$.filter')
-            else:
-                config_mode = dbs.CalibrationImage.attributes['configuration_mode'].astext
-                binning = dbs.CalibrationImage.attributes['binning'].astext
-                filter_col = dbs.CalibrationImage.attributes['filter'].astext
+            config_mode = cast(dbs.CalibrationImage.attributes['configuration_mode'], String)
+            binning = cast(dbs.CalibrationImage.attributes['binning'], String)
+            filter_col = cast(dbs.CalibrationImage.attributes['filter'], String)
 
             rank = func.row_number().over(
                 partition_by=[dbs.CalibrationImage.instrument_id, dbs.CalibrationImage.type,

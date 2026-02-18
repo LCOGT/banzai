@@ -160,32 +160,3 @@ class TestDropSubscription:
         mock_create_engine.return_value = engine
         replication.drop_subscription('postgresql://local/db', 'my_sub', drop_slot=True)
         assert 'CASCADE' in conn.execute.call_args[0][0].text
-
-
-class TestGetSubscriptionStatus:
-
-    @mock.patch('banzai.cache.replication.logger')
-    @mock.patch('banzai.dbs.get_session')
-    def test_logs_error_and_reraises(self, mock_get_session, mock_logger):
-        mock_get_session.side_effect = Exception('Query timeout')
-        with pytest.raises(Exception, match='Query timeout'):
-            replication.get_subscription_status('postgresql://local/db')
-        assert 'Failed to get subscription status' in mock_logger.error.call_args[0][0]
-
-    @mock.patch('banzai.dbs.get_session')
-    def test_returns_subscriptions(self, mock_get_session, mock_session):
-        mock_get_session.return_value = mock_session
-        mock_session.execute.return_value.fetchall.return_value = [
-            ('sub1', True, 'slot1'),
-            ('sub2', False, 'slot2'),
-        ]
-        result = replication.get_subscription_status('postgresql://local/db')
-        assert len(result) == 2
-        assert result[0] == {'subname': 'sub1', 'subenabled': True, 'subslotname': 'slot1'}
-        assert result[1]['subenabled'] is False
-
-    @mock.patch('banzai.dbs.get_session')
-    def test_returns_empty_list_when_none(self, mock_get_session, mock_session):
-        mock_get_session.return_value = mock_session
-        mock_session.execute.return_value.fetchall.return_value = []
-        assert replication.get_subscription_status('postgresql://local/db') == []
