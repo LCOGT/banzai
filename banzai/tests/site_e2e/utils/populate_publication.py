@@ -152,14 +152,12 @@ ADDITIONAL_CALIBRATIONS = [
 def insert_calibrations(db_address: str, calibrations: list, skip_existing: bool = False) -> None:
     """Insert calibration records into the database."""
     with dbs.get_session(db_address) as session:
-        print(f"Inserting {len(calibrations)} calibration images")
         for cal_data in calibrations:
             if skip_existing:
                 existing = session.query(dbs.CalibrationImage).filter(
                     dbs.CalibrationImage.id == cal_data['id']
                 ).first()
                 if existing:
-                    print(f"  - {cal_data['type']}: {cal_data['filename']} (already exists, skipping)")
                     continue
 
             cal = dbs.CalibrationImage(
@@ -175,19 +173,14 @@ def insert_calibrations(db_address: str, calibrations: list, skip_existing: bool
                 attributes=cal_data['attributes'],
             )
             session.add(cal)
-            print(f"  - {cal_data['type']}: {cal_data['filename']}")
 
         session.commit()
-
-    print("Calibration insertion complete")
 
 
 def insert_initial_data(db_address: str) -> None:
     """Insert site, instrument, and top 2 calibrations per type."""
-    print(f"Creating database schema at {db_address}")
     dbs.create_db(db_address)
 
-    print("Creating publication banzai_calibrations")
     with dbs.get_session(db_address) as session:
         session.execute(text(
             "CREATE PUBLICATION banzai_calibrations FOR TABLE sites, instruments, calimages"
@@ -195,22 +188,14 @@ def insert_initial_data(db_address: str) -> None:
         session.commit()
 
     with dbs.get_session(db_address) as session:
-        print(f"Inserting site: {SITE_DATA['id']}")
-        site = dbs.Site(**SITE_DATA)
-        session.add(site)
+        session.add(dbs.Site(**SITE_DATA))
         session.flush()
-
-        print(f"Inserting instrument: {INSTRUMENT_DATA['name']} (id={INSTRUMENT_DATA['id']})")
-        instrument = dbs.Instrument(**INSTRUMENT_DATA)
-        session.add(instrument)
-        session.flush()
+        session.add(dbs.Instrument(**INSTRUMENT_DATA))
         session.commit()
 
     insert_calibrations(db_address, INITIAL_CALIBRATIONS)
-    print("Initial data insertion complete")
 
 
 def insert_additional_calibrations(db_address: str) -> None:
     """Insert older calibrations for cache update tests."""
     insert_calibrations(db_address, ADDITIONAL_CALIBRATIONS, skip_existing=True)
-    print("Additional calibrations insertion complete")
