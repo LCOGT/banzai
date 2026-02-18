@@ -36,7 +36,7 @@ from sqlalchemy import create_engine, text
 from banzai import dbs
 from banzai.tests.site_e2e.utils import populate_publication
 from banzai.tests.site_e2e.utils.wait_for_downloads import wait_for_downloads
-from banzai.tests.site_e2e.utils.wait_for_replication import wait_for_replication_sync
+from banzai.tests.site_e2e.conftest import _wait_for_subscription_active
 
 
 # Expected calibration filenames for phase 1 (7 files - top 2 per config + BPM)
@@ -53,6 +53,17 @@ PHASE1_EXPECTED_FILES = [
 # Raw science frame to process
 RAW_FRAME_ID = 90985172
 RAW_FRAME_FILENAME = 'lsc0m476-sq34-20260121-0190-e00.fits.fz'
+
+
+def _find_fits_files(root_dir):
+    """Walk root_dir and return all .fits.fz file paths found."""
+    fits_files = []
+    if os.path.exists(root_dir):
+        for dirpath, _, filenames in os.walk(root_dir):
+            for f in filenames:
+                if f.endswith('.fits.fz'):
+                    fits_files.append(os.path.join(dirpath, f))
+    return fits_files
 
 
 @pytest.mark.e2e_site
@@ -89,8 +100,6 @@ class TestSiteE2E:
 
         assert result.returncode == 0, f"docker compose ps failed: {result.stderr}"
 
-        # Check that essential services are running
-        # Note: banzai-cache-init is expected to have exited (it's an init container)
         essential_services = ['banzai-postgresql', 'banzai-redis', 'banzai-download-worker']
         ps_output = result.stdout.lower()
 
@@ -100,11 +109,9 @@ class TestSiteE2E:
     @pytest.mark.e2e_site_startup
     def test_03_replication_subscription_active(self, site_deployment, local_db_address):
         """Verify replication subscription is active."""
-        # Wait for subscription to sync
-        synced = wait_for_replication_sync(local_db_address, timeout=60)
+        synced = _wait_for_subscription_active(local_db_address, timeout=60)
         assert synced, "Replication subscription did not become active within timeout"
 
-        # Query subscription status from pg_subscription (which has subenabled column)
         engine = create_engine(local_db_address)
         with engine.connect() as conn:
             result = conn.execute(text("""
@@ -116,14 +123,12 @@ class TestSiteE2E:
 
         assert len(rows) > 0, "No subscriptions found"
 
-        # Check that at least one subscription is enabled and has an active worker
         enabled_subs = [row for row in rows if row.subenabled and row.pid is not None]
         assert len(enabled_subs) > 0, "No active subscriptions found"
 
     @pytest.mark.e2e_site_cache
     def test_04_initial_data_replicated(self, site_deployment, local_db_address):
         """Verify initial 7 calibrations replicated to local DB."""
-        # Give replication a moment to sync initial data
         time.sleep(5)
 
         with dbs.get_session(local_db_address) as session:
@@ -142,20 +147,26 @@ class TestSiteE2E:
     @pytest.mark.e2e_site_cache
     def test_05_initial_files_cached(self, site_deployment, cache_dir):
         """Verify download worker cached the 7 calibration files."""
-        # Wait for files to be downloaded
-        success = wait_for_downloads(
-            cache_dir=cache_dir,
-            expected_files=PHASE1_EXPECTED_FILES,
-            timeout=180  # 3 minutes for downloads
-        )
+        # Files are stored in standard banzai hierarchy under cache_dir.
+        # Poll until all expected filenames appear somewhere in the tree.
+        timeout = 180
+        poll_interval = 5
+        start_time = time.time()
 
-        assert success, f"Download worker did not cache all expected files within timeout"
+        while time.time() - start_time < timeout:
+            cached_files = {os.path.basename(p) for p in _find_fits_files(str(cache_dir))}
+            if all(f in cached_files for f in PHASE1_EXPECTED_FILES):
+                break
+            time.sleep(poll_interval)
 
-        # Verify all files exist and have non-zero size
+        cached_files = {os.path.basename(p) for p in _find_fits_files(str(cache_dir))}
         for filename in PHASE1_EXPECTED_FILES:
-            filepath = os.path.join(cache_dir, filename)
-            assert os.path.exists(filepath), f"Expected cached file not found: {filename}"
-            assert os.path.getsize(filepath) > 0, f"Cached file is empty: {filename}"
+            assert filename in cached_files, f"Expected cached file not found: {filename}"
+
+        # Verify non-zero size
+        for filepath in _find_fits_files(str(cache_dir)):
+            if os.path.basename(filepath) in PHASE1_EXPECTED_FILES:
+                assert os.path.getsize(filepath) > 0, f"Cached file is empty: {filepath}"
 
     @pytest.mark.e2e_site_reduction
     def test_06_queue_raw_frame(self, site_deployment, data_dir, archive_api_url, auth_token):
@@ -163,8 +174,6 @@ class TestSiteE2E:
         raw_dir = os.path.join(data_dir, 'raw')
         os.makedirs(raw_dir, exist_ok=True)
 
-        # Download raw frame from archive API
-        # Step 1: Get frame metadata (the API returns JSON with a 'url' field for the actual file)
         raw_frame_path = os.path.join(raw_dir, RAW_FRAME_FILENAME)
         api_url = f"{archive_api_url}frames/{RAW_FRAME_ID}/"
         headers = {"Authorization": f"Token {auth_token}"}
@@ -176,7 +185,6 @@ class TestSiteE2E:
         fits_url = frame_data.get('url')
         assert fits_url, f"No 'url' field in frame metadata: {frame_data.keys()}"
 
-        # Step 2: Download actual FITS file from the URL
         fits_response = requests.get(fits_url, timeout=120)
         assert fits_response.status_code == 200, f"Failed to download FITS file: {fits_response.status_code}"
 
@@ -186,8 +194,6 @@ class TestSiteE2E:
         assert os.path.exists(raw_frame_path), f"Raw frame not downloaded: {raw_frame_path}"
         assert os.path.getsize(raw_frame_path) > 0, f"Downloaded raw frame is empty"
 
-        # Queue the frame for processing via RabbitMQ
-        # queue_images.py is in the scripts/ directory at repo root
         repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
         queue_script = os.path.join(repo_root, 'scripts', 'queue_images.py')
         fits_exchange = os.environ.get('FITS_EXCHANGE', 'fits_files')
@@ -228,29 +234,22 @@ class TestSiteE2E:
         timeout = 300  # 5 minutes for reduction
         poll_interval = 10
 
-        # Track results for each raw file
         results = {}
 
         for raw_file in raw_files:
             raw_path = os.path.join(raw_dir, raw_file)
 
-            # Read headers to determine output location
             with fits.open(raw_path) as hdul:
                 header = hdul['SCI'].header
                 site = header['SITEID'].strip().lower()
                 instrument = header['INSTRUME'].strip().lower()
-                # Use DAY-OBS (observing night) not DATE-OBS (UTC timestamp)
-                # DAY-OBS matches the date in the filename and banzai's output path
                 day_obs = header['DAY-OBS'].replace('-', '')
 
-            # Banzai output structure: {base}/{site}/{instrument}/{date}/processed/
             output_dir = os.path.join(data_dir, 'output', site, instrument, day_obs, 'processed')
 
-            # Reduced filename: e00 -> e91
             expected_output = raw_file.replace('-e00.fits.fz', '-e91.fits.fz')
             expected_output_path = os.path.join(output_dir, expected_output)
 
-            # Wait for output to appear
             start_time = time.time()
             while time.time() - start_time < timeout:
                 if os.path.exists(expected_output_path) and os.path.getsize(expected_output_path) > 0:
@@ -258,7 +257,6 @@ class TestSiteE2E:
                     break
                 time.sleep(poll_interval)
             else:
-                # Timeout - check DB for diagnostic info
                 with dbs.get_session(local_db_address) as session:
                     pattern = raw_file.replace('-e00.fits.fz', '%')
                     result = session.execute(text("""
@@ -273,7 +271,6 @@ class TestSiteE2E:
                 else:
                     results[raw_file] = ('missing', f"No output or DB record, expected: {expected_output_path}")
 
-        # Report results
         failures = [(f, info) for f, (status, info) in results.items() if status != 'success']
         if failures:
             failure_msg = "\n".join(f"  {f}: {info}" for f, info in failures)
@@ -282,10 +279,8 @@ class TestSiteE2E:
     @pytest.mark.e2e_site_cache
     def test_08_add_older_calibrations(self, publication_db_address):
         """Insert older calibrations to test cache updates."""
-        # Insert 6 additional older calibrations via populate_publication utility
         populate_publication.insert_additional_calibrations(publication_db_address)
 
-        # Verify they were inserted in the publication DB
         with dbs.get_session(publication_db_address) as session:
             cal_count = session.query(dbs.CalibrationImage).filter(
                 dbs.CalibrationImage.is_master == True,
@@ -300,7 +295,6 @@ class TestSiteE2E:
     @pytest.mark.e2e_site_cache
     def test_09_older_calibrations_replicated(self, local_db_address):
         """Verify new calibrations replicated (now 13 total in DB)."""
-        # Give replication time to sync the new records
         timeout = 60
         poll_interval = 5
         start_time = time.time()
@@ -337,29 +331,26 @@ class TestSiteE2E:
         - Then realizes they're not in top 2 and deletes them
         - Final state: same 7 files as before (top 2 BIAS, top 2 DARK, top 2 SKYFLAT, 1 BPM)
         """
-        # Give download worker time to process the new calibrations
         timeout = 120
         poll_interval = 10
         start_time = time.time()
 
-        # Wait for cache to stabilize at 7 files
         while time.time() - start_time < timeout:
-            if os.path.exists(cache_dir):
-                files = [f for f in os.listdir(cache_dir) if f.endswith('.fits.fz')]
-                if len(files) == 7:
-                    # Verify these are the expected files (top 2 per config)
-                    for expected_file in PHASE1_EXPECTED_FILES:
-                        assert expected_file in files, (
-                            f"Expected file {expected_file} missing from cache. "
-                            f"Files present: {files}"
-                        )
-                    return  # Test passed
+            all_files = _find_fits_files(str(cache_dir))
+            filenames = [os.path.basename(p) for p in all_files]
+            if len(filenames) == 7:
+                for expected_file in PHASE1_EXPECTED_FILES:
+                    assert expected_file in filenames, (
+                        f"Expected file {expected_file} missing from cache. "
+                        f"Files present: {filenames}"
+                    )
+                return  # Test passed
 
             time.sleep(poll_interval)
 
-        # Final check after timeout
-        files = [f for f in os.listdir(cache_dir) if f.endswith('.fits.fz')] if os.path.exists(cache_dir) else []
-        assert len(files) == 7, (
-            f"Expected exactly 7 files in cache (top 2 per config), found {len(files)}. "
-            f"Files present: {files}"
+        all_files = _find_fits_files(str(cache_dir))
+        filenames = [os.path.basename(p) for p in all_files]
+        assert len(filenames) == 7, (
+            f"Expected exactly 7 files in cache (top 2 per config), found {len(filenames)}. "
+            f"Files present: {filenames}"
         )

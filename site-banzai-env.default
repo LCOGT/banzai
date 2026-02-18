@@ -10,10 +10,10 @@ SITE_ID=                                # Site identifier (e.g., lsc, ogg, cpt)
 AWS_DB_ADDRESS=                         # postgresql://user:pass@aws-host.rds.amazonaws.com:5432/calibrations
 REPLICATION_SLOT_NAME=                  # banzai_${SITE_ID}_slot (e.g., banzai_lsc_slot)
 PUBLICATION_NAME=banzai_calibrations    # AWS publication name
-INSTRUMENT_TYPES_TO_CACHE=              # Comma-separated list (e.g., qhy,sinistro) or '*' for all
+INSTRUMENT_TYPES=*                      # Comma-separated instrument types to cache (e.g., qhy,sinistro) or '*' for all
+PROCESSED_PATH=/data/processed          # Path where calibration files are stored
 
 # Download Worker Configuration
-CACHE_FILES_ROOT=/data/calibrations     # Where to store downloaded calibration files
 DOWNLOAD_WORKER_POLL_INTERVAL=10        # Seconds between checking for new downloads
 
 # API Configuration

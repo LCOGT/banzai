@@ -1,22 +1,10 @@
-#!/usr/bin/env python
 """
 Populate the publication database with test data for site E2E tests.
-
-This script creates the schema and inserts test data in two phases:
-1. Initial data: site, instrument, and top 2 calibrations per type
-2. Additional calibrations: older versions for cache update tests
-
-Usage:
-    # Insert initial data only
-    python populate_publication.py --db-address postgresql://banzai:banzai_test@localhost:5433/banzai_test
-
-    # Insert additional calibrations
-    python populate_publication.py --db-address postgresql://... --phase additional
 """
 
-import argparse
 import datetime
-import sys
+
+from sqlalchemy import text
 
 from banzai import dbs
 
@@ -161,28 +149,45 @@ ADDITIONAL_CALIBRATIONS = [
 ]
 
 
+def insert_calibrations(db_address: str, calibrations: list, skip_existing: bool = False) -> None:
+    """Insert calibration records into the database."""
+    with dbs.get_session(db_address) as session:
+        print(f"Inserting {len(calibrations)} calibration images")
+        for cal_data in calibrations:
+            if skip_existing:
+                existing = session.query(dbs.CalibrationImage).filter(
+                    dbs.CalibrationImage.id == cal_data['id']
+                ).first()
+                if existing:
+                    print(f"  - {cal_data['type']}: {cal_data['filename']} (already exists, skipping)")
+                    continue
+
+            cal = dbs.CalibrationImage(
+                id=cal_data['id'],
+                type=cal_data['type'],
+                filename=cal_data['filename'],
+                filepath=None,
+                frameid=cal_data['frameid'],
+                dateobs=cal_data['dateobs'],
+                instrument_id=INSTRUMENT_DATA['id'],
+                is_master=True,
+                is_bad=False,
+                attributes=cal_data['attributes'],
+            )
+            session.add(cal)
+            print(f"  - {cal_data['type']}: {cal_data['filename']}")
+
+        session.commit()
+
+    print("Calibration insertion complete")
+
+
 def insert_initial_data(db_address: str) -> None:
-    """
-    Insert site, instrument, and top 2 calibrations per type.
-
-    Creates the schema using banzai.dbs.create_db(), creates the publication,
-    and inserts:
-    - 1 site (lsc)
-    - 1 instrument (sq34)
-    - 7 calibration images (top 2 per type: BIAS, DARK, SKYFLAT, plus 1 BPM)
-
-    Parameters
-    ----------
-    db_address : str
-        SQLAlchemy database connection string
-    """
-    # Create schema (same pattern as testing/populate_test_db.py)
+    """Insert site, instrument, and top 2 calibrations per type."""
     print(f"Creating database schema at {db_address}")
     dbs.create_db(db_address)
 
-    # Create publication for logical replication (must be done after schema exists)
     print("Creating publication banzai_calibrations")
-    from sqlalchemy import text
     with dbs.get_session(db_address) as session:
         session.execute(text(
             "CREATE PUBLICATION banzai_calibrations FOR TABLE sites, instruments, calimages"
@@ -190,112 +195,22 @@ def insert_initial_data(db_address: str) -> None:
         session.commit()
 
     with dbs.get_session(db_address) as session:
-        # Insert site
         print(f"Inserting site: {SITE_DATA['id']}")
         site = dbs.Site(**SITE_DATA)
         session.add(site)
         session.flush()
 
-        # Insert instrument (must specify id explicitly)
         print(f"Inserting instrument: {INSTRUMENT_DATA['name']} (id={INSTRUMENT_DATA['id']})")
         instrument = dbs.Instrument(**INSTRUMENT_DATA)
         session.add(instrument)
         session.flush()
-
-        # Insert initial calibrations
-        print(f"Inserting {len(INITIAL_CALIBRATIONS)} initial calibration images")
-        for cal_data in INITIAL_CALIBRATIONS:
-            cal = dbs.CalibrationImage(
-                id=cal_data['id'],
-                type=cal_data['type'],
-                filename=cal_data['filename'],
-                filepath=None,
-                frameid=cal_data['frameid'],
-                dateobs=cal_data['dateobs'],
-                instrument_id=INSTRUMENT_DATA['id'],
-                is_master=True,
-                is_bad=False,
-                attributes=cal_data['attributes'],
-            )
-            session.add(cal)
-            print(f"  - {cal_data['type']}: {cal_data['filename']}")
-
         session.commit()
 
+    insert_calibrations(db_address, INITIAL_CALIBRATIONS)
     print("Initial data insertion complete")
 
 
 def insert_additional_calibrations(db_address: str) -> None:
-    """
-    Insert older calibrations for cache update tests.
-
-    Inserts 6 additional calibration images (older versions of BIAS, DARK, SKYFLAT).
-    This simulates new calibrations arriving via replication that the cache
-    should process.
-
-    Parameters
-    ----------
-    db_address : str
-        SQLAlchemy database connection string
-    """
-    with dbs.get_session(db_address) as session:
-        print(f"Inserting {len(ADDITIONAL_CALIBRATIONS)} additional calibration images")
-        for cal_data in ADDITIONAL_CALIBRATIONS:
-            # Skip if already exists (idempotent for reruns)
-            existing = session.query(dbs.CalibrationImage).filter(
-                dbs.CalibrationImage.id == cal_data['id']
-            ).first()
-            if existing:
-                print(f"  - {cal_data['type']}: {cal_data['filename']} (already exists, skipping)")
-                continue
-
-            cal = dbs.CalibrationImage(
-                id=cal_data['id'],
-                type=cal_data['type'],
-                filename=cal_data['filename'],
-                filepath=None,
-                frameid=cal_data['frameid'],
-                dateobs=cal_data['dateobs'],
-                instrument_id=INSTRUMENT_DATA['id'],
-                is_master=True,
-                is_bad=False,
-                attributes=cal_data['attributes'],
-            )
-            session.add(cal)
-            print(f"  - {cal_data['type']}: {cal_data['filename']}")
-
-        session.commit()
-
+    """Insert older calibrations for cache update tests."""
+    insert_calibrations(db_address, ADDITIONAL_CALIBRATIONS, skip_existing=True)
     print("Additional calibrations insertion complete")
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Populate the publication database with test data"
-    )
-    parser.add_argument(
-        "--db-address",
-        required=True,
-        help="Database connection string (e.g., postgresql://banzai:banzai_test@localhost:5433/banzai_test)",
-    )
-    parser.add_argument(
-        "--phase",
-        choices=["initial", "additional"],
-        default="initial",
-        help="Which phase of data to insert (default: initial)",
-    )
-
-    args = parser.parse_args()
-
-    try:
-        if args.phase == "initial":
-            insert_initial_data(args.db_address)
-        else:
-            insert_additional_calibrations(args.db_address)
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
