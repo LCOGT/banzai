@@ -2,6 +2,7 @@ import os
 
 import mock
 import pytest
+from sqlalchemy.exc import ProgrammingError
 
 from banzai.cache import init
 
@@ -54,10 +55,22 @@ class TestRunInitialization:
         'SITE_ID': 'lsc'
     }, clear=True)
     def test_subscription_already_exists_continues(self, mock_create_db, mock_setup_sub):
-        mock_setup_sub.side_effect = Exception('subscription already exists')
+        mock_setup_sub.side_effect = ProgrammingError('', {}, Exception('subscription already exists'))
         with pytest.raises(SystemExit) as exc_info:
             init.run_initialization()
         assert exc_info.value.code == 0
+
+    @mock.patch('banzai.cache.replication.setup_subscription')
+    @mock.patch('banzai.dbs.create_db')
+    @mock.patch.dict(os.environ, {
+        'DB_ADDRESS': 'sqlite:///test.db', 'AWS_DB_ADDRESS': 'postgresql://aws/db',
+        'SITE_ID': 'lsc'
+    }, clear=True)
+    def test_subscription_non_duplicate_error_exits_1(self, mock_create_db, mock_setup_sub):
+        mock_setup_sub.side_effect = Exception('connection refused')
+        with pytest.raises(SystemExit) as exc_info:
+            init.run_initialization()
+        assert exc_info.value.code == 1
 
     @mock.patch('banzai.dbs.create_db')
     @mock.patch.dict(os.environ, {'DB_ADDRESS': 'sqlite:///test.db'}, clear=True)

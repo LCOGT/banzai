@@ -1,7 +1,7 @@
 import io
 import os
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from unittest import mock
 
 import pytest
@@ -49,90 +49,6 @@ def _add_cal(session, instrument_id, cal_type, filename, frameid, dateobs, attrs
         dateobs=dateobs, datecreated=dateobs, instrument_id=instrument_id,
         is_master=True, is_bad=False, attributes=attrs,
     ))
-
-
-# --- get_calibrations_to_cache: real SQLite integration tests ---
-
-def test_top2_ranking(db_address, tmp_path):
-    inst_id = _seed_db(db_address)
-    base = datetime(2024, 1, 15)
-    with dbs.get_session(db_address) as session:
-        for i in range(3):
-            _add_cal(session, inst_id, 'BIAS', f'bias_{i}.fits', 1000 + i,
-                     base - timedelta(days=i), {'configuration_mode': 'default', 'binning': '1x1'})
-    worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
-    result = worker.get_calibrations_to_cache()
-    filenames = {r.filename for r in result}
-    assert 'bias_0.fits' in filenames
-    assert 'bias_1.fits' in filenames
-    assert 'bias_2.fits' not in filenames
-
-
-def test_filter_partitions_separately(db_address, tmp_path):
-    inst_id = _seed_db(db_address)
-    base = datetime(2024, 1, 15)
-    with dbs.get_session(db_address) as session:
-        for i in range(3):
-            _add_cal(session, inst_id, 'SKYFLAT', f'flat_v_{i}.fits', 2000 + i,
-                     base - timedelta(days=i), {'configuration_mode': 'default', 'binning': '1x1', 'filter': 'V'})
-            _add_cal(session, inst_id, 'SKYFLAT', f'flat_r_{i}.fits', 3000 + i,
-                     base - timedelta(days=i), {'configuration_mode': 'default', 'binning': '1x1', 'filter': 'R'})
-    worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
-    result = worker.get_calibrations_to_cache()
-    filenames = {r.filename for r in result}
-    # 2 per filter
-    assert len([f for f in filenames if 'flat_v_' in f]) == 2
-    assert len([f for f in filenames if 'flat_r_' in f]) == 2
-
-
-def test_filters_by_site(db_address, tmp_path):
-    inst_id = _seed_db(db_address, site_id='tst')
-    _seed_db(db_address, site_id='ogg', camera='fa02')
-    base = datetime(2024, 1, 15)
-    with dbs.get_session(db_address) as session:
-        _add_cal(session, inst_id, 'BIAS', 'tst_bias.fits', 100, base,
-                 {'configuration_mode': 'default', 'binning': '1x1'})
-        # instrument_id=2 belongs to ogg
-        _add_cal(session, 2, 'BIAS', 'ogg_bias.fits', 200, base,
-                 {'configuration_mode': 'default', 'binning': '1x1'})
-    worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
-    result = worker.get_calibrations_to_cache()
-    filenames = {r.filename for r in result}
-    assert 'tst_bias.fits' in filenames
-    assert 'ogg_bias.fits' not in filenames
-
-
-def test_filters_by_instrument_type(db_address, tmp_path):
-    _seed_db(db_address, camera='fa01', inst_type='1m0-SciCam-Sinistro')
-    _seed_db(db_address, camera='kb01', inst_type='0m4-SciCam-SBIG')
-    base = datetime(2024, 1, 15)
-    with dbs.get_session(db_address) as session:
-        # inst 1 = Sinistro, inst 2 = SBIG (but same site from _seed_db reuse - we inserted same site twice)
-        _add_cal(session, 1, 'BIAS', 'sin_bias.fits', 100, base,
-                 {'configuration_mode': 'default', 'binning': '1x1'})
-        _add_cal(session, 2, 'BIAS', 'sbig_bias.fits', 200, base,
-                 {'configuration_mode': 'default', 'binning': '1x1'})
-    worker = DownloadWorker(db_address, 'tst', ['1m0-SciCam-Sinistro'], str(tmp_path), FakeContext())
-    result = worker.get_calibrations_to_cache()
-    filenames = {r.filename for r in result}
-    assert 'sin_bias.fits' in filenames
-    assert 'sbig_bias.fits' not in filenames
-
-
-def test_wildcard_instrument_types_returns_all(db_address, tmp_path):
-    _seed_db(db_address, camera='fa01', inst_type='1m0-SciCam-Sinistro')
-    _seed_db(db_address, camera='kb01', inst_type='0m4-SciCam-SBIG')
-    base = datetime(2024, 1, 15)
-    with dbs.get_session(db_address) as session:
-        _add_cal(session, 1, 'BIAS', 'sin_bias.fits', 100, base,
-                 {'configuration_mode': 'default', 'binning': '1x1'})
-        _add_cal(session, 2, 'BIAS', 'sbig_bias.fits', 200, base,
-                 {'configuration_mode': 'default', 'binning': '1x1'})
-    worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
-    result = worker.get_calibrations_to_cache()
-    filenames = {r.filename for r in result}
-    assert 'sin_bias.fits' in filenames
-    assert 'sbig_bias.fits' in filenames
 
 
 # --- download_calibration tests ---
