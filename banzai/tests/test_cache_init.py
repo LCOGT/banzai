@@ -8,6 +8,11 @@ from banzai.cache import init
 
 pytestmark = pytest.mark.cache_init
 
+AWS_ENV = {
+    'DB_ADDRESS': 'sqlite:///test.db', 'AWS_DB_ADDRESS': 'postgresql://aws/db',
+    'SITE_ID': 'lsc',
+}
+
 
 class TestRunInitialization:
 
@@ -35,10 +40,7 @@ class TestRunInitialization:
 
     @mock.patch('banzai.cache.replication.setup_subscription')
     @mock.patch('banzai.dbs.create_db')
-    @mock.patch.dict(os.environ, {
-        'DB_ADDRESS': 'sqlite:///test.db', 'AWS_DB_ADDRESS': 'postgresql://aws/db',
-        'SITE_ID': 'lsc'
-    }, clear=True)
+    @mock.patch.dict(os.environ, AWS_ENV, clear=True)
     def test_happy_path_with_aws(self, mock_create_db, mock_setup_sub):
         with pytest.raises(SystemExit) as exc_info:
             init.run_initialization()
@@ -50,10 +52,7 @@ class TestRunInitialization:
 
     @mock.patch('banzai.cache.replication.setup_subscription')
     @mock.patch('banzai.dbs.create_db')
-    @mock.patch.dict(os.environ, {
-        'DB_ADDRESS': 'sqlite:///test.db', 'AWS_DB_ADDRESS': 'postgresql://aws/db',
-        'SITE_ID': 'lsc'
-    }, clear=True)
+    @mock.patch.dict(os.environ, AWS_ENV, clear=True)
     def test_subscription_already_exists_continues(self, mock_create_db, mock_setup_sub):
         mock_setup_sub.side_effect = ProgrammingError('', {}, Exception('subscription already exists'))
         with pytest.raises(SystemExit) as exc_info:
@@ -62,10 +61,7 @@ class TestRunInitialization:
 
     @mock.patch('banzai.cache.replication.setup_subscription')
     @mock.patch('banzai.dbs.create_db')
-    @mock.patch.dict(os.environ, {
-        'DB_ADDRESS': 'sqlite:///test.db', 'AWS_DB_ADDRESS': 'postgresql://aws/db',
-        'SITE_ID': 'lsc'
-    }, clear=True)
+    @mock.patch.dict(os.environ, AWS_ENV, clear=True)
     def test_subscription_non_duplicate_error_exits_1(self, mock_create_db, mock_setup_sub):
         mock_setup_sub.side_effect = Exception('connection refused')
         with pytest.raises(SystemExit) as exc_info:

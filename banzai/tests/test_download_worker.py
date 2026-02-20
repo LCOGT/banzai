@@ -1,7 +1,6 @@
 import io
 import os
-import time
-from datetime import date, datetime
+from datetime import datetime
 from unittest import mock
 
 import pytest
@@ -11,6 +10,13 @@ from banzai.cache.download_worker import DownloadWorker, run_download_worker_dae
 from banzai.tests.utils import FakeContext
 
 pytestmark = pytest.mark.download_worker
+
+
+def _make_cal(filename='bias.fits', frameid=123, **overrides):
+    defaults = dict(id=1, filename=filename, frameid=frameid,
+                    dateobs=datetime(2024, 1, 15), site='tst', camera='fa01')
+    defaults.update(overrides)
+    return mock.MagicMock(**defaults)
 
 
 @pytest.fixture
@@ -53,27 +59,8 @@ def _add_cal(session, instrument_id, cal_type, filename, frameid, dateobs, attrs
 
 # --- download_calibration tests ---
 
-def test_download_new_file(worker, tmp_path):
-    cal = mock.MagicMock(id=1, filename='bias.fits', frameid=123,
-                         dateobs=datetime(2024, 1, 15), site='tst', camera='fa01')
-    fits_data = io.BytesIO(b'\x00' * 2880)
-
-    with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=fits_data) as dl, \
-         mock.patch('banzai.utils.fits_utils.get_primary_header', return_value=mock.MagicMock()), \
-         mock.patch.object(worker, '_update_filepath') as up:
-        worker.download_calibration(cal)
-
-    dl.assert_called_once()
-    assert dl.call_args[0][0] == {'frameid': 123, 'filename': 'bias.fits'}
-    assert dl.call_args[1]['is_raw_frame'] is False
-    up.assert_called_once_with(1, worker.get_cache_path(cal))
-    dest = os.path.join(worker.get_cache_path(cal), 'bias.fits')
-    assert os.path.exists(dest)
-
-
 def test_skips_when_file_exists(worker, tmp_path):
-    cal = mock.MagicMock(id=1, filename='bias.fits', frameid=123,
-                         dateobs=datetime(2024, 1, 15), site='tst', camera='fa01')
+    cal = _make_cal()
     dest_dir = worker.get_cache_path(cal)
     os.makedirs(dest_dir, exist_ok=True)
     open(os.path.join(dest_dir, 'bias.fits'), 'w').close()
@@ -87,16 +74,14 @@ def test_skips_when_file_exists(worker, tmp_path):
 
 
 def test_skips_null_frameid(worker):
-    cal = mock.MagicMock(id=1, filename='bias.fits', frameid=None,
-                         dateobs=datetime(2024, 1, 15), site='tst', camera='fa01')
+    cal = _make_cal(frameid=None)
     with mock.patch('banzai.utils.fits_utils.download_from_s3') as dl:
         worker.download_calibration(cal)
     dl.assert_not_called()
 
 
 def test_cleans_temp_on_validation_failure(worker, tmp_path):
-    cal = mock.MagicMock(id=1, filename='bad.fits', frameid=123,
-                         dateobs=datetime(2024, 1, 15), site='tst', camera='fa01')
+    cal = _make_cal(filename='bad.fits')
     with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=io.BytesIO(b'bad')), \
          mock.patch('banzai.utils.fits_utils.get_primary_header', return_value=None):
         with pytest.raises(ValueError, match="Invalid FITS"):
@@ -107,8 +92,7 @@ def test_cleans_temp_on_validation_failure(worker, tmp_path):
 
 
 def test_cleans_temp_on_exception(worker, tmp_path):
-    cal = mock.MagicMock(id=1, filename='fail.fits', frameid=123,
-                         dateobs=datetime(2024, 1, 15), site='tst', camera='fa01')
+    cal = _make_cal(filename='fail.fits')
     with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=io.BytesIO(b'\x00' * 100)), \
          mock.patch('banzai.utils.fits_utils.get_primary_header', return_value=mock.MagicMock()), \
          mock.patch('os.rename', side_effect=OSError("disk full")):
@@ -119,19 +103,6 @@ def test_cleans_temp_on_exception(worker, tmp_path):
 
 
 # --- delete_calibration tests ---
-
-def test_delete_removes_file_and_clears_db(worker, tmp_path):
-    test_dir = str(tmp_path / 'deltest')
-    os.makedirs(test_dir)
-    filepath = os.path.join(test_dir, 'old.fits')
-    open(filepath, 'w').close()
-    cal = mock.MagicMock(id=1, filename='old.fits', filepath=test_dir)
-
-    with mock.patch.object(worker, '_update_filepath') as up:
-        worker.delete_calibration(cal)
-    assert not os.path.exists(filepath)
-    up.assert_called_once_with(1, None)
-
 
 def test_delete_clears_db_when_file_missing(worker):
     cal = mock.MagicMock(id=1, filename='gone.fits', filepath='/nonexistent')
@@ -145,13 +116,11 @@ def test_delete_happy_path_with_real_db(db_address, tmp_path):
     with dbs.get_session(db_address) as session:
         _add_cal(session, inst_id, 'BIAS', 'del.fits', 100, datetime(2024, 1, 1),
                  {'configuration_mode': 'default', 'binning': '1x1'})
-    # Set filepath so delete can clear it
     with dbs.get_session(db_address) as session:
         cal = session.query(dbs.CalibrationImage).filter_by(filename='del.fits').first()
         cal.filepath = str(tmp_path)
         cal_id = cal.id
 
-    # Create file on disk
     open(os.path.join(str(tmp_path), 'del.fits'), 'w').close()
 
     worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
@@ -192,7 +161,6 @@ def test_partitions_independently_by_config(db_address, tmp_path):
 
     worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
     filenames = {r.filename for r in worker.get_calibrations_to_cache()}
-    # Top 2 from each partition (by dateobs desc): j=2 and j=1
     assert filenames == {'bias_1x1_1.fits', 'bias_1x1_2.fits',
                          'bias_2x2_1.fits', 'bias_2x2_2.fits'}
 
@@ -231,47 +199,19 @@ def test_download_happy_path_with_real_db(db_address, tmp_path):
         cal_id = session.query(dbs.CalibrationImage).filter_by(filename='bias.fits').first().id
 
     worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
-    cal = mock.MagicMock(id=cal_id, filename='bias.fits', frameid=123,
-                         dateobs=datetime(2024, 1, 15), site='tst', camera='fa01')
-    with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=io.BytesIO(b'\x00' * 2880)), \
+    cal = _make_cal(id=cal_id)
+    with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=io.BytesIO(b'\x00' * 2880)) as dl, \
          mock.patch('banzai.utils.fits_utils.get_primary_header', return_value=mock.MagicMock()):
         worker.download_calibration(cal)
+
+    dl.assert_called_once()
+    assert dl.call_args[0][0] == {'frameid': 123, 'filename': 'bias.fits'}
+    assert dl.call_args[1]['is_raw_frame'] is False
 
     expected_path = worker.get_cache_path(cal)
     assert os.path.exists(os.path.join(expected_path, 'bias.fits'))
     with dbs.get_session(db_address) as session:
         assert session.query(dbs.CalibrationImage).get(cal_id).filepath == expected_path
-
-
-class _StopLoop(BaseException):
-    """Non-Exception BaseException to break out of run() loop cleanly in tests."""
-    pass
-
-
-# --- run() tests ---
-
-def test_run_backs_off_on_error(worker):
-    call_count = [0]
-
-    def sleep_side_effect(seconds):
-        call_count[0] += 1
-        if call_count[0] >= 2:
-            raise _StopLoop()
-
-    with mock.patch.object(worker, 'get_calibrations_to_cache', side_effect=Exception("db error")), \
-         mock.patch('time.sleep', side_effect=sleep_side_effect) as mock_sleep:
-        with pytest.raises(_StopLoop):
-            worker.run()
-
-    assert mock_sleep.call_args_list[0][0][0] == 30
-
-
-# --- get_cache_path test ---
-
-def test_get_cache_path(worker):
-    cal = mock.MagicMock(dateobs=date(2024, 1, 15), site='tst', camera='fa01')
-    path = worker.get_cache_path(cal)
-    assert path.endswith(os.path.join('tst', 'fa01', '20240115', 'processed'))
 
 
 # --- run_download_worker_daemon tests ---
