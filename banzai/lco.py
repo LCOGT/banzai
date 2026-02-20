@@ -588,9 +588,9 @@ class LCOFrameFactory(FrameFactory):
             return None
         # If the public date is provided in the file_info message, set it here and don't override it later.
         if file_info.get('public_date') is not None:
-            image.public_date = file_info['public_date']
+            image.public_date = date_utils.parse_date_obs(file_info['public_date'])
         elif file_info.get('L1PUBDAT') is not None:
-            image.public_date = file_info['L1PUBDAT']
+            image.public_date = date_utils.parse_date_obs(file_info['L1PUBDAT'])
 
         # If the frame cannot be processed for some reason return None instead of the new image object
         if image_utils.image_can_be_processed(image, runtime_context):
