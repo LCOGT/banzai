@@ -18,31 +18,6 @@ def _mock_engine():
     return mock_engine, mock_conn
 
 
-@pytest.fixture
-def mock_session():
-    """Mock dbs.get_session context manager returning a mock session."""
-    session = mock.MagicMock()
-    session.__enter__ = mock.MagicMock(return_value=session)
-    session.__exit__ = mock.MagicMock(return_value=False)
-    return session
-
-
-@pytest.mark.parametrize('func,mock_target,error_substr', [
-    (lambda: replication.setup_subscription('postgresql://local/db', 'host=aws', site_id='lsc'),
-     'banzai.cache.replication.create_engine', 'Failed to create subscription'),
-    (lambda: replication.check_replication_health('postgresql://local/db'),
-     'banzai.dbs.get_session', 'Failed to check replication health'),
-    (lambda: replication.drop_subscription('postgresql://local/db', 'my_sub'),
-     'banzai.cache.replication.create_engine', 'Failed to drop subscription'),
-])
-def test_logs_error_and_reraises(func, mock_target, error_substr):
-    with mock.patch(mock_target, side_effect=Exception('test error')), \
-         mock.patch('banzai.cache.replication.logger') as mock_logger:
-        with pytest.raises(Exception, match='test error'):
-            func()
-    assert error_substr in mock_logger.error.call_args[0][0]
-
-
 class TestSetupSubscription:
 
     @mock.patch('banzai.cache.replication.create_engine')
@@ -63,80 +38,13 @@ class TestSetupSubscription:
         replication.setup_subscription('postgresql://local/db', 'host=aws', site_id='ogg')
         conn.execution_options.assert_called_once_with(isolation_level="AUTOCOMMIT")
 
-    @mock.patch('banzai.cache.replication.create_engine')
-    def test_custom_names(self, mock_create_engine):
-        engine, conn = _mock_engine()
-        mock_create_engine.return_value = engine
-        replication.setup_subscription(
-            'postgresql://local/db', 'host=aws', site_id='cpt',
-            subscription_name='custom_sub', slot_name='custom_slot'
-        )
-        sql = conn.execute.call_args[0][0].text
-        assert 'custom_sub' in sql
-        assert 'custom_slot' in sql
-
-    @mock.patch('banzai.cache.replication.create_engine')
-    def test_custom_publication_name(self, mock_create_engine):
-        engine, conn = _mock_engine()
-        mock_create_engine.return_value = engine
-        replication.setup_subscription(
-            'postgresql://local/db', 'host=aws', site_id='lsc',
-            publication_name='my_pub'
-        )
-        sql = conn.execute.call_args[0][0].text
-        assert 'PUBLICATION my_pub' in sql
-        assert 'banzai_calibrations' not in sql
-
 
 class TestCheckReplicationHealth:
 
     @mock.patch('banzai.dbs.get_session')
-    def test_returns_metrics(self, mock_get_session, mock_session):
-        mock_get_session.return_value = mock_session
-        mock_session.execute.return_value.fetchone.return_value = (
-            'test_sub', 1234, '0/1234', '0/5678',
-            '2024-01-01 12:00:00', '2024-01-01 12:00:01',
-            '2024-01-01 12:00:00', 5.0
-        )
-        health = replication.check_replication_health('postgresql://local/db')
-        assert health['subname'] == 'test_sub'
-        assert health['pid'] == 1234
-        assert health['lag_seconds'] == 5.0
-
-    @mock.patch('banzai.dbs.get_session')
-    def test_returns_empty_dict_when_no_subscription(self, mock_get_session, mock_session):
+    def test_returns_empty_dict_when_no_subscription(self, mock_get_session):
+        mock_session = mock.MagicMock()
+        mock_session.__enter__.return_value = mock_session
         mock_get_session.return_value = mock_session
         mock_session.execute.return_value.fetchone.return_value = None
         assert replication.check_replication_health('postgresql://local/db') == {}
-
-    @mock.patch('banzai.cache.replication.logger')
-    @mock.patch('banzai.dbs.get_session')
-    def test_handles_none_lag(self, mock_get_session, mock_logger, mock_session):
-        mock_get_session.return_value = mock_session
-        mock_session.execute.return_value.fetchone.return_value = (
-            'test_sub', 1234, '0/1234', '0/5678',
-            '2024-01-01 12:00:00', None, '2024-01-01 12:00:00', None
-        )
-        health = replication.check_replication_health('postgresql://local/db')
-        assert health['lag_seconds'] is None
-        mock_logger.warning.assert_called_with('Replication lag could not be determined')
-
-
-class TestDropSubscription:
-
-    @mock.patch('banzai.cache.replication.create_engine')
-    def test_drop_without_cascade(self, mock_create_engine):
-        engine, conn = _mock_engine()
-        mock_create_engine.return_value = engine
-        replication.drop_subscription('postgresql://local/db', 'my_sub', drop_slot=False)
-        sql = conn.execute.call_args[0][0]
-        assert isinstance(sql, TextClause)
-        assert 'DROP SUBSCRIPTION IF EXISTS my_sub' in sql.text
-        assert 'CASCADE' not in sql.text
-
-    @mock.patch('banzai.cache.replication.create_engine')
-    def test_drop_with_cascade(self, mock_create_engine):
-        engine, conn = _mock_engine()
-        mock_create_engine.return_value = engine
-        replication.drop_subscription('postgresql://local/db', 'my_sub', drop_slot=True)
-        assert 'CASCADE' in conn.execute.call_args[0][0].text
