@@ -206,7 +206,8 @@ class LCOObservationFrame(ObservationFrame):
 
         if self.public_date is None:
             # Don't override the public date if it already exists
-            if any(fnmatch(self.meta['PROPID'].lower(), public_proposal) for public_proposal in context.PUBLIC_PROPOSALS):
+            if any(fnmatch(self.meta['PROPID'].lower(), public_proposal)
+                   for public_proposal in context.PUBLIC_PROPOSALS):
                 self.public_date = self.dateobs
             else:
                 # Wait to make public
@@ -585,6 +586,12 @@ class LCOFrameFactory(FrameFactory):
             logger.error('Crosstalk coefficients are missing from both the header and the defaults. Stopping reduction',
                          image=image)
             return None
+        # If the public date is provided in the file_info message, set it here and don't override it later.
+        if file_info.get('public_date') is not None:
+            image.public_date = file_info['public_date']
+        elif file_info.get('L1PUBDAT') is not None:
+            image.public_date = file_info['L1PUBDAT']
+
         # If the frame cannot be processed for some reason return None instead of the new image object
         if image_utils.image_can_be_processed(image, runtime_context):
             return image

@@ -1,3 +1,7 @@
+1.29.0 (2026-02-20)
+-------------------
+- Added a check to see if the public date is included in the shipper so we don't override it
+
 1.28.0 (2026-01-14)
 -------------------
 - Added support for local/site deployments with docker-compose-site.yml
