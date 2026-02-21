@@ -2,13 +2,13 @@
 # Database Configuration
 # PostgreSQL database for local processing and calibration cache
 DB_ADDRESS=postgresql://banzai@postgresql:5432/banzai_local
-CAL_DB_ADDRESS=                         # Optional: separate calibration DB (defaults to DB_ADDRESS)
+# CAL_DB_ADDRESS=                       # Optional: separate calibration DB (defaults to DB_ADDRESS)
 SITE_ID=                                # Site identifier (e.g., lsc, ogg, cpt)
 
 # PostgreSQL Replication Configuration (for future use)
 # When setting up replication from AWS, configure these:
-AWS_DB_ADDRESS=                         # postgresql://user:pass@aws-host.rds.amazonaws.com:5432/calibrations
-REPLICATION_SLOT_NAME=                  # banzai_${SITE_ID}_slot (e.g., banzai_lsc_slot)
+# AWS_DB_ADDRESS=                       # postgresql://user:pass@aws-host.rds.amazonaws.com:5432/calibrations
+# REPLICATION_SLOT_NAME=                # banzai_${SITE_ID}_slot (e.g., banzai_lsc_slot)
 PUBLICATION_NAME=banzai_calibrations    # AWS publication name
 INSTRUMENT_TYPES=*                      # Comma-separated instrument types to cache (e.g., qhy,sinistro) or '*' for all
 PROCESSED_PATH=/data/processed          # Path where calibration files are stored
@@ -31,8 +31,8 @@ FITS_EXCHANGE=fits_files
 TASK_HOST=redis://redis:6379/0
 
 # Celery Configuration
-CELERY_TASK_QUEUE_NAME=e2e_task_queue
-CELERY_LARGE_TASK_QUEUE_NAME=e2e_large_task_queue
+CELERY_TASK_QUEUE_NAME=celery
+CELERY_LARGE_TASK_QUEUE_NAME=celery_large
 
 # Worker Configuration
 BANZAI_WORKER_LOGLEVEL=debug
