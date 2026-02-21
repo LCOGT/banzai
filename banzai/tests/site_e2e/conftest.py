@@ -243,7 +243,7 @@ def cleanup(request):
 
     print("[Cleanup] Dropping subscription...")
     try:
-        replication.drop_subscription(LOCAL_DB_ADDRESS, f"banzai_{site_id}_sub", drop_slot=True)
+        replication.drop_subscription(LOCAL_DB_ADDRESS, f"banzai_{site_id}_sub")
     except Exception as e:
         print(f"[Cleanup] Warning: Failed to drop subscription: {e}")
 

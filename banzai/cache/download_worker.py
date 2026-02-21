@@ -52,7 +52,7 @@ class DownloadWorker:
             return session.query(subq).filter(subq.c.rank <= 2).all()
 
     def get_cache_path(self, cal):
-        epoch = date_utils.epoch_date_to_string(cal.dateobs)
+        epoch = date_utils.epoch_date_to_string(cal.dateobs.date())
         return os.path.join(self.processed_path, cal.site, cal.camera, epoch, 'processed')
 
     def download_calibration(self, cal):
@@ -79,7 +79,6 @@ class DownloadWorker:
         try:
             with open(temp_path, 'wb') as f:
                 f.write(buffer.read())
-            buffer.close()
             if fits_utils.get_primary_header(temp_path) is None:
                 os.remove(temp_path)
                 raise ValueError(f"Invalid FITS file: {cal.filename}")
@@ -126,7 +125,7 @@ class DownloadWorker:
                         dbs.CalibrationImage.filepath,
                     ).join(dbs.Instrument).filter(
                         dbs.CalibrationImage.filepath.isnot(None),
-                        dbs.CalibrationImage.filepath.startswith(self.processed_path),
+                        dbs.CalibrationImage.filepath.like(self.processed_path + '%'),
                         dbs.Instrument.site == self.site_id,
                     ).all()
                 to_delete = [c for c in cached_in_db if c.filename not in needed_filenames]

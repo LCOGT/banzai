@@ -2,7 +2,6 @@
 
 import os
 import subprocess
-import time
 from pathlib import Path
 
 import pytest
@@ -103,16 +102,17 @@ class TestSiteE2E:
     @pytest.mark.e2e_site_cache
     def test_04_initial_data_replicated(self, site_deployment):
         """Verify initial 7 calibrations replicated to local DB."""
-        time.sleep(5)
+        def check():
+            with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+                cal_count = session.query(dbs.CalibrationImage).filter(
+                    dbs.CalibrationImage.is_master == True,
+                    dbs.CalibrationImage.is_bad == False
+                ).count()
+            return cal_count if cal_count == 7 else None
 
-        with dbs.get_session(LOCAL_DB_ADDRESS) as session:
-            cal_count = session.query(dbs.CalibrationImage).filter(
-                dbs.CalibrationImage.is_master == True,
-                dbs.CalibrationImage.is_bad == False
-            ).count()
-
-        assert cal_count == 7, (
-            f"Expected 7 calibrations in local DB, found {cal_count}. "
+        result = poll_until(check, timeout=60)
+        assert result == 7, (
+            "Expected 7 calibrations in local DB. "
             "Replication may not have completed."
         )
 

@@ -35,8 +35,10 @@ def setup_subscription(local_db_address, aws_connection_string, site_id,
     try:
         # CREATE SUBSCRIPTION cannot run inside a transaction block
         engine = create_engine(local_db_address)
-        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        with engine.connect() as conn:
+            conn = conn.execution_options(isolation_level="AUTOCOMMIT")
             conn.execute(text(subscription_sql))
+        engine.dispose()
         logger.info(f"Successfully created subscription: {subscription_name}")
     except Exception as e:
         logger.error(f"Failed to create subscription: {e}")
@@ -91,22 +93,20 @@ def check_replication_health(db_address):
         raise
 
 
-def drop_subscription(db_address, subscription_name, drop_slot=True):
-    # If drop_slot=True, this also drops the replication slot on AWS.
+def drop_subscription(db_address, subscription_name):
+    # Also drops the replication slot on AWS.
     # Undropped slots consume WAL space indefinitely.
     logger.info(f"Dropping subscription: {subscription_name}")
-    logger.info(f"  Drop slot: {drop_slot}")
 
-    drop_sql = f"DROP SUBSCRIPTION IF EXISTS {subscription_name}"
-    if drop_slot:
-        drop_sql += " CASCADE"
-    drop_sql += ";"
+    drop_sql = f"DROP SUBSCRIPTION IF EXISTS {subscription_name};"
 
     try:
         # DROP SUBSCRIPTION cannot run inside a transaction block
         engine = create_engine(db_address)
-        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        with engine.connect() as conn:
+            conn = conn.execution_options(isolation_level="AUTOCOMMIT")
             conn.execute(text(drop_sql))
+        engine.dispose()
         logger.info(f"Successfully dropped subscription: {subscription_name}")
     except Exception as e:
         logger.error(f"Failed to drop subscription: {e}")
