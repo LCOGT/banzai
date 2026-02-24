@@ -63,3 +63,4 @@ def run_pipeline_stages(image_paths: list, runtime_context: Context, calibration
 
     for image in images:
         image.write(runtime_context)
+    return images
