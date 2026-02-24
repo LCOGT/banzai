@@ -198,6 +198,40 @@ class TestConcurrentStacks:
 
 
 # ---------------------------------------------------------------------------
+# check_stack_complete
+# ---------------------------------------------------------------------------
+
+@pytest.mark.smart_stacking
+class TestCheckStackComplete:
+
+    @staticmethod
+    def _frame(filepath='/data/f.fits', is_last=False):
+        f = MagicMock()
+        f.filepath = filepath
+        f.is_last = is_last
+        return f
+
+    def test_all_frames_arrived_and_reduced(self):
+        frames = [self._frame() for _ in range(3)]
+        assert check_stack_complete(frames, frmtotal=3) is True
+
+    def test_partial_without_is_last(self):
+        frames = [self._frame() for _ in range(3)]
+        assert check_stack_complete(frames, frmtotal=5) is False
+
+    def test_partial_with_is_last(self):
+        frames = [self._frame() for _ in range(2)] + [self._frame(is_last=True)]
+        assert check_stack_complete(frames, frmtotal=5) is True
+
+    def test_is_last_waits_for_unreduced_frames(self):
+        frames = [self._frame(), self._frame(filepath=None, is_last=True)]
+        assert check_stack_complete(frames, frmtotal=5) is False
+
+    def test_empty_frames(self):
+        assert check_stack_complete([], frmtotal=5) is False
+
+
+# ---------------------------------------------------------------------------
 # Retention / cleanup
 # ---------------------------------------------------------------------------
 

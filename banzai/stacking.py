@@ -26,8 +26,15 @@ def validate_message(body):
 
 
 def check_stack_complete(frames, frmtotal):
-    """Return True if all expected frames are present and reduced."""
-    return len(frames) == frmtotal and all(f.filepath is not None for f in frames)
+    """Return True if the stack is ready to finalize.
+
+    A stack is complete when all received frames have been reduced and either
+    all expected frames are present or the instrument signalled is_last.
+    """
+    all_reduced = all(f.filepath is not None for f in frames)
+    all_arrived = len(frames) == frmtotal
+    has_last = any(f.is_last for f in frames)
+    return all_reduced and (all_arrived or has_last)
 
 
 # ---------------------------------------------------------------------------
