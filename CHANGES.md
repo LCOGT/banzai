@@ -1,3 +1,8 @@
+1.30.0 (2026-03-05)
+-------------------
+- Migrated to use astropy.time to parse date times which should be more robust against format
+  differeces
+
 1.29.0 (2026-02-20)
 -------------------
 - Added a check to see if the public date is included in the shipper so we don't override it
