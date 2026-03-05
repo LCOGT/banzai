@@ -9,6 +9,7 @@ import datetime
 import argparse
 import numpy as np
 from dateutil.parser import parse
+from astropy.time import Time
 
 
 TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S'
@@ -84,18 +85,7 @@ def parse_epoch_string(epoch_string):
 def parse_date_obs(date_obs_string):
     if date_obs_string == 'N/A':
         return None
-    # Check if there are hours
-    if 'T' not in date_obs_string:
-        return datetime.datetime.strptime(date_obs_string, '%Y-%m-%d')
-    # Check if there is fractional seconds in the time
-    date_fractional_seconds_list = date_obs_string.split('.')
-    if len(date_fractional_seconds_list) > 1:
-        # Pad the string with zeros to include microseconds
-        date_obs_string += (6 - len(date_fractional_seconds_list[-1])) * '0'
-    else:
-        # Pad the string with zeros to include microseconds
-        date_obs_string += '.000000'
-    return datetime.datetime.strptime(date_obs_string, '%Y-%m-%dT%H:%M:%S.%f')
+    return Time(date_obs_string).datetime
 
 
 def date_obs_to_string(date_obs):
