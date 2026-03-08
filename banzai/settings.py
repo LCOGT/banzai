@@ -163,3 +163,7 @@ LARGE_WORKER_THRESHOLD = 5000 * 5000
 LARGE_WORKER_QUEUE = os.getenv('CELERY_LARGE_TASK_QUEUE_NAME', 'celery_large')
 
 REFERENCE_CATALOG_URL = os.getenv('REFERENCE_CATALOG_URL', 'http://phot-catalog.lco.gtn/')
+
+SUBFRAME_TASK_QUEUE_NAME = os.getenv('SUBFRAME_TASK_QUEUE_NAME', 'subframe_tasks')
+STACK_QUEUE_NAME = os.getenv('STACK_QUEUE_NAME', 'banzai_stack_queue')
+REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
