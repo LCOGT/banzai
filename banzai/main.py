@@ -22,7 +22,8 @@ from banzai.lco import LCOFrameFactory
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
-from banzai.scheduling import process_image, app, schedule_calibration_stacking
+from banzai.scheduling import process_image, process_subframe, app, schedule_calibration_stacking
+from banzai.stacking import validate_message
 from banzai.data import DataProduct
 from celery.schedules import crontab
 import celery
@@ -226,6 +227,56 @@ def start_listener(runtime_context):
             listener.ensure_connection(max_retries=10)
         except KeyboardInterrupt:
             logger.info('Shutting down pipeline listener.')
+
+
+class SubframeListener(ConsumerMixin):
+    def __init__(self, runtime_context):
+        self.runtime_context = runtime_context
+
+    def on_connection_error(self, exc, interval):
+        logger.error('{0}. Retrying connection in {1} seconds...'.format(exc, interval))
+        self.connection = self.connection.clone()
+        self.connection.ensure_connection(max_retries=10)
+
+    def get_consumers(self, Consumer, channel):
+        """Bind to banzai_stack_queue."""
+        queue = Queue(self.runtime_context.STACK_QUEUE_NAME)
+        consumer = Consumer(queues=[queue], callbacks=[self.on_message])
+        consumer.qos(prefetch_count=1)
+        return [consumer]
+
+    def on_message(self, body, message):
+        """Validate and dispatch to Celery for processing."""
+        if not validate_message(body):
+            logger.error('Invalid message received, missing required fields')
+            message.ack()
+            return
+
+        process_subframe.apply_async(
+            args=(body, vars(self.runtime_context)),
+            queue=self.runtime_context.SUBFRAME_TASK_QUEUE_NAME,
+        )
+        message.ack()
+
+
+def run_subframe_worker():
+    """Entry point for the subframe listener."""
+    runtime_context = parse_args(settings)
+
+    logging.getLogger('amqp').setLevel(logging.WARNING)
+    logger.info('Starting subframe listener')
+
+    listener = SubframeListener(runtime_context)
+
+    with Connection(runtime_context.broker_url) as connection:
+        listener.connection = connection.clone()
+        try:
+            listener.run()
+        except listener.connection.connection_errors:
+            listener.connection = connection.clone()
+            listener.ensure_connection(max_retries=10)
+        except KeyboardInterrupt:
+            logger.info('Shutting down subframe listener.')
 
 
 def mark_frame(mark_as):

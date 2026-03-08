@@ -159,3 +159,67 @@ services:
       - DOWNLOAD_WORKER_POLL_INTERVAL=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}
     command: ["banzai_download_worker"]
     restart: unless-stopped
+
+  banzai-subframe-listener:
+    build: .
+    container_name: banzai-subframe-listener
+    depends_on:
+      banzai-cache-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_started
+    environment:
+      - DB_ADDRESS=${DB_ADDRESS}
+      - SUBFRAME_TASK_QUEUE_NAME=${SUBFRAME_TASK_QUEUE_NAME:-subframe_tasks}
+      - TASK_HOST=${TASK_HOST}
+    command: ["banzai_subframe_worker", "--broker-url=${FITS_BROKER_URL}",
+              "--db-address=${DB_ADDRESS}", "--rlevel=9"]
+    restart: unless-stopped
+
+  banzai-subframe-worker:
+    build: .
+    container_name: banzai-subframe-worker
+    depends_on:
+      banzai-cache-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    volumes:
+      - ${HOST_DATA_DIR}:/data
+      - ${HOST_PROCESSED_DIR}:/output
+    environment:
+      - DB_ADDRESS=${DB_ADDRESS}
+      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
+      - TASK_HOST=${TASK_HOST}
+      - SUBFRAME_TASK_QUEUE_NAME=${SUBFRAME_TASK_QUEUE_NAME:-subframe_tasks}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
+      - OMP_NUM_THREADS=${OMP_NUM_THREADS}
+      - API_ROOT=${API_ROOT}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - DATA_ROOT=/output
+    command: ["celery", "-A", "banzai.scheduling", "worker",
+              "--hostname", "banzai-subframe-worker-local",
+              "-l", "${BANZAI_WORKER_LOGLEVEL}",
+              "-c", "4",
+              "-Q", "${SUBFRAME_TASK_QUEUE_NAME:-subframe_tasks}"]
+    restart: unless-stopped
+
+  banzai-stacking-supervisor:
+    build: .
+    container_name: banzai-stacking-supervisor
+    depends_on:
+      banzai-cache-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    environment:
+      - SITE_ID=${SITE_ID}
+      - DB_ADDRESS=${DB_ADDRESS}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - STACK_TIMEOUT_MINUTES=${STACK_TIMEOUT_MINUTES:-20}
+      - STACK_RETENTION_DAYS=${STACK_RETENTION_DAYS:-30}
+    command: ["banzai_stacking_supervisor"]
+    restart: unless-stopped
