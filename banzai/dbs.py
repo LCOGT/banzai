@@ -12,6 +12,7 @@ import datetime
 from dateutil.parser import parse
 import requests
 from sqlalchemy import create_engine, pool, func, make_url
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float, Text
 from sqlalchemy.ext.declarative import declarative_base
@@ -114,6 +115,25 @@ class ProcessedImage(Base):
     checksum = Column(CHAR(32), index=True, default='0'*32)
     success = Column(Boolean, default=False)
     tries = Column(Integer, default=0)
+
+
+
+class StackFrame(Base):
+    __tablename__ = 'stack_frames'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    moluid = Column(String(100), nullable=False, index=True)
+    stack_num = Column(Integer, nullable=False)
+    frmtotal = Column(Integer, nullable=False)
+    camera = Column(String(50), nullable=False, index=True)
+    filepath = Column(String(255), nullable=True)
+    is_last = Column(Boolean, default=False)
+    status = Column(String(20), default='active', nullable=False)
+    dateobs = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    __table_args__ = (
+        UniqueConstraint('moluid', 'stack_num', name='uq_stack_moluid_num'),
+    )
 
 
 def parse_configdb(configdb_address):
@@ -580,3 +600,56 @@ def replicate_instrument(instrument_record, db_address):
 
         add_or_update_record(db_session, Instrument, equivalence_criteria, record_attributes)
         db_session.commit()
+
+
+def insert_stack_frame(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs):
+    """Insert a stack frame record into the database. Duplicate (moluid, stack_num) is a no-op."""
+    try:
+        with get_session(db_address) as session:
+            session.add(StackFrame(
+                moluid=moluid,
+                stack_num=stack_num,
+                frmtotal=frmtotal,
+                camera=camera,
+                filepath=filepath,
+                is_last=is_last,
+                dateobs=dateobs,
+            ))
+    except IntegrityError:
+        pass
+
+
+def get_stack_frames(db_address, moluid):
+    """Get all stack frame records for a given moluid."""
+    with get_session(db_address) as session:
+        return session.query(StackFrame).filter(
+            StackFrame.moluid == moluid
+        ).all()
+
+
+def mark_stack_complete(db_address, moluid, status='complete'):
+    """Mark all frames for a moluid as complete (or timeout)."""
+    now = datetime.datetime.utcnow()
+    with get_session(db_address) as session:
+        session.query(StackFrame).filter(
+            StackFrame.moluid == moluid
+        ).update({'status': status, 'completed_at': now})
+
+
+def update_stack_frame_filepath(db_address, moluid, stack_num, filepath):
+    """Set the reduced filepath on an existing stack frame record."""
+    with get_session(db_address) as session:
+        session.query(StackFrame).filter(
+            StackFrame.moluid == moluid,
+            StackFrame.stack_num == stack_num,
+        ).update({'filepath': filepath})
+
+
+def cleanup_old_records(db_address, retention_days):
+    """Delete completed stack frame records older than retention_days."""
+    cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=retention_days)
+    with get_session(db_address) as session:
+        session.query(StackFrame).filter(
+            StackFrame.status != 'active',
+            StackFrame.completed_at < cutoff,
+        ).delete()
