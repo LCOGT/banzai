@@ -115,6 +115,7 @@ banzai_create_local_db = "banzai.main:create_local_db"
 banzai_download_worker = "banzai.cache.download_worker:run_download_worker_daemon"
 banzai_cache_init = "banzai.cache.init:run_initialization"
 banzai_stacking_supervisor = "banzai.stacking:run_supervisor"
+banzai_subframe_worker = "banzai.main:run_subframe_worker"
 
 [tool.coverage.run]
 source = ["banzai"]

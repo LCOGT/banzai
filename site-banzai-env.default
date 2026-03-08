@@ -26,3 +26,10 @@ AWS_DB_ADDRESS=                         # postgresql+psycopg://user:pass@aws-hos
 # API
 API_ROOT=https://archive-api.lco.global/
 OPENTSDB_PYTHON_METRICS_TEST_MODE=1
+
+# Smart Stacking Configuration
+REDIS_URL=redis://redis:6379/0
+STACK_QUEUE_NAME=banzai_stack_queue          # RabbitMQ queue for incoming subframe messages
+SUBFRAME_TASK_QUEUE_NAME=subframe_tasks      # Celery queue for subframe reduction tasks
+STACK_TIMEOUT_MINUTES=20                     # Max wait for missing frames before finalizing
+STACK_RETENTION_DAYS=30                      # Days to keep completed stack records
