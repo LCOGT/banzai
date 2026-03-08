@@ -3,6 +3,7 @@ import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+from astropy.io.fits import Header
 
 from sqlalchemy import text
 
@@ -12,6 +13,7 @@ from banzai.stacking import (validate_message, check_stack_complete,
                               push_notification, drain_notifications, REDIS_KEY_PREFIX,
                               process_notifications, finalize_stack, check_timeout,
                               discover_cameras, StackingSupervisor)
+from banzai.main import SubframeListener
 
 pytestmark = pytest.mark.smart_stacking
 
@@ -268,6 +270,115 @@ class TestRetention:
         cleanup_old_records(db_address, retention_days=7)
         frames = get_stack_frames(db_address, 'mol-recent')
         assert len(frames) == 3
+
+
+# ---------------------------------------------------------------------------
+# SubframeListener on_message
+# ---------------------------------------------------------------------------
+
+@pytest.mark.smart_stacking
+class TestSubframeListenerOnMessage:
+    """on_message dispatches to Celery; no FITS I/O or DB work here."""
+
+    @patch('banzai.main.process_subframe')
+    def test_on_message_dispatches_valid(self, mock_task):
+        ctx = MagicMock(SUBFRAME_TASK_QUEUE_NAME='subframe_tasks')
+        listener = SubframeListener(ctx)
+
+        body = {
+            'fits_file': '/path/to/frame.fits',
+            'last_frame': 'False',
+            'instrument_enqueue_timestamp': '1771023918500',
+        }
+        mock_message = MagicMock()
+
+        listener.on_message(body, mock_message)
+
+        mock_task.apply_async.assert_called_once_with(
+            args=(body, vars(ctx)),
+            queue='subframe_tasks',
+        )
+        mock_message.ack.assert_called_once()
+
+    @patch('banzai.main.process_subframe')
+    def test_on_message_invalid_no_dispatch(self, mock_task):
+        listener = SubframeListener(MagicMock())
+
+        body = {
+            'last_frame': 'True',
+            # missing fits_file and instrument_enqueue_timestamp
+        }
+        mock_message = MagicMock()
+
+        listener.on_message(body, mock_message)
+
+        mock_task.apply_async.assert_not_called()
+        mock_message.ack.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# process_subframe Celery task
+# ---------------------------------------------------------------------------
+
+@pytest.mark.smart_stacking
+class TestProcessSubframe:
+    """Test the Celery task that does the actual subframe processing."""
+
+    @staticmethod
+    def _make_fits_header(**overrides):
+        """Build a FITS header with the standard stack keys."""
+        h = Header()
+        h['INSTRUME'] = 'cam1'
+        h['DATE-OBS'] = '2024-01-01T00:00:00'
+        h['STACK'] = 'T'
+        h['MOLFRNUM'] = 1
+        h['FRMTOTAL'] = 5
+        h['MOLUID'] = 'mol-xyz'
+        for k, v in overrides.items():
+            h[k] = v
+        return h
+
+    @staticmethod
+    def _make_mock_image(output_dir='/data/processed', output_filename='frame-e09.fits'):
+        """Build a mock image returned by run_pipeline_stages."""
+        img = MagicMock()
+        img.get_output_directory.return_value = output_dir
+        img.get_output_filename.return_value = output_filename
+        return img
+
+    @pytest.mark.parametrize('last_frame_str, expected_is_last', [
+        ('False', False),
+        ('True', True),
+    ])
+    @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
+    def test_process_subframe(self, mock_run_stages, last_frame_str, expected_is_last, db_address, mock_redis):
+        from banzai.scheduling import process_subframe
+
+        mock_image = self._make_mock_image()
+        mock_run_stages.return_value = [mock_image]
+
+        header = self._make_fits_header()
+        body = {
+            'fits_file': '/path/to/frame.fits',
+            'last_frame': last_frame_str,
+            'instrument_enqueue_timestamp': '1771023918500',
+        }
+        runtime_context = {'db_address': db_address, 'REDIS_URL': 'redis://localhost:6379/0'}
+
+        with patch('banzai.scheduling.fits_utils.get_primary_header', return_value=header), \
+             patch('banzai.scheduling.redis.Redis.from_url', return_value=mock_redis):
+            process_subframe(body, runtime_context)
+
+        mock_run_stages.assert_called_once()
+
+        frames = get_stack_frames(db_address, 'mol-xyz')
+        assert len(frames) == 1
+        assert frames[0].stack_num == 1
+        assert frames[0].frmtotal == 5
+        assert frames[0].camera == 'cam1'
+        assert frames[0].is_last is expected_is_last
+        assert frames[0].filepath == '/data/processed/frame-e09.fits'
+        mock_redis.lpush.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
