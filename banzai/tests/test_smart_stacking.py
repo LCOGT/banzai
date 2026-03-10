@@ -287,8 +287,8 @@ class TestSubframeListenerOnMessage:
 
         body = {
             'fits_file': '/path/to/frame.fits',
-            'last_frame': 'False',
-            'instrument_enqueue_timestamp': '1771023918500',
+            'last_frame': False,
+            'instrument_enqueue_timestamp': 1771023918500,
         }
         mock_message = MagicMock()
 
@@ -305,7 +305,7 @@ class TestSubframeListenerOnMessage:
         listener = SubframeListener(MagicMock())
 
         body = {
-            'last_frame': 'True',
+            'last_frame': True,
             # missing fits_file and instrument_enqueue_timestamp
         }
         mock_message = MagicMock()
@@ -346,12 +346,12 @@ class TestProcessSubframe:
         img.get_output_filename.return_value = output_filename
         return img
 
-    @pytest.mark.parametrize('last_frame_str, expected_is_last', [
-        ('False', False),
-        ('True', True),
+    @pytest.mark.parametrize('last_frame_val, expected_is_last', [
+        (False, False),
+        (True, True),
     ])
     @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
-    def test_process_subframe(self, mock_run_stages, last_frame_str, expected_is_last, db_address, mock_redis):
+    def test_process_subframe(self, mock_run_stages, last_frame_val, expected_is_last, db_address, mock_redis):
         from banzai.scheduling import process_subframe
 
         mock_image = self._make_mock_image()
@@ -360,8 +360,8 @@ class TestProcessSubframe:
         header = self._make_fits_header()
         body = {
             'fits_file': '/path/to/frame.fits',
-            'last_frame': last_frame_str,
-            'instrument_enqueue_timestamp': '1771023918500',
+            'last_frame': last_frame_val,
+            'instrument_enqueue_timestamp': 1771023918500,
         }
         runtime_context = {'db_address': db_address, 'REDIS_URL': 'redis://localhost:6379/0'}
 
