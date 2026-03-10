@@ -308,8 +308,8 @@ class TestSiteE2E:
 
         body = {
             'fits_file': '/raw/subframe_test.fits.fz',
-            'last_frame': 'True',
-            'instrument_enqueue_timestamp': str(int(time.time() * 1000)),
+            'last_frame': True,
+            'instrument_enqueue_timestamp': int(time.time() * 1000),
         }
         publish_to_queue('banzai_stack_queue', body)
 
