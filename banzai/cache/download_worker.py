@@ -4,6 +4,7 @@ import os
 import sys
 import time
 
+from astropy.io import fits
 from sqlalchemy import cast, func, String
 
 from banzai import dbs, logs, settings
@@ -57,7 +58,7 @@ class DownloadWorker:
         return os.path.join(self.processed_path, cal.site, cal.camera, epoch, 'processed')
 
     def download_calibration(self, cal):
-        """Download file, validate FITS, write atomically, update DB filepath."""
+        """Download file, validate FITS, write to disk, update DB filepath."""
         dest_dir = self.get_cache_path(cal)
         local_path = os.path.join(dest_dir, cal.filename)
 
@@ -76,20 +77,14 @@ class DownloadWorker:
             self.runtime_context, is_raw_frame=False
         )
 
-        temp_path = local_path + '.tmp'
         try:
-            with open(temp_path, 'wb') as f:
-                f.write(buffer.read())
-            if fits_utils.get_primary_header(temp_path) is None:
-                os.remove(temp_path)
-                raise ValueError(f"Invalid FITS file: {cal.filename}")
-            os.rename(temp_path, local_path)
-            self._update_filepath(cal.id, dest_dir)
-            logger.info(f"Downloaded {cal.filename}")
-        except Exception:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-            raise
+            hdulist = fits.open(buffer)
+            hdulist.writeto(local_path)
+            hdulist.close()
+        finally:
+            buffer.close()
+        self._update_filepath(cal.id, dest_dir)
+        logger.info(f"Downloaded {cal.filename}")
 
     def delete_calibration(self, cal):
         """Remove file from disk and clear filepath in DB."""

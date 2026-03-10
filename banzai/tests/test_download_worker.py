@@ -3,13 +3,23 @@ import os
 from datetime import datetime
 from unittest import mock
 
+import numpy as np
 import pytest
+from astropy.io import fits
 
 from banzai import dbs
 from banzai.cache.download_worker import DownloadWorker, run_download_worker_daemon
 from banzai.tests.utils import FakeContext
 
 pytestmark = pytest.mark.download_worker
+
+
+def _make_fits_buffer():
+    buf = io.BytesIO()
+    hdu = fits.PrimaryHDU(np.zeros((2, 2), dtype=np.float32))
+    hdu.writeto(buf)
+    buf.seek(0)
+    return buf
 
 
 def _make_cal(filename='bias.fits', frameid=123, **overrides):
@@ -80,26 +90,11 @@ def test_skips_null_frameid(worker):
     dl.assert_not_called()
 
 
-def test_cleans_temp_on_validation_failure(worker, tmp_path):
+def test_raises_on_invalid_fits(worker):
     cal = _make_cal(filename='bad.fits')
-    with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=io.BytesIO(b'bad')), \
-         mock.patch('banzai.utils.fits_utils.get_primary_header', return_value=None):
-        with pytest.raises(ValueError, match="Invalid FITS"):
-            worker.download_calibration(cal)
-    dest_dir = worker.get_cache_path(cal)
-    assert not os.path.exists(os.path.join(dest_dir, 'bad.fits.tmp'))
-    assert not os.path.exists(os.path.join(dest_dir, 'bad.fits'))
-
-
-def test_cleans_temp_on_exception(worker, tmp_path):
-    cal = _make_cal(filename='fail.fits')
-    with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=io.BytesIO(b'\x00' * 100)), \
-         mock.patch('banzai.utils.fits_utils.get_primary_header', return_value=mock.MagicMock()), \
-         mock.patch('os.rename', side_effect=OSError("disk full")):
+    with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=io.BytesIO(b'bad')):
         with pytest.raises(OSError):
             worker.download_calibration(cal)
-    dest_dir = worker.get_cache_path(cal)
-    assert not os.path.exists(os.path.join(dest_dir, 'fail.fits.tmp'))
 
 
 # --- delete_calibration tests ---
@@ -200,8 +195,7 @@ def test_download_happy_path_with_real_db(db_address, tmp_path):
 
     worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
     cal = _make_cal(id=cal_id)
-    with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=io.BytesIO(b'\x00' * 2880)) as dl, \
-         mock.patch('banzai.utils.fits_utils.get_primary_header', return_value=mock.MagicMock()):
+    with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=_make_fits_buffer()) as dl:
         worker.download_calibration(cal)
 
     dl.assert_called_once()
