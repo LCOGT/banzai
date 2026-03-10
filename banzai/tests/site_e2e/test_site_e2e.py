@@ -1,7 +1,10 @@
 """End-to-end tests for site deployment caching system."""
 
+import datetime
 import os
+import shutil
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -15,6 +18,7 @@ from banzai.tests.site_e2e.conftest import (
     PUBLICATION_DB_ADDRESS, LOCAL_DB_ADDRESS, CACHE_DIR, DATA_DIR,
     ARCHIVE_API_URL, REPO_ROOT,
     wait_for_subscription_active, poll_until, run_site_compose,
+    publish_to_queue,
 )
 
 
@@ -283,3 +287,83 @@ class TestSiteE2E:
         calibrations should not persist in the cache.
         """
         _assert_cache_matches(PHASE1_EXPECTED_FILES, timeout=120)
+
+    @pytest.mark.e2e_site_reduction
+    def test_12_subframe_stack_completes(self, site_deployment):
+        """Verify subframe stacking processes a frame end-to-end."""
+        from astropy.io import fits
+
+        raw_dir = DATA_DIR / 'raw'
+        src_path = raw_dir / RAW_FRAME_FILENAME
+        subframe_path = raw_dir / 'subframe_test.fits.fz'
+
+        assert src_path.exists(), f"Raw frame not found: {src_path}"
+        shutil.copy2(str(src_path), str(subframe_path))
+
+        with fits.open(str(subframe_path), mode='update') as hdul:
+            hdul['SCI'].header['MOLUID'] = 'mol-e2e-test'
+            hdul['SCI'].header['MOLFRNUM'] = 1
+            hdul['SCI'].header['FRMTOTAL'] = 1
+            hdul['SCI'].header['STACK'] = 'T'
+
+        body = {
+            'fits_file': '/raw/subframe_test.fits.fz',
+            'last_frame': 'True',
+            'instrument_enqueue_timestamp': str(int(time.time() * 1000)),
+        }
+        publish_to_queue('banzai_stack_queue', body)
+
+        def check():
+            with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+                frames = session.query(dbs.StackFrame).filter(
+                    dbs.StackFrame.moluid == 'mol-e2e-test'
+                ).all()
+                if frames and all(f.status == 'complete' for f in frames):
+                    return [f.filepath for f in frames]
+                return None
+
+        filepaths = poll_until(check, timeout=300)
+        assert filepaths, "Subframe stack did not complete within timeout"
+
+        # Verify the reduced output file exists on disk.
+        # The container path (e.g. /reduced/lsc/sq34/.../file.fits.fz) maps to DATA_DIR/output/...
+        container_path = filepaths[0]
+        assert container_path, "StackFrame has no filepath after completion"
+        relative_path = container_path.removeprefix('/reduced/')
+        expected_path = DATA_DIR / 'output' / relative_path
+
+        found = poll_until(
+            lambda p=expected_path: p.exists() and p.stat().st_size > 0,
+            timeout=60, interval=5
+        )
+        assert found, f"Reduced subframe output not found: {expected_path}"
+
+    @pytest.mark.e2e_site_cache
+    def test_13_stack_timeout(self, site_deployment):
+        """Verify stacking supervisor times out incomplete stacks."""
+        stale_dateobs = datetime.datetime.utcnow() - datetime.timedelta(minutes=25)
+
+        for stack_num in [1, 2]:
+            dbs.insert_stack_frame(
+                LOCAL_DB_ADDRESS,
+                moluid='mol-e2e-timeout',
+                stack_num=stack_num,
+                frmtotal=3,
+                camera='sq34',
+                filepath='/tmp/fake.fits',
+                is_last=False,
+                dateobs=stale_dateobs,
+            )
+
+        def check():
+            with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+                frames = session.query(dbs.StackFrame).filter(
+                    dbs.StackFrame.moluid == 'mol-e2e-timeout'
+                ).all()
+                if frames and all(f.status == 'timeout' for f in frames):
+                    return frames
+                return None
+
+        result = poll_until(check, timeout=60)
+        assert result, "Stacking supervisor did not timeout the stale stack"
+        assert len(result) == 2, f"Expected 2 timed-out frames, found {len(result)}"

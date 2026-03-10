@@ -65,6 +65,16 @@ def poll_until(predicate, timeout, interval=5):
     return result
 
 
+def publish_to_queue(queue_name, body, broker_url='amqp://localhost:5672'):
+    """Publish a JSON message to a RabbitMQ queue."""
+    from kombu import Connection, Queue
+    with Connection(broker_url) as conn:
+        queue = Queue(queue_name, channel=conn.channel())
+        queue.declare()
+        with conn.Producer() as producer:
+            producer.publish(body, routing_key=queue_name, serializer='json')
+
+
 def run_docker_compose(compose_file, *args, cwd=None, env=None):
     """Run a docker compose command and return the CompletedProcess result."""
     cmd = ["docker", "compose", "-f", str(compose_file)] + list(args)
