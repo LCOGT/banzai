@@ -274,7 +274,7 @@ def process_subframe(self, body: dict, runtime_context: dict):
             frmtotal=header['FRMTOTAL'],
             camera=camera,
             filepath=None,
-            is_last=body.get('last_frame', 'False') == 'True',
+            is_last=body.get('last_frame', False),
             dateobs=dateobs,
         )
 
