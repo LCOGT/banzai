@@ -167,7 +167,6 @@ class FakeInstrument(object):
         self.ny = 4096
 
 
-
 class FakeCalImage:
     def __init__(self):
         self.frameid = 1234

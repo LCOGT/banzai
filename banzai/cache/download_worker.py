@@ -6,7 +6,8 @@ import time
 
 from sqlalchemy import cast, func, String
 
-from banzai import dbs, logs
+from banzai import dbs, logs, settings
+from banzai.context import Context
 from banzai.utils import date_utils, fits_utils
 
 logger = logs.get_logger()
@@ -158,9 +159,6 @@ class DownloadWorker:
 
 def run_download_worker_daemon():
     """Entry point: read env vars, create worker, run."""
-    from banzai import settings
-    from banzai.context import Context
-
     db_address = os.getenv('DB_ADDRESS')
     site_id = os.getenv('SITE_ID')
     instrument_types_str = os.getenv('INSTRUMENT_TYPES', '*')

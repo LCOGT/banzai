@@ -9,8 +9,11 @@ from pathlib import Path
 
 import pytest
 
-from banzai.tests.site_e2e.utils import populate_publication
 from banzai.cache import replication
+from banzai.logs import get_logger
+from banzai.tests.site_e2e.utils import populate_publication
+
+logger = get_logger()
 
 
 SITE_E2E_DIR = Path(__file__).parent.resolve()
@@ -167,26 +170,26 @@ def publication_db():
     """Start and initialize the publication database."""
     compose_file = SITE_E2E_DIR / "publication_db" / "docker-compose.yml"
 
-    print("\n[Publication DB] Cleaning up any previous state...")
+    logger.info("\n[Publication DB] Cleaning up any previous state...")
     run_docker_compose(compose_file, "down", "-v", "--remove-orphans")
 
-    print("[Publication DB] Starting...")
+    logger.info("[Publication DB] Starting...")
     result = run_docker_compose(compose_file, "up", "-d")
     if result.returncode != 0:
         pytest.fail(f"Failed to start publication DB: {result.stderr}")
 
-    print("[Publication DB] Waiting for healthy...")
+    logger.info("[Publication DB] Waiting for healthy...")
     if not wait_for_healthy(compose_file, "postgres", timeout=60):
         logs = run_docker_compose(compose_file, "logs")
         pytest.fail(f"Publication DB did not become healthy. Logs:\n{logs.stdout}\n{logs.stderr}")
 
-    print("[Publication DB] Inserting initial data...")
+    logger.info("[Publication DB] Inserting initial data...")
     try:
         populate_publication.insert_initial_data(PUBLICATION_DB_ADDRESS)
     except Exception as e:
         pytest.fail(f"Failed to populate publication DB: {e}")
 
-    print("[Publication DB] Ready")
+    logger.info("[Publication DB] Ready")
     yield PUBLICATION_DB_ADDRESS
 
 
@@ -198,7 +201,7 @@ def site_deployment(publication_db):
     if not SITE_ENV_FILE.exists():
         pytest.fail("site_e2e.env not found. Copy site_e2e.env.template and fill in required values.")
 
-    print("\n[Site Deployment] Cleaning up any previous state...")
+    logger.info("\n[Site Deployment] Cleaning up any previous state...")
     run_site_compose("down", "-v", "--remove-orphans")
 
     for subdir in ["calibrations", "output", "postgres"]:
@@ -207,12 +210,12 @@ def site_deployment(publication_db):
             shutil.rmtree(d, ignore_errors=True)
         d.mkdir(parents=True, exist_ok=True)
 
-    print("[Site Deployment] Starting...")
+    logger.info("[Site Deployment] Starting...")
     result = run_site_compose("up", "-d", "--build")
     if result.returncode != 0:
         pytest.fail(f"Failed to start site deployment: {result.stderr}")
 
-    print("[Site Deployment] Waiting for cache-init to complete...")
+    logger.info("[Site Deployment] Waiting for cache-init to complete...")
     if not wait_for_service_exit(
         SITE_COMPOSE_FILE, "banzai-cache-init", expected_code=0, timeout=180,
         cwd=REPO_ROOT, env={"ENV_FILE": str(SITE_ENV_FILE)}
@@ -220,7 +223,7 @@ def site_deployment(publication_db):
         logs = run_site_compose("logs", "banzai-cache-init")
         pytest.fail(f"Cache init did not complete. Logs:\n{logs.stdout}\n{logs.stderr}")
 
-    print("[Site Deployment] Waiting for services to be healthy...")
+    logger.info("[Site Deployment] Waiting for services to be healthy...")
     if not wait_for_healthy(
         SITE_COMPOSE_FILE, timeout=120,
         cwd=REPO_ROOT, env={"ENV_FILE": str(SITE_ENV_FILE)}
@@ -228,7 +231,7 @@ def site_deployment(publication_db):
         logs = run_site_compose("logs")
         pytest.fail(f"Site services not healthy. Logs:\n{logs.stdout}\n{logs.stderr}")
 
-    print("[Site Deployment] Ready")
+    logger.info("[Site Deployment] Ready")
     yield
 
 
@@ -237,25 +240,25 @@ def cleanup(request):
     """Cleanup fixture that runs after all tests complete."""
     yield
 
-    print("\n[Cleanup] Starting cleanup...")
+    logger.info("\n[Cleanup] Starting cleanup...")
     pub_compose = SITE_E2E_DIR / "publication_db" / "docker-compose.yml"
     site_id = os.environ.get("SITE_ID", "lsc")
 
-    print("[Cleanup] Dropping subscription...")
+    logger.info("[Cleanup] Dropping subscription...")
     try:
         replication.drop_subscription(LOCAL_DB_ADDRESS, f"banzai_{site_id}_sub")
     except Exception as e:
-        print(f"[Cleanup] Warning: Failed to drop subscription: {e}")
+        logger.warning(f"[Cleanup] Failed to drop subscription: {e}")
 
-    print("[Cleanup] Stopping site deployment...")
+    logger.info("[Cleanup] Stopping site deployment...")
     if SITE_COMPOSE_FILE.exists():
         run_site_compose("down", "-v", "--remove-orphans")
 
-    print("[Cleanup] Stopping publication database...")
+    logger.info("[Cleanup] Stopping publication database...")
     if pub_compose.exists():
         run_docker_compose(pub_compose, "down", "-v", "--remove-orphans")
 
-    print("[Cleanup] Removing data directory contents...")
+    logger.info("[Cleanup] Removing data directory contents...")
     if DATA_DIR.exists():
         for item in DATA_DIR.iterdir():
             if item.is_dir():
@@ -264,8 +267,8 @@ def cleanup(request):
                 item.unlink(missing_ok=True)
 
     pub_data_dir = SITE_E2E_DIR / "data"
-    print("[Cleanup] Removing publication DB data directory...")
+    logger.info("[Cleanup] Removing publication DB data directory...")
     if pub_data_dir.exists():
         shutil.rmtree(pub_data_dir, ignore_errors=True)
 
-    print("[Cleanup] Complete")
+    logger.info("[Cleanup] Complete")

@@ -116,7 +116,6 @@ class ProcessedImage(Base):
     tries = Column(Integer, default=0)
 
 
-
 def parse_configdb(configdb_address):
     """
     Parse the contents of the configdb.
