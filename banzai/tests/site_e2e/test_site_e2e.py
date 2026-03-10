@@ -205,8 +205,48 @@ class TestSiteE2E:
         if failures:
             pytest.fail(f"Reduction failed for {len(failures)}/{len(raw_files)} files:\n" + "\n".join(failures))
 
+    @pytest.mark.e2e_site_reduction
+    def test_08_reduction_used_cached_calibrations(self, site_deployment):
+        """Verify reduced frames used calibrations that exist in the local cache and DB."""
+        from astropy.io import fits
+
+        output_dir = DATA_DIR / 'output'
+        reduced_files = list(output_dir.rglob('*-e91.fits.fz'))
+        assert reduced_files, f"No reduced files found under {output_dir}"
+
+        cal_header_keys = {'L1IDBIAS': 'bias', 'L1IDDARK': 'dark', 'L1IDFLAT': 'flat'}
+        cached_files = {p.name for p in CACHE_DIR.rglob('*.fits.fz')}
+        errors = []
+
+        for reduced_path in reduced_files:
+            with fits.open(str(reduced_path)) as hdul:
+                ext = 'SCI' if 'SCI' in hdul else 0
+                header = hdul[ext].header
+
+            for key, cal_type in cal_header_keys.items():
+                val = header.get(key, '')
+                if not val or val == 'N/A':
+                    continue
+                basename = os.path.basename(val)
+
+                if basename not in cached_files:
+                    errors.append(
+                        f"{reduced_path.name}: {cal_type} file '{basename}' not found in cache"
+                    )
+
+                with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+                    cal = session.query(dbs.CalibrationImage).filter(
+                        dbs.CalibrationImage.filename == basename
+                    ).first()
+                if not cal or not cal.filepath:
+                    errors.append(
+                        f"{reduced_path.name}: {cal_type} file '{basename}' missing or NULL filepath in DB"
+                    )
+
+        assert not errors, "Cached calibration verification failed:\n" + "\n".join(errors)
+
     @pytest.mark.e2e_site_cache
-    def test_08_add_older_calibrations(self):
+    def test_09_add_older_calibrations(self):
         """Insert older calibrations to test cache updates."""
         populate_publication.insert_additional_calibrations(PUBLICATION_DB_ADDRESS)
 
@@ -222,7 +262,7 @@ class TestSiteE2E:
         )
 
     @pytest.mark.e2e_site_cache
-    def test_09_older_calibrations_replicated(self):
+    def test_10_older_calibrations_replicated(self):
         """Verify new calibrations replicated (now 13 total in DB)."""
         def check():
             with dbs.get_session(LOCAL_DB_ADDRESS) as session:
@@ -236,7 +276,7 @@ class TestSiteE2E:
             "Expected 13 calibrations in local DB after replication"
 
     @pytest.mark.e2e_site_cache
-    def test_10_cache_updated(self):
+    def test_11_cache_updated(self):
         """Verify cache settled to exactly 7 files after older calibrations added.
 
         The download worker keeps only the top 2 per config, so the 6 older
