@@ -15,21 +15,20 @@ BANZAI_WORKER_LOGLEVEL=debug
 OMP_NUM_THREADS=2
 DOWNLOAD_WORKER_POLL_INTERVAL=10
 
+# Smart stacking
+STACK_TIMEOUT_MINUTES=20
+STACK_RETENTION_DAYS=30
+STACK_QUEUE_NAME=banzai_stack_queue
+
 # Database
 DB_ADDRESS=postgresql+psycopg://banzai@postgresql:5432/banzai_local
 PUBLICATION_NAME=banzai_calibrations
 # CAL_DB_ADDRESS=
 
-# Replication
-AWS_DB_ADDRESS=                         # postgresql+psycopg://user:pass@aws-host.rds.amazonaws.com:5432/calibrations
+# Replication (cache-init handles these)
+# AWS_DB_ADDRESS=                       # postgresql+psycopg://user:pass@aws-host.rds.amazonaws.com:5432/calibrations
+# REPLICATION_SLOT_NAME=                # banzai_${SITE_ID}_slot
 
 # API
 API_ROOT=https://archive-api.lco.global/
 OPENTSDB_PYTHON_METRICS_TEST_MODE=1
-
-# Smart Stacking Configuration
-REDIS_URL=redis://redis:6379/0
-STACK_QUEUE_NAME=banzai_stack_queue          # RabbitMQ queue for incoming subframe messages
-SUBFRAME_TASK_QUEUE_NAME=subframe_tasks      # Celery queue for subframe reduction tasks
-STACK_TIMEOUT_MINUTES=20                     # Max wait for missing frames before finalizing
-STACK_RETENTION_DAYS=30                      # Days to keep completed stack records
