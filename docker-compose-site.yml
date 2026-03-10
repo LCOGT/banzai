@@ -173,7 +173,8 @@ services:
       - SUBFRAME_TASK_QUEUE_NAME=subframe_reduction_task_queue
       - TASK_HOST=redis://redis:6379/0
     command: ["banzai_subframe_worker", "--broker-url=amqp://rabbitmq:5672",
-              "--db-address=${DB_ADDRESS}", "--rlevel=9"]
+              "--db-address=${DB_ADDRESS}", "--rlevel=9",
+              "--processed-path=/reduced"]
     restart: unless-stopped
 
   banzai-subframe-worker:
@@ -187,6 +188,7 @@ services:
       rabbitmq:
         condition: service_started
     volumes:
+      - ${HOST_RAW_DIR}:/raw
       - ${HOST_CALS_DIR}:/calibrations
       - ${HOST_REDUCED_DIR}:/reduced
     environment:
