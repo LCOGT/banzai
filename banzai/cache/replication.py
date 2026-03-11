@@ -15,10 +15,9 @@ def setup_subscription(local_db_address, aws_connection_string, site_id,
     if slot_name is None:
         slot_name = f'banzai_{site_id}_slot'
 
-    logger.info(f"Setting up replication subscription: {subscription_name}")
-    logger.info(f"  Publication: {publication_name}")
-    logger.info(f"  Slot: {slot_name}")
-    logger.info(f"  Site: {site_id}")
+    logger.info("Setting up replication subscription",
+                extra_tags={'subscription': subscription_name, 'publication': publication_name,
+                            'slot': slot_name, 'site': site_id})
 
     subscription_sql = f"""
     CREATE SUBSCRIPTION {subscription_name}
