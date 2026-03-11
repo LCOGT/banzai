@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from astropy.io import fits
 
-from banzai import dbs
+from banzai import dbs, settings
 from banzai.cache.download_worker import DownloadWorker, run_download_worker_daemon
 from banzai.tests.utils import FakeContext
 
@@ -130,16 +130,19 @@ def test_delete_happy_path_with_real_db(db_address, tmp_path):
 
 # --- get_calibrations_to_cache tests ---
 
-def _default_attrs(binning='1x1', filter_name=''):
-    return {'configuration_mode': 'default', 'binning': binning, 'filter': filter_name}
+def _attrs_for_type(cal_type, **overrides):
+    attrs = {k: '' for k in settings.CALIBRATION_SET_CRITERIA.get(cal_type, [])}
+    attrs.update(overrides)
+    return attrs
 
 
 def test_returns_top_2_per_config(db_address, tmp_path):
     inst_id = _seed_db(db_address)
+    bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
     with dbs.get_session(db_address) as session:
-        _add_cal(session, inst_id, 'BIAS', 'old.fits', 1, datetime(2024, 1, 1), _default_attrs())
-        _add_cal(session, inst_id, 'BIAS', 'mid.fits', 2, datetime(2024, 1, 2), _default_attrs())
-        _add_cal(session, inst_id, 'BIAS', 'new.fits', 3, datetime(2024, 1, 3), _default_attrs())
+        _add_cal(session, inst_id, 'BIAS', 'old.fits', 1, datetime(2024, 1, 1), bias_attrs)
+        _add_cal(session, inst_id, 'BIAS', 'mid.fits', 2, datetime(2024, 1, 2), bias_attrs)
+        _add_cal(session, inst_id, 'BIAS', 'new.fits', 3, datetime(2024, 1, 3), bias_attrs)
 
     worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
     filenames = {r.filename for r in worker.get_calibrations_to_cache()}
@@ -151,8 +154,9 @@ def test_partitions_independently_by_config(db_address, tmp_path):
     with dbs.get_session(db_address) as session:
         for i, binning in enumerate(['1x1', '2x2']):
             for j in range(3):
+                attrs = _attrs_for_type('BIAS', configuration_mode='default', binning=binning)
                 _add_cal(session, inst_id, 'BIAS', f'bias_{binning}_{j}.fits',
-                         i * 10 + j, datetime(2024, 1, j + 1), _default_attrs(binning=binning))
+                         i * 10 + j, datetime(2024, 1, j + 1), attrs)
 
     worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
     filenames = {r.filename for r in worker.get_calibrations_to_cache()}
@@ -163,9 +167,10 @@ def test_partitions_independently_by_config(db_address, tmp_path):
 def test_filters_by_instrument_type(db_address, tmp_path):
     sinistro_id = _seed_db(db_address, camera='fa01', inst_type='1m0-SciCam-Sinistro')
     floyds_id = _seed_db(db_address, camera='en01', inst_type='2m0-FLOYDS-SciCam')
+    bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
     with dbs.get_session(db_address) as session:
-        _add_cal(session, sinistro_id, 'BIAS', 'sinistro.fits', 1, datetime(2024, 1, 1), _default_attrs())
-        _add_cal(session, floyds_id, 'BIAS', 'floyds.fits', 2, datetime(2024, 1, 1), _default_attrs())
+        _add_cal(session, sinistro_id, 'BIAS', 'sinistro.fits', 1, datetime(2024, 1, 1), bias_attrs)
+        _add_cal(session, floyds_id, 'BIAS', 'floyds.fits', 2, datetime(2024, 1, 1), bias_attrs)
 
     worker = DownloadWorker(db_address, 'tst', ['1m0-SciCam-Sinistro'], str(tmp_path), FakeContext())
     filenames = {r.filename for r in worker.get_calibrations_to_cache()}
@@ -175,13 +180,60 @@ def test_filters_by_instrument_type(db_address, tmp_path):
 def test_wildcard_returns_all_instrument_types(db_address, tmp_path):
     sinistro_id = _seed_db(db_address, camera='fa01', inst_type='1m0-SciCam-Sinistro')
     floyds_id = _seed_db(db_address, camera='en01', inst_type='2m0-FLOYDS-SciCam')
+    bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
     with dbs.get_session(db_address) as session:
-        _add_cal(session, sinistro_id, 'BIAS', 'sinistro.fits', 1, datetime(2024, 1, 1), _default_attrs())
-        _add_cal(session, floyds_id, 'BIAS', 'floyds.fits', 2, datetime(2024, 1, 1), _default_attrs())
+        _add_cal(session, sinistro_id, 'BIAS', 'sinistro.fits', 1, datetime(2024, 1, 1), bias_attrs)
+        _add_cal(session, floyds_id, 'BIAS', 'floyds.fits', 2, datetime(2024, 1, 1), bias_attrs)
 
     worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
     filenames = {r.filename for r in worker.get_calibrations_to_cache()}
     assert filenames == {'sinistro.fits', 'floyds.fits'}
+
+
+def test_biases_ignore_filter(db_address, tmp_path):
+    """Biases taken with different filters should be grouped together."""
+    inst_id = _seed_db(db_address)
+    bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
+    with dbs.get_session(db_address) as session:
+        _add_cal(session, inst_id, 'BIAS', 'bias_V.fits', 1, datetime(2024, 1, 1), bias_attrs)
+        _add_cal(session, inst_id, 'BIAS', 'bias_B.fits', 2, datetime(2024, 1, 2), bias_attrs)
+        _add_cal(session, inst_id, 'BIAS', 'bias_R.fits', 3, datetime(2024, 1, 3), bias_attrs)
+
+    worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
+    filenames = {r.filename for r in worker.get_calibrations_to_cache()}
+    assert filenames == {'bias_B.fits', 'bias_R.fits'}
+
+
+def test_darks_partitioned_by_temperature(db_address, tmp_path):
+    inst_id = _seed_db(db_address)
+    with dbs.get_session(db_address) as session:
+        for i, temp in enumerate(['5', '10']):
+            for j in range(3):
+                _add_cal(session, inst_id, 'DARK', f'dark_t{temp}_{j}.fits',
+                         i * 10 + j, datetime(2024, 1, j + 1),
+                         _attrs_for_type('DARK', configuration_mode='default', binning='1x1',
+                                         ccd_temperature=temp))
+
+    worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
+    filenames = {r.filename for r in worker.get_calibrations_to_cache()}
+    assert filenames == {'dark_t5_1.fits', 'dark_t5_2.fits',
+                         'dark_t10_1.fits', 'dark_t10_2.fits'}
+
+
+def test_skyflats_partitioned_by_filter(db_address, tmp_path):
+    inst_id = _seed_db(db_address)
+    with dbs.get_session(db_address) as session:
+        for i, filt in enumerate(['V', 'B']):
+            for j in range(3):
+                _add_cal(session, inst_id, 'SKYFLAT', f'flat_{filt}_{j}.fits',
+                         i * 10 + j, datetime(2024, 1, j + 1),
+                         _attrs_for_type('SKYFLAT', configuration_mode='default', binning='1x1',
+                                         filter=filt))
+
+    worker = DownloadWorker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
+    filenames = {r.filename for r in worker.get_calibrations_to_cache()}
+    assert filenames == {'flat_V_1.fits', 'flat_V_2.fits',
+                         'flat_B_1.fits', 'flat_B_2.fits'}
 
 
 # --- download integration test ---
@@ -189,7 +241,8 @@ def test_wildcard_returns_all_instrument_types(db_address, tmp_path):
 def test_download_happy_path_with_real_db(db_address, tmp_path):
     inst_id = _seed_db(db_address)
     with dbs.get_session(db_address) as session:
-        _add_cal(session, inst_id, 'BIAS', 'bias.fits', 123, datetime(2024, 1, 15), _default_attrs())
+        _add_cal(session, inst_id, 'BIAS', 'bias.fits', 123, datetime(2024, 1, 15),
+                 _attrs_for_type('BIAS', configuration_mode='default', binning='1x1'))
     with dbs.get_session(db_address) as session:
         cal_id = session.query(dbs.CalibrationImage).filter_by(filename='bias.fits').first().id
 

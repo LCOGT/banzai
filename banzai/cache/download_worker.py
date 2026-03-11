@@ -24,34 +24,41 @@ class DownloadWorker:
         self.runtime_context = runtime_context
 
     def get_calibrations_to_cache(self):
-        """Return top 2 calibrations per config via SQL window function."""
+        """Return top 2 calibrations per config via SQL window function.
+
+        Runs one query per calibration type so each type partitions by its own
+        criteria from settings.CALIBRATION_SET_CRITERIA.
+        """
+        results = []
         with dbs.get_session(self.db_address) as session:
-            config_mode = cast(dbs.CalibrationImage.attributes['configuration_mode'], String)
-            binning = cast(dbs.CalibrationImage.attributes['binning'], String)
-            filter_col = cast(dbs.CalibrationImage.attributes['filter'], String)
+            for cal_type, criteria in settings.CALIBRATION_SET_CRITERIA.items():
+                partition_cols = [dbs.CalibrationImage.instrument_id]
+                for key in criteria:
+                    partition_cols.append(cast(dbs.CalibrationImage.attributes[key], String))
 
-            rank = func.row_number().over(
-                partition_by=[dbs.CalibrationImage.instrument_id, dbs.CalibrationImage.type,
-                              config_mode, binning, filter_col],
-                order_by=dbs.CalibrationImage.dateobs.desc()
-            ).label('rank')
+                rank = func.row_number().over(
+                    partition_by=partition_cols,
+                    order_by=dbs.CalibrationImage.dateobs.desc()
+                ).label('rank')
 
-            query = session.query(
-                dbs.CalibrationImage.id, dbs.CalibrationImage.filename,
-                dbs.CalibrationImage.frameid, dbs.CalibrationImage.type,
-                dbs.CalibrationImage.dateobs, dbs.CalibrationImage.filepath,
-                dbs.Instrument.site.label('site'), dbs.Instrument.camera.label('camera'),
-                rank,
-            ).join(dbs.Instrument).filter(
-                dbs.CalibrationImage.is_master == True,
-                dbs.CalibrationImage.is_bad == False,
-                dbs.Instrument.site == self.site_id,
-            )
-            if self.instrument_types != ['*']:
-                query = query.filter(dbs.Instrument.type.in_(self.instrument_types))
+                query = session.query(
+                    dbs.CalibrationImage.id, dbs.CalibrationImage.filename,
+                    dbs.CalibrationImage.frameid, dbs.CalibrationImage.type,
+                    dbs.CalibrationImage.dateobs, dbs.CalibrationImage.filepath,
+                    dbs.Instrument.site.label('site'), dbs.Instrument.camera.label('camera'),
+                    rank,
+                ).join(dbs.Instrument).filter(
+                    dbs.CalibrationImage.type == cal_type,
+                    dbs.CalibrationImage.is_master == True,
+                    dbs.CalibrationImage.is_bad == False,
+                    dbs.Instrument.site == self.site_id,
+                )
+                if self.instrument_types != ['*']:
+                    query = query.filter(dbs.Instrument.type.in_(self.instrument_types))
 
-            subq = query.subquery()
-            return session.query(subq).filter(subq.c.rank <= 2).all()
+                subq = query.subquery()
+                results.extend(session.query(subq).filter(subq.c.rank <= 2).all())
+        return results
 
     def get_cache_path(self, cal):
         epoch = date_utils.epoch_date_to_string(cal.dateobs.date())
