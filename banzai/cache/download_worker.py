@@ -9,7 +9,7 @@ from sqlalchemy import cast, func, String
 
 from banzai import dbs, logs, settings
 from banzai.context import Context
-from banzai.utils import date_utils, fits_utils
+from banzai.utils import date_utils, file_utils, fits_utils
 
 logger = logs.get_logger()
 HEARTBEAT_INTERVAL = 300
@@ -55,7 +55,7 @@ class DownloadWorker:
 
     def get_cache_path(self, cal):
         epoch = date_utils.epoch_date_to_string(cal.dateobs.date())
-        return os.path.join(self.processed_path, cal.site, cal.camera, epoch, 'processed')
+        return file_utils.get_processed_path(self.processed_path, cal.site, cal.camera, epoch)
 
     def download_calibration(self, cal):
         """Download file, validate FITS, write to disk, update DB filepath."""
