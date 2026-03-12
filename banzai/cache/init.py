@@ -22,6 +22,8 @@ def create_parser():
                         help='Site identifier (e.g. lsc). Required when --aws-db-address is set.')
     parser.add_argument('--publication-name', dest='publication_name', default='banzai_calibrations',
                         help='AWS publication name (default: banzai_calibrations)')
+    parser.add_argument('--slot-name', dest='slot_name', default=None,
+                        help='Replication slot name (default: banzai_<site-id>_slot)')
     return parser
 
 
@@ -42,7 +44,8 @@ def run_initialization():
             try:
                 replication.setup_subscription(args.db_address, args.aws_db_address,
                                                site_id=args.site_id,
-                                               publication_name=args.publication_name)
+                                               publication_name=args.publication_name,
+                                               slot_name=args.slot_name)
                 logger.info("Replication subscription created successfully")
             except (ProgrammingError, pg_errors.DuplicateObject):
                 logger.info("Replication subscription already exists, skipping")

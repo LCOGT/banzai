@@ -47,7 +47,8 @@ class TestRunInitialization:
         mock_create_db.assert_called_once_with('sqlite:///test.db')
         mock_setup_sub.assert_called_once_with(
             'sqlite:///test.db', 'postgresql://aws/db',
-            site_id='lsc', publication_name='banzai_calibrations'
+            site_id='lsc', publication_name='banzai_calibrations',
+            slot_name=None
         )
 
     @mock.patch('banzai.cache.replication.setup_subscription')
@@ -85,5 +86,19 @@ class TestRunInitialization:
         assert exc_info.value.code == 0
         mock_setup_sub.assert_called_once_with(
             'sqlite:///test.db', 'postgresql://aws/db',
-            site_id='lsc', publication_name='custom_pub'
+            site_id='lsc', publication_name='custom_pub',
+            slot_name=None
+        )
+
+    @mock.patch('banzai.cache.replication.setup_subscription')
+    @mock.patch('banzai.dbs.create_db')
+    @mock.patch('sys.argv', list(AWS_ARGV) + ['--slot-name=custom_slot'])
+    def test_slot_name_passed_through(self, mock_create_db, mock_setup_sub):
+        with pytest.raises(SystemExit) as exc_info:
+            init.run_initialization()
+        assert exc_info.value.code == 0
+        mock_setup_sub.assert_called_once_with(
+            'sqlite:///test.db', 'postgresql://aws/db',
+            site_id='lsc', publication_name='banzai_calibrations',
+            slot_name='custom_slot'
         )

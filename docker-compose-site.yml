@@ -27,7 +27,8 @@ services:
               "--db-address=${DB_ADDRESS}",
               "--aws-db-address=${AWS_DB_ADDRESS:-}",
               "--site-id=${SITE_ID}",
-              "--publication-name=${PUBLICATION_NAME:-banzai_calibrations}"]
+              "--publication-name=${PUBLICATION_NAME:-banzai_calibrations}",
+              "--slot-name=banzai_${SITE_ID}_slot"]
     restart: "no"
 
   redis:
