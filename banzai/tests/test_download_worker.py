@@ -69,7 +69,7 @@ def test_skips_when_file_exists(tmp_path):
     open(os.path.join(dest_dir, 'bias.fits'), 'w').close()
 
     with mock.patch('banzai.utils.fits_utils.download_from_s3') as dl, \
-         mock.patch('banzai.cache.download_worker._update_filepath') as up:
+         mock.patch('banzai.cache.download_worker.update_filepath') as up:
         download_calibration('sqlite:///test.db', processed_path, FakeContext(), cal)
 
     dl.assert_not_called()
@@ -94,7 +94,7 @@ def test_raises_on_invalid_fits(tmp_path):
 
 def test_delete_clears_db_when_file_missing():
     cal = mock.MagicMock(id=1, filename='gone.fits', filepath='/nonexistent')
-    with mock.patch('banzai.cache.download_worker._update_filepath') as up:
+    with mock.patch('banzai.cache.download_worker.update_filepath') as up:
         delete_calibration('sqlite:///test.db', cal)
     up.assert_called_once_with('sqlite:///test.db', 1, None)
 

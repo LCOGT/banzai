@@ -58,7 +58,7 @@ def get_cache_path(processed_path, cal):
     return file_utils.get_processed_path(processed_path, cal.site, cal.camera, epoch)
 
 
-def _update_filepath(db_address, cal_id, filepath):
+def update_filepath(db_address, cal_id, filepath):
     with dbs.get_session(db_address) as session:
         cal = session.query(dbs.CalibrationImage).get(cal_id)
         if cal:
@@ -72,7 +72,7 @@ def download_calibration(db_address, processed_path, runtime_context, cal):
 
     if os.path.exists(local_path):
         logger.info(f"Already on disk: {cal.filename}, updating DB filepath")
-        _update_filepath(db_address, cal.id, dest_dir)
+        update_filepath(db_address, cal.id, dest_dir)
         return
     if cal.frameid is None:
         logger.warning(f"Skipping {cal.filename} - NULL frameid")
@@ -91,7 +91,7 @@ def download_calibration(db_address, processed_path, runtime_context, cal):
         hdulist.close()
     finally:
         buffer.close()
-    _update_filepath(db_address, cal.id, dest_dir)
+    update_filepath(db_address, cal.id, dest_dir)
     logger.info(f"Downloaded {cal.filename}")
 
 
@@ -101,7 +101,7 @@ def delete_calibration(db_address, cal):
     if os.path.exists(file_path):
         os.remove(file_path)
         logger.info(f"Deleted {cal.filename}")
-    _update_filepath(db_address, cal.id, None)
+    update_filepath(db_address, cal.id, None)
 
 
 def get_cached_calibrations(db_address, site_id, processed_path):
