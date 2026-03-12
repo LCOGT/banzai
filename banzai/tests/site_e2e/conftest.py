@@ -204,7 +204,7 @@ def site_deployment(publication_db):
     logger.info("\n[Site Deployment] Cleaning up any previous state...")
     run_site_compose("down", "-v", "--remove-orphans")
 
-    for subdir in ["calibrations", "output", "postgres"]:
+    for subdir in ["raw", "calibrations", "output", "postgres"]:
         d = DATA_DIR / subdir
         if d.exists():
             shutil.rmtree(d, ignore_errors=True)

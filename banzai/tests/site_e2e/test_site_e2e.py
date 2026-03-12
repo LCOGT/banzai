@@ -152,7 +152,7 @@ class TestSiteE2E:
                 str(raw_dir),
                 '--broker-url', 'amqp://localhost:5672',
                 '--exchange', fits_exchange,
-                '--container-path', '/data/raw'
+                '--container-path', '/raw'
             ],
             capture_output=True, text=True, timeout=30, cwd=str(REPO_ROOT)
         )

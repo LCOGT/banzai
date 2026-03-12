@@ -9,7 +9,7 @@ services:
       - POSTGRES_USER=banzai
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
-      - ${HOST_DATA_DIR}/postgres:/var/lib/postgresql/data
+      - ${HOST_POSTGRES_DIR}:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U banzai -d banzai_local"]
       interval: 5s
@@ -23,8 +23,6 @@ services:
     depends_on:
       postgresql:
         condition: service_healthy
-    volumes:
-      - ${HOST_DATA_DIR}:/data
     command: ["banzai_cache_init",
               "--db-address=${DB_ADDRESS}",
               "--aws-db-address=${AWS_DB_ADDRESS:-}",
@@ -45,6 +43,9 @@ services:
       - "15672:15672"
     restart: unless-stopped
 
+  # NOTE: download-worker and pipeline workers must mount HOST_CALS_DIR
+  # at the same container path (/calibrations) so DB filepaths resolve correctly.
+
   banzai-worker:
     build: .
     container_name: banzai-worker
@@ -56,22 +57,23 @@ services:
       rabbitmq:
         condition: service_started
     volumes:
-      - ${HOST_DATA_DIR}:/data
-      - ${HOST_PROCESSED_DIR}:/output
+      - ${HOST_RAW_DIR}:/raw
+      - ${HOST_CALS_DIR}:/calibrations
+      - ${HOST_REDUCED_DIR}:/reduced
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - TASK_HOST=${TASK_HOST}
-      - FITS_BROKER=${FITS_BROKER}
-      - FITS_EXCHANGE=${FITS_EXCHANGE}
-      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME}
+      - TASK_HOST=redis://redis:6379/0
+      - FITS_BROKER=rabbitmq
+      - FITS_EXCHANGE=fits_files
+      - CELERY_TASK_QUEUE_NAME=reduction_task_queue
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - DATA_ROOT=/output
-    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_TASK_QUEUE_NAME}"]
+      - DATA_ROOT=/reduced
+    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "reduction_task_queue"]
     restart: unless-stopped
 
   banzai-large-worker:
@@ -85,22 +87,23 @@ services:
       rabbitmq:
         condition: service_started
     volumes:
-      - ${HOST_DATA_DIR}:/data
-      - ${HOST_PROCESSED_DIR}:/output
+      - ${HOST_RAW_DIR}:/raw
+      - ${HOST_CALS_DIR}:/calibrations
+      - ${HOST_REDUCED_DIR}:/reduced
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - TASK_HOST=${TASK_HOST}
-      - FITS_BROKER=${FITS_BROKER}
-      - FITS_EXCHANGE=${FITS_EXCHANGE}
-      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME}
+      - TASK_HOST=redis://redis:6379/0
+      - FITS_BROKER=rabbitmq
+      - FITS_EXCHANGE=fits_files
+      - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - DATA_ROOT=/output
-    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-large-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_LARGE_TASK_QUEUE_NAME}"]
+      - DATA_ROOT=/reduced
+    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-large-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "large_reduction_task_queue"]
     restart: unless-stopped
 
   banzai-listener:
@@ -116,25 +119,25 @@ services:
       banzai-worker:
         condition: service_started
     volumes:
-      - ${HOST_DATA_DIR}:/data
-      - ${HOST_PROCESSED_DIR}:/output
+      - ${HOST_RAW_DIR}:/raw
+      - ${HOST_CALS_DIR}:/calibrations
+      - ${HOST_REDUCED_DIR}:/reduced
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
-      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME}
-      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME}
-      - TASK_HOST=${TASK_HOST}
-      - FITS_BROKER_URL=${FITS_BROKER_URL}
-      - FITS_EXCHANGE=${FITS_EXCHANGE}
+      - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
+      - CELERY_TASK_QUEUE_NAME=reduction_task_queue
+      - TASK_HOST=redis://redis:6379/0
+      - FITS_EXCHANGE=fits_files
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
     entrypoint: ["banzai_run_realtime_pipeline", "--fpack", "--no-bpm",
-                 "--broker-url=${FITS_BROKER_URL}",
+                 "--broker-url=amqp://rabbitmq:5672",
                  "--db-address=${DB_ADDRESS}",
                  "--calibration-db-address=${CAL_DB_ADDRESS}",
-                 "--processed-path=/output"]
+                 "--processed-path=/reduced"]
     restart: unless-stopped
 
   banzai-download-worker:
@@ -144,12 +147,12 @@ services:
       banzai-cache-init:
         condition: service_completed_successfully
     volumes:
-      - ${HOST_DATA_DIR}:/data
+      - ${HOST_CALS_DIR}:/calibrations
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - SITE_ID=${SITE_ID}
       - INSTRUMENT_TYPES=${INSTRUMENT_TYPES:-*}
-      - PROCESSED_PATH=${PROCESSED_PATH:-/data/processed}
+      - PROCESSED_PATH=/calibrations
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - DOWNLOAD_WORKER_POLL_INTERVAL=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}

@@ -1,40 +1,29 @@
 
-# Database Configuration
-# PostgreSQL database for local processing and calibration cache
-DB_ADDRESS=postgresql://banzai@postgresql:5432/banzai_local
-# CAL_DB_ADDRESS=                       # Optional: separate calibration DB (defaults to DB_ADDRESS)
-SITE_ID=                                # Site identifier (e.g., lsc, ogg, cpt)
+# Site
+SITE_ID=                                # e.g., lsc, ogg, cpt
+AUTH_TOKEN=                             # Archive API token
+INSTRUMENT_TYPES=*                      # Comma-separated instrument types to cache (e.g., 0m4-SciCam-QHY600,1m0-SciCam-Sinistro) or * for all
 
-# PostgreSQL Replication Configuration (for future use)
-# When setting up replication from AWS, configure these:
-# AWS_DB_ADDRESS=                       # postgresql://user:pass@aws-host.rds.amazonaws.com:5432/calibrations
-# REPLICATION_SLOT_NAME=                # banzai_${SITE_ID}_slot (e.g., banzai_lsc_slot)
-PUBLICATION_NAME=banzai_calibrations    # AWS publication name
-INSTRUMENT_TYPES=*                      # Comma-separated instrument types to cache (e.g., qhy,sinistro) or '*' for all
-PROCESSED_PATH=/data/processed          # Path where calibration files are stored
+# Host paths
+HOST_RAW_DIR=./site_banzai/raw               # Raw FITS input
+HOST_CALS_DIR=./site_banzai/calibrations     # Cached calibration files
+HOST_REDUCED_DIR=./site_banzai/reduced       # Pipeline output (reduced frames)
+HOST_POSTGRES_DIR=./site_banzai/postgres     # PostgreSQL database storage
 
-# Download Worker Configuration
-DOWNLOAD_WORKER_POLL_INTERVAL=10        # Seconds between checking for new downloads
-
-# API Configuration
-API_ROOT=https://archive-api.lco.global/
-AUTH_TOKEN=
-
-# Data Paths
-HOST_DATA_DIR=./site_banzai # this maps to /data in the container, and should contain unprocessed data in a subdirectory `raw`
-HOST_PROCESSED_DIR=./site_banzai/output # path where processed data will be saved on the host
-
-# Container Networking
-FITS_BROKER=rabbitmq
-FITS_BROKER_URL=amqp://rabbitmq:5672
-FITS_EXCHANGE=fits_files
-TASK_HOST=redis://redis:6379/0
-
-# Celery Configuration
-CELERY_TASK_QUEUE_NAME=celery
-CELERY_LARGE_TASK_QUEUE_NAME=celery_large
-
-# Worker Configuration
+# Worker
 BANZAI_WORKER_LOGLEVEL=debug
 OMP_NUM_THREADS=2
+DOWNLOAD_WORKER_POLL_INTERVAL=10
+
+# Database
+DB_ADDRESS=postgresql://banzai@postgresql:5432/banzai_local
+PUBLICATION_NAME=banzai_calibrations
+# CAL_DB_ADDRESS=
+
+# Replication (cache-init handles these)
+# AWS_DB_ADDRESS=                       # postgresql://user:pass@aws-host.rds.amazonaws.com:5432/calibrations
+# REPLICATION_SLOT_NAME=                # banzai_${SITE_ID}_slot
+
+# API
+API_ROOT=https://archive-api.lco.global/
 OPENTSDB_PYTHON_METRICS_TEST_MODE=1

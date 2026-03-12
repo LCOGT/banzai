@@ -122,21 +122,6 @@ The use case for LCO's site deployment assumes that calibration files are proces
 allowing the use of a remote database to source super calibrations (via `CAL_DB_ADDRESS`),
 with all other database activity on a local SQLite database (via `DB_ADDRESS`).
 
-Note that database addresses in the environment file are relative to the Docker container. Since `$HOST_DATA_DIR`
-is mapped to the container's `/data`, the `DB_ADDRESS` should be something like `sqlite:////data/<db_name>`.
-
-Create the Local Database
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If using a separate calibration database, copy the site/instrument information to your local database:
-
-.. code-block:: bash
-
-    banzai_create_local_db --site $SITE_ID --local-db-address $DB_ADDRESS --cal-db-address $CAL_DB_ADDRESS
-
-Note that `$DB_ADDRESS` should use a path relative to the host directory. For example, if `$HOST_DATA_DIR` is
-`site_banzai`, the address might be `sqlite:///site_banzai/<db_name>`.
-
 Start the Containers
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -147,13 +132,13 @@ Start the Containers
 Process Images
 ~~~~~~~~~~~~~~
 
-Queue images for processing using the helper script. Raw files must be in `$HOST_DATA_DIR`:
+Queue images for processing using the helper script. Raw files must be in `$HOST_RAW_DIR`:
 
 .. code-block:: bash
 
-    python scripts/queue_images.py <host_data_dir>/raw/
+    python scripts/queue_images.py $HOST_RAW_DIR
 
-Processed output will be saved in `${HOST_PROCESSED_DIR}`.
+Processed output will be saved in `$HOST_REDUCED_DIR`.
 
 Tests
 -----

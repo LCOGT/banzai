@@ -22,8 +22,8 @@ def main():
                         help='RabbitMQ broker URL (default: amqp://localhost:5672)')
     parser.add_argument('--exchange', default='fits_files',
                         help='RabbitMQ exchange name (default: fits_files)')
-    parser.add_argument('--container-path', default='/data/raw',
-                        help='Base path inside container where files are mounted (default: /data/raw)')
+    parser.add_argument('--container-path', default='/raw',
+                        help='Base path inside container where files are mounted (default: /raw)')
     args = parser.parse_args()
 
     # Find FITS files
