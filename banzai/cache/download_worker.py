@@ -15,152 +15,156 @@ logger = logs.get_logger()
 HEARTBEAT_INTERVAL = 300
 
 
-class DownloadWorker:
-    def __init__(self, db_address, site_id, instrument_types, processed_path, runtime_context):
-        self.db_address = db_address
-        self.site_id = site_id
-        self.instrument_types = instrument_types
-        self.processed_path = processed_path
-        self.runtime_context = runtime_context
+def get_calibrations_to_cache(db_address, site_id, instrument_types):
+    """Return top 2 calibrations per config via SQL window function.
 
-    def get_calibrations_to_cache(self):
-        """Return top 2 calibrations per config via SQL window function.
+    Runs one query per calibration type so each type partitions by its own
+    criteria from settings.CALIBRATION_SET_CRITERIA.
+    """
+    results = []
+    with dbs.get_session(db_address) as session:
+        for cal_type, criteria in settings.CALIBRATION_SET_CRITERIA.items():
+            partition_cols = [dbs.CalibrationImage.instrument_id]
+            for key in criteria:
+                partition_cols.append(cast(dbs.CalibrationImage.attributes[key], String))
 
-        Runs one query per calibration type so each type partitions by its own
-        criteria from settings.CALIBRATION_SET_CRITERIA.
-        """
-        results = []
-        with dbs.get_session(self.db_address) as session:
-            for cal_type, criteria in settings.CALIBRATION_SET_CRITERIA.items():
-                partition_cols = [dbs.CalibrationImage.instrument_id]
-                for key in criteria:
-                    partition_cols.append(cast(dbs.CalibrationImage.attributes[key], String))
+            rank = func.row_number().over(
+                partition_by=partition_cols,
+                order_by=dbs.CalibrationImage.dateobs.desc()
+            ).label('rank')
 
-                rank = func.row_number().over(
-                    partition_by=partition_cols,
-                    order_by=dbs.CalibrationImage.dateobs.desc()
-                ).label('rank')
+            query = session.query(
+                dbs.CalibrationImage.id, dbs.CalibrationImage.filename,
+                dbs.CalibrationImage.frameid, dbs.CalibrationImage.type,
+                dbs.CalibrationImage.dateobs, dbs.CalibrationImage.filepath,
+                dbs.Instrument.site.label('site'), dbs.Instrument.camera.label('camera'),
+                rank,
+            ).join(dbs.Instrument).filter(
+                dbs.CalibrationImage.type == cal_type,
+                dbs.CalibrationImage.is_master == True,
+                dbs.CalibrationImage.is_bad == False,
+                dbs.Instrument.site == site_id,
+            )
+            if instrument_types != ['*']:
+                query = query.filter(dbs.Instrument.type.in_(instrument_types))
 
-                query = session.query(
-                    dbs.CalibrationImage.id, dbs.CalibrationImage.filename,
-                    dbs.CalibrationImage.frameid, dbs.CalibrationImage.type,
-                    dbs.CalibrationImage.dateobs, dbs.CalibrationImage.filepath,
-                    dbs.Instrument.site.label('site'), dbs.Instrument.camera.label('camera'),
-                    rank,
-                ).join(dbs.Instrument).filter(
-                    dbs.CalibrationImage.type == cal_type,
-                    dbs.CalibrationImage.is_master == True,
-                    dbs.CalibrationImage.is_bad == False,
-                    dbs.Instrument.site == self.site_id,
-                )
-                if self.instrument_types != ['*']:
-                    query = query.filter(dbs.Instrument.type.in_(self.instrument_types))
+            subq = query.subquery()
+            results.extend(session.query(subq).filter(subq.c.rank <= 2).all())
+    return results
 
-                subq = query.subquery()
-                results.extend(session.query(subq).filter(subq.c.rank <= 2).all())
-        return results
 
-    def get_cache_path(self, cal):
-        epoch = date_utils.epoch_date_to_string(cal.dateobs.date())
-        return file_utils.get_processed_path(self.processed_path, cal.site, cal.camera, epoch)
+def get_cache_path(processed_path, cal):
+    epoch = date_utils.epoch_date_to_string(cal.dateobs.date())
+    return file_utils.get_processed_path(processed_path, cal.site, cal.camera, epoch)
 
-    def download_calibration(self, cal):
-        """Download file, validate FITS, write to disk, update DB filepath."""
-        dest_dir = self.get_cache_path(cal)
-        local_path = os.path.join(dest_dir, cal.filename)
 
-        if os.path.exists(local_path):
-            logger.info(f"Already on disk: {cal.filename}, updating DB filepath")
-            self._update_filepath(cal.id, dest_dir)
-            return
-        if cal.frameid is None:
-            logger.warning(f"Skipping {cal.filename} - NULL frameid")
-            return
+def _update_filepath(db_address, cal_id, filepath):
+    with dbs.get_session(db_address) as session:
+        cal = session.query(dbs.CalibrationImage).get(cal_id)
+        if cal:
+            cal.filepath = filepath
 
-        os.makedirs(dest_dir, exist_ok=True)
-        logger.info(f"Downloading {cal.filename} (frameid={cal.frameid})")
-        buffer = fits_utils.download_from_s3(
-            {'frameid': cal.frameid, 'filename': cal.filename},
-            self.runtime_context, is_raw_frame=False
-        )
 
+def download_calibration(db_address, processed_path, runtime_context, cal):
+    """Download file, validate FITS, write to disk, update DB filepath."""
+    dest_dir = get_cache_path(processed_path, cal)
+    local_path = os.path.join(dest_dir, cal.filename)
+
+    if os.path.exists(local_path):
+        logger.info(f"Already on disk: {cal.filename}, updating DB filepath")
+        _update_filepath(db_address, cal.id, dest_dir)
+        return
+    if cal.frameid is None:
+        logger.warning(f"Skipping {cal.filename} - NULL frameid")
+        return
+
+    os.makedirs(dest_dir, exist_ok=True)
+    logger.info(f"Downloading {cal.filename} (frameid={cal.frameid})")
+    buffer = fits_utils.download_from_s3(
+        {'frameid': cal.frameid, 'filename': cal.filename},
+        runtime_context, is_raw_frame=False
+    )
+
+    try:
+        hdulist = fits.open(buffer)
+        hdulist.writeto(local_path)
+        hdulist.close()
+    finally:
+        buffer.close()
+    _update_filepath(db_address, cal.id, dest_dir)
+    logger.info(f"Downloaded {cal.filename}")
+
+
+def delete_calibration(db_address, cal):
+    """Remove file from disk and clear filepath in DB."""
+    file_path = os.path.join(cal.filepath, cal.filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        logger.info(f"Deleted {cal.filename}")
+    _update_filepath(db_address, cal.id, None)
+
+
+def get_cached_calibrations(db_address, site_id, processed_path):
+    """Return all calibrations with a local filepath at this site."""
+    with dbs.get_session(db_address) as session:
+        return session.query(
+            dbs.CalibrationImage.id, dbs.CalibrationImage.filename,
+            dbs.CalibrationImage.filepath,
+        ).join(dbs.Instrument).filter(
+            dbs.CalibrationImage.filepath.isnot(None),
+            dbs.CalibrationImage.filepath.like(processed_path + '%'),
+            dbs.Instrument.site == site_id,
+        ).all()
+
+
+def run_download_worker(db_address, site_id, instrument_types, processed_path,
+                        runtime_context, poll_interval=10):
+    """Main loop: poll DB, download missing files, delete stale ones."""
+    logger.info("Download worker started")
+    last_heartbeat = time.monotonic()
+
+    while True:
         try:
-            hdulist = fits.open(buffer)
-            hdulist.writeto(local_path)
-            hdulist.close()
-        finally:
-            buffer.close()
-        self._update_filepath(cal.id, dest_dir)
-        logger.info(f"Downloaded {cal.filename}")
+            needed = get_calibrations_to_cache(db_address, site_id, instrument_types)
+            needed_filenames = {cal.filename for cal in needed}
 
-    def delete_calibration(self, cal):
-        """Remove file from disk and clear filepath in DB."""
-        file_path = os.path.join(cal.filepath, cal.filename)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            logger.info(f"Deleted {cal.filename}")
-        self._update_filepath(cal.id, None)
+            # Download calibrations not yet on local disk
+            to_download = [cal for cal in needed
+                           if not os.path.exists(os.path.join(
+                               get_cache_path(processed_path, cal), cal.filename))]
 
-    def _update_filepath(self, cal_id, filepath):
-        with dbs.get_session(self.db_address) as session:
-            cal = session.query(dbs.CalibrationImage).get(cal_id)
-            if cal:
-                cal.filepath = filepath
+            # Find locally-cached cals no longer in the top-2 needed set
+            cached_in_db = get_cached_calibrations(db_address, site_id, processed_path)
+            to_delete = [c for c in cached_in_db if c.filename not in needed_filenames]
 
-    def run(self, poll_interval=10):
-        """Main loop: poll DB, download missing files, delete stale ones."""
-        logger.info("Download worker started")
-        last_heartbeat = time.monotonic()
+            for cal in to_download:
+                try:
+                    download_calibration(db_address, processed_path, runtime_context, cal)
+                except Exception as e:
+                    logger.error(f"Failed to download {cal.filename}: {e}", exc_info=True)
+            for cal in to_delete:
+                try:
+                    delete_calibration(db_address, cal)
+                except Exception as e:
+                    logger.error(f"Failed to delete {cal.filename}: {e}", exc_info=True)
 
-        while True:
-            try:
-                needed = self.get_calibrations_to_cache()
-                needed_filenames = {cal.filename for cal in needed}
+            now = time.monotonic()
+            if to_download or to_delete:
+                logger.info(f"Cache sync: downloaded {len(to_download)}, "
+                            f"deleted {len(to_delete)}, total needed {len(needed)}")
+                last_heartbeat = now
+            elif now - last_heartbeat >= HEARTBEAT_INTERVAL:
+                logger.info(f"Cache healthy: {len(needed)} calibrations tracked")
+                last_heartbeat = now
 
-                # Download calibrations not yet on local disk
-                to_download = [cal for cal in needed
-                               if not os.path.exists(os.path.join(self.get_cache_path(cal), cal.filename))]
-
-                # Find locally-cached cals no longer in the top-2 needed set
-                with dbs.get_session(self.db_address) as session:
-                    cached_in_db = session.query(
-                        dbs.CalibrationImage.id, dbs.CalibrationImage.filename,
-                        dbs.CalibrationImage.filepath,
-                    ).join(dbs.Instrument).filter(
-                        dbs.CalibrationImage.filepath.isnot(None),
-                        dbs.CalibrationImage.filepath.like(self.processed_path + '%'),
-                        dbs.Instrument.site == self.site_id,
-                    ).all()
-                to_delete = [c for c in cached_in_db if c.filename not in needed_filenames]
-
-                for cal in to_download:
-                    try:
-                        self.download_calibration(cal)
-                    except Exception as e:
-                        logger.error(f"Failed to download {cal.filename}: {e}", exc_info=True)
-                for cal in to_delete:
-                    try:
-                        self.delete_calibration(cal)
-                    except Exception as e:
-                        logger.error(f"Failed to delete {cal.filename}: {e}", exc_info=True)
-
-                now = time.monotonic()
-                if to_download or to_delete:
-                    logger.info(f"Cache sync: downloaded {len(to_download)}, "
-                                f"deleted {len(to_delete)}, total needed {len(needed)}")
-                    last_heartbeat = now
-                elif now - last_heartbeat >= HEARTBEAT_INTERVAL:
-                    logger.info(f"Cache healthy: {len(needed)} calibrations tracked")
-                    last_heartbeat = now
-
-                time.sleep(poll_interval)
-            except Exception as e:
-                logger.error(f"Error in worker loop: {e}", exc_info=True)
-                time.sleep(30)
+            time.sleep(poll_interval)
+        except Exception as e:
+            logger.error(f"Error in worker loop: {e}", exc_info=True)
+            time.sleep(30)
 
 
 def run_download_worker_daemon():
-    """Entry point: read env vars, create worker, run."""
+    """Entry point: read env vars, start worker loop."""
     db_address = os.getenv('DB_ADDRESS')
     site_id = os.getenv('SITE_ID')
     instrument_types_str = os.getenv('INSTRUMENT_TYPES', '*')
@@ -173,16 +177,11 @@ def run_download_worker_daemon():
 
     instrument_types = ([t.strip() for t in instrument_types_str.split(',')]
                         if instrument_types_str != '*' else ['*'])
-    runtime_context = Context({
-        'ARCHIVE_FRAME_URL': settings.ARCHIVE_FRAME_URL,
-        'ARCHIVE_AUTH_HEADER': settings.ARCHIVE_AUTH_HEADER,
-        'RAW_DATA_FRAME_URL': settings.RAW_DATA_FRAME_URL,
-        'RAW_DATA_AUTH_HEADER': settings.RAW_DATA_AUTH_HEADER,
-    })
+    runtime_context = Context(settings)
 
-    worker = DownloadWorker(db_address, site_id, instrument_types, processed_path, runtime_context)
     try:
-        worker.run(poll_interval=poll_interval)
+        run_download_worker(db_address, site_id, instrument_types, processed_path,
+                            runtime_context, poll_interval)
     except KeyboardInterrupt:
         logger.info("Download worker stopped")
         sys.exit(0)
