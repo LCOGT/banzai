@@ -25,12 +25,11 @@ services:
         condition: service_healthy
     volumes:
       - ${HOST_DATA_DIR}:/data
-    environment:
-      - DB_ADDRESS=${DB_ADDRESS}
-      - AWS_DB_ADDRESS=${AWS_DB_ADDRESS:-}
-      - SITE_ID=${SITE_ID}
-      - PUBLICATION_NAME=${PUBLICATION_NAME:-banzai_calibrations}
-    command: ["banzai_cache_init"]
+    command: ["banzai_cache_init",
+              "--db-address=${DB_ADDRESS}",
+              "--aws-db-address=${AWS_DB_ADDRESS:-}",
+              "--site-id=${SITE_ID}",
+              "--publication-name=${PUBLICATION_NAME:-banzai_calibrations}"]
     restart: "no"
 
   redis:
