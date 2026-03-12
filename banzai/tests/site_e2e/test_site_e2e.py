@@ -43,7 +43,7 @@ def _assert_cache_matches(expected_files, timeout=180):
         found = {p.name for p in CACHE_DIR.rglob('*.fits.fz')}
         return found if found == expected else None
 
-    result = poll_until(check, timeout)
+    result = poll_until(check, timeout, interval=2)
     if not result:
         found = {p.name for p in CACHE_DIR.rglob('*.fits.fz')} if CACHE_DIR.exists() else set()
         assert False, f"Expected {sorted(expected)}, found {sorted(found)}"
@@ -110,7 +110,7 @@ class TestSiteE2E:
                 ).count()
             return cal_count if cal_count == 7 else None
 
-        result = poll_until(check, timeout=60)
+        result = poll_until(check, timeout=60, interval=2)
         assert result == 7, (
             "Expected 7 calibrations in local DB. "
             "Replication may not have completed."
@@ -186,7 +186,7 @@ class TestSiteE2E:
 
             found = poll_until(
                 lambda p=expected_path: p.exists() and p.stat().st_size > 0,
-                timeout, interval=10
+                timeout, interval=5
             )
 
             if not found:
@@ -232,7 +232,7 @@ class TestSiteE2E:
                 ).count()
             return count == 13
 
-        assert poll_until(check, timeout=60), \
+        assert poll_until(check, timeout=60, interval=2), \
             "Expected 13 calibrations in local DB after replication"
 
     @pytest.mark.e2e_site_cache
