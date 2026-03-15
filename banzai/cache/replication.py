@@ -2,6 +2,9 @@ from sqlalchemy import text, create_engine
 from banzai import dbs
 from banzai.logs import get_logger
 
+# PostgreSQL logical replication is managed via server-level DDL commands
+# (CREATE/DROP SUBSCRIPTION) that cannot run inside transaction blocks and
+# have no SQLAlchemy ORM representation. Raw SQL with AUTOCOMMIT is required.
 logger = get_logger()
 
 
@@ -41,54 +44,6 @@ def setup_subscription(local_db_address, aws_connection_string, site_id,
         logger.info(f"Successfully created subscription: {subscription_name}")
     except Exception as e:
         logger.error(f"Failed to create subscription: {e}")
-        raise
-
-
-def check_replication_health(db_address):
-    """Returns dict of replication metrics from pg_stat_subscription, or {} if no subscription exists."""
-    health_sql = """
-    SELECT
-        subname,
-        pid,
-        received_lsn,
-        latest_end_lsn,
-        last_msg_send_time,
-        last_msg_receipt_time,
-        latest_end_time,
-        EXTRACT(EPOCH FROM (NOW() - last_msg_receipt_time)) as lag_seconds
-    FROM pg_stat_subscription;
-    """
-
-    try:
-        with dbs.get_session(db_address) as session:
-            result = session.execute(text(health_sql)).fetchone()
-
-        if result is None:
-            logger.warning("No replication subscription found")
-            return {}
-
-        health = {
-            'subname': result[0],
-            'pid': result[1],
-            'received_lsn': result[2],
-            'latest_end_lsn': result[3],
-            'last_msg_send_time': result[4],
-            'last_msg_receipt_time': result[5],
-            'latest_end_time': result[6],
-            'lag_seconds': float(result[7]) if result[7] is not None else None
-        }
-
-        if health['lag_seconds'] is not None:
-            logger.info(f"Replication lag: {health['lag_seconds']:.1f} seconds")
-            if health['lag_seconds'] > 300:
-                logger.warning(f"Replication lag is high: {health['lag_seconds']:.1f} seconds")
-        else:
-            logger.warning("Replication lag could not be determined")
-
-        return health
-
-    except Exception as e:
-        logger.error(f"Failed to check replication health: {e}")
         raise
 
 

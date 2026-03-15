@@ -37,14 +37,3 @@ class TestSetupSubscription:
         mock_create_engine.return_value = engine
         replication.setup_subscription('postgresql://local/db', 'host=aws', site_id='ogg')
         conn.execution_options.assert_called_once_with(isolation_level="AUTOCOMMIT")
-
-
-class TestCheckReplicationHealth:
-
-    @mock.patch('banzai.dbs.get_session')
-    def test_returns_empty_dict_when_no_subscription(self, mock_get_session):
-        mock_session = mock.MagicMock()
-        mock_session.__enter__.return_value = mock_session
-        mock_get_session.return_value = mock_session
-        mock_session.execute.return_value.fetchone.return_value = None
-        assert replication.check_replication_health('postgresql://local/db') == {}
