@@ -266,9 +266,4 @@ def cleanup(request):
             else:
                 item.unlink(missing_ok=True)
 
-    pub_data_dir = SITE_E2E_DIR / "data"
-    logger.info("[Cleanup] Removing publication DB data directory...")
-    if pub_data_dir.exists():
-        shutil.rmtree(pub_data_dir, ignore_errors=True)
-
     logger.info("[Cleanup] Complete")

@@ -93,5 +93,4 @@ test.db
 .direnv
 
 # Site E2E test data
-banzai/tests/site_e2e/data/
 banzai/tests/site_e2e/site_e2e.env
