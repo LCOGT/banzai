@@ -1,0 +1,17 @@
+
+# Database
+DB_ADDRESS=sqlite:///banzai.db
+# CAL_DB_ADDRESS=                       # Optional: separate calibration DB (defaults to DB_ADDRESS)
+
+# API
+API_ROOT=https://archive-api.lco.global/
+AUTH_TOKEN=
+
+# Host paths
+HOST_RAW_DIR=./local_banzai/raw
+HOST_REDUCED_DIR=./local_banzai/reduced
+
+# Worker
+BANZAI_WORKER_LOGLEVEL=debug
+OMP_NUM_THREADS=2
+OPENTSDB_PYTHON_METRICS_TEST_MODE=1

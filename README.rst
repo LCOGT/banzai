@@ -100,39 +100,23 @@ create a master dark frame. Then, the same for skyflats. At this point, you will
 science images using the `banzai_reduce_individual_frame` command.
 
 To run the pipeline in its active mode, you need to setup a task queue and a filename queue.
-See the `docker-compose-site.yml` file for details on this setup.
+See the `docker-compose-local.yml` file for details on this setup.
 
 Running Locally
 ---------------
 
-For deploying BANZAI at an observatory site with local processing, use the containerized setup with
-`docker-compose-site.yml`. This configuration allows you to process incoming data locally while sourcing
-calibration files from a remote database.
+To run BANZAI as a local pipeline, use `docker-compose-local.yml`. This is the recommended setup
+for development and for processing data independently of LCO's site infrastructure.
 
-Environment Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~
+1. Copy `local-banzai-env.default` to `local-banzai-env` and set your `AUTH_TOKEN` and `DB_ADDRESS`.
 
-First copy `site-banzai-env.default` to `site-banzai-env` and configure the following variables:
-
-* Database addresses (local SQLite for processing, remote PostgreSQL for calibrations)
-* Site ID and API authentication token
-* Data directory paths
-
-The use case for LCO's site deployment assumes that calibration files are processed and managed centrally,
-allowing the use of a remote database to source super calibrations (via `CAL_DB_ADDRESS`),
-with all other database activity on a local SQLite database (via `DB_ADDRESS`).
-
-Start the Containers
-~~~~~~~~~~~~~~~~~~~~
+2. Start the containers:
 
 .. code-block:: bash
 
-    docker compose -f docker-compose-site.yml --env-file site-banzai-env up -d --build
+    docker compose -f docker-compose-local.yml --env-file local-banzai-env up -d --build
 
-Process Images
-~~~~~~~~~~~~~~
-
-Queue images for processing using the helper script. Raw files must be in `$HOST_RAW_DIR`:
+3. Queue images for processing. Raw files must be in `$HOST_RAW_DIR`:
 
 .. code-block:: bash
 
