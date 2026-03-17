@@ -82,7 +82,7 @@ class TestSiteE2E:
         assert result.returncode == 0, f"docker compose ps failed: {result.stderr}"
 
         ps_output = result.stdout.lower()
-        for service in ['banzai-postgresql', 'banzai-redis', 'banzai-download-worker']:
+        for service in ['banzai-postgresql', 'banzai-download-worker']:
             assert service in ps_output, f"Service {service} not found in docker compose ps output"
 
     @pytest.mark.e2e_site_startup

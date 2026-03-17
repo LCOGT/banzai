@@ -31,32 +31,17 @@ services:
               "--slot-name=banzai_${SITE_ID}_slot"]
     restart: "no"
 
-  redis:
-    image: redis:7
-    container_name: banzai-redis
-    restart: unless-stopped
-
-  rabbitmq:
-    image: rabbitmq:3.12-management
-    container_name: banzai-rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    restart: unless-stopped
-
   # NOTE: download-worker and pipeline workers must mount HOST_CALS_DIR
   # at the same container path (/calibrations) so DB filepaths resolve correctly.
 
   banzai-worker:
     build: .
     container_name: banzai-worker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
     volumes:
       - ${HOST_RAW_DIR}:/raw
       - ${HOST_CALS_DIR}:/calibrations
@@ -64,8 +49,8 @@ services:
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - TASK_HOST=redis://redis:6379/0
-      - FITS_BROKER=rabbitmq
+      - TASK_HOST=${REDIS_URL}
+      - FITS_BROKER=${RABBITMQ_URL}
       - FITS_EXCHANGE=fits_files
       - CELERY_TASK_QUEUE_NAME=reduction_task_queue
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
@@ -80,13 +65,11 @@ services:
   banzai-large-worker:
     build: .
     container_name: banzai-large-worker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
     volumes:
       - ${HOST_RAW_DIR}:/raw
       - ${HOST_CALS_DIR}:/calibrations
@@ -94,8 +77,8 @@ services:
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - TASK_HOST=redis://redis:6379/0
-      - FITS_BROKER=rabbitmq
+      - TASK_HOST=${REDIS_URL}
+      - FITS_BROKER=${RABBITMQ_URL}
       - FITS_EXCHANGE=fits_files
       - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
@@ -110,13 +93,11 @@ services:
   banzai-listener:
     build: .
     container_name: banzai-listener
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
       banzai-worker:
         condition: service_started
     volumes:
@@ -131,11 +112,11 @@ services:
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
       - CELERY_TASK_QUEUE_NAME=reduction_task_queue
-      - TASK_HOST=redis://redis:6379/0
+      - TASK_HOST=${REDIS_URL}
       - FITS_EXCHANGE=fits_files
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
     entrypoint: ["banzai_run_realtime_pipeline", "--fpack", "--no-bpm",
-                 "--broker-url=amqp://rabbitmq:5672",
+                 "--broker-url=${RABBITMQ_URL}",
                  "--db-address=${DB_ADDRESS}",
                  "--calibration-db-address=${CAL_DB_ADDRESS}",
                  "--processed-path=/reduced"]
@@ -163,16 +144,17 @@ services:
   banzai-subframe-listener:
     build: .
     container_name: banzai-subframe-listener
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
-      rabbitmq:
-        condition: service_started
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - SUBFRAME_TASK_QUEUE_NAME=subframe_reduction_task_queue
-      - TASK_HOST=redis://redis:6379/0
-    command: ["banzai_subframe_worker", "--broker-url=amqp://rabbitmq:5672",
+      - TASK_HOST=${REDIS_URL}
+      - REDIS_URL=${REDIS_URL}
+    command: ["banzai_subframe_worker", "--broker-url=${RABBITMQ_URL}",
               "--db-address=${DB_ADDRESS}", "--rlevel=9",
               "--processed-path=/reduced"]
     restart: unless-stopped
@@ -180,13 +162,11 @@ services:
   banzai-subframe-worker:
     build: .
     container_name: banzai-subframe-worker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
     volumes:
       - ${HOST_RAW_DIR}:/raw
       - ${HOST_CALS_DIR}:/calibrations
@@ -194,9 +174,9 @@ services:
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - TASK_HOST=redis://redis:6379/0
+      - TASK_HOST=${REDIS_URL}
       - SUBFRAME_TASK_QUEUE_NAME=subframe_reduction_task_queue
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=${REDIS_URL}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
       - API_ROOT=${API_ROOT}
@@ -212,16 +192,16 @@ services:
   banzai-stacking-supervisor:
     build: .
     container_name: banzai-stacking-supervisor
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
-      redis:
-        condition: service_started
     command: [
       "banzai_stacking_supervisor",
       "--site-id=${SITE_ID}",
       "--db-address=${DB_ADDRESS}",
-      "--redis-url=redis://redis:6379/0",
+      "--redis-url=${REDIS_URL}",
       "--stack-timeout-minutes=${STACK_TIMEOUT_MINUTES:-20}",
       "--stack-retention-days=${STACK_RETENTION_DAYS:-30}"
     ]
