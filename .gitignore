@@ -73,6 +73,7 @@ justfile
 
 # Local Banzai Setup
 site-banzai-env
+local-banzai-env
 example_data
 local_banzai
 site_banzai

@@ -131,10 +131,21 @@ See the `docker-compose-local.yml` file for details on this setup.
 Running Locally
 ---------------
 
-To run BANZAI as a local pipeline, use `docker-compose-local.yml`. This is the recommended setup
+To run BANZAI as a local pipeline, use ``docker-compose-local.yml``. This is the recommended setup
 for development and for processing data independently of LCO's site infrastructure.
 
-1. Copy `local-banzai-env.default` to `local-banzai-env` and set your `AUTH_TOKEN` and `DB_ADDRESS`.
+Redis and RabbitMQ are managed separately via ``docker-compose-dependencies.yml`` so they can be
+left running across pipeline restarts. Start them first:
+
+.. code-block:: bash
+
+    docker compose -f docker-compose-dependencies.yml up -d
+
+Pipeline containers connect via the ``REDIS_URL`` and ``RABBITMQ_URL`` environment variables
+(defaulting to ``host.docker.internal``). Site deployments can point these at existing
+infrastructure instead.
+
+1. Copy ``local-banzai-env.default`` to ``local-banzai-env`` and set your ``AUTH_TOKEN`` and ``DB_ADDRESS``.
 
 2. Start the containers:
 
@@ -142,13 +153,13 @@ for development and for processing data independently of LCO's site infrastructu
 
     docker compose -f docker-compose-local.yml --env-file local-banzai-env up -d --build
 
-3. Queue images for processing. Raw files must be in `$HOST_RAW_DIR`:
+3. Queue images for processing. Raw files must be in ``$HOST_RAW_DIR``:
 
 .. code-block:: bash
 
     uv run python scripts/queue_images.py $HOST_RAW_DIR
 
-Processed output will be saved in `$HOST_REDUCED_DIR`.
+Processed output will be saved in ``$HOST_REDUCED_DIR``.
 
 Tests
 -----
@@ -187,7 +198,8 @@ Site Deployment E2E Tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 The site E2E tests validate the full site deployment caching system, including PostgreSQL
 logical replication, calibration file caching, and frame reduction. These tests require
-Docker and an LCO archive API token.
+Docker, an LCO archive API token, and Redis/RabbitMQ running via
+``docker compose -f docker-compose-dependencies.yml up -d``.
 
 To run the site E2E tests:
 

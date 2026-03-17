@@ -11,6 +11,10 @@ AUTH_TOKEN=
 HOST_RAW_DIR=./local_banzai/raw
 HOST_REDUCED_DIR=./local_banzai/reduced
 
+# Message brokers
+REDIS_URL=redis://host.docker.internal:6379/0
+RABBITMQ_URL=amqp://host.docker.internal:5672
+
 # Worker
 BANZAI_WORKER_LOGLEVEL=debug
 OMP_NUM_THREADS=2
