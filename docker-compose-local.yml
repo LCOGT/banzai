@@ -1,29 +1,15 @@
 services:
-  redis:
-    image: redis:7
-    container_name: banzai-redis
-    restart: unless-stopped
-
-  rabbitmq:
-    image: rabbitmq:3.12-management
-    container_name: banzai-rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    restart: unless-stopped
-
   banzai-worker:
     build: .
     container_name: banzai-worker
-    depends_on:
-      - redis
-      - rabbitmq
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ${HOST_RAW_DIR}:/raw
       - ${HOST_REDUCED_DIR}:/reduced
     environment:
-      - TASK_HOST=redis://redis:6379/0
-      - FITS_BROKER=rabbitmq
+      - TASK_HOST=${REDIS_URL}
+      - FITS_BROKER=${RABBITMQ_URL}
       - FITS_EXCHANGE=fits_files
       - CELERY_TASK_QUEUE_NAME=reduction_task_queue
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
@@ -38,15 +24,14 @@ services:
   banzai-large-worker:
     build: .
     container_name: banzai-large-worker
-    depends_on:
-      - redis
-      - rabbitmq
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ${HOST_RAW_DIR}:/raw
       - ${HOST_REDUCED_DIR}:/reduced
     environment:
-      - TASK_HOST=redis://redis:6379/0
-      - FITS_BROKER=rabbitmq
+      - TASK_HOST=${REDIS_URL}
+      - FITS_BROKER=${RABBITMQ_URL}
       - FITS_EXCHANGE=fits_files
       - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
@@ -61,9 +46,9 @@ services:
   banzai-listener:
     build: .
     container_name: banzai-listener
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
-      - redis
-      - rabbitmq
       - banzai-worker
     volumes:
       - ${HOST_RAW_DIR}:/raw
@@ -76,11 +61,11 @@ services:
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
       - CELERY_TASK_QUEUE_NAME=reduction_task_queue
-      - TASK_HOST=redis://redis:6379/0
+      - TASK_HOST=${REDIS_URL}
       - FITS_EXCHANGE=fits_files
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
     entrypoint: ["banzai_run_realtime_pipeline", "--fpack", "--no-bpm",
-                 "--broker-url=amqp://rabbitmq:5672",
+                 "--broker-url=${RABBITMQ_URL}",
                  "--db-address=${DB_ADDRESS}",
                  "--calibration-db-address=${CAL_DB_ADDRESS}",
                  "--processed-path=/reduced"]

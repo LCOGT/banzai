@@ -48,6 +48,7 @@ ARCHIVE_API_URL = os.environ.get("API_ROOT", "https://archive-api.lco.global/")
 DATA_DIR = REPO_ROOT / "data"
 CACHE_DIR = DATA_DIR / "calibrations"
 SITE_COMPOSE_FILE = REPO_ROOT / "docker-compose-site.yml"
+DEPS_COMPOSE_FILE = REPO_ROOT / "docker-compose-dependencies.yml"
 SITE_ENV_FILE = SITE_E2E_DIR / "site_e2e.env"
 
 

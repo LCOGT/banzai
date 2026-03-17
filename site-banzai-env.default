@@ -10,6 +10,10 @@ HOST_CALS_DIR=./site_banzai/calibrations     # Cached calibration files
 HOST_REDUCED_DIR=./site_banzai/reduced       # Pipeline output (reduced frames)
 HOST_POSTGRES_DIR=./site_banzai/postgres     # PostgreSQL database storage
 
+# Message brokers (override to point at existing site infrastructure)
+REDIS_URL=redis://host.docker.internal:6379/0
+RABBITMQ_URL=amqp://host.docker.internal:5672
+
 # Worker
 BANZAI_WORKER_LOGLEVEL=debug
 OMP_NUM_THREADS=2
@@ -23,7 +27,6 @@ STACK_QUEUE_NAME=banzai_stack_queue
 # Database
 DB_ADDRESS=postgresql+psycopg://banzai@postgresql:5432/banzai_local
 PUBLICATION_NAME=banzai_calibrations
-# CAL_DB_ADDRESS=
 
 # Replication (cache-init handles these)
 # AWS_DB_ADDRESS=                       # postgresql+psycopg://user:pass@aws-host.rds.amazonaws.com:5432/calibrations
