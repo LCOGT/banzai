@@ -1,36 +1,4 @@
 services:
-  postgresql:
-    image: postgres:14
-    container_name: banzai-postgresql
-    ports:
-    - "5442:5432"
-    environment:
-      - POSTGRES_DB=banzai_local
-      - POSTGRES_USER=banzai
-      - POSTGRES_HOST_AUTH_METHOD=trust
-    volumes:
-      - ${HOST_POSTGRES_DIR}:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U banzai -d banzai_local"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  banzai-cache-init:
-    build: .
-    container_name: banzai-cache-init
-    depends_on:
-      postgresql:
-        condition: service_healthy
-    command: ["banzai_cache_init",
-              "--db-address=${DB_ADDRESS}",
-              "--aws-db-address=${AWS_DB_ADDRESS:-}",
-              "--site-id=${SITE_ID}",
-              "--publication-name=${PUBLICATION_NAME:-banzai_calibrations}",
-              "--slot-name=banzai_${SITE_ID}_slot"]
-    restart: "no"
-
   redis:
     image: redis:7
     container_name: banzai-redis
@@ -44,26 +12,16 @@ services:
       - "15672:15672"
     restart: unless-stopped
 
-  # NOTE: download-worker and pipeline workers must mount HOST_CALS_DIR
-  # at the same container path (/calibrations) so DB filepaths resolve correctly.
-
   banzai-worker:
     build: .
     container_name: banzai-worker
     depends_on:
-      banzai-cache-init:
-        condition: service_completed_successfully
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
+      - redis
+      - rabbitmq
     volumes:
       - ${HOST_RAW_DIR}:/raw
-      - ${HOST_CALS_DIR}:/calibrations
       - ${HOST_REDUCED_DIR}:/reduced
     environment:
-      - DB_ADDRESS=${DB_ADDRESS}
-      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - TASK_HOST=redis://redis:6379/0
       - FITS_BROKER=rabbitmq
       - FITS_EXCHANGE=fits_files
@@ -81,19 +39,12 @@ services:
     build: .
     container_name: banzai-large-worker
     depends_on:
-      banzai-cache-init:
-        condition: service_completed_successfully
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
+      - redis
+      - rabbitmq
     volumes:
       - ${HOST_RAW_DIR}:/raw
-      - ${HOST_CALS_DIR}:/calibrations
       - ${HOST_REDUCED_DIR}:/reduced
     environment:
-      - DB_ADDRESS=${DB_ADDRESS}
-      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - TASK_HOST=redis://redis:6379/0
       - FITS_BROKER=rabbitmq
       - FITS_EXCHANGE=fits_files
@@ -111,17 +62,11 @@ services:
     build: .
     container_name: banzai-listener
     depends_on:
-      banzai-cache-init:
-        condition: service_completed_successfully
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
-      banzai-worker:
-        condition: service_started
+      - redis
+      - rabbitmq
+      - banzai-worker
     volumes:
       - ${HOST_RAW_DIR}:/raw
-      - ${HOST_CALS_DIR}:/calibrations
       - ${HOST_REDUCED_DIR}:/reduced
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
@@ -139,23 +84,4 @@ services:
                  "--db-address=${DB_ADDRESS}",
                  "--calibration-db-address=${CAL_DB_ADDRESS}",
                  "--processed-path=/reduced"]
-    restart: unless-stopped
-
-  banzai-download-worker:
-    build: .
-    container_name: banzai-download-worker
-    depends_on:
-      banzai-cache-init:
-        condition: service_completed_successfully
-    volumes:
-      - ${HOST_CALS_DIR}:/calibrations
-    environment:
-      - DB_ADDRESS=${DB_ADDRESS}
-      - SITE_ID=${SITE_ID}
-      - INSTRUMENT_TYPES=${INSTRUMENT_TYPES:-*}
-      - PROCESSED_PATH=/calibrations
-      - API_ROOT=${API_ROOT}
-      - AUTH_TOKEN=${AUTH_TOKEN}
-      - DOWNLOAD_WORKER_POLL_INTERVAL=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}
-    command: ["banzai_download_worker"]
     restart: unless-stopped

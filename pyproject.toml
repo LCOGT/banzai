@@ -8,7 +8,7 @@ build-backend = "poetry.core.masonry.api"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.10,<4"
-version = "1.30.0"
+version = "1.31.0"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
@@ -142,6 +142,8 @@ zip-safe = false
     banzai_populate_bpms = "banzai.main:add_bpms_from_archive"
     banzai_create_db = "banzai.main:create_db"
     banzai_create_local_db = "banzai.main:create_local_db"
+    banzai_download_worker = "banzai.cache.download_worker:run_download_worker_daemon"
+    banzai_cache_init = "banzai.cache.init:run_initialization"
 
 [tool.coverage.run]
 source = ["banzai"]

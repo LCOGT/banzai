@@ -100,60 +100,29 @@ create a master dark frame. Then, the same for skyflats. At this point, you will
 science images using the `banzai_reduce_individual_frame` command.
 
 To run the pipeline in its active mode, you need to setup a task queue and a filename queue.
-See the `docker-compose-site.yml` file for details on this setup.
+See the `docker-compose-local.yml` file for details on this setup.
 
 Running Locally
 ---------------
 
-For deploying BANZAI at an observatory site with local processing, use the containerized setup with
-`docker-compose-site.yml`. This configuration allows you to process incoming data locally while sourcing
-calibration files from a remote database.
+To run BANZAI as a local pipeline, use `docker-compose-local.yml`. This is the recommended setup
+for development and for processing data independently of LCO's site infrastructure.
 
-Environment Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~
+1. Copy `local-banzai-env.default` to `local-banzai-env` and set your `AUTH_TOKEN` and `DB_ADDRESS`.
 
-First copy `site-banzai-env.default` to `site-banzai-env` and configure the following variables:
-
-* Database addresses (local SQLite for processing, remote PostgreSQL for calibrations)
-* Site ID and API authentication token
-* Data directory paths
-
-The use case for LCO's site deployment assumes that calibration files are processed and managed centrally,
-allowing the use of a remote database to source super calibrations (via `CAL_DB_ADDRESS`),
-with all other database activity on a local SQLite database (via `DB_ADDRESS`).
-
-Note that database addresses in the environment file are relative to the Docker container. Since `$HOST_DATA_DIR`
-is mapped to the container's `/data`, the `DB_ADDRESS` should be something like `sqlite:////data/<db_name>`.
-
-Create the Local Database
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If using a separate calibration database, copy the site/instrument information to your local database:
+2. Start the containers:
 
 .. code-block:: bash
 
-    banzai_create_local_db --site $SITE_ID --local-db-address $DB_ADDRESS --cal-db-address $CAL_DB_ADDRESS
+    docker compose -f docker-compose-local.yml --env-file local-banzai-env up -d --build
 
-Note that `$DB_ADDRESS` should use a path relative to the host directory. For example, if `$HOST_DATA_DIR` is
-`site_banzai`, the address might be `sqlite:///site_banzai/<db_name>`.
-
-Start the Containers
-~~~~~~~~~~~~~~~~~~~~
+3. Queue images for processing. Raw files must be in `$HOST_RAW_DIR`:
 
 .. code-block:: bash
 
-    docker compose -f docker-compose-site.yml --env-file site-banzai-env up -d --build
+    python scripts/queue_images.py $HOST_RAW_DIR
 
-Process Images
-~~~~~~~~~~~~~~
-
-Queue images for processing using the helper script. Raw files must be in `$HOST_DATA_DIR`:
-
-.. code-block:: bash
-
-    python queue_images.py <host_data_dir>/raw/
-
-Processed output will be saved in `${HOST_PROCESSED_DIR}`.
+Processed output will be saved in `$HOST_REDUCED_DIR`.
 
 Tests
 -----
@@ -187,6 +156,30 @@ After all of the containers are up, run
 .. code-block:: bash
 
     docker exec banzai-listener pytest --pyargs banzai.tests "-m e2e"
+
+Site Deployment E2E Tests
+~~~~~~~~~~~~~~~~~~~~~~~~~
+The site E2E tests validate the full site deployment caching system, including PostgreSQL
+logical replication, calibration file caching, and frame reduction. These tests require
+Docker and an LCO archive API token.
+
+To run the site E2E tests:
+
+.. code-block:: bash
+
+    # Copy and configure the environment file
+    cp banzai/tests/site_e2e/site_e2e.env.template banzai/tests/site_e2e/site_e2e.env
+    # Edit site_e2e.env and add your AUTH_TOKEN
+
+    # Run the tests
+    pytest -m e2e_site banzai/tests/site_e2e/ -v -s
+
+The following markers can be used to run subsets of the site E2E tests:
+
+* e2e_site: All site deployment tests
+* e2e_site_startup: Publication DB and site deployment startup tests
+* e2e_site_cache: Cache synchronization tests
+* e2e_site_reduction: Frame reduction tests
 
 License
 -------

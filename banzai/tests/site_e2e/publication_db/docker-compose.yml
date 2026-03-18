@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:14
+    container_name: banzai-postgres-publication
+    environment:
+      POSTGRES_DB: banzai_test
+      POSTGRES_USER: banzai
+      POSTGRES_PASSWORD: banzai_test
+    ports:
+      - "5433:5432"
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
+    volumes:
+      - pub-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banzai -d banzai_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pub-pgdata:

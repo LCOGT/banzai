@@ -21,8 +21,8 @@ from banzai.metrics import trace_function
 
 class LCOObservationFrame(ObservationFrame):
     def get_output_directory(self, runtime_context) -> str:
-        return os.path.join(runtime_context.processed_path, self.instrument.site,
-                            self.instrument.camera, self.epoch, 'processed')
+        return file_utils.get_processed_path(runtime_context.processed_path,
+                                             self.instrument.site, self.instrument.camera, self.epoch)
 
     @property
     def ra(self):
