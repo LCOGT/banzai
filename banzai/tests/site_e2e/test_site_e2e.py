@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 import requests
 from sqlalchemy import create_engine, text
+from astropy.io import fits
 
 from banzai import dbs
 from banzai.tests.site_e2e.utils import populate_publication
@@ -162,7 +163,6 @@ class TestSiteE2E:
     @pytest.mark.e2e_site_reduction
     def test_07_reduction_completes(self, site_deployment):
         """Verify reduction completed by checking for processed output file."""
-        from astropy.io import fits
 
         raw_dir = DATA_DIR / 'raw'
         assert raw_dir.exists(), f"Raw directory not found: {raw_dir}"
