@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from sqlalchemy import text
+
 from banzai import dbs
 from banzai.dbs import insert_stack_frame, get_stack_frames, mark_stack_complete, cleanup_old_records, update_stack_frame_filepath
 from banzai.stacking import (validate_message, check_stack_complete,
@@ -246,7 +248,6 @@ class TestRetention:
         mark_stack_complete(db_address, 'mol-old', 'complete')
 
         with dbs.get_session(db_address) as session:
-            from sqlalchemy import text
             session.execute(
                 text("UPDATE stack_frames SET completed_at = :old_date WHERE moluid = :mol"),
                 {'old_date': datetime.datetime.utcnow() - datetime.timedelta(days=30), 'mol': 'mol-old'},
