@@ -1,5 +1,4 @@
 import os
-import traceback
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse
 
@@ -303,4 +302,4 @@ def process_subframe(self, body: dict, runtime_context: dict):
     except Retry:
         raise
     except Exception:
-        logger.error(f'Error processing subframe: {traceback.format_exc()}')
+        logger.error("Error processing subframe: {error}".format(error=logs.format_exception()))
