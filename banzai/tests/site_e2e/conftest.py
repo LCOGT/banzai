@@ -6,6 +6,8 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
+from sqlalchemy import create_engine, text as sa_text
+from kombu import Connection, Queue
 
 import pytest
 
@@ -67,7 +69,6 @@ def poll_until(predicate, timeout, interval=5):
 
 def publish_to_queue(queue_name, body, broker_url='amqp://localhost:5672'):
     """Publish a JSON message to a RabbitMQ queue."""
-    from kombu import Connection, Queue
     with Connection(broker_url) as conn:
         queue = Queue(queue_name, channel=conn.channel())
         queue.declare()
@@ -142,7 +143,6 @@ def wait_for_service_exit(compose_file, service_name, expected_code=0, timeout=1
 
 def wait_for_subscription_active(timeout=60):
     """Wait for the replication subscription to be enabled with an active worker."""
-    from sqlalchemy import create_engine, text as sa_text
 
     engine = create_engine(LOCAL_DB_ADDRESS)
 
