@@ -1,7 +1,7 @@
 # Source: postgresql/templates/primary/statefulset.yaml
 apiVersion: apps/v1
 kind: StatefulSet
-metadata:
+metadata: # kpt-merge: banzai-deps/postgresql
   name: postgresql
   namespace: banzai-deps
   labels:
@@ -11,6 +11,8 @@ metadata:
     app.kubernetes.io/version: 15.4.0
     helm.sh/chart: postgresql-12.12.10
     app.kubernetes.io/component: primary
+  annotations:
+    internal.kpt.dev/upstream-identifier: 'apps|StatefulSet|banzai-deps|postgresql'
 spec:
   replicas: 1
   serviceName: postgresql-hl
@@ -169,7 +171,7 @@ spec:
 # Source: postgresql/templates/secrets.yaml
 apiVersion: v1
 kind: Secret
-metadata:
+metadata: # kpt-merge: banzai-deps/postgresql
   name: postgresql
   namespace: banzai-deps
   labels:
@@ -178,6 +180,8 @@ metadata:
     app.kubernetes.io/name: postgresql
     app.kubernetes.io/version: 15.4.0
     helm.sh/chart: postgresql-12.12.10
+  annotations:
+    internal.kpt.dev/upstream-identifier: '|Secret|banzai-deps|postgresql'
 type: Opaque
 data:
   postgres-password: dko5enFqVWtHRg==
@@ -187,7 +191,7 @@ data:
 # Source: postgresql/templates/primary/svc.yaml
 apiVersion: v1
 kind: Service
-metadata:
+metadata: # kpt-merge: banzai-deps/postgresql
   name: postgresql
   namespace: banzai-deps
   labels:
@@ -197,6 +201,8 @@ metadata:
     app.kubernetes.io/version: 15.4.0
     helm.sh/chart: postgresql-12.12.10
     app.kubernetes.io/component: primary
+  annotations:
+    internal.kpt.dev/upstream-identifier: '|Service|banzai-deps|postgresql'
 spec:
   type: ClusterIP
   sessionAffinity: None
@@ -213,7 +219,7 @@ spec:
 # Source: postgresql/templates/primary/svc-headless.yaml
 apiVersion: v1
 kind: Service
-metadata:
+metadata: # kpt-merge: banzai-deps/postgresql-hl
   name: postgresql-hl
   namespace: banzai-deps
   labels:
@@ -229,6 +235,7 @@ metadata:
     # field is broken in some versions of Kubernetes:
     # https://github.com/kubernetes/kubernetes/issues/58662
     service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+    internal.kpt.dev/upstream-identifier: '|Service|banzai-deps|postgresql-hl'
 spec:
   type: ClusterIP
   clusterIP: None

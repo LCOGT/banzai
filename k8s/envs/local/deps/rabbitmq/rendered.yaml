@@ -1,7 +1,7 @@
 # Source: rabbitmq/templates/statefulset.yaml
 apiVersion: apps/v1
 kind: StatefulSet
-metadata:
+metadata: # kpt-merge: banzai-deps/rabbitmq
   name: rabbitmq
   namespace: banzai-deps
   labels:
@@ -10,6 +10,8 @@ metadata:
     app.kubernetes.io/name: rabbitmq
     app.kubernetes.io/version: 4.1.2
     helm.sh/chart: rabbitmq-16.0.10
+  annotations:
+    internal.kpt.dev/upstream-identifier: 'apps|StatefulSet|banzai-deps|rabbitmq'
 spec:
   serviceName: rabbitmq-headless
   podManagementPolicy: OrderedReady
@@ -268,7 +270,7 @@ spec:
 # Source: rabbitmq/templates/networkpolicy.yaml
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
-metadata:
+metadata: # kpt-merge: banzai-deps/rabbitmq
   name: rabbitmq
   namespace: banzai-deps
   labels:
@@ -277,6 +279,8 @@ metadata:
     app.kubernetes.io/name: rabbitmq
     app.kubernetes.io/version: 4.1.2
     helm.sh/chart: rabbitmq-16.0.10
+  annotations:
+    internal.kpt.dev/upstream-identifier: 'networking.k8s.io|NetworkPolicy|banzai-deps|rabbitmq'
 spec:
   podSelector:
     matchLabels:
@@ -299,7 +303,7 @@ spec:
 # Source: rabbitmq/templates/pdb.yaml
 apiVersion: policy/v1
 kind: PodDisruptionBudget
-metadata:
+metadata: # kpt-merge: banzai-deps/rabbitmq
   name: rabbitmq
   namespace: banzai-deps
   labels:
@@ -308,6 +312,8 @@ metadata:
     app.kubernetes.io/name: rabbitmq
     app.kubernetes.io/version: 4.1.2
     helm.sh/chart: rabbitmq-16.0.10
+  annotations:
+    internal.kpt.dev/upstream-identifier: 'policy|PodDisruptionBudget|banzai-deps|rabbitmq'
 spec:
   maxUnavailable: 1
   selector:
@@ -318,7 +324,7 @@ spec:
 # Source: rabbitmq/templates/role.yaml
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
-metadata:
+metadata: # kpt-merge: banzai-deps/rabbitmq-endpoint-reader
   name: rabbitmq-endpoint-reader
   namespace: banzai-deps
   labels:
@@ -327,6 +333,8 @@ metadata:
     app.kubernetes.io/name: rabbitmq
     app.kubernetes.io/version: 4.1.2
     helm.sh/chart: rabbitmq-16.0.10
+  annotations:
+    internal.kpt.dev/upstream-identifier: 'rbac.authorization.k8s.io|Role|banzai-deps|rabbitmq-endpoint-reader'
 rules:
 - apiGroups:
   - ""
@@ -344,7 +352,7 @@ rules:
 # Source: rabbitmq/templates/rolebinding.yaml
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
-metadata:
+metadata: # kpt-merge: banzai-deps/rabbitmq-endpoint-reader
   name: rabbitmq-endpoint-reader
   namespace: banzai-deps
   labels:
@@ -353,6 +361,8 @@ metadata:
     app.kubernetes.io/name: rabbitmq
     app.kubernetes.io/version: 4.1.2
     helm.sh/chart: rabbitmq-16.0.10
+  annotations:
+    internal.kpt.dev/upstream-identifier: 'rbac.authorization.k8s.io|RoleBinding|banzai-deps|rabbitmq-endpoint-reader'
 subjects:
 - kind: ServiceAccount
   name: rabbitmq
@@ -364,7 +374,7 @@ roleRef:
 # Source: rabbitmq/templates/secrets.yaml
 apiVersion: v1
 kind: Secret
-metadata:
+metadata: # kpt-merge: banzai-deps/rabbitmq
   name: rabbitmq
   namespace: banzai-deps
   labels:
@@ -373,6 +383,8 @@ metadata:
     app.kubernetes.io/name: rabbitmq
     app.kubernetes.io/version: 4.1.2
     helm.sh/chart: rabbitmq-16.0.10
+  annotations:
+    internal.kpt.dev/upstream-identifier: '|Secret|banzai-deps|rabbitmq'
 type: Opaque
 data:
   rabbitmq-password: cmFiYml0bXE=
@@ -381,7 +393,7 @@ data:
 # Source: rabbitmq/templates/config-secret.yaml
 apiVersion: v1
 kind: Secret
-metadata:
+metadata: # kpt-merge: banzai-deps/rabbitmq-config
   name: rabbitmq-config
   namespace: banzai-deps
   labels:
@@ -390,6 +402,8 @@ metadata:
     app.kubernetes.io/name: rabbitmq
     app.kubernetes.io/version: 4.1.2
     helm.sh/chart: rabbitmq-16.0.10
+  annotations:
+    internal.kpt.dev/upstream-identifier: '|Secret|banzai-deps|rabbitmq-config'
 type: Opaque
 data:
   rabbitmq.conf: IyMgVXNlcm5hbWUgYW5kIHBhc3N3b3JkCmRlZmF1bHRfdXNlciA9IHJhYmJpdG1xCiMjIENsdXN0ZXJpbmcKIyMKY2x1c3Rlcl9uYW1lID0gcmFiYml0bXEKY2x1c3Rlcl9mb3JtYXRpb24ucGVlcl9kaXNjb3ZlcnlfYmFja2VuZCAgPSByYWJiaXRfcGVlcl9kaXNjb3ZlcnlfazhzCmNsdXN0ZXJfZm9ybWF0aW9uLms4cy5ob3N0ID0ga3ViZXJuZXRlcy5kZWZhdWx0CmNsdXN0ZXJfZm9ybWF0aW9uLms4cy5hZGRyZXNzX3R5cGUgPSBob3N0bmFtZQpjbHVzdGVyX2Zvcm1hdGlvbi5rOHMuc2VydmljZV9uYW1lID0gcmFiYml0bXEtaGVhZGxlc3MKY2x1c3Rlcl9mb3JtYXRpb24uazhzLmhvc3RuYW1lX3N1ZmZpeCA9IC5yYWJiaXRtcS1oZWFkbGVzcy5iYW56YWktZGVwcy5zdmMuY2x1c3Rlci5sb2NhbApjbHVzdGVyX2Zvcm1hdGlvbi5ub2RlX2NsZWFudXAuaW50ZXJ2YWwgPSAxMApjbHVzdGVyX2Zvcm1hdGlvbi5ub2RlX2NsZWFudXAub25seV9sb2dfd2FybmluZyA9IHRydWUKY2x1c3Rlcl9wYXJ0aXRpb25faGFuZGxpbmcgPSBhdXRvaGVhbAoKIyBxdWV1ZSBtYXN0ZXIgbG9jYXRvcgpxdWV1ZV9tYXN0ZXJfbG9jYXRvciA9IG1pbi1tYXN0ZXJzCiMgZW5hYmxlIGxvb3BiYWNrIHVzZXIKbG9vcGJhY2tfdXNlcnMucmFiYml0bXEgPSBmYWxzZQojZGVmYXVsdF92aG9zdCA9IGJhbnphaS1kZXBzLXZob3N0CiNkaXNrX2ZyZWVfbGltaXQuYWJzb2x1dGUgPSA1ME1CCiMjIFByb21ldGhldXMgbWV0cmljcwojIwpwcm9tZXRoZXVzLnRjcC5wb3J0ID0gOTQxOQojIyBUQ1AgTGlzdGVuIE9wdGlvbnMKIyMKdGNwX2xpc3Rlbl9vcHRpb25zLmJhY2tsb2cgPSAxMjgKdGNwX2xpc3Rlbl9vcHRpb25zLm5vZGVsYXkgPSB0cnVlCnRjcF9saXN0ZW5fb3B0aW9ucy5saW5nZXIub24gICAgICA9IHRydWUKdGNwX2xpc3Rlbl9vcHRpb25zLmxpbmdlci50aW1lb3V0ID0gMAp0Y3BfbGlzdGVuX29wdGlvbnMua2VlcGFsaXZlID0gZmFsc2U=
@@ -397,7 +411,7 @@ data:
 # Source: rabbitmq/templates/svc.yaml
 apiVersion: v1
 kind: Service
-metadata:
+metadata: # kpt-merge: banzai-deps/rabbitmq
   name: rabbitmq
   namespace: banzai-deps
   labels:
@@ -406,6 +420,8 @@ metadata:
     app.kubernetes.io/name: rabbitmq
     app.kubernetes.io/version: 4.1.2
     helm.sh/chart: rabbitmq-16.0.10
+  annotations:
+    internal.kpt.dev/upstream-identifier: '|Service|banzai-deps|rabbitmq'
 spec:
   type: ClusterIP
   sessionAffinity: None
@@ -433,7 +449,7 @@ spec:
 # Source: rabbitmq/templates/svc-headless.yaml
 apiVersion: v1
 kind: Service
-metadata:
+metadata: # kpt-merge: banzai-deps/rabbitmq-headless
   name: rabbitmq-headless
   namespace: banzai-deps
   labels:
@@ -442,6 +458,8 @@ metadata:
     app.kubernetes.io/name: rabbitmq
     app.kubernetes.io/version: 4.1.2
     helm.sh/chart: rabbitmq-16.0.10
+  annotations:
+    internal.kpt.dev/upstream-identifier: '|Service|banzai-deps|rabbitmq-headless'
 spec:
   clusterIP: None
   ports:
@@ -465,7 +483,7 @@ spec:
 # Source: rabbitmq/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
-metadata:
+metadata: # kpt-merge: banzai-deps/rabbitmq
   name: rabbitmq
   namespace: banzai-deps
   labels:
@@ -474,6 +492,8 @@ metadata:
     app.kubernetes.io/name: rabbitmq
     app.kubernetes.io/version: 4.1.2
     helm.sh/chart: rabbitmq-16.0.10
+  annotations:
+    internal.kpt.dev/upstream-identifier: '|ServiceAccount|banzai-deps|rabbitmq'
 automountServiceAccountToken: false
 secrets:
 - name: rabbitmq

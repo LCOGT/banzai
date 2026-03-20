@@ -5,7 +5,5 @@ metadata: # kpt-merge: /cronjob
   annotations:
     config.kubernetes.io/local-config: "true"
     internal.kpt.dev/upstream-identifier: 'kustomize.config.k8s.io|Kustomization|default|cronjob'
-components:
-  - ./remove-kpt-internal-annotations/
 resources:
   - ./cronjob.yaml

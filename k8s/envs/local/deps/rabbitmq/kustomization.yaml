@@ -7,5 +7,3 @@ metadata: # kpt-merge: /helm-chart
     internal.kpt.dev/upstream-identifier: kustomize.config.k8s.io|Kustomization|default|helm-chart
 resources:
   - ./rendered.yaml
-components:
-  - ./remove-kpt-internal-annotations/

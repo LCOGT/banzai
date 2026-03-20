@@ -17,9 +17,9 @@ upstreamLock:
     repo: https://github.com/LCOGT/kpt-pkg-catalog
     directory: /cronjob
     ref: main
-    commit: 6086ca76a72cfa89714913a0ae2550f7938bcde7
+    commit: 8b89fb7ae3f697300ea8f230aef2f266a0862ed8
 pipeline:
   mutators:
-    - image: gcr.io/kpt-fn/apply-replacements:v0.1.1
+    - image: ghcr.io/kptdev/krm-functions-catalog/apply-replacements:v0.1.1
       configPath: ./fn-replacements.yaml
       name: apply-replacements
