@@ -116,7 +116,6 @@ class ProcessedImage(Base):
     tries = Column(Integer, default=0)
 
 
-
 class StackFrame(Base):
     __tablename__ = 'stack_frames'
     id = Column(Integer, primary_key=True, autoincrement=True)

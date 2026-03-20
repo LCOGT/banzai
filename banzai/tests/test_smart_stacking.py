@@ -13,6 +13,7 @@ from banzai.stacking import (validate_message, check_stack_complete,
                               push_notification, drain_notifications, REDIS_KEY_PREFIX,
                               process_notifications, finalize_stack, check_timeout,
                               discover_cameras, StackingSupervisor)
+from banzai.scheduling import process_subframe
 from banzai.main import SubframeListener
 
 pytestmark = pytest.mark.smart_stacking
@@ -48,7 +49,6 @@ def mock_redis():
 # Database operations
 # ---------------------------------------------------------------------------
 
-@pytest.mark.smart_stacking
 class TestDBOperations:
 
     def test_insert_and_query(self, db_address):
@@ -100,7 +100,6 @@ class TestDBOperations:
 # Status transitions
 # ---------------------------------------------------------------------------
 
-@pytest.mark.smart_stacking
 class TestStatusTransitions:
 
     def test_status_active_to_complete(self, db_address):
@@ -134,7 +133,6 @@ class TestStatusTransitions:
 # Timeout
 # ---------------------------------------------------------------------------
 
-@pytest.mark.smart_stacking
 class TestTimeout:
 
     def test_timeout_finalizes_stale_stacks(self, db_address):
@@ -154,7 +152,6 @@ class TestTimeout:
 # Redis notifications
 # ---------------------------------------------------------------------------
 
-@pytest.mark.smart_stacking
 class TestRedisNotifications:
 
     def test_push_notification(self, mock_redis):
@@ -175,7 +172,6 @@ class TestRedisNotifications:
 # Multiple concurrent stacks
 # ---------------------------------------------------------------------------
 
-@pytest.mark.smart_stacking
 class TestConcurrentStacks:
 
     def test_concurrent_stacks_same_camera(self, db_address):
@@ -203,7 +199,6 @@ class TestConcurrentStacks:
 # check_stack_complete
 # ---------------------------------------------------------------------------
 
-@pytest.mark.smart_stacking
 class TestCheckStackComplete:
 
     @staticmethod
@@ -237,7 +232,6 @@ class TestCheckStackComplete:
 # Retention / cleanup
 # ---------------------------------------------------------------------------
 
-@pytest.mark.smart_stacking
 class TestRetention:
 
     def test_cleanup_old_records(self, db_address):
@@ -276,7 +270,6 @@ class TestRetention:
 # SubframeListener on_message
 # ---------------------------------------------------------------------------
 
-@pytest.mark.smart_stacking
 class TestSubframeListenerOnMessage:
     """on_message dispatches to Celery; no FITS I/O or DB work here."""
 
@@ -320,7 +313,6 @@ class TestSubframeListenerOnMessage:
 # process_subframe Celery task
 # ---------------------------------------------------------------------------
 
-@pytest.mark.smart_stacking
 class TestProcessSubframe:
     """Test the Celery task that does the actual subframe processing."""
 
@@ -352,7 +344,6 @@ class TestProcessSubframe:
     ])
     @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
     def test_process_subframe(self, mock_run_stages, last_frame_val, expected_is_last, db_address, mock_redis):
-        from banzai.scheduling import process_subframe
 
         mock_image = self._make_mock_image()
         mock_run_stages.return_value = [mock_image]
@@ -385,7 +376,6 @@ class TestProcessSubframe:
 # Supervisor
 # ---------------------------------------------------------------------------
 
-@pytest.mark.smart_stacking
 class TestSupervisor:
 
     def test_discover_cameras(self, db_address):

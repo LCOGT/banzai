@@ -1,5 +1,4 @@
 from sqlalchemy import text, create_engine
-from banzai import dbs
 from banzai.logs import get_logger
 
 # PostgreSQL logical replication is managed via server-level DDL commands

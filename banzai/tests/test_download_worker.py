@@ -128,7 +128,7 @@ def _attrs_for_type(cal_type, **overrides):
     return attrs
 
 
-def test_returns_top_2_per_config(db_address, tmp_path):
+def test_returns_top_2_per_config(db_address):
     inst_id = _seed_db(db_address)
     bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
     with dbs.get_session(db_address) as session:
@@ -140,7 +140,7 @@ def test_returns_top_2_per_config(db_address, tmp_path):
     assert filenames == {'mid.fits', 'new.fits'}
 
 
-def test_partitions_independently_by_config(db_address, tmp_path):
+def test_partitions_independently_by_config(db_address):
     inst_id = _seed_db(db_address)
     with dbs.get_session(db_address) as session:
         for i, binning in enumerate(['1x1', '2x2']):
@@ -154,7 +154,7 @@ def test_partitions_independently_by_config(db_address, tmp_path):
                          'bias_2x2_1.fits', 'bias_2x2_2.fits'}
 
 
-def test_filters_by_instrument_type(db_address, tmp_path):
+def test_filters_by_instrument_type(db_address):
     sinistro_id = _seed_db(db_address, camera='fa01', inst_type='1m0-SciCam-Sinistro')
     floyds_id = _seed_db(db_address, camera='en01', inst_type='2m0-FLOYDS-SciCam')
     bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
@@ -167,7 +167,7 @@ def test_filters_by_instrument_type(db_address, tmp_path):
     assert filenames == {'sinistro.fits'}
 
 
-def test_wildcard_returns_all_instrument_types(db_address, tmp_path):
+def test_wildcard_returns_all_instrument_types(db_address):
     sinistro_id = _seed_db(db_address, camera='fa01', inst_type='1m0-SciCam-Sinistro')
     floyds_id = _seed_db(db_address, camera='en01', inst_type='2m0-FLOYDS-SciCam')
     bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
@@ -179,7 +179,7 @@ def test_wildcard_returns_all_instrument_types(db_address, tmp_path):
     assert filenames == {'sinistro.fits', 'floyds.fits'}
 
 
-def test_biases_ignore_filter(db_address, tmp_path):
+def test_biases_ignore_filter(db_address):
     """Biases taken with different filters should be grouped together."""
     inst_id = _seed_db(db_address)
     bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
@@ -192,7 +192,7 @@ def test_biases_ignore_filter(db_address, tmp_path):
     assert filenames == {'bias_B.fits', 'bias_R.fits'}
 
 
-def test_darks_partitioned_by_temperature(db_address, tmp_path):
+def test_darks_partitioned_by_temperature(db_address):
     inst_id = _seed_db(db_address)
     with dbs.get_session(db_address) as session:
         for i, temp in enumerate(['5', '10']):
@@ -207,7 +207,7 @@ def test_darks_partitioned_by_temperature(db_address, tmp_path):
                          'dark_t10_1.fits', 'dark_t10_2.fits'}
 
 
-def test_skyflats_partitioned_by_filter(db_address, tmp_path):
+def test_skyflats_partitioned_by_filter(db_address):
     inst_id = _seed_db(db_address)
     with dbs.get_session(db_address) as session:
         for i, filt in enumerate(['V', 'B']):
