@@ -212,7 +212,6 @@ class TestSiteE2E:
     @pytest.mark.e2e_site_reduction
     def test_08_reduction_used_cached_calibrations(self, site_deployment):
         """Verify reduced frames used calibrations that exist in the local cache and DB."""
-        from astropy.io import fits
 
         output_dir = DATA_DIR / 'output'
         reduced_files = list(output_dir.rglob('*-e91.fits.fz'))
@@ -291,7 +290,6 @@ class TestSiteE2E:
     @pytest.mark.e2e_site_reduction
     def test_12_subframe_stack_completes(self, site_deployment):
         """Verify subframe stacking processes a frame end-to-end."""
-        from astropy.io import fits
 
         raw_dir = DATA_DIR / 'raw'
         src_path = raw_dir / RAW_FRAME_FILENAME
