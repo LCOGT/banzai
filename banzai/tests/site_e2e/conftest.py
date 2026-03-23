@@ -77,6 +77,20 @@ def publish_to_queue(queue_name, body, broker_url='amqp://localhost:5672'):
             producer.publish(body, routing_key=queue_name, serializer='json')
 
 
+def _clean_data_dir(path):
+    """Remove a directory that may contain files owned by container UIDs."""
+    if not path.exists():
+        return
+    result = subprocess.run(
+        ["docker", "run", "--rm", "-v", f"{path}:/target", "alpine",
+         "sh", "-c", "rm -rf /target/*"],
+        capture_output=True, timeout=30,
+    )
+    if result.returncode != 0:
+        logger.warning(f"Docker cleanup failed for {path}: {result.stderr}")
+    shutil.rmtree(path, ignore_errors=True)
+
+
 def run_docker_compose(compose_file, *args, cwd=None, env=None):
     """Run a docker compose command and return the CompletedProcess result."""
     cmd = ["docker", "compose", "-f", str(compose_file)] + list(args)
@@ -230,11 +244,11 @@ def site_deployment(publication_db):
     logger.info("\n[Site Deployment] Cleaning up any previous state...")
     run_site_compose("down", "-v", "--remove-orphans")
 
-    for subdir in ["raw", "calibrations", "output", "postgres"]:
+    for subdir in ["raw", "calibrations", "output"]:
         d = DATA_DIR / subdir
-        if d.exists():
-            shutil.rmtree(d, ignore_errors=True)
+        _clean_data_dir(d)
         d.mkdir(parents=True, exist_ok=True)
+        d.chmod(0o777)
 
     logger.info("[Site Deployment] Starting...")
     result = run_site_compose("up", "-d", "--build")
@@ -285,11 +299,6 @@ def cleanup(request):
         run_docker_compose(pub_compose, "down", "-v", "--remove-orphans")
 
     logger.info("[Cleanup] Removing data directory contents...")
-    if DATA_DIR.exists():
-        for item in DATA_DIR.iterdir():
-            if item.is_dir():
-                shutil.rmtree(item, ignore_errors=True)
-            else:
-                item.unlink(missing_ok=True)
+    _clean_data_dir(DATA_DIR)
 
     logger.info("[Cleanup] Complete")

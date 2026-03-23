@@ -4,12 +4,14 @@ services:
     container_name: banzai-postgresql
     ports:
     - "5442:5432"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - POSTGRES_DB=banzai_local
       - POSTGRES_USER=banzai
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
-      - ${HOST_POSTGRES_DIR}:/var/lib/postgresql/data
+      - site-pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U banzai -d banzai_local"]
       interval: 5s
@@ -206,3 +208,6 @@ services:
       "--stack-retention-days=${STACK_RETENTION_DAYS:-30}"
     ]
     restart: unless-stopped
+
+volumes:
+  site-pgdata:

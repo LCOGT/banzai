@@ -4,6 +4,7 @@ import datetime
 import os
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -153,7 +154,7 @@ class TestSiteE2E:
 
         result = subprocess.run(
             [
-                'uv', 'run', 'python', str(queue_script),
+                sys.executable, str(queue_script),
                 str(raw_dir),
                 '--broker-url', 'amqp://localhost:5672',
                 '--exchange', fits_exchange,

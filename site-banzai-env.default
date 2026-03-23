@@ -8,7 +8,6 @@ INSTRUMENT_TYPES=*                      # Comma-separated instrument types to ca
 HOST_RAW_DIR=./site_banzai/raw               # Raw FITS input
 HOST_CALS_DIR=./site_banzai/calibrations     # Cached calibration files
 HOST_REDUCED_DIR=./site_banzai/reduced       # Pipeline output (reduced frames)
-HOST_POSTGRES_DIR=./site_banzai/postgres     # PostgreSQL database storage
 
 # Message brokers (override to point at existing site infrastructure)
 REDIS_URL=redis://host.docker.internal:6379/0
