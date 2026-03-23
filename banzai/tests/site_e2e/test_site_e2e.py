@@ -16,9 +16,9 @@ from banzai import dbs
 from banzai.tests.site_e2e.utils import populate_publication
 from banzai.tests.site_e2e.conftest import (
     PUBLICATION_DB_ADDRESS, LOCAL_DB_ADDRESS, CACHE_DIR, DATA_DIR,
-    ARCHIVE_API_URL, REPO_ROOT,
-    wait_for_subscription_active, poll_until, run_site_compose,
-    publish_to_queue,
+    ARCHIVE_API_URL, REPO_ROOT, SITE_COMPOSE_FILE,
+    wait_for_subscription_active, wait_for_service_exit, poll_until,
+    run_site_compose, publish_to_queue, drop_subscription_keep_slot,
 )
 
 
@@ -365,3 +365,23 @@ class TestSiteE2E:
         result = poll_until(check, timeout=60)
         assert result, "Stacking supervisor did not timeout the stale stack"
         assert len(result) == 2, f"Expected 2 timed-out frames, found {len(result)}"
+
+    @pytest.mark.e2e_site_startup
+    def test_14_cache_init_reuses_existing_slot(self, site_deployment):
+        """Verify cache-init succeeds when the replication slot already exists on the publisher."""
+        site_id = os.environ.get("SITE_ID", "lsc")
+        subscription_name = f"banzai_{site_id}_sub"
+
+        drop_subscription_keep_slot(LOCAL_DB_ADDRESS, subscription_name)
+
+        run_site_compose("rm", "-f", "banzai-cache-init")
+        result = run_site_compose("up", "-d", "banzai-cache-init")
+        assert result.returncode == 0, f"Failed to restart cache-init: {result.stderr}"
+
+        assert wait_for_service_exit(
+            SITE_COMPOSE_FILE, "banzai-cache-init", expected_code=0, timeout=60,
+            cwd=REPO_ROOT
+        ), "cache-init did not exit successfully after reusing existing slot"
+
+        assert wait_for_subscription_active(timeout=60), \
+            "Replication subscription did not become active after slot reuse"
