@@ -141,6 +141,21 @@ def wait_for_service_exit(compose_file, service_name, expected_code=0, timeout=1
     return poll_until(check, timeout, interval=2)
 
 
+def drop_subscription_keep_slot(db_address, subscription_name):
+    """Drop a local subscription without dropping the replication slot on the publisher.
+
+    This simulates the scenario where the local DB is wiped but the publisher
+    retains the slot (e.g., container restart with a fresh volume).
+    """
+    engine = create_engine(db_address)
+    with engine.connect() as conn:
+        conn = conn.execution_options(isolation_level="AUTOCOMMIT")
+        conn.execute(sa_text(f"ALTER SUBSCRIPTION {subscription_name} DISABLE"))
+        conn.execute(sa_text(f"ALTER SUBSCRIPTION {subscription_name} SET (slot_name = NONE)"))
+        conn.execute(sa_text(f"DROP SUBSCRIPTION {subscription_name}"))
+    engine.dispose()
+
+
 def wait_for_subscription_active(timeout=60):
     """Wait for the replication subscription to be enabled with an active worker."""
 

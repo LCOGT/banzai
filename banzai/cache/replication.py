@@ -1,10 +1,28 @@
+from psycopg2 import errors as pg_errors
 from sqlalchemy import text, create_engine
+from sqlalchemy.exc import OperationalError
+
 from banzai.logs import get_logger
 
 # PostgreSQL logical replication is managed via server-level DDL commands
 # (CREATE/DROP SUBSCRIPTION) that cannot run inside transaction blocks and
 # have no SQLAlchemy ORM representation. Raw SQL with AUTOCOMMIT is required.
 logger = get_logger()
+
+
+def _subscription_sql(subscription_name, aws_connection_string, publication_name,
+                      slot_name, create_slot=True):
+    return f"""
+    CREATE SUBSCRIPTION {subscription_name}
+        CONNECTION '{aws_connection_string}'
+        PUBLICATION {publication_name}
+        WITH (
+            copy_data = true,
+            create_slot = {'true' if create_slot else 'false'},
+            slot_name = '{slot_name}',
+            synchronous_commit = off
+        );
+    """
 
 
 def setup_subscription(local_db_address, aws_connection_string, site_id,
@@ -21,29 +39,28 @@ def setup_subscription(local_db_address, aws_connection_string, site_id,
                 extra_tags={'subscription': subscription_name, 'publication': publication_name,
                             'slot': slot_name, 'site': site_id})
 
-    subscription_sql = f"""
-    CREATE SUBSCRIPTION {subscription_name}
-        CONNECTION '{aws_connection_string}'
-        PUBLICATION {publication_name}
-        WITH (
-            copy_data = true,
-            create_slot = true,
-            slot_name = '{slot_name}',
-            synchronous_commit = off
-        );
-    """
-
+    engine = create_engine(local_db_address)
     try:
+        sql = _subscription_sql(subscription_name, aws_connection_string,
+                                publication_name, slot_name, create_slot=True)
         # CREATE SUBSCRIPTION cannot run inside a transaction block
-        engine = create_engine(local_db_address)
         with engine.connect() as conn:
             conn = conn.execution_options(isolation_level="AUTOCOMMIT")
-            conn.execute(text(subscription_sql))
+            conn.execute(text(sql))
+    except OperationalError as e:
+        if isinstance(e.orig, pg_errors.ProtocolViolation) and 'already exists' in str(e.orig):
+            logger.info(f"Replication slot '{slot_name}' already exists on publisher, reusing it")
+            sql = _subscription_sql(subscription_name, aws_connection_string,
+                                    publication_name, slot_name, create_slot=False)
+            with engine.connect() as conn:
+                conn = conn.execution_options(isolation_level="AUTOCOMMIT")
+                conn.execute(text(sql))
+        else:
+            raise
+    finally:
         engine.dispose()
-        logger.info(f"Successfully created subscription: {subscription_name}")
-    except Exception as e:
-        logger.error(f"Failed to create subscription: {e}")
-        raise
+
+    logger.info(f"Successfully created subscription: {subscription_name}")
 
 
 def drop_subscription(db_address, subscription_name):
