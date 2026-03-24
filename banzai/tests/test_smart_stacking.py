@@ -12,7 +12,7 @@ from banzai.dbs import insert_stack_frame, get_stack_frames, mark_stack_complete
 from banzai.stacking import (validate_message, check_stack_complete,
                               push_notification, drain_notifications, REDIS_KEY_PREFIX,
                               process_notifications, finalize_stack, check_timeout,
-                              discover_cameras, StackingSupervisor)
+                              StackingSupervisor)
 from banzai.scheduling import process_subframe
 from banzai.main import SubframeListener
 
@@ -378,13 +378,8 @@ class TestProcessSubframe:
 
 class TestSupervisor:
 
-    def test_discover_cameras(self, db_address):
-        cameras = discover_cameras(db_address, 'tst')
-        assert 'cam1' in cameras
-        assert 'cam2' in cameras
-        assert len(cameras) == 2
-
-    @patch('banzai.stacking.discover_cameras', return_value=['cam1', 'cam2', 'cam3'])
+    @patch('banzai.stacking.dbs.get_instruments_at_site',
+           return_value=[MagicMock(camera='cam1'), MagicMock(camera='cam2'), MagicMock(camera='cam3')])
     @patch('banzai.stacking.multiprocessing.Process')
     def test_supervisor_spawns_per_camera(self, mock_process_cls, mock_discover):
         supervisor = StackingSupervisor(

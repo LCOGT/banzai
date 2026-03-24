@@ -1,7 +1,7 @@
 """Smart stacking: worker, supervisor, and helper functions."""
+import argparse
 import datetime
 import multiprocessing
-import os
 import signal
 import time
 
@@ -114,15 +114,6 @@ def check_timeout(db_address, camera, timeout_minutes):
 # Supervisor
 # ---------------------------------------------------------------------------
 
-def discover_cameras(db_address, site_id):
-    """Query the Instrument table for cameras at a site."""
-    with dbs.get_session(db_address) as session:
-        instruments = session.query(dbs.Instrument).filter(
-            dbs.Instrument.site == site_id
-        ).all()
-    return [inst.camera for inst in instruments]
-
-
 class StackingSupervisor:
     def __init__(self, site_id, db_address, redis_url, timeout_minutes=20, retention_days=30):
         self.site_id = site_id
@@ -137,7 +128,7 @@ class StackingSupervisor:
 
     def start(self):
         """Discover cameras and spawn one worker process per camera."""
-        cameras = discover_cameras(self.db_address, self.site_id)
+        cameras = [inst.camera for inst in dbs.get_instruments_at_site(self.site_id, self.db_address)]
         for camera in cameras:
             proc = multiprocessing.Process(
                 target=run_worker_loop,
@@ -172,17 +163,28 @@ class StackingSupervisor:
         self.workers.clear()
 
 
+def create_parser():
+    parser = argparse.ArgumentParser(description='Run the smart stacking supervisor.')
+    parser.add_argument('--site-id', dest='site_id', required=True,
+                        help='Site identifier (e.g. lsc, ogg)')
+    parser.add_argument('--db-address', dest='db_address', required=True,
+                        help='Database connection string')
+    parser.add_argument('--redis-url', dest='redis_url', default='redis://redis:6379/0',
+                        help='Redis URL (default: redis://redis:6379/0)')
+    parser.add_argument('--stack-timeout-minutes', dest='stack_timeout_minutes', type=int, default=20,
+                        help='Minutes before an incomplete stack times out (default: 20)')
+    parser.add_argument('--stack-retention-days', dest='stack_retention_days', type=int, default=30,
+                        help='Days to retain completed stacks (default: 30)')
+    return parser
+
+
 def run_supervisor():
     """Entry point for the stacking supervisor."""
-    site_id = os.environ['SITE_ID']
-    db_address = os.environ['DB_ADDRESS']
-    redis_url = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
-    timeout_minutes = int(os.environ.get('STACK_TIMEOUT_MINUTES', '20'))
-    retention_days = int(os.environ.get('STACK_RETENTION_DAYS', '30'))
+    args = create_parser().parse_args()
 
-    supervisor = StackingSupervisor(site_id, db_address, redis_url,
-                                    timeout_minutes=timeout_minutes,
-                                    retention_days=retention_days)
+    supervisor = StackingSupervisor(args.site_id, args.db_address, args.redis_url,
+                                    timeout_minutes=args.stack_timeout_minutes,
+                                    retention_days=args.stack_retention_days)
 
     def handle_signal(signum, frame):
         supervisor.shutdown()

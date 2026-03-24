@@ -150,14 +150,14 @@ services:
     volumes:
       - ${HOST_CALS_DIR}:/calibrations
     environment:
-      - DB_ADDRESS=${DB_ADDRESS}
-      - SITE_ID=${SITE_ID}
-      - INSTRUMENT_TYPES=${INSTRUMENT_TYPES:-*}
-      - PROCESSED_PATH=/calibrations
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - DOWNLOAD_WORKER_POLL_INTERVAL=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}
-    command: ["banzai_download_worker"]
+    command: ["banzai_download_worker",
+              "--db-address=${DB_ADDRESS}",
+              "--site-id=${SITE_ID}",
+              "--instrument-types=${INSTRUMENT_TYPES:-*}",
+              "--processed-path=/calibrations",
+              "--poll-interval=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}"]
     restart: unless-stopped
 
   banzai-subframe-listener:
@@ -217,11 +217,12 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_started
-    environment:
-      - SITE_ID=${SITE_ID}
-      - DB_ADDRESS=${DB_ADDRESS}
-      - REDIS_URL=redis://redis:6379/0
-      - STACK_TIMEOUT_MINUTES=${STACK_TIMEOUT_MINUTES:-20}
-      - STACK_RETENTION_DAYS=${STACK_RETENTION_DAYS:-30}
-    command: ["banzai_stacking_supervisor"]
+    command: [
+      "banzai_stacking_supervisor",
+      "--site-id=${SITE_ID}",
+      "--db-address=${DB_ADDRESS}",
+      "--redis-url=redis://redis:6379/0",
+      "--stack-timeout-minutes=${STACK_TIMEOUT_MINUTES:-20}",
+      "--stack-retention-days=${STACK_RETENTION_DAYS:-30}"
+    ]
     restart: unless-stopped

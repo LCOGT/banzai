@@ -249,15 +249,18 @@ def test_download_happy_path_with_real_db(db_address, tmp_path):
 
 # --- run_download_worker_daemon tests ---
 
-def test_daemon_exits_without_db_address():
-    with mock.patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(SystemExit) as exc:
+@pytest.mark.parametrize('types_arg,expected', [
+    ('*', ['*']),
+    ('1m0-SciCam-Sinistro', ['1m0-SciCam-Sinistro']),
+    ('1m0-SciCam-Sinistro,2m0-FLOYDS-SciCam', ['1m0-SciCam-Sinistro', '2m0-FLOYDS-SciCam']),
+    ('1m0-SciCam-Sinistro, 2m0-FLOYDS-SciCam', ['1m0-SciCam-Sinistro', '2m0-FLOYDS-SciCam']),
+])
+def test_daemon_parses_instrument_types(types_arg, expected):
+    argv = ['banzai_download_worker', '--db-address=sqlite:///test.db',
+            '--site-id=tst', f'--instrument-types={types_arg}']
+    with mock.patch('sys.argv', argv), \
+         mock.patch('banzai.cache.download_worker.run_download_worker') as run:
+        run.side_effect = SystemExit(0)
+        with pytest.raises(SystemExit):
             run_download_worker_daemon()
-        assert exc.value.code == 1
-
-
-def test_daemon_exits_without_site_id():
-    with mock.patch.dict(os.environ, {'DB_ADDRESS': 'sqlite:///test.db'}, clear=True):
-        with pytest.raises(SystemExit) as exc:
-            run_download_worker_daemon()
-        assert exc.value.code == 1
+    assert run.call_args[0][2] == expected

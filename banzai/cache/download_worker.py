@@ -1,5 +1,6 @@
 """Download worker for calibration file caching. Polls DB, downloads missing
 calibrations, deletes stale ones."""
+import argparse
 import os
 import sys
 import time
@@ -163,25 +164,32 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
             time.sleep(30)
 
 
+def create_parser():
+    parser = argparse.ArgumentParser(description='Run the calibration download worker.')
+    parser.add_argument('--db-address', dest='db_address', required=True,
+                        help='Database connection string')
+    parser.add_argument('--site-id', dest='site_id', required=True,
+                        help='Site identifier (e.g. lsc, ogg)')
+    parser.add_argument('--instrument-types', dest='instrument_types', default='*',
+                        help='Comma-separated instrument types, or * for all (default: *)')
+    parser.add_argument('--processed-path', dest='processed_path', default='/calibrations',
+                        help='Path for cached calibration files (default: /calibrations)')
+    parser.add_argument('--poll-interval', dest='poll_interval', type=int, default=10,
+                        help='Seconds between poll cycles (default: 10)')
+    return parser
+
+
 def run_download_worker_daemon():
-    """Entry point: read env vars, start worker loop."""
-    db_address = os.getenv('DB_ADDRESS')
-    site_id = os.getenv('SITE_ID')
-    instrument_types_str = os.getenv('INSTRUMENT_TYPES', '*')
-    processed_path = os.getenv('PROCESSED_PATH', '/data/processed')
-    poll_interval = int(os.getenv('DOWNLOAD_WORKER_POLL_INTERVAL', '10'))
+    """Entry point: parse args, start worker loop."""
+    args = create_parser().parse_args()
 
-    if not db_address or not site_id:
-        logger.error('DB_ADDRESS and SITE_ID environment variables are required')
-        sys.exit(1)
-
-    instrument_types = ([t.strip() for t in instrument_types_str.split(',')]
-                        if instrument_types_str != '*' else ['*'])
+    instrument_types = ([t.strip() for t in args.instrument_types.split(',')]
+                        if args.instrument_types != '*' else ['*'])
     runtime_context = Context(settings)
 
     try:
-        run_download_worker(db_address, site_id, instrument_types, processed_path,
-                            runtime_context, poll_interval)
+        run_download_worker(args.db_address, args.site_id, instrument_types, args.processed_path,
+                            runtime_context, args.poll_interval)
     except KeyboardInterrupt:
         logger.info("Download worker stopped")
         sys.exit(0)
