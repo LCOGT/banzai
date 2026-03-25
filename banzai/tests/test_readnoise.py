@@ -27,9 +27,10 @@ def test_null_input_images():
     assert image is None
 
 
+@mock.patch('banzai.dbs.update_calibration_frameid')
 @mock.patch("banzai.lco.LCOFrameFactory.open")
 @mock.patch("banzai.calibrations.CalibrationUser.get_calibration_file_info", return_value={"filename": "test.fits"})
-def test_adds_good_noise_map(mock_noise_map_file_info, mock_noise_map, set_random_seed):
+def test_adds_good_noise_map(mock_noise_map_file_info, mock_noise_map, mock_update_frameid, set_random_seed):
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False)])
     super_image = FakeLCOObservationFrame(
         hdu_list=[FakeCCDData(data=make_test_readnoise(101, 103, 9.0), memmap=False)], file_path="test.fits"
@@ -41,9 +42,10 @@ def test_adds_good_noise_map(mock_noise_map_file_info, mock_noise_map, set_rando
     assert image.meta.get("L1IDRDN") == "test.fits"
 
 
+@mock.patch('banzai.dbs.update_calibration_frameid')
 @mock.patch("banzai.lco.LCOFrameFactory.open")
 @mock.patch("banzai.calibrations.CalibrationUser.get_calibration_file_info", return_value={"filename": "test.fits"})
-def test_adds_good_noise_map_3d(mock_noise_map_file_info, mock_noise_map, set_random_seed):
+def test_adds_good_noise_map_3d(mock_noise_map_file_info, mock_noise_map, mock_update_frameid, set_random_seed):
     image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(memmap=False) for i in range(4)])
     super_image = FakeLCOObservationFrame(
         hdu_list=[

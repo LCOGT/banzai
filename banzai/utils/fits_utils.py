@@ -125,6 +125,11 @@ def get_configuration_mode(header):
     return configuration_mode
 
 
+@retry(
+    wait=wait_exponential(multiplier=2, min=4, max=10),
+    stop=stop_after_attempt(4),
+    reraise=True
+)
 def basename_search_in_archive(filename, dateobs, context, is_raw_frame=False):
     if is_raw_frame:
         url = f'{context.RAW_DATA_FRAME_URL}/'
@@ -136,8 +141,12 @@ def basename_search_in_archive(filename, dateobs, context, is_raw_frame=False):
     basename = filename.replace('.fz', '').replace('.fits', '')
     start = (dateobs - datetime.timedelta(days=3)).strftime('%Y-%m-%d')
     end = (dateobs + datetime.timedelta(days=3)).strftime('%Y-%m-%d')
-    frames = requests.get(url, headers=archive_auth_header,
-                          params={'basename': basename, 'start': start, 'end': end}).json()['results']
+
+    response = requests.get(url, headers=archive_auth_header,
+                            params={'basename_exact': basename, 'start': start, 'end': end},
+                            timeout=15)
+    response.raise_for_status()
+    frames = response.json()['results']
     if len(frames) > 0:
         frame_id = frames[0]['id']
     else:

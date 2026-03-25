@@ -333,6 +333,16 @@ def cal_record_to_file_info(record):
     return file_info
 
 
+def update_calibration_frameid(cal_record_file_info, db_address):
+    with get_session(db_address=db_address) as db_session:
+        query = db_session.query(CalibrationImage).filter(CalibrationImage.filename == cal_record_file_info['filename'])
+        record = query.first()
+        if record is not None:
+            record.frameid = cal_record_file_info['frameid']
+            db_session.add(record)
+            db_session.commit()
+
+
 def build_master_calibration_criteria(image, calibration_type, master_selection_criteria,
                                       use_only_older_calibrations):
     calibration_criteria = CalibrationImage.type == calibration_type.upper()
