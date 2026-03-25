@@ -70,6 +70,7 @@ class FakeLCOObservationFrame(LCOObservationFrame):
         self.is_bad = False
         self.hdu_order = ['SCI', 'CAT', 'BPM', 'ERR']
         self.n_sub_exposures = 1
+        self.frame_id = 12
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
 

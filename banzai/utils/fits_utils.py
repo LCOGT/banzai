@@ -142,8 +142,9 @@ def basename_search_in_archive(filename, dateobs, context, is_raw_frame=False):
     start = (dateobs - datetime.timedelta(days=3)).strftime('%Y-%m-%d')
     end = (dateobs + datetime.timedelta(days=3)).strftime('%Y-%m-%d')
 
-    response = requests.get(url, headers=archive_auth_header, 
-                            params={'basename_exact': basename, 'start': start, 'end': end})
+    response = requests.get(url, headers=archive_auth_header,
+                            params={'basename_exact': basename, 'start': start, 'end': end},
+                            timeout=15)
     response.raise_for_status()
     frames = response.json()['results']
     if len(frames) > 0:

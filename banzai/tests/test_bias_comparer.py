@@ -32,10 +32,10 @@ def test_flags_bad_if_no_master_calibration(mock_master_filename, set_random_see
     image = comparer.do_stage(image)
     assert image.is_bad is True
 
-
+@mock.patch('banzai.dbs.update_calibration_frameid')
 @mock.patch('banzai.lco.LCOFrameFactory.open')
 @mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info')
-def test_does_not_reject_noisy_image(mock_master_cal_name, mock_master_frame, set_random_seed):
+def test_does_not_reject_noisy_image(mock_master_cal_name, mock_master_frame, mock_update_frameid, set_random_seed):
     mock_master_cal_name.return_value = {'filename': 'test.fits'}
     fake_master_image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(read_noise=11.0)],
                                                 is_master=True)
@@ -47,9 +47,10 @@ def test_does_not_reject_noisy_image(mock_master_cal_name, mock_master_frame, se
     assert image.is_bad is False
 
 
+@mock.patch('banzai.dbs.update_calibration_frameid')
 @mock.patch('banzai.lco.LCOFrameFactory.open')
 @mock.patch('banzai.calibrations.CalibrationUser.get_calibration_file_info')
-def test_does_flag_bad_image(mock_master_cal_name, mock_master_frame, set_random_seed):
+def test_does_flag_bad_image(mock_master_cal_name, mock_master_frame, mock_update_frameid, set_random_seed):
     mock_master_cal_name.return_value = {'filename': 'test.fits'}
     master_readnoise = 3.0
     image_readnoise = 11.0

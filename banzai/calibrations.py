@@ -130,9 +130,9 @@ class CalibrationUser(Stage):
         master_calibration_image.is_master = True
         # If the frame id was not included originally but we were able to pull it from the archive,
         # we store it for future use
-        if 'frame_id' not in master_calibration_file_info and master_calibration_image.frame_id is not None:
-            master_calibration_file_info['frame_id'] = master_calibration_image.frame_id
-            dbs.update_calibration_record(master_calibration_file_info, self.runtime_context.cal_db_address)
+        if 'frameid' not in master_calibration_file_info and master_calibration_image.frame_id is not None:
+            master_calibration_file_info['frameid'] = master_calibration_image.frame_id
+            dbs.update_calibration_frameid(master_calibration_file_info, self.runtime_context.cal_db_address)
         logger.info('Applying master calibration', image=image,
                     extra_tags={'master_calibration':  master_calibration_image.filename})
         return self.apply_master_calibration(image, master_calibration_image)
