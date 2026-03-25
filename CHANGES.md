@@ -1,3 +1,9 @@
+1.32.0 (2026-03-25)
+-------------------
+- Updated calibration frame archive searches to use basename_exact param
+- If we have to pull a calibration frame from the archive via basename, we store the frame id
+  for future use in queries
+
 1.31.0 (2026-03-17)
 -------------------
 - Added calibration cache system for site deployments
