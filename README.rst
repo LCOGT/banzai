@@ -31,16 +31,20 @@ pleas see our paper on arXiv. If possible please also cite
 
 Installation
 ------------
-BANZAI can be installed using pip, by running from the top-level directory containing `setup.py`.
+BANZAI uses `Poetry <https://python-poetry.org/>`_ for dependency management.
 
-Note that `pip>=19.3.1` is required to build and install BANZAI.
+**Python 3.12** is required. Python 3.13 is not supported on Linux because numpy 1.26.4
+(the latest version before the numpy 2.x API break) has no pre-built wheels for Python 3.13,
+forcing a source build that requires a C++ compiler not typically present on minimal installations.
+
+Set up with `pyenv <https://github.com/pyenv/pyenv>`_ and Poetry:
 
 .. code-block:: bash
 
-    pip install .
-
-This will automatically install the dependencies from PyPi, so it is recommended to install
-BANZAI in a virtual environment.
+    pyenv install 3.12
+    pyenv local 3.12
+    poetry env use $(pyenv which python)
+    poetry install
 
 Usage
 -----
@@ -73,10 +77,9 @@ For a runnable example of BANZAI in manual pipeline mode, refer to `this jupyter
 The main requirement to run BANZAI is that the database has been set up. BANZAI is database type
 agnostic as it uses SQLAlchemy. To create a new database to run BANZAI, run
 
-.. code-block:: python
+.. code-block:: bash
 
-    from banzai.dbs import create_db
-    create_db('sqlite:///banzai-test.db')
+    poetry run banzai_create_db --db-address sqlite:///banzai-test.db
 
 This will create an sqlite3 database file in your current directory called `banzai-test.db`.
 
@@ -89,7 +92,7 @@ To add a local bpm to the database, run
 
 .. code-block:: bash
 
-    banzai_add_super_calibration path/to/bpm/file --db-address path/to/db
+    poetry run banzai_add_super_calibration path/to/bpm/file --db-address path/to/db
 
 Generally, you have to reduce individual bias frames first by running `banzai_reduce_individual_frame` command.
 If the processing went well, you can mark them as good in the database using `banzai_mark_frame_as_good`.
@@ -130,7 +133,7 @@ Unit tests can be run using pytest. The end-to-end tests require more setup, so 
 
 .. code-block:: bash
 
-    pytest -m 'not e2e'
+    poetry run pytest -m 'not e2e'
 
 The `-m` is short for marker. The following markers are defined if you only want to run a subset of the tests:
 
@@ -172,7 +175,7 @@ To run the site E2E tests:
     # Edit site_e2e.env and add your AUTH_TOKEN
 
     # Run the tests
-    pytest -m e2e_site banzai/tests/site_e2e/ -v -s
+    poetry run pytest -m e2e_site banzai/tests/site_e2e/ -v -s
 
 The following markers can be used to run subsets of the site E2E tests:
 
