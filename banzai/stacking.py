@@ -169,8 +169,8 @@ def create_parser():
                         help='Site identifier (e.g. lsc, ogg)')
     parser.add_argument('--db-address', dest='db_address', required=True,
                         help='Database connection string')
-    parser.add_argument('--redis-url', dest='redis_url', default='redis://redis:6379/0',
-                        help='Redis URL (default: redis://redis:6379/0)')
+    parser.add_argument('--redis-url', dest='redis_url', required=True,
+                        help='Redis URL')
     parser.add_argument('--stack-timeout-minutes', dest='stack_timeout_minutes', type=int, default=20,
                         help='Minutes before an incomplete stack times out (default: 20)')
     parser.add_argument('--stack-retention-days', dest='stack_retention_days', type=int, default=30,
