@@ -117,10 +117,9 @@ def download_from_s3(file_info, context, is_raw_frame=False):
         if int(response.status_code) == 429:
             message += ' Rate limited.'
         logger.error(message, extra_tags={'filename': file_info.get('filename'),
-                                         'attempt_number': download_from_s3.statistics['attempt_number']})
+                                          'attempt_number': download_from_s3.statistics['attempt_number']})
         raise e
-    bytes = response.content
-    buffer.write(bytes)
+    bytes = buffer.write(response.content)
     buffer.seek(0)
     add_telemetry_span_attribute('downloaded_bytes', bytes)
     return buffer
