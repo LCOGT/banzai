@@ -112,13 +112,13 @@ def download_from_s3(file_info, context, is_raw_frame=False):
     response = requests.get(response_data['url'], timeout=60)
     try:
         response.raise_for_status()
-    except requests.exceptions.HTTPError as e:
+    except requests.exceptions.HTTPError:
         message = 'Error downloading file from S3.'
         if int(response.status_code) == 429:
             message += ' Rate limited.'
         logger.error(message, extra_tags={'filename': file_info.get('filename'),
                                           'attempt_number': download_from_s3.statistics['attempt_number']})
-        raise e
+        raise
     bytes = buffer.write(response.content)
     buffer.seek(0)
     add_telemetry_span_attribute('downloaded_bytes', bytes)
