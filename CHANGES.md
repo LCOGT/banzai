@@ -1,3 +1,7 @@
+1.32.1 (2026-03-27)
+-------------------
+- Another timeout added to fix transient archive failures
+
 1.32.0 (2026-03-25)
 -------------------
 - Updated calibration frame archive searches to use basename_exact param
