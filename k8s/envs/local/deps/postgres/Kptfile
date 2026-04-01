@@ -20,7 +20,7 @@ upstreamLock:
     commit: 6086ca76a72cfa89714913a0ae2550f7938bcde7
 pipeline:
   mutators:
-    - image: gcr.io/kpt-fn/starlark:v0.5.0
+    - image: ghcr.io/kptdev/krm-functions-catalog/starlark:v0.5.0
       configMap:
         source: |-
           output = "rendered.yaml"
@@ -34,10 +34,10 @@ pipeline:
 
           ctx.resource_list["items"] = new
       name: reset-rendered
-    - image: gcr.io/kpt-fn/render-helm-chart:v0.2.2
+    - image: ghcr.io/kptdev/krm-functions-catalog/render-helm-chart:v0.2.2
       configPath: ./charts.yaml
       name: render-helm-chart
-    - image: gcr.io/kpt-fn/starlark:v0.5.0
+    - image: ghcr.io/kptdev/krm-functions-catalog/starlark:v0.5.0
       configMap:
         source: |-
           output = "rendered.yaml"
