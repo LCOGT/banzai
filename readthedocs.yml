@@ -9,5 +9,5 @@ build:
     python: "3.12"
   commands:
     - curl -LsSf https://astral.sh/uv/install.sh | sh
-    - source $HOME/.local/bin/env && uv sync --extra cpu --extra docs
-    - source $HOME/.local/bin/env && uv run sphinx-build -b html docs/ ${READTHEDOCS_OUTPUT}/html/
+    - . $HOME/.local/bin/env && uv sync --extra cpu --extra docs
+    - . $HOME/.local/bin/env && uv run sphinx-build -b html docs/ ${READTHEDOCS_OUTPUT}/html/

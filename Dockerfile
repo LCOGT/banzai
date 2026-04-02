@@ -11,17 +11,17 @@ RUN apt-get -y update && apt-get -y install gcc procps git && \
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-ENV UV_SYSTEM_PYTHON=1
+ENV PATH="/lco/banzai/.venv/bin:$PATH"
 
 WORKDIR /lco/banzai
 
 COPY pyproject.toml uv.lock ./
 
-RUN uv pip install --extra cpu -r pyproject.toml --no-cache
+RUN uv sync --extra cpu --no-install-project --no-cache
 
 COPY . .
 
-RUN uv pip install --extra cpu --no-cache -r pyproject.toml
+RUN uv sync --extra cpu --no-cache
 
 RUN cp /lco/banzai/pytest.ini /home/archive/pytest.ini
 
