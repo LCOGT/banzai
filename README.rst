@@ -37,7 +37,7 @@ BANZAI uses `uv <https://docs.astral.sh/uv/>`_ for dependency management. Instal
 
     curl -LsSf https://astral.sh/uv/install.sh | sh
 
-Then install BANZAI with CPU-only PyTorch (recommended for most users):
+**The standard install uses** ``--extra cpu``, which installs CPU-only PyTorch. This is the recommended default for most users and is what the Docker image and CI use:
 
 .. code-block:: bash
 
@@ -49,11 +49,7 @@ For GPU support (CUDA 12.1):
 
     uv sync --extra cuda
 
-To install without PyTorch (e.g. in environments that manage torch separately):
-
-.. code-block:: bash
-
-    uv sync
+Running ``uv sync`` without an extra will install PyTorch from PyPI, which on Linux is the full CUDA-bundled wheel (~2GB) and requires CUDA drivers. Prefer ``--extra cpu`` unless you specifically need GPU support.
 
 All dependencies are managed automatically. A virtual environment is created in ``.venv`` in the project directory.
 

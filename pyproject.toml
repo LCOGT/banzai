@@ -44,7 +44,6 @@ dependencies = [
   "mock",
   "extension-helpers",
   "numcodecs>=0.16.0",
-  "cosmic-conn[cpu]",
 ]
 
 [project.optional-dependencies]
@@ -61,7 +60,8 @@ docs = [
     "nbsphinx",
     "ipykernel",
 ]
-cuda = ["cosmic-conn[cuda]"]
+cpu = ["cosmic-conn[cpu]", "torch>=2.3"]
+cuda = ["cosmic-conn[cuda]", "torch>=2.3"]
 style = ["pycodestyle"]
 
 [dependency-groups]
@@ -77,14 +77,27 @@ otel = [
 "Docs" = "https://banzai.readthedocs.io/en/latest/"
 
 [tool.uv]
-environments = [
-    "sys_platform == 'linux' and python_version >= '3.11'",
-    "sys_platform == 'darwin' and python_version >= '3.11'",
+conflicts = [
+    [{ extra = "cpu" }, { extra = "cuda" }],
 ]
 
 [tool.uv.sources]
 cosmic-conn = { git = "https://github.com/LCOGT/cosmic-conn", branch = "uv" }
 ocs_ingester = { git = "https://github.com/observatorycontrolsystem/ingester", branch = "fix/poetry_and_update_deps" }
+torch = [
+    { index = "pytorch-cpu", extra = "cpu" },
+    { index = "pytorch-cuda", extra = "cuda" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
 
 [tool.setuptools.packages.find]
 include = ["banzai*"]

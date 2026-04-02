@@ -18,7 +18,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - name: Set up project
-        run: uv sync --extra test
+        run: uv sync --extra cpu --extra test
       - name: Run tests
         run: uv run pytest --pyargs banzai.tests -m "not e2e"
   macos:
@@ -33,6 +33,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - name: Set up project
-        run: uv sync --extra test
+        run: uv sync --extra cpu --extra test
       - name: Run tests
         run: uv run pytest --pyargs banzai.tests -m "not e2e"
