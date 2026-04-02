@@ -20,6 +20,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install pandoc
       - name: Set up project
-        run: uv sync --extra cpu --extra docs
+        run: uv sync --extra docs
       - name: Build Docs
         run: uv run sphinx-build -W -b html docs docs/_build/html
