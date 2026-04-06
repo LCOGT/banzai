@@ -18,14 +18,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - name: Set up project
-        run: uv sync --extra test
+        run: uv sync --locked --extra test
       - name: Run tests
         run: uv run pytest --pyargs banzai.tests -m "not e2e"
   macos:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: ['3.12', '3.13']
+        python-version: ['3.13']
     steps:
       - uses: actions/checkout@v3
       - uses: astral-sh/setup-uv@v4
@@ -33,6 +33,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - name: Set up project
-        run: uv sync --extra test
+        run: uv sync --locked --extra test
       - name: Run tests
         run: uv run pytest --pyargs banzai.tests -m "not e2e"

@@ -44,6 +44,11 @@ Then install BANZAI and all dependencies including CPU-only PyTorch:
     uv sync
 
 All dependencies are managed automatically. A virtual environment is created in ``.venv`` in the project directory.
+Activate it before running any commands:
+
+.. code-block:: bash
+
+    source .venv/bin/activate
 
 Installing from PyPI
 ~~~~~~~~~~~~~~~~~~~~
@@ -134,7 +139,7 @@ for development and for processing data independently of LCO's site infrastructu
 
 .. code-block:: bash
 
-    python scripts/queue_images.py $HOST_RAW_DIR
+    uv run python scripts/queue_images.py $HOST_RAW_DIR
 
 Processed output will be saved in `$HOST_REDUCED_DIR`.
 
@@ -144,7 +149,7 @@ Unit tests can be run using pytest. The end-to-end tests require more setup, so 
 
 .. code-block:: bash
 
-    pytest -m 'not e2e'
+    uv run pytest -m 'not e2e'
 
 The `-m` is short for marker. The following markers are defined if you only want to run a subset of the tests:
 

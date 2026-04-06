@@ -17,11 +17,11 @@ WORKDIR /lco/banzai
 
 COPY pyproject.toml uv.lock ./
 
-RUN uv sync --no-install-project --no-cache
+RUN uv sync --locked --no-install-project --no-cache
 
 COPY . .
 
-RUN uv sync --no-cache
+RUN uv sync --locked --no-cache
 
 RUN cp /lco/banzai/pytest.ini /home/archive/pytest.ini
 

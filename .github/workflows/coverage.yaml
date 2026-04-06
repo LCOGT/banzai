@@ -16,6 +16,6 @@ jobs:
           python-version: '3.12'
           enable-cache: true
       - name: Set up project
-        run: uv sync --extra test
+        run: uv sync --locked --extra test
       - name: Run coverage
         run: uv run pytest --pyargs banzai.tests -m "not e2e" --cov banzai --cov-config="setup.cfg"
