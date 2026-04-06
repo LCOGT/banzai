@@ -44,6 +44,8 @@ dependencies = [
   "mock",
   "extension-helpers",
   "numcodecs>=0.16.0",
+  "cosmic-conn[cpu]>=0.6.0",
+  "torch>=2.3",
 ]
 
 [project.optional-dependencies]
@@ -60,8 +62,6 @@ docs = [
     "nbsphinx",
     "ipykernel",
 ]
-cpu = ["cosmic-conn[cpu]", "torch>=2.3"]
-cuda = ["cosmic-conn[cuda]", "torch>=2.3"]
 style = ["pycodestyle"]
 
 [dependency-groups]
@@ -76,27 +76,14 @@ otel = [
 "Source" = "https://github.com/lcogt/banzai"
 "Docs" = "https://banzai.readthedocs.io/en/latest/"
 
-[tool.uv]
-conflicts = [
-    [{ extra = "cpu" }, { extra = "cuda" }],
-]
-
 [tool.uv.sources]
-cosmic-conn = { git = "https://github.com/LCOGT/cosmic-conn", branch = "uv" }
+cosmic-conn = { git = "https://github.com/cy-xu/cosmic-conn", branch = "v0.6.0" }
 ocs_ingester = { git = "https://github.com/observatorycontrolsystem/ingester", branch = "fix/poetry_and_update_deps" }
-torch = [
-    { index = "pytorch-cpu", extra = "cpu" },
-    { index = "pytorch-cuda", extra = "cuda" },
-]
+torch = { index = "pytorch-cpu" }
 
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
-[[tool.uv.index]]
-name = "pytorch-cuda"
-url = "https://download.pytorch.org/whl/cu121"
 explicit = true
 
 [tool.setuptools.packages.find]

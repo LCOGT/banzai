@@ -37,41 +37,24 @@ BANZAI uses `uv <https://docs.astral.sh/uv/>`_ for dependency management. Instal
 
     curl -LsSf https://astral.sh/uv/install.sh | sh
 
-**The standard install uses** ``--extra cpu``, which installs CPU-only PyTorch. This is the recommended default for most users and is what the Docker image and CI use:
+Then install BANZAI and all dependencies including CPU-only PyTorch:
 
 .. code-block:: bash
 
-    uv sync --extra cpu
-
-For GPU support (CUDA 12.1):
-
-.. code-block:: bash
-
-    uv sync --extra cuda
-
-Running ``uv sync`` without an extra will install PyTorch from PyPI, which on Linux is the full CUDA-bundled wheel (~2GB) and requires CUDA drivers. Prefer ``--extra cpu`` unless you specifically need GPU support.
+    uv sync
 
 All dependencies are managed automatically. A virtual environment is created in ``.venv`` in the project directory.
 
 Installing from PyPI
 ~~~~~~~~~~~~~~~~~~~~
-When installing BANZAI as a package (rather than from source), the PyTorch index must be specified
-explicitly to get the correct wheel. Without it, pip/uv will fall back to the full CUDA-bundled
-PyTorch wheel from PyPI (~2GB).
-
-CPU-only (recommended for most systems):
+When installing BANZAI as a package (rather than from source), pass the pytorch-cpu index to
+avoid pulling the full CUDA-bundled PyTorch wheel from PyPI (~2GB):
 
 .. code-block:: bash
 
-    uv pip install "lco-banzai[cpu]" --extra-index-url https://download.pytorch.org/whl/cpu
+    uv pip install lco-banzai --extra-index-url https://download.pytorch.org/whl/cpu
 
-GPU (CUDA 12.1):
-
-.. code-block:: bash
-
-    uv pip install "lco-banzai[cuda]" --extra-index-url https://download.pytorch.org/whl/cu121
-
-The same flags apply when using ``pip`` instead of ``uv pip``.
+The same flag applies when using ``pip`` instead of ``uv pip``.
 
 Usage
 -----

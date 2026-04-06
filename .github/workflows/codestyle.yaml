@@ -16,6 +16,6 @@ jobs:
           python-version: '3.12'
           enable-cache: true
       - name: Set up project
-        run: uv sync --extra cpu --extra style
+        run: uv sync --extra style
       - name: Code Style
         run: uv run pycodestyle --count --max-line-length=120
