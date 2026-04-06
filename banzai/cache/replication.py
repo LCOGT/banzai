@@ -1,4 +1,4 @@
-from psycopg2 import errors as pg_errors
+from psycopg import errors as pg_errors
 from sqlalchemy import text, create_engine
 from sqlalchemy.exc import OperationalError
 
