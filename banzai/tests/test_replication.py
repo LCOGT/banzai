@@ -1,6 +1,6 @@
 import mock
 import pytest
-from psycopg2 import errors as pg_errors
+from psycopg import errors as pg_errors
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql.elements import TextClause
 
