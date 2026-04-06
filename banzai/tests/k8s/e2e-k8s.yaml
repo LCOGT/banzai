@@ -160,7 +160,7 @@ spec:
       - --hostname
       - "banzai-celery-worker"
       - --concurrency
-      - "1"
+      - "2"
       - -l
       - "info"
       - "-Q"
@@ -180,10 +180,10 @@ spec:
     resources:
       requests:
         cpu: 2
-        memory: 8Gi
+        memory: 12Gi
       limits:
-        cpu: 3
-        memory: 8Gi
+        cpu: 4
+        memory: 12Gi
   - name: banzai-listener
     image: banzai:test-latest
     imagePullPolicy: IfNotPresent

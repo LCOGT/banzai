@@ -44,7 +44,7 @@ dependencies = [
   "mock",
   "extension-helpers",
   "numcodecs>=0.16.0",
-  "cosmic-conn[cpu]>=0.6.0",
+  "cosmic-conn[cpu]>=0.6.1",
   "torch>=2.3",
 ]
 
@@ -77,7 +77,7 @@ otel = [
 "Docs" = "https://banzai.readthedocs.io/en/latest/"
 
 [tool.uv.sources]
-cosmic-conn = { git = "https://github.com/cy-xu/cosmic-conn", branch = "v0.6.0" }
+cosmic-conn = { git = "https://github.com/cy-xu/cosmic-conn", branch = "v0.6.1" }
 ocs_ingester = { git = "https://github.com/observatorycontrolsystem/ingester", branch = "fix/poetry_and_update_deps" }
 torch = { index = "pytorch-cpu" }
 
