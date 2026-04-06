@@ -6,6 +6,7 @@ Versions
 
 - Switch to using uv. Drop python 3.10 support because astropy
   does not support 3.10 and numpy 2 simultaneously
+- Bugfix in retry logic when downloading from the archive
 
 1.32.1 (2026-03-27)
 -------------------
