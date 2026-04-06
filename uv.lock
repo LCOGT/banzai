@@ -529,8 +529,8 @@ wheels = [
 
 [[package]]
 name = "cosmic-conn"
-version = "0.6.0"
-source = { git = "https://github.com/cy-xu/cosmic-conn?branch=v0.6.0#9a758cac2217a12e52352710a5a080e66348e649" }
+version = "0.6.1"
+source = { git = "https://github.com/cy-xu/cosmic-conn?branch=v0.6.1#ce5785d05ee3b06bd59e3206f8ea1c9cfdf3e0dc" }
 dependencies = [
     { name = "astropy" },
     { name = "numpy" },
@@ -1216,7 +1216,7 @@ requires-dist = [
     { name = "astropy", specifier = ">=7.0" },
     { name = "bottleneck" },
     { name = "celery", extras = ["redis"], specifier = ">=5.5.0rc5" },
-    { name = "cosmic-conn", extras = ["cpu"], git = "https://github.com/cy-xu/cosmic-conn?branch=v0.6.0" },
+    { name = "cosmic-conn", extras = ["cpu"], git = "https://github.com/cy-xu/cosmic-conn?branch=v0.6.1" },
     { name = "coverage", marker = "extra == 'test'" },
     { name = "emcee" },
     { name = "extension-helpers" },

@@ -4,10 +4,96 @@ from astropy.table import Table
 from astropy.io import fits
 import pytest
 import io
+from unittest.mock import patch, MagicMock
 
 from banzai.utils import fits_utils
+from banzai.exceptions import FrameNotAvailableError
 
 pytestmark = pytest.mark.fits_utils
+
+
+class FakeContext:
+    ARCHIVE_FRAME_URL = 'https://archive.example.com/frames'
+    ARCHIVE_AUTH_HEADER = {'Authorization': 'Token test'}
+    RAW_DATA_FRAME_URL = 'https://raw.example.com/frames'
+    RAW_DATA_AUTH_HEADER = {'Authorization': 'Token test'}
+
+
+def make_fits_bytes():
+    buf = io.BytesIO()
+    fits.HDUList([fits.PrimaryHDU()]).writeto(buf)
+    return buf.getvalue()
+
+
+@patch('banzai.utils.fits_utils.requests.get')
+def test_download_from_s3_retries_on_400(mock_get):
+    bad_response = MagicMock()
+    bad_response.status_code = 400
+    bad_response.raise_for_status.side_effect = Exception('400 Bad Request')
+
+    good_response = MagicMock()
+    good_response.status_code = 200
+    good_response.raise_for_status.return_value = None
+    good_response.json.return_value = {'url': 'https://s3.example.com/file.fits'}
+
+    s3_response = MagicMock()
+    s3_response.status_code = 200
+    s3_response.raise_for_status.return_value = None
+    s3_response.content = make_fits_bytes()
+
+    mock_get.side_effect = [bad_response, good_response, s3_response]
+
+    file_info = {'frameid': 42, 'filename': 'test.fits'}
+    result = fits_utils.download_from_s3(file_info, FakeContext())
+
+    assert mock_get.call_count == 3
+    assert result.read(4) == b'SIMP'
+
+
+@patch('banzai.utils.fits_utils.requests.get')
+def test_download_from_s3_retries_on_empty_content(mock_get):
+    archive_response = MagicMock()
+    archive_response.status_code = 200
+    archive_response.raise_for_status.return_value = None
+    archive_response.json.return_value = {'url': 'https://s3.example.com/file.fits'}
+
+    empty_s3_response = MagicMock()
+    empty_s3_response.status_code = 200
+    empty_s3_response.raise_for_status.return_value = None
+    empty_s3_response.content = b''
+
+    good_s3_response = MagicMock()
+    good_s3_response.status_code = 200
+    good_s3_response.raise_for_status.return_value = None
+    good_s3_response.content = make_fits_bytes()
+
+    mock_get.side_effect = [archive_response, empty_s3_response,
+                            archive_response, good_s3_response]
+
+    file_info = {'frameid': 42, 'filename': 'test.fits'}
+    result = fits_utils.download_from_s3(file_info, FakeContext())
+
+    assert mock_get.call_count == 4
+    assert result.read(4) == b'SIMP'
+
+
+@patch('banzai.utils.fits_utils.requests.get')
+def test_download_from_s3_raises_after_all_retries_empty(mock_get):
+    archive_response = MagicMock()
+    archive_response.status_code = 200
+    archive_response.raise_for_status.return_value = None
+    archive_response.json.return_value = {'url': 'https://s3.example.com/file.fits'}
+
+    empty_s3_response = MagicMock()
+    empty_s3_response.status_code = 200
+    empty_s3_response.raise_for_status.return_value = None
+    empty_s3_response.content = b''
+
+    mock_get.side_effect = [archive_response, empty_s3_response] * 4
+
+    file_info = {'frameid': 42, 'filename': 'test.fits'}
+    with pytest.raises(EOFError, match='Downloaded empty file from S3'):
+        fits_utils.download_from_s3(file_info, FakeContext())
 
 
 def test_table_to_fits():
