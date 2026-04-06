@@ -7,17 +7,15 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Or macos-latest if needed
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
-      - name: Set up 
-        uses: actions/setup-python@v4
+      - uses: astral-sh/setup-uv@v4
         with:
-          python-version: '3.12' # Specify your desired version
-      - name: Install Poetry
-        run: pip install poetry
+          python-version: '3.12'
+          enable-cache: true
       - name: Set up project
-        run: poetry install -E cpu -E test
+        run: uv sync --locked --extra test
       - name: Run coverage
-        run: poetry run pytest --pyargs banzai.tests -m "not e2e" --cov banzai --cov-config="setup.cfg"
+        run: uv run pytest --pyargs banzai.tests -m "not e2e" --cov banzai --cov-config="setup.cfg"

@@ -7,17 +7,15 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Or macos-latest if needed
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: astral-sh/setup-uv@v4
         with:
-          python-version: '3.12' # Specify your desired version
-      - name: Install Poetry
-        run: pip install poetry
+          python-version: '3.12'
+          enable-cache: true
       - name: Set up project
-        run: poetry install -E cpu -E style
+        run: uv sync --locked --extra style
       - name: Code Style
-        run: poetry run pycodestyle --count --max-line-length=120
+        run: uv run pycodestyle --count --max-line-length=120

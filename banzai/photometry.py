@@ -31,7 +31,7 @@ def radius_of_contour(contour, source):
 
 def flag_sources(sources, source_labels, segmentation_map, mask, flag, mask_value):
     affected_sources = np.unique(segmentation_map.data[mask == mask_value])
-    sources['flag'][np.in1d(source_labels, affected_sources)] |= flag
+    sources['flag'][np.isin(source_labels, affected_sources)] |= flag
 
 
 def flag_deblended(sources, catalog, segmentation_map, deblended_seg_map, flag_value=2):
@@ -41,7 +41,7 @@ def flag_deblended(sources, catalog, segmentation_map, deblended_seg_map, flag_v
     # Get the sources that were originally blended
     original_blends = np.unique(segmentation_map.data[deblended_seg_map > np.max(segmentation_map)])
     deblended_sources = np.hstack([deblended_sources, original_blends])
-    sources['flag'][np.in1d(catalog.labels, deblended_sources)] |= flag_value
+    sources['flag'][np.isin(catalog.labels, deblended_sources)] |= flag_value
 
 
 def flag_edge_sources(image, sources, flag_value=8):

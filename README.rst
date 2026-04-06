@@ -31,16 +31,35 @@ pleas see our paper on arXiv. If possible please also cite
 
 Installation
 ------------
-BANZAI can be installed using pip, by running from the top-level directory containing `setup.py`.
-
-Note that `pip>=19.3.1` is required to build and install BANZAI.
+BANZAI uses `uv <https://docs.astral.sh/uv/>`_ for dependency management. Install uv first if you don't have it:
 
 .. code-block:: bash
 
-    pip install .
+    curl -LsSf https://astral.sh/uv/install.sh | sh
 
-This will automatically install the dependencies from PyPi, so it is recommended to install
-BANZAI in a virtual environment.
+Then install BANZAI and all dependencies including CPU-only PyTorch:
+
+.. code-block:: bash
+
+    uv sync
+
+All dependencies are managed automatically. A virtual environment is created in ``.venv`` in the project directory.
+Activate it before running any commands:
+
+.. code-block:: bash
+
+    source .venv/bin/activate
+
+Installing from PyPI
+~~~~~~~~~~~~~~~~~~~~
+When installing BANZAI as a package (rather than from source), pass the pytorch-cpu index to
+avoid pulling the full CUDA-bundled PyTorch wheel from PyPI (~2GB):
+
+.. code-block:: bash
+
+    uv pip install lco-banzai --extra-index-url https://download.pytorch.org/whl/cpu
+
+The same flag applies when using ``pip`` instead of ``uv pip``.
 
 Usage
 -----
@@ -120,7 +139,7 @@ for development and for processing data independently of LCO's site infrastructu
 
 .. code-block:: bash
 
-    python scripts/queue_images.py $HOST_RAW_DIR
+    uv run python scripts/queue_images.py $HOST_RAW_DIR
 
 Processed output will be saved in `$HOST_REDUCED_DIR`.
 
@@ -130,7 +149,7 @@ Unit tests can be run using pytest. The end-to-end tests require more setup, so 
 
 .. code-block:: bash
 
-    pytest -m 'not e2e'
+    uv run pytest -m 'not e2e'
 
 The `-m` is short for marker. The following markers are defined if you only want to run a subset of the tests:
 
