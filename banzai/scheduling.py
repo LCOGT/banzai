@@ -2,16 +2,19 @@ import os
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse
 
+import redis
 from celery import Celery
 from kombu import Queue
 from celery.exceptions import Retry
 from banzai import dbs, calibrations, logs
-from banzai.utils import date_utils, realtime_utils, stage_utils
+from banzai.utils import date_utils, fits_utils, realtime_utils, stage_utils
 from banzai.metrics import add_telemetry_span_attribute, add_telemetry_span_event
 from celery.signals import worker_process_init
 from banzai.context import Context
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
-from banzai.utils.date_utils import get_stacking_date_range
+from banzai.utils.date_utils import get_stacking_date_range, parse_date_obs
+from banzai.dbs import insert_stack_frame, update_stack_frame_filepath
+from banzai.stacking import push_notification
 try:
     from opentelemetry.instrumentation.celery import CeleryInstrumentor
     OPENTELEMETRY_AVAILABLE = True
@@ -247,3 +250,56 @@ def process_image(self, file_info: dict, runtime_context: dict):
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
                      extra_tags={'file_info': file_info})
+
+
+@app.task(name='celery.process_subframe', bind=True, reject_on_worker_lost=True, max_retries=5)
+def process_subframe(self, body: dict, runtime_context: dict):
+    """Reduce a subframe, record it in the DB, and notify the stacking worker."""
+    try:
+        runtime_context = Context(runtime_context)
+        filepath = body['fits_file']
+
+        header = fits_utils.get_primary_header(filepath)
+
+        camera = header.get('INSTRUME', '').strip()
+        dateobs_str = header.get('DATE-OBS', '')
+        dateobs = parse_date_obs(dateobs_str) if dateobs_str else None
+
+        # Phase 1: Insert DB record before reduction so stacking worker can see it
+        insert_stack_frame(
+            runtime_context.db_address,
+            moluid=header['MOLUID'],
+            stack_num=header['MOLFRNUM'],
+            frmtotal=header['FRMTOTAL'],
+            camera=camera,
+            filepath=None,
+            is_last=body.get('last_frame', False),
+            dateobs=dateobs,
+        )
+
+        # Phase 2: Run reduction pipeline
+        images = stage_utils.run_pipeline_stages([{'path': filepath}], runtime_context)
+
+        # Phase 3: Update DB record with reduced filepath
+        if images:
+            reduced_path = os.path.join(
+                images[0].get_output_directory(runtime_context),
+                images[0].get_output_filename(runtime_context),
+            )
+            update_stack_frame_filepath(
+                runtime_context.db_address,
+                header['MOLUID'],
+                header['MOLFRNUM'],
+                reduced_path,
+            )
+
+        # Phase 4: Notify the stack worker that a new subframe is available
+        redis_url = getattr(runtime_context, 'REDIS_URL', None)
+        if redis_url:
+            redis_client = redis.Redis.from_url(redis_url)
+            push_notification(redis_client, camera, header['MOLUID'])
+
+    except Retry:
+        raise
+    except Exception:
+        logger.error("Error processing subframe: {error}".format(error=logs.format_exception()))
