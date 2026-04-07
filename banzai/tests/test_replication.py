@@ -24,7 +24,7 @@ class TestSetupSubscription:
     def test_generates_sql_with_site_id(self, mock_create_engine):
         engine, conn = _mock_engine()
         mock_create_engine.return_value = engine
-        replication.setup_subscription('postgresql://local/db', 'host=aws dbname=cal', site_id='lsc')
+        replication.setup_subscription('postgresql+psycopg://local/db', 'host=aws dbname=cal', site_id='lsc')
         sql_arg = conn.execute.call_args[0][0]
         assert isinstance(sql_arg, TextClause)
         assert 'banzai_lsc_sub' in sql_arg.text
@@ -35,5 +35,5 @@ class TestSetupSubscription:
     def test_uses_autocommit(self, mock_create_engine):
         engine, conn = _mock_engine()
         mock_create_engine.return_value = engine
-        replication.setup_subscription('postgresql://local/db', 'host=aws', site_id='ogg')
+        replication.setup_subscription('postgresql+psycopg://local/db', 'host=aws', site_id='ogg')
         conn.execution_options.assert_called_once_with(isolation_level="AUTOCOMMIT")

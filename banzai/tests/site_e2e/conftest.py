@@ -36,11 +36,11 @@ load_env_file(SITE_E2E_DIR / "site_e2e.env")
 # Configuration constants (from env vars with defaults)
 PUBLICATION_DB_ADDRESS = os.environ.get(
     "PUBLICATION_DB_ADDRESS",
-    "postgresql://banzai:banzai_test@localhost:5433/banzai_test"
+    "postgresql+psycopg://banzai:banzai_test@localhost:5433/banzai_test"
 )
 LOCAL_DB_ADDRESS = os.environ.get(
     "LOCAL_DB_ADDRESS",
-    "postgresql://banzai@localhost:5442/banzai_local"
+    "postgresql+psycopg://banzai@localhost:5442/banzai_local"
 )
 ARCHIVE_API_URL = os.environ.get("API_ROOT", "https://archive-api.lco.global/")
 DATA_DIR = REPO_ROOT / "data"
