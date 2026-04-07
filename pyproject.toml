@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.11,<4"
-version = "1.33.0"
+version = "1.33.1"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
@@ -23,7 +23,7 @@ classifiers = [
 dependencies = [
   "astropy>=7.0",
   "scipy",
-  "sqlalchemy>=1.3.0b1",
+  "sqlalchemy>=2",
   "logutils",
   "numpy>=2",
   "lcogt_logging",
@@ -33,7 +33,7 @@ dependencies = [
   "opensearch-py",
   "pytest>=4.0",
   "pyyaml",
-  "psycopg2-binary",
+  "psycopg[binary]",
   "celery[redis]>=5.5.0rc5",
   "apscheduler",
   "ocs_ingester>=3.0.4,<4.0.0",
