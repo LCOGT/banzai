@@ -1,6 +1,11 @@
 Versions
 ========
 
+1.33.2 (2026-04-07)
+-------------------
+
+- Suppress ingester warning for opentsdb if OPENTSDB_HOSTNAME env variable is not set.
+
 1.33.1 (2026-04-07)
 -------------------
 
