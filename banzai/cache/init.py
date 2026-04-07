@@ -3,7 +3,6 @@
 import argparse
 import sys
 
-from psycopg2 import errors as pg_errors
 from sqlalchemy.exc import ProgrammingError
 
 from banzai import dbs, logs
@@ -47,7 +46,7 @@ def run_initialization():
                                                publication_name=args.publication_name,
                                                slot_name=args.slot_name)
                 logger.info("Replication subscription created successfully")
-            except (ProgrammingError, pg_errors.DuplicateObject):
+            except ProgrammingError:
                 logger.info("Replication subscription already exists, skipping")
         else:
             logger.info("--aws-db-address not provided, skipping replication setup")
