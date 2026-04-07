@@ -8,7 +8,7 @@ pytestmark = pytest.mark.cache_init
 
 AWS_ARGV = (
     'banzai_cache_init',
-    '--db-address=sqlite:///test.db', '--aws-db-address=postgresql://aws/db',
+    '--db-address=sqlite:///test.db', '--aws-db-address=postgresql+psycopg://aws/db',
     '--site-id=lsc',
 )
 
@@ -22,7 +22,7 @@ class TestRunInitialization:
         assert exc_info.value.code == 2
 
     @mock.patch('sys.argv', [
-        'banzai_cache_init', '--db-address=sqlite:///test.db', '--aws-db-address=postgresql://aws/db'
+        'banzai_cache_init', '--db-address=sqlite:///test.db', '--aws-db-address=postgresql+psycopg://aws/db'
     ])
     def test_exits_1_when_site_id_missing_with_aws(self):
         with pytest.raises(SystemExit) as exc_info:
@@ -46,7 +46,7 @@ class TestRunInitialization:
         assert exc_info.value.code == 0
         mock_create_db.assert_called_once_with('sqlite:///test.db')
         mock_setup_sub.assert_called_once_with(
-            'sqlite:///test.db', 'postgresql://aws/db',
+            'sqlite:///test.db', 'postgresql+psycopg://aws/db',
             site_id='lsc', publication_name='banzai_calibrations',
             slot_name=None
         )
@@ -85,7 +85,7 @@ class TestRunInitialization:
             init.run_initialization()
         assert exc_info.value.code == 0
         mock_setup_sub.assert_called_once_with(
-            'sqlite:///test.db', 'postgresql://aws/db',
+            'sqlite:///test.db', 'postgresql+psycopg://aws/db',
             site_id='lsc', publication_name='custom_pub',
             slot_name=None
         )
@@ -98,7 +98,7 @@ class TestRunInitialization:
             init.run_initialization()
         assert exc_info.value.code == 0
         mock_setup_sub.assert_called_once_with(
-            'sqlite:///test.db', 'postgresql://aws/db',
+            'sqlite:///test.db', 'postgresql+psycopg://aws/db',
             site_id='lsc', publication_name='banzai_calibrations',
             slot_name='custom_slot'
         )

@@ -12,9 +12,8 @@ import datetime
 from dateutil.parser import parse
 import requests
 from sqlalchemy import create_engine, pool, func, make_url
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float, Text
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float
 from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
 from banzai.logs import get_logger

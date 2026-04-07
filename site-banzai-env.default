@@ -16,12 +16,12 @@ OMP_NUM_THREADS=2
 DOWNLOAD_WORKER_POLL_INTERVAL=10
 
 # Database
-DB_ADDRESS=postgresql://banzai@postgresql:5432/banzai_local
+DB_ADDRESS=postgresql+psycopg://banzai@postgresql:5432/banzai_local
 PUBLICATION_NAME=banzai_calibrations
 # CAL_DB_ADDRESS=
 
 # Replication
-AWS_DB_ADDRESS=                         # postgresql://user:pass@aws-host.rds.amazonaws.com:5432/calibrations
+AWS_DB_ADDRESS=                         # postgresql+psycopg://user:pass@aws-host.rds.amazonaws.com:5432/calibrations
 
 # API
 API_ROOT=https://archive-api.lco.global/

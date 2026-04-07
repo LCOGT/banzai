@@ -1,6 +1,11 @@
 Versions
 ========
 
+1.33.1 (2026-04-07)
+-------------------
+
+- Update psycopg to v3 to work with the defaults in sqlalchemy 2
+
 1.33.0 (2026-03-30)
 -------------------
 
