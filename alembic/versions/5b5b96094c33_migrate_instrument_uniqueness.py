@@ -1,7 +1,7 @@
 """Migrate instrument uniqueness.
 
 Revision ID: 5b5b96094c33
-Revises: 
+Revises:
 Create Date: 2026-04-08 14:47:57.894924
 
 """
