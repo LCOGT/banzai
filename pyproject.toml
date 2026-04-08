@@ -95,6 +95,7 @@ zip-safe = false
 
 [tool.setuptools.package-data]
 "banzai.tests" = ["data/*"]
+"banzai" = ["alembic.ini", "alembic/env.py", "alembic/script.py.mako", "alembic/versions/*.py"]
 
 [project.scripts]
 banzai_reduce_individual_frame = "banzai.main:reduce_single_frame"
