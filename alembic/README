@@ -1,0 +1,4 @@
+# Alembic
+
+Alembic (https://alembic.sqlalchemy.org/) scripts to migrate BANZAI database
+from previous versions.
