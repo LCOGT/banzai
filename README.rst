@@ -99,6 +99,13 @@ agnostic as it uses SQLAlchemy. To create a new database to run BANZAI, run
 
 This will create an sqlite3 database file in your current directory called `banzai-test.db`.
 
+To run database migrations (e.g. after upgrading BANZAI), use the Alembic migration files bundled
+with the package:
+
+.. code-block:: bash
+
+    DB_ADDRESS=postgresql://user:pass@host/dbname alembic -c $(python -c "import importlib.resources; print(importlib.resources.files('banzai').joinpath('alembic.ini'))") upgrade head
+
 If you are not running this at LCO, you will have to add the instrument of interest to your database
 by running `banzai_add_instrument` before you can process any data.
 

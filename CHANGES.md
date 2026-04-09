@@ -1,6 +1,12 @@
 Versions
 ========
 
+1.34.0 (2026-04-08)
+-------------------
+
+- Added an alembic migration to go from old versions of the banzai instrument
+  table to current version that has simplified uniqueness constraints
+
 1.33.2 (2026-04-07)
 -------------------
 

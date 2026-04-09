@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.11,<4"
-version = "1.33.2"
+version = "1.34.0"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
@@ -46,6 +46,7 @@ dependencies = [
   "numcodecs>=0.16.0",
   "cosmic-conn[cpu]>=0.6.1",
   "torch>=2.3",
+  "alembic"
 ]
 
 [project.optional-dependencies]
@@ -94,6 +95,7 @@ zip-safe = false
 
 [tool.setuptools.package-data]
 "banzai.tests" = ["data/*"]
+"banzai" = ["alembic.ini", "alembic/env.py", "alembic/script.py.mako", "alembic/versions/*.py"]
 
 [project.scripts]
 banzai_reduce_individual_frame = "banzai.main:reduce_single_frame"
