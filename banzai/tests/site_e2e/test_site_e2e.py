@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import time
+import json
 from pathlib import Path
 
 import pytest
@@ -19,7 +20,7 @@ from banzai.tests.site_e2e.conftest import (
     PUBLICATION_DB_ADDRESS, LOCAL_DB_ADDRESS, CACHE_DIR, DATA_DIR,
     ARCHIVE_API_URL, REPO_ROOT, SITE_COMPOSE_FILE,
     wait_for_subscription_active, wait_for_service_exit, poll_until,
-    run_site_compose, publish_to_queue, drop_subscription_keep_slot,
+    run_site_compose, publish_raw_string_to_queue, drop_subscription_keep_slot,
 )
 
 
@@ -290,7 +291,10 @@ class TestSiteE2E:
 
     @pytest.mark.e2e_site_reduction
     def test_12_subframe_stack_completes(self, site_deployment):
-        """Verify subframe stacking processes a frame end-to-end."""
+        """Verify subframe stacking processes a frame end-to-end.
+
+        Publishes as a raw JSON string to match how instruments send messages.
+        """
 
         raw_dir = DATA_DIR / 'raw'
         src_path = raw_dir / RAW_FRAME_FILENAME
@@ -305,12 +309,12 @@ class TestSiteE2E:
             hdul['SCI'].header['FRMTOTAL'] = 1
             hdul['SCI'].header['STACK'] = 'T'
 
-        body = {
+        body = json.dumps({
             'fits_file': '/raw/subframe_test.fits.fz',
             'last_frame': True,
             'instrument_enqueue_timestamp': int(time.time() * 1000),
-        }
-        publish_to_queue('banzai_stack_queue', body)
+        })
+        publish_raw_string_to_queue('banzai_stack_queue', body)
 
         def check():
             with dbs.get_session(LOCAL_DB_ADDRESS) as session:

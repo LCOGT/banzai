@@ -77,6 +77,20 @@ def publish_to_queue(queue_name, body, broker_url='amqp://localhost:5672'):
             producer.publish(body, routing_key=queue_name, serializer='json')
 
 
+def publish_raw_string_to_queue(queue_name, raw_body, broker_url='amqp://localhost:5672'):
+    """Publish a raw string message to a RabbitMQ queue without JSON serialization.
+
+    This mimics how the instrument software publishes messages: as plain text
+    JSON strings rather than kombu-serialized dicts.
+    """
+    with Connection(broker_url) as conn:
+        queue = Queue(queue_name, channel=conn.channel())
+        queue.declare()
+        with conn.Producer() as producer:
+            producer.publish(raw_body, routing_key=queue_name,
+                             content_type='text/plain', content_encoding='utf-8')
+
+
 def _clean_data_dir(path):
     """Remove a directory that may contain files owned by container UIDs."""
     if not path.exists():

@@ -8,6 +8,7 @@ Author
 October 2015
 """
 import argparse
+import json
 import os
 import os.path
 import logging
@@ -247,6 +248,8 @@ class SubframeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         """Validate and dispatch to Celery for processing."""
+        if isinstance(body, str):
+            body = json.loads(body)
         if not validate_message(body):
             logger.error('Invalid message received, missing required fields')
             message.ack()
