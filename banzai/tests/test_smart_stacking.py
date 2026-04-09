@@ -1,5 +1,6 @@
 """Unit tests for the smart stacking feature."""
 import datetime
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -286,6 +287,26 @@ class TestSubframeListenerOnMessage:
         mock_message = MagicMock()
 
         listener.on_message(body, mock_message)
+
+        mock_task.apply_async.assert_called_once_with(
+            args=(body, vars(ctx)),
+            queue='subframe_tasks',
+        )
+        mock_message.ack.assert_called_once()
+
+    @patch('banzai.main.process_subframe')
+    def test_on_message_parses_json_string(self, mock_task):
+        ctx = MagicMock(SUBFRAME_TASK_QUEUE_NAME='subframe_tasks')
+        listener = SubframeListener(ctx)
+
+        body = {
+            'fits_file': '/path/to/frame.fits',
+            'last_frame': False,
+            'instrument_enqueue_timestamp': 1771023918500,
+        }
+        mock_message = MagicMock()
+
+        listener.on_message(json.dumps(body), mock_message)
 
         mock_task.apply_async.assert_called_once_with(
             args=(body, vars(ctx)),
