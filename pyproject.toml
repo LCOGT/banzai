@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.11,<4"
-version = "1.34.0"
+version = "1.34.1"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
