@@ -35,6 +35,12 @@ def load_env_file(env_path):
 
 load_env_file(SITE_E2E_DIR / "site_e2e.env")
 
+# Resolve relative HOST_*_DIR paths to absolute (required for host-path:host-path volume mounts)
+for _key in ('HOST_RAW_DIR', 'HOST_CALS_DIR', 'HOST_REDUCED_DIR'):
+    _val = os.environ.get(_key)
+    if _val and not os.path.isabs(_val):
+        os.environ[_key] = str((REPO_ROOT / _val).resolve())
+
 # Configuration constants (from env vars with defaults)
 PUBLICATION_DB_ADDRESS = os.environ.get(
     "PUBLICATION_DB_ADDRESS",
