@@ -159,7 +159,6 @@ class TestSiteE2E:
                 str(raw_dir),
                 '--broker-url', 'amqp://localhost:5672',
                 '--exchange', fits_exchange,
-                '--container-path', '/raw'
             ],
             capture_output=True, text=True, timeout=30, cwd=str(REPO_ROOT)
         )
@@ -310,7 +309,7 @@ class TestSiteE2E:
             hdul['SCI'].header['STACK'] = 'T'
 
         body = json.dumps({
-            'fits_file': '/raw/subframe_test.fits.fz',
+            'fits_file': str(DATA_DIR / 'raw' / 'subframe_test.fits.fz'),
             'last_frame': True,
             'instrument_enqueue_timestamp': int(time.time() * 1000),
         })
@@ -329,11 +328,9 @@ class TestSiteE2E:
         assert filepaths, "Subframe stack did not complete within timeout"
 
         # Verify the reduced output file exists on disk.
-        # The container path (e.g. /reduced/lsc/sq34/.../file.fits.fz) maps to DATA_DIR/output/...
-        container_path = filepaths[0]
-        assert container_path, "StackFrame has no filepath after completion"
-        relative_path = container_path.removeprefix('/reduced/')
-        expected_path = DATA_DIR / 'output' / relative_path
+        # Paths in the DB are now absolute host paths, so check directly.
+        assert filepaths[0], "StackFrame has no filepath after completion"
+        expected_path = Path(filepaths[0])
 
         found = poll_until(
             lambda p=expected_path: p.exists() and p.stat().st_size > 0,
