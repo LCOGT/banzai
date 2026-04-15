@@ -22,8 +22,6 @@ def main():
                         help='RabbitMQ broker URL (default: amqp://localhost:5672)')
     parser.add_argument('--exchange', default='fits_files',
                         help='RabbitMQ exchange name (default: fits_files)')
-    parser.add_argument('--container-path', default='/raw',
-                        help='Base path inside container where files are mounted (default: /raw)')
     args = parser.parse_args()
 
     # Find FITS files
@@ -33,22 +31,20 @@ def main():
 
     print(f'Files to process: {len(fits_files)}')
 
-    # Queue each file
+    # Queue each file — use absolute host paths (containers mount host dirs at the same path)
     for filepath in sorted(fits_files):
+        abs_path = os.path.abspath(filepath)
         with fits.open(filepath) as hdul:
             header = hdul['SCI'].header
             siteid = header.get('SITEID', '').strip()
             instrume = header.get('INSTRUME', '').strip()
 
             if siteid and instrume:
-                # Use container path instead of host path
-                container_path = f'{args.container_path}/{os.path.basename(filepath)}'
-
                 post_to_archive_queue(
                     filename=os.path.basename(filepath),
                     broker_url=args.broker_url,
                     exchange_name=args.exchange,
-                    path=container_path,
+                    path=abs_path,
                     SITEID=siteid,
                     INSTRUME=instrume
                 )

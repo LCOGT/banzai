@@ -33,8 +33,8 @@ services:
               "--slot-name=banzai_${SITE_ID}_slot"]
     restart: "no"
 
-  # NOTE: download-worker and pipeline workers must mount HOST_CALS_DIR
-  # at the same container path (/calibrations) so DB filepaths resolve correctly.
+  # NOTE: HOST_*_DIR paths must be absolute. Volumes are mounted at the same
+  # path inside the container so that host-absolute file paths resolve as-is.
 
   banzai-worker:
     build: .
@@ -45,9 +45,9 @@ services:
       banzai-cache-init:
         condition: service_completed_successfully
     volumes:
-      - ${HOST_RAW_DIR}:/raw
-      - ${HOST_CALS_DIR}:/calibrations
-      - ${HOST_REDUCED_DIR}:/reduced
+      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
+      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
@@ -60,7 +60,7 @@ services:
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - DATA_ROOT=/reduced
+      - DATA_ROOT=${HOST_REDUCED_DIR}
     command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "reduction_task_queue"]
     restart: unless-stopped
 
@@ -73,9 +73,9 @@ services:
       banzai-cache-init:
         condition: service_completed_successfully
     volumes:
-      - ${HOST_RAW_DIR}:/raw
-      - ${HOST_CALS_DIR}:/calibrations
-      - ${HOST_REDUCED_DIR}:/reduced
+      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
+      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
@@ -88,7 +88,7 @@ services:
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - DATA_ROOT=/reduced
+      - DATA_ROOT=${HOST_REDUCED_DIR}
     command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-large-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "large_reduction_task_queue"]
     restart: unless-stopped
 
@@ -103,9 +103,9 @@ services:
       banzai-worker:
         condition: service_started
     volumes:
-      - ${HOST_RAW_DIR}:/raw
-      - ${HOST_CALS_DIR}:/calibrations
-      - ${HOST_REDUCED_DIR}:/reduced
+      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
+      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
@@ -121,7 +121,7 @@ services:
                  "--broker-url=${RABBITMQ_URL}",
                  "--db-address=${DB_ADDRESS}",
                  "--calibration-db-address=${CAL_DB_ADDRESS}",
-                 "--processed-path=/reduced"]
+                 "--processed-path=${HOST_REDUCED_DIR}"]
     restart: unless-stopped
 
   banzai-download-worker:
@@ -131,7 +131,7 @@ services:
       banzai-cache-init:
         condition: service_completed_successfully
     volumes:
-      - ${HOST_CALS_DIR}:/calibrations
+      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
     environment:
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
@@ -139,7 +139,7 @@ services:
               "--db-address=${DB_ADDRESS}",
               "--site-id=${SITE_ID}",
               "--instrument-types=${INSTRUMENT_TYPES:-*}",
-              "--processed-path=/calibrations",
+              "--processed-path=${HOST_CALS_DIR}",
               "--poll-interval=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}"]
     restart: unless-stopped
 
@@ -158,7 +158,7 @@ services:
       - REDIS_URL=${REDIS_URL}
     command: ["banzai_subframe_worker", "--broker-url=${RABBITMQ_URL}",
               "--db-address=${DB_ADDRESS}", "--rlevel=9",
-              "--processed-path=/reduced"]
+              "--processed-path=${HOST_REDUCED_DIR}"]
     restart: unless-stopped
 
   banzai-subframe-worker:
@@ -170,9 +170,9 @@ services:
       banzai-cache-init:
         condition: service_completed_successfully
     volumes:
-      - ${HOST_RAW_DIR}:/raw
-      - ${HOST_CALS_DIR}:/calibrations
-      - ${HOST_REDUCED_DIR}:/reduced
+      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
+      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
@@ -183,7 +183,7 @@ services:
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - DATA_ROOT=/reduced
+      - DATA_ROOT=${HOST_REDUCED_DIR}
     command: ["celery", "-A", "banzai.scheduling", "worker",
               "--hostname", "banzai-subframe-worker-local",
               "-l", "${BANZAI_WORKER_LOGLEVEL}",

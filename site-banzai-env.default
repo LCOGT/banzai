@@ -4,10 +4,10 @@ SITE_ID=                                # e.g., lsc, ogg, cpt
 AUTH_TOKEN=                             # Archive API token
 INSTRUMENT_TYPES=*                      # Comma-separated instrument types to cache (e.g., 0m4-SciCam-QHY600,1m0-SciCam-Sinistro) or * for all
 
-# Host paths
-HOST_RAW_DIR=./site_banzai/raw               # Raw FITS input
-HOST_CALS_DIR=./site_banzai/calibrations     # Cached calibration files
-HOST_REDUCED_DIR=./site_banzai/reduced       # Pipeline output (reduced frames)
+# Host paths (must be absolute — mounted at the same path inside containers)
+HOST_RAW_DIR=/mnt/data/raw                   # Raw FITS input
+HOST_CALS_DIR=/mnt/data/calibrations         # Cached calibration files
+HOST_REDUCED_DIR=/mnt/data/reduced           # Pipeline output (reduced frames)
 
 # Message brokers (override to point at existing site infrastructure)
 REDIS_URL=redis://host.docker.internal:6379/0
