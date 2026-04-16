@@ -238,9 +238,9 @@ def open_fits_file(file_info, context, is_raw_frame=False):
 
 
 def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: Iterable) -> fits.HDUList:
-    quantize_levels = {'ext': 1e9 for ext in lossless_extensions}
+    quantize_levels = {ext: 1e9 for ext in lossless_extensions}
     return fits.pack(uncompressed_hdulist, extension_quantizations=quantize_levels)
- 
+
 
 def to_fits_image_extension(data, master_extension_name, extension_name, context, extension_version=None):
     extension_name = master_extension_name + extension_name
