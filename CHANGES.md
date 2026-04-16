@@ -1,6 +1,12 @@
 Versions
 ========
 
+1.35.0 (2026-04-16)
+-------------------
+
+- Pulling in fixed version of astropy that no longer
+  fpacks data incorrectly
+
 1.34.0 (2026-04-08)
 -------------------
 
