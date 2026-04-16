@@ -89,15 +89,31 @@ def download_from_s3(file_info, context, is_raw_frame=False):
         url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}/?include_related_frames=false'
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
     logger.info(f"Requesting archive URL {url} (auth header present: {bool(archive_auth_header)})")
-    response = requests.get(url, headers=archive_auth_header, timeout=30)
+
     try:
+        response = requests.get(url, headers=archive_auth_header, timeout=30)
         response.raise_for_status()
     except requests.exceptions.HTTPError:
         message = 'Error downloading file from archive.'
         if int(response.status_code) == 429:
             message += ' Rate limited.'
-        logger.error(message, extra_tags={'filename': file_info.get('filename'),
-                     'attempt_number': download_from_s3.statistics['attempt_number']})
+        logger.error(
+                message,
+                extra_tags={
+                    'filename': file_info.get('filename'),
+                    'attempt_number': download_from_s3.statistics['attempt_number']
+                }
+            )
+        raise
+    except requests.exceptions.RequestException as e:
+        message = "Archive download connection error."
+        logger.error(
+            f"{message} {e}",
+            extra_tags={
+                'filename': file_info.get('filename'),
+                'attempt_number': download_from_s3.statistics['attempt_number']
+            }
+        )
         raise
 
     # Parse the JSON response
@@ -109,21 +125,40 @@ def download_from_s3(file_info, context, is_raw_frame=False):
         raise FrameNotAvailableError(f"Frame {frame_id} not found in archive")
 
     buffer = io.BytesIO()
-    response = requests.get(response_data['url'], timeout=60)
     try:
+        response = requests.get(response_data['url'], timeout=60)
         response.raise_for_status()
     except requests.exceptions.HTTPError:
-        message = 'Error downloading file from S3.'
+        message = f'Error downloading file from S3. {response.status_code} {response.reason}.'
         if int(response.status_code) == 429:
             message += ' Rate limited.'
-        logger.error(message, extra_tags={'filename': file_info.get('filename'),
-                                          'attempt_number': download_from_s3.statistics['attempt_number']})
+        logger.error(
+            message,
+            extra_tags={
+                'filename': file_info.get('filename'),
+                'attempt_number': download_from_s3.statistics['attempt_number']
+            }
+        )
+        raise
+    except requests.exceptions.RequestException as e:
+        message = "S3 download connection error."
+        logger.error(
+            f"{message} {e}",
+            extra_tags={
+                'filename': file_info.get('filename'),
+                'attempt_number': download_from_s3.statistics['attempt_number']
+            }
+        )
         raise
     downloaded_bytes = buffer.write(response.content)
     if downloaded_bytes == 0:
-        logger.error('Downloaded empty file from S3.',
-                     extra_tags={'filename': file_info.get('filename'),
-                                 'attempt_number': download_from_s3.statistics['attempt_number']})
+        logger.error(
+            'Downloaded empty file from S3.',
+            extra_tags={
+                'filename': file_info.get('filename'),
+                'attempt_number': download_from_s3.statistics['attempt_number']
+            }
+        )
         raise EOFError('Downloaded empty file from S3.')
     buffer.seek(0)
     add_telemetry_span_attribute('downloaded_bytes', downloaded_bytes)
@@ -194,7 +229,7 @@ def open_fits_file(file_info, context, is_raw_frame=False):
         raise ValueError('This file does not exist and there is no frame id to get it from S3.')
 
     hdu_list = fits.open(buffer, memmap=False)
-    uncompressed_hdu_list = unpack(hdu_list)
+    uncompressed_hdu_list = fits.unpack(hdu_list)
     hdu_list.close()
     buffer.close()
     del hdu_list
@@ -203,86 +238,9 @@ def open_fits_file(file_info, context, is_raw_frame=False):
     return uncompressed_hdu_list, filename, frame_id
 
 
-def unpack(compressed_hdulist: fits.HDUList) -> fits.HDUList:
-    # If the primary fits header only has the mandatory keywords, then we throw away that extension
-    # and extension 1 gets moved to 0
-    # Otherwise the primary HDU is kept
-    move_1_to_0 = True
-    for keyword in compressed_hdulist[0].header:
-        if keyword not in FITS_MANDATORY_KEYWORDS:
-            move_1_to_0 = False
-            break
-    if not move_1_to_0 or not isinstance(compressed_hdulist[1], fits.CompImageHDU):
-        primary_hdu = fits.PrimaryHDU(data=compressed_hdulist[0].data, header=compressed_hdulist[0].header)
-    else:
-        data_type = str(compressed_hdulist[1].data.dtype)
-        if 'int' == data_type[:3]:
-            data_type = 'u' + data_type
-            data = np.array(compressed_hdulist[1].data, getattr(np, data_type))
-        else:
-            data = compressed_hdulist[1].data
-        primary_hdu = fits.PrimaryHDU(data=data, header=compressed_hdulist[1].header)
-        if 'ZDITHER0' in primary_hdu.header:
-            primary_hdu.header.pop('ZDITHER0')
-    hdulist = [primary_hdu]
-    if move_1_to_0:
-        starting_extension = 2
-    else:
-        starting_extension = 1
-    for hdu in compressed_hdulist[starting_extension:]:
-        if isinstance(hdu, fits.CompImageHDU):
-            if hdu.data is None:
-                data = hdu.data
-            else:
-                data_type = str(hdu.data.dtype)
-                if 'int' == data_type[:3]:
-                    data_type = getattr(np, 'u' + data_type)
-                    data = np.array(hdu.data, data_type)
-                else:
-                    data = np.array(hdu.data, hdu.data.dtype)
-            hdulist.append(fits.ImageHDU(data=data, header=hdu.header))
-        elif isinstance(hdu, fits.BinTableHDU):
-            hdulist.append(fits.BinTableHDU(data=hdu.data, header=hdu.header))
-        else:
-            hdulist.append(fits.ImageHDU(data=hdu.data, header=hdu.header))
-    return fits.HDUList(hdulist)
-
-
 def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: Iterable) -> fits.HDUList:
-    if uncompressed_hdulist[0].data is None:
-        primary_hdu = fits.PrimaryHDU(header=uncompressed_hdulist[0].header)
-        hdulist = [primary_hdu]
-    else:
-        primary_hdu = fits.PrimaryHDU()
-        if uncompressed_hdulist[0].header['EXTNAME'] in lossless_extensions:
-            quantize_level = 1e9
-        else:
-            quantize_level = 64
-        if uncompressed_hdulist[0].data is None:
-            data = None
-        else:
-            data = np.ascontiguousarray(uncompressed_hdulist[0].data)
-        compressed_hdu = fits.CompImageHDU(data=data,
-                                           header=uncompressed_hdulist[0].header, quantize_level=quantize_level,
-                                           quantize_method=1)
-        hdulist = [primary_hdu, compressed_hdu]
-
-    for hdu in uncompressed_hdulist[1:]:
-        if isinstance(hdu, fits.ImageHDU):
-            if hdu.header['EXTNAME'] in lossless_extensions:
-                quantize_level = 1e9
-            else:
-                quantize_level = 64
-            if hdu.data is None:
-                data = None
-            else:
-                data = np.ascontiguousarray(hdu.data)
-            compressed_hdu = fits.CompImageHDU(data=data, header=hdu.header,
-                                               quantize_level=quantize_level, quantize_method=1)
-            hdulist.append(compressed_hdu)
-        else:
-            hdulist.append(hdu)
-    return fits.HDUList(hdulist)
+    quantize_levels = {ext: 1e9 for ext in lossless_extensions}
+    return fits.pack(uncompressed_hdulist, extension_quantizations=quantize_levels)
 
 
 def to_fits_image_extension(data, master_extension_name, extension_name, context, extension_version=None):

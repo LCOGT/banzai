@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.11,<4"
-version = "1.34.0"
+version = "1.35.0"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
@@ -21,7 +21,7 @@ classifiers = [
   "Operating System :: OS Independent"
 ]
 dependencies = [
-  "astropy>=7.0",
+  "astropy @ git+https://github.com/cmccully/astropy.git@fix/funpack",
   "scipy",
   "sqlalchemy>=2",
   "logutils",
@@ -77,8 +77,8 @@ otel = [
 "Source" = "https://github.com/lcogt/banzai"
 "Docs" = "https://banzai.readthedocs.io/en/latest/"
 
+
 [tool.uv.sources]
-cosmic-conn = { git = "https://github.com/cy-xu/cosmic-conn", branch = "v0.6.1" }
 ocs_ingester = { git = "https://github.com/observatorycontrolsystem/ingester", branch = "fix/poetry_and_update_deps" }
 torch = { index = "pytorch-cpu" }
 
@@ -119,7 +119,6 @@ banzai_cache_init = "banzai.cache.init:run_initialization"
 source = ["banzai"]
 omit = [
   "banzai/_astropy_init*",
-  "banzai/conftest*",
   "banzai/cython_version*",
   "banzai/setup_package*",
   "banzai/*/setup_package*",
