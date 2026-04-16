@@ -208,10 +208,14 @@ class TestMain():
     @mock.patch('banzai.scheduling.dbs.get_instruments_at_site')
     @mock.patch('banzai.scheduling.get_calibration_blocks_for_time_range')
     @mock.patch('banzai.scheduling.filter_calibration_blocks_for_type')
-    def test_submit_stacking_tasks_to_queue_with_delay(self, mock_filter_blocks, mock_get_blocks, mock_get_instruments,
-                                                       mock_stack_calibrations, setup):
+    @mock.patch('banzai.scheduling.datetime')
+    def test_submit_stacking_tasks_to_queue_with_delay(self, mock_datetime, mock_filter_blocks, mock_get_blocks,
+                                                       mock_get_instruments, mock_stack_calibrations, setup):
+        frozen_now = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        mock_datetime.now.return_value = frozen_now
+        mock_datetime.strptime.side_effect = datetime.strptime
         mock_get_instruments.return_value = [self.fake_inst]
-        self.fake_blocks_response_json['results'][0]['end'] = datetime.strftime(datetime.now(timezone.utc) + timedelta(minutes=1),
+        self.fake_blocks_response_json['results'][0]['end'] = datetime.strftime(frozen_now + timedelta(minutes=1),
                                                                                 date_utils.TIMESTAMP_FORMAT)
         mock_get_blocks.return_value = self.fake_blocks_response_json
         mock_filter_blocks.return_value = [block for block in self.fake_blocks_response_json['results']]
