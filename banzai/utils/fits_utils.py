@@ -74,13 +74,16 @@ def get_primary_header(filename) -> Optional[fits.Header]:
     reraise=True
 )
 @trace_function("download_from_s3")
-def download_from_s3(file_info, context, is_raw_frame=False):
+def download_from_s3(file_info, context, is_raw_frame=False, log_attempts=False):
     frame_id = file_info.get('frameid')
     add_telemetry_span_attribute('frame_id', frame_id)
     add_telemetry_span_attribute('frame_filename', file_info.get('filename'))
-    logger.info(f"Downloading file {file_info.get('filename')} from archive. ID: {frame_id}.",
+    attempt = download_from_s3.statistics['attempt_number']
+    max_attempts = download_from_s3.retry.stop.max_attempt_number
+    attempt_suffix = f" (attempt {attempt}/{max_attempts})" if log_attempts else ""
+    logger.info(f"Downloading file {file_info.get('filename')} from archive{attempt_suffix}. ID: {frame_id}.",
                 extra_tags={'filename': file_info.get('filename'),
-                            'attempt_number': download_from_s3.statistics['attempt_number']})
+                            'attempt_number': attempt})
 
     if is_raw_frame:
         url = f'{context.RAW_DATA_FRAME_URL}/{frame_id}/'

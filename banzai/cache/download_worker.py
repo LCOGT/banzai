@@ -13,7 +13,8 @@ from banzai.context import Context
 from banzai.utils import date_utils, file_utils, fits_utils
 
 logger = logs.get_logger()
-HEARTBEAT_INTERVAL = 300
+HEARTBEAT_INTERVAL = 600        # seconds
+FAILURE_RETRY_SECONDS = 43200   # seconds
 
 
 def get_calibrations_to_cache(db_address, site_id, instrument_types):
@@ -80,10 +81,9 @@ def download_calibration(db_address, processed_path, runtime_context, cal):
         return
 
     os.makedirs(dest_dir, exist_ok=True)
-    logger.info(f"Downloading {cal.filename} (frameid={cal.frameid})")
     buffer = fits_utils.download_from_s3(
         {'frameid': cal.frameid, 'filename': cal.filename},
-        runtime_context, is_raw_frame=False
+        runtime_context, is_raw_frame=False, log_attempts=True,
     )
 
     try:
@@ -93,7 +93,7 @@ def download_calibration(db_address, processed_path, runtime_context, cal):
     finally:
         buffer.close()
     update_filepath(db_address, cal.id, dest_dir)
-    logger.info(f"Downloaded {cal.filename}")
+    logger.info(f"Cached {cal.filename}")
 
 
 def delete_calibration(db_address, cal):
@@ -122,41 +122,60 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                         runtime_context, poll_interval=10):
     """Main loop: poll DB, download missing files, delete stale ones."""
     logger.info("Download worker started")
-    last_heartbeat = time.monotonic()
+    failed_frameids: dict[int, float] = {}
+    # Start at 0.0 so the first poll always logs a status line on worker startup.
+    last_status_log = 0.0
 
     while True:
         try:
             needed = get_calibrations_to_cache(db_address, site_id, instrument_types)
             needed_filenames = {cal.filename for cal in needed}
 
-            # Download calibrations not yet on local disk
             to_download = [cal for cal in needed
                            if not os.path.exists(os.path.join(
                                get_cache_path(processed_path, cal), cal.filename))]
 
-            # Find locally-cached cals no longer in the top-2 needed set
             cached_in_db = get_cached_calibrations(db_address, site_id, processed_path)
             to_delete = [c for c in cached_in_db if c.filename not in needed_filenames]
 
-            for cal in to_download:
+            now = time.monotonic()
+            failed_frameids = {fid: t for fid, t in failed_frameids.items()
+                               if now - t < FAILURE_RETRY_SECONDS}
+            fresh_to_download = [c for c in to_download if c.frameid not in failed_frameids]
+
+            if fresh_to_download or to_delete or (now - last_status_log >= HEARTBEAT_INTERVAL):
+                cached_count = len(needed) - len(to_download)
+                logger.info(
+                    f"Cache status: {len(needed)} needed, {cached_count} cached, "
+                    f"{len(fresh_to_download)} to download, {len(failed_frameids)} failing, "
+                    f"{len(to_delete)} to delete"
+                )
+                last_status_log = now
+
+            downloaded_count = 0
+            failed_count = 0
+            for cal in fresh_to_download:
                 try:
                     download_calibration(db_address, processed_path, runtime_context, cal)
+                    downloaded_count += 1
                 except Exception as e:
+                    failed_frameids[cal.frameid] = time.monotonic()
+                    failed_count += 1
                     logger.error(f"Failed to download {cal.filename}: {e}", exc_info=True)
+
+            deleted_count = 0
             for cal in to_delete:
                 try:
                     delete_calibration(db_address, cal)
+                    deleted_count += 1
                 except Exception as e:
                     logger.error(f"Failed to delete {cal.filename}: {e}", exc_info=True)
 
-            now = time.monotonic()
-            if to_download or to_delete:
-                logger.info(f"Cache sync: downloaded {len(to_download)}, "
-                            f"deleted {len(to_delete)}, total needed {len(needed)}")
-                last_heartbeat = now
-            elif now - last_heartbeat >= HEARTBEAT_INTERVAL:
-                logger.info(f"Cache healthy: {len(needed)} calibrations tracked")
-                last_heartbeat = now
+            if downloaded_count or failed_count or deleted_count:
+                logger.info(
+                    f"Cache sync done: {downloaded_count} downloaded, "
+                    f"{failed_count} failed, {deleted_count} deleted"
+                )
 
             time.sleep(poll_interval)
         except Exception as e:
