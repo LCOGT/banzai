@@ -9,11 +9,13 @@ from banzai.logs import get_logger
 # have no SQLAlchemy ORM representation. Raw SQL with AUTOCOMMIT is required.
 logger = get_logger()
 
+# Subscription lives in each site's local Postgres, so a single fixed name is sufficient.
+SUBSCRIPTION_NAME = 'banzai_calibrations_sub'
 
-def _subscription_sql(subscription_name, aws_connection_string, publication_name,
-                      slot_name, create_slot=True):
+
+def _subscription_sql(aws_connection_string, publication_name, slot_name, create_slot=True):
     return f"""
-    CREATE SUBSCRIPTION {subscription_name}
+    CREATE SUBSCRIPTION {SUBSCRIPTION_NAME}
         CONNECTION '{aws_connection_string}'
         PUBLICATION {publication_name}
         WITH (
@@ -25,24 +27,17 @@ def _subscription_sql(subscription_name, aws_connection_string, publication_name
     """
 
 
-def setup_subscription(local_db_address, aws_connection_string, site_id,
-                      publication_name='banzai_calibrations',
-                      subscription_name=None, slot_name=None):
+def setup_subscription(local_db_address, aws_connection_string, slot_name,
+                      publication_name='banzai_calibrations'):
     # aws_connection_string uses libpq format: 'host=... port=5432 dbname=... user=... password=...'
     # Inactive slots consume WAL space on AWS — must be dropped when sites are decommissioned.
-    if subscription_name is None:
-        subscription_name = f'banzai_{site_id}_sub'
-    if slot_name is None:
-        slot_name = f'banzai_{site_id}_slot'
-
     logger.info("Setting up replication subscription",
-                extra_tags={'subscription': subscription_name, 'publication': publication_name,
-                            'slot': slot_name, 'site': site_id})
+                extra_tags={'subscription': SUBSCRIPTION_NAME, 'publication': publication_name,
+                            'slot': slot_name})
 
     engine = create_engine(local_db_address)
     try:
-        sql = _subscription_sql(subscription_name, aws_connection_string,
-                                publication_name, slot_name, create_slot=True)
+        sql = _subscription_sql(aws_connection_string, publication_name, slot_name, create_slot=True)
         # CREATE SUBSCRIPTION cannot run inside a transaction block
         with engine.connect() as conn:
             conn = conn.execution_options(isolation_level="AUTOCOMMIT")
@@ -50,8 +45,7 @@ def setup_subscription(local_db_address, aws_connection_string, site_id,
     except OperationalError as e:
         if isinstance(e.orig, pg_errors.ProtocolViolation) and 'already exists' in str(e.orig):
             logger.info(f"Replication slot '{slot_name}' already exists on publisher, reusing it")
-            sql = _subscription_sql(subscription_name, aws_connection_string,
-                                    publication_name, slot_name, create_slot=False)
+            sql = _subscription_sql(aws_connection_string, publication_name, slot_name, create_slot=False)
             with engine.connect() as conn:
                 conn = conn.execution_options(isolation_level="AUTOCOMMIT")
                 conn.execute(text(sql))
@@ -60,7 +54,7 @@ def setup_subscription(local_db_address, aws_connection_string, site_id,
     finally:
         engine.dispose()
 
-    logger.info(f"Successfully created subscription: {subscription_name}")
+    logger.info(f"Successfully created subscription: {SUBSCRIPTION_NAME}")
 
 
 def drop_subscription(db_address, subscription_name):

@@ -12,6 +12,7 @@ from kombu import Connection, Queue
 import pytest
 
 from banzai.cache import replication
+from banzai.cache.replication import SUBSCRIPTION_NAME
 from banzai.logs import get_logger
 from banzai.tests.site_e2e.utils import populate_publication
 
@@ -302,11 +303,10 @@ def cleanup(request):
 
     logger.info("\n[Cleanup] Starting cleanup...")
     pub_compose = SITE_E2E_DIR / "publication_db" / "docker-compose.yml"
-    site_id = os.environ.get("SITE_ID", "lsc")
 
     logger.info("[Cleanup] Dropping subscription...")
     try:
-        replication.drop_subscription(LOCAL_DB_ADDRESS, f"banzai_{site_id}_sub")
+        replication.drop_subscription(LOCAL_DB_ADDRESS, SUBSCRIPTION_NAME)
     except Exception as e:
         logger.warning(f"[Cleanup] Failed to drop subscription: {e}")
 
