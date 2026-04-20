@@ -47,8 +47,7 @@ class TestRunInitialization:
         mock_create_db.assert_called_once_with('sqlite:///test.db')
         mock_setup_sub.assert_called_once_with(
             'sqlite:///test.db', 'postgresql+psycopg://aws/db',
-            site_id='lsc', publication_name='banzai_calibrations',
-            slot_name=None
+            slot_name='banzai_lsc_slot', publication_name='banzai_calibrations',
         )
 
     @mock.patch('banzai.cache.replication.setup_subscription')
@@ -86,8 +85,7 @@ class TestRunInitialization:
         assert exc_info.value.code == 0
         mock_setup_sub.assert_called_once_with(
             'sqlite:///test.db', 'postgresql+psycopg://aws/db',
-            site_id='lsc', publication_name='custom_pub',
-            slot_name=None
+            slot_name='banzai_lsc_slot', publication_name='custom_pub',
         )
 
     @mock.patch('banzai.cache.replication.setup_subscription')
@@ -99,6 +97,5 @@ class TestRunInitialization:
         assert exc_info.value.code == 0
         mock_setup_sub.assert_called_once_with(
             'sqlite:///test.db', 'postgresql+psycopg://aws/db',
-            site_id='lsc', publication_name='banzai_calibrations',
-            slot_name='custom_slot'
+            slot_name='custom_slot', publication_name='banzai_calibrations',
         )

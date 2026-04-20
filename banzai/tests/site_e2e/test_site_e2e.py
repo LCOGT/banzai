@@ -15,6 +15,7 @@ from sqlalchemy import create_engine, text
 from astropy.io import fits
 
 from banzai import dbs
+from banzai.cache.replication import SUBSCRIPTION_NAME
 from banzai.tests.site_e2e.utils import populate_publication
 from banzai.tests.site_e2e.conftest import (
     PUBLICATION_DB_ADDRESS, LOCAL_DB_ADDRESS, CACHE_DIR, DATA_DIR,
@@ -371,10 +372,7 @@ class TestSiteE2E:
     @pytest.mark.e2e_site_startup
     def test_14_cache_init_reuses_existing_slot(self, site_deployment):
         """Verify cache-init succeeds when the replication slot already exists on the publisher."""
-        site_id = os.environ.get("SITE_ID", "lsc")
-        subscription_name = f"banzai_{site_id}_sub"
-
-        drop_subscription_keep_slot(LOCAL_DB_ADDRESS, subscription_name)
+        drop_subscription_keep_slot(LOCAL_DB_ADDRESS, SUBSCRIPTION_NAME)
 
         run_site_compose("rm", "-f", "banzai-cache-init")
         result = run_site_compose("up", "-d", "banzai-cache-init")
