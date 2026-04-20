@@ -30,12 +30,15 @@ These tests validate the full system by:
    cp banzai/tests/site_e2e/site_e2e.env.template banzai/tests/site_e2e/site_e2e.env
    ```
 
-2. Edit `site_e2e.env` and fill in your archive API token:
-   ```bash
-   AUTH_TOKEN=your-lco-archive-api-token
-   ```
+2. Edit `site_e2e.env` and fill in:
 
-   All other values have working defaults. The token is required to download calibration and science frames from the archive.
+   - Your archive API token:
+     ```bash
+     AUTH_TOKEN=your-lco-archive-api-token
+     ```
+   - Absolute paths for `HOST_RAW_DIR`, `HOST_CALS_DIR`, `HOST_REDUCED_DIR`, and `HOST_POSTGRES_DIR`. Relative paths will cause tests to fail fast at collection time, because `docker-compose-site.yml` mounts these as `${HOST_*_DIR}:${HOST_*_DIR}` (same path inside and outside the container). Point them at `<your-checkout>/data/raw`, `/calibrations`, `/output`, and `/postgres`.
+
+   Other values have working defaults.
 
 ## Running the Tests
 
