@@ -36,11 +36,18 @@ def load_env_file(env_path):
 
 load_env_file(SITE_E2E_DIR / "site_e2e.env")
 
-# Resolve relative HOST_*_DIR paths to absolute (required for host-path:host-path volume mounts)
+# HOST_*_DIR paths must be absolute so that host-path:host-path volume
+# mounts in docker-compose-site.yml resolve correctly (mirrors the
+# production site-banzai-env contract).
 for _key in ('HOST_RAW_DIR', 'HOST_CALS_DIR', 'HOST_REDUCED_DIR'):
     _val = os.environ.get(_key)
-    if _val and not os.path.isabs(_val):
-        os.environ[_key] = str((REPO_ROOT / _val).resolve())
+    if not _val:
+        raise RuntimeError(f"{_key} is required in site_e2e.env")
+    if not os.path.isabs(_val):
+        raise RuntimeError(
+            f"{_key}={_val!r} must be an absolute path. "
+            f"Update banzai/tests/site_e2e/site_e2e.env."
+        )
 
 # Configuration constants (from env vars with defaults)
 PUBLICATION_DB_ADDRESS = os.environ.get(
