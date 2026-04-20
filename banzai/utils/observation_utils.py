@@ -10,7 +10,7 @@ def get_calibration_blocks_for_time_range(site, start_before, start_after, conte
     payload = {'start_before': start_before, 'start_after': start_after, 'site': site,
                'proposal': context.CALIBRATE_PROPOSAL_ID, 'aborted': 'false', 'canceled': 'false', 'order': '-start',
                'offset': '', 'limit': 1000}
-    response = requests.get(context.OBSERVATION_PORTAL_URL, params=payload)
+    response = requests.get(context.OBSERVATION_PORTAL_URL, params=payload, headers=context.ARCHIVE_AUTH_HEADER)
     response.raise_for_status()
     results = response.json()['results']
     for observation in results:

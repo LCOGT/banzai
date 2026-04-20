@@ -1,6 +1,12 @@
 Versions
 ========
 
+1.35.1 (2026-04-20)
+-------------------
+
+- Added authentication to the observation portal to get the times when
+  calibration blocks are scheduled.
+
 1.35.0 (2026-04-16)
 -------------------
 
