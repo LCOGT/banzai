@@ -4,6 +4,8 @@ import mock
 import pytest
 import argparse
 
+from sqlalchemy import create_engine, inspect
+
 import banzai.main
 from banzai import dbs
 from banzai.tests.utils import FakeResponse
@@ -56,3 +58,32 @@ def test_add_or_update():
         # Clean up for other methods
         db_session.delete(instrument)
         db_session.commit()
+
+
+def test_create_db_default_does_not_create_site_tables(tmp_path):
+    addr = f'sqlite:///{tmp_path}/aws_only.db'
+    dbs.create_db(addr)
+    engine = create_engine(addr)
+    assert not inspect(engine).has_table('stack_frames')
+
+
+def test_create_db_site_true_creates_site_tables(tmp_path):
+    addr = f'sqlite:///{tmp_path}/site.db'
+    dbs.create_db(addr, site=True)
+    engine = create_engine(addr)
+    assert inspect(engine).has_table('stack_frames')
+
+
+def test_get_session_site_true_raises_when_site_tables_missing(tmp_path):
+    addr = f'sqlite:///{tmp_path}/aws_only.db'
+    dbs.create_db(addr)
+    with pytest.raises(RuntimeError, match='stack_frames'):
+        with dbs.get_session(addr, site=True):
+            pass
+
+
+def test_get_session_site_true_succeeds_with_site_tables(tmp_path):
+    addr = f'sqlite:///{tmp_path}/site.db'
+    dbs.create_db(addr, site=True)
+    with dbs.get_session(addr, site=True) as session:
+        assert session is not None
