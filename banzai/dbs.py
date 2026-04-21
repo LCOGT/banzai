@@ -12,10 +12,11 @@ import datetime
 from dateutil.parser import parse
 import requests
 from sqlalchemy import create_engine, pool, func, make_url, inspect
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float, Text
 from sqlalchemy.sql.expression import true
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from contextlib import contextmanager
 from banzai.logs import get_logger
 
@@ -624,20 +625,34 @@ def replicate_instrument(instrument_record, db_address):
 
 
 def insert_stack_frame(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs):
-    """Insert a stack frame record into the database. Duplicate (moluid, stack_num) is a no-op."""
-    try:
-        with get_session(db_address, site=True) as session:
-            session.add(StackFrame(
-                moluid=moluid,
-                stack_num=stack_num,
-                frmtotal=frmtotal,
-                camera=camera,
-                filepath=filepath,
-                is_last=is_last,
-                dateobs=dateobs,
-            ))
-    except IntegrityError:
-        pass
+    """Upsert a stack frame record. On conflict (moluid, stack_num), reset the row
+    to a fresh active state so a requeue behaves like a retry from scratch."""
+    with get_session(db_address, site=True) as session:
+        dialect = session.bind.dialect.name
+        if 'postgres' in dialect:
+            insert = pg_insert
+        elif 'sqlite' in dialect:
+            insert = sqlite_insert
+        else:
+            raise NotImplementedError("Only postgres and sqlite are supported")
+
+        stmt = insert(StackFrame).values(
+            moluid=moluid, stack_num=stack_num, frmtotal=frmtotal, camera=camera,
+            filepath=filepath, is_last=is_last, dateobs=dateobs,
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=['moluid', 'stack_num'],
+            set_={
+                'frmtotal': stmt.excluded.frmtotal,
+                'camera': stmt.excluded.camera,
+                'is_last': stmt.excluded.is_last,
+                'dateobs': stmt.excluded.dateobs,
+                'filepath': stmt.excluded.filepath,
+                'status': 'active',
+                'completed_at': None,
+            },
+        )
+        session.execute(stmt)
 
 
 def get_stack_frames(db_address, moluid):
