@@ -150,9 +150,12 @@ services:
         condition: service_completed_successfully
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
+      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - SUBFRAME_TASK_QUEUE_NAME=subframe_reduction_task_queue
       - TASK_HOST=${REDIS_URL}
       - REDIS_URL=${REDIS_URL}
+      - API_ROOT=${API_ROOT}
+      - AUTH_TOKEN=${AUTH_TOKEN}
     command: ["banzai_subframe_worker", "--broker-url=${RABBITMQ_URL}",
               "--db-address=${DB_ADDRESS}", "--rlevel=9",
               "--processed-path=${HOST_REDUCED_DIR}"]
