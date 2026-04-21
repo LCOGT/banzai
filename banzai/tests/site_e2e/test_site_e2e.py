@@ -243,12 +243,38 @@ class TestSiteE2E:
                     cal = session.query(dbs.CalibrationImage).filter(
                         dbs.CalibrationImage.filename == basename
                     ).first()
-                if not cal or not cal.filepath:
+                cache_root = str(CACHE_DIR)
+                if not cal or not cal.filepath or not cal.filepath.startswith(cache_root):
                     errors.append(
-                        f"{reduced_path.name}: {cal_type} file '{basename}' missing or NULL filepath in DB"
+                        f"{reduced_path.name}: {cal_type} file '{basename}' filepath="
+                        f"{cal.filepath if cal else None!r}, expected under {cache_root}"
                     )
 
         assert not errors, "Cached calibration verification failed:\n" + "\n".join(errors)
+
+    @pytest.mark.e2e_site_cache
+    @pytest.mark.parametrize("drifted_value", [None, "/archive/engineering/fake/path"])
+    def test_08b_filepath_reconciled_after_drift(self, site_deployment, drifted_value):
+        """Worker restores local filepath when DB value drifts for an on-disk cal."""
+        target = 'lsc0m476-sq34-20260121-bias-central30x30-bin1x1.fits.fz'
+
+        with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+            cal = session.query(dbs.CalibrationImage).filter_by(filename=target).first()
+            assert cal and cal.filepath and cal.filepath.startswith(str(CACHE_DIR)), (
+                f"pre-condition failed: {target} not locally cached before drift "
+                f"(filepath={cal.filepath if cal else None!r})"
+            )
+            expected = cal.filepath
+            cal.filepath = drifted_value
+
+        def check():
+            with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+                cal = session.query(dbs.CalibrationImage).filter_by(filename=target).first()
+                return cal.filepath if cal and cal.filepath == expected else None
+
+        assert poll_until(check, timeout=60, interval=2) == expected, (
+            f"worker did not reconcile {target} back to {expected} after drift to {drifted_value!r}"
+        )
 
     @pytest.mark.e2e_site_cache
     def test_09_add_older_calibrations(self):
