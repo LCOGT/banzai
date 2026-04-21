@@ -57,7 +57,6 @@ services:
       - CELERY_TASK_QUEUE_NAME=reduction_task_queue
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
-      - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - DATA_ROOT=${HOST_REDUCED_DIR}
@@ -85,7 +84,6 @@ services:
       - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
-      - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - DATA_ROOT=${HOST_REDUCED_DIR}
@@ -116,7 +114,6 @@ services:
       - CELERY_TASK_QUEUE_NAME=reduction_task_queue
       - TASK_HOST=${REDIS_URL}
       - FITS_EXCHANGE=fits_files
-      - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
     entrypoint: ["banzai_run_realtime_pipeline", "--fpack", "--no-bpm",
                  "--broker-url=${RABBITMQ_URL}",
                  "--db-address=${DB_ADDRESS}",
