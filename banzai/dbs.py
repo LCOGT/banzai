@@ -11,7 +11,7 @@ import os.path
 import datetime
 from dateutil.parser import parse
 import requests
-from sqlalchemy import create_engine, pool, func, make_url
+from sqlalchemy import create_engine, pool, func, make_url, inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float, Text
@@ -19,13 +19,14 @@ from sqlalchemy.sql.expression import true
 from contextlib import contextmanager
 from banzai.logs import get_logger
 
-Base = declarative_base()
+Base = declarative_base()      # AWS-replicated tables
+SiteBase = declarative_base()  # site-only tables
 
 logger = get_logger()
 
 
 @contextmanager
-def get_session(db_address):
+def get_session(db_address, site=False):
     """
     Get a connection to the database.
 
@@ -35,6 +36,16 @@ def get_session(db_address):
     """
     # Build a new engine for each session. This makes things thread safe.
     engine = create_engine(db_address, poolclass=pool.NullPool)
+    if site:
+        inspector = inspect(engine)
+        missing = [t.name for t in SiteBase.metadata.tables.values()
+                   if not inspector.has_table(t.name)]
+        if missing:
+            raise RuntimeError(
+                f"get_session called with site=True but site tables "
+                f"missing from {db_address}: {missing}. "
+                f"This deployment is not site-configured."
+            )
     Base.metadata.bind = engine
 
     # We don't use autoflush typically. I have run into issues where SQLAlchemy would try to flush
@@ -116,7 +127,7 @@ class ProcessedImage(Base):
     tries = Column(Integer, default=0)
 
 
-class StackFrame(Base):
+class StackFrame(SiteBase):
     __tablename__ = 'stack_frames'
     id = Column(Integer, primary_key=True, autoincrement=True)
     moluid = Column(String(100), nullable=False, index=True)
@@ -451,13 +462,15 @@ def mark_frame(filename, mark_as, db_address):
         db_session.commit()
 
 
-def create_db(db_address):
+def create_db(db_address, site=False):
     # Create an engine for the database
     engine = create_engine(db_address)
 
     # Create all tables in the engine
     # This only needs to be run once on initialization.
     Base.metadata.create_all(engine)
+    if site:
+        SiteBase.metadata.create_all(engine)
 
 
 def populate_instrument_tables(db_address, configdb_address):
@@ -613,7 +626,7 @@ def replicate_instrument(instrument_record, db_address):
 def insert_stack_frame(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs):
     """Insert a stack frame record into the database. Duplicate (moluid, stack_num) is a no-op."""
     try:
-        with get_session(db_address) as session:
+        with get_session(db_address, site=True) as session:
             session.add(StackFrame(
                 moluid=moluid,
                 stack_num=stack_num,
@@ -629,7 +642,7 @@ def insert_stack_frame(db_address, moluid, stack_num, frmtotal, camera, filepath
 
 def get_stack_frames(db_address, moluid):
     """Get all stack frame records for a given moluid."""
-    with get_session(db_address) as session:
+    with get_session(db_address, site=True) as session:
         return session.query(StackFrame).filter(
             StackFrame.moluid == moluid
         ).all()
@@ -638,7 +651,7 @@ def get_stack_frames(db_address, moluid):
 def mark_stack_complete(db_address, moluid, status='complete'):
     """Mark all frames for a moluid as complete (or timeout)."""
     now = datetime.datetime.utcnow()
-    with get_session(db_address) as session:
+    with get_session(db_address, site=True) as session:
         session.query(StackFrame).filter(
             StackFrame.moluid == moluid
         ).update({'status': status, 'completed_at': now})
@@ -646,7 +659,7 @@ def mark_stack_complete(db_address, moluid, status='complete'):
 
 def update_stack_frame_filepath(db_address, moluid, stack_num, filepath):
     """Set the reduced filepath on an existing stack frame record."""
-    with get_session(db_address) as session:
+    with get_session(db_address, site=True) as session:
         session.query(StackFrame).filter(
             StackFrame.moluid == moluid,
             StackFrame.stack_num == stack_num,
@@ -656,7 +669,7 @@ def update_stack_frame_filepath(db_address, moluid, stack_num, filepath):
 def cleanup_old_records(db_address, retention_days):
     """Delete completed stack frame records older than retention_days."""
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=retention_days)
-    with get_session(db_address) as session:
+    with get_session(db_address, site=True) as session:
         session.query(StackFrame).filter(
             StackFrame.status != 'active',
             StackFrame.completed_at < cutoff,
