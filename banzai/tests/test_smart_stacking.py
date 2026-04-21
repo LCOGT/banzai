@@ -69,19 +69,30 @@ class TestDBOperations:
         assert frame.is_last is False
         assert frame.dateobs == dateobs
 
-    def test_duplicate_is_noop(self, db_address):
+    def test_duplicate_resets_state_for_retry(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         insert_stack_frame(
             db_address, moluid='mol-dup', stack_num=1, frmtotal=3,
             camera='cam1', filepath='/data/dup1.fits', is_last=False, dateobs=dateobs,
         )
+        mark_stack_complete(db_address, 'mol-dup', 'complete')
+        frames = get_stack_frames(db_address, 'mol-dup')
+        assert frames[0].status == 'complete'
+        assert frames[0].completed_at is not None
+
+        new_dateobs = datetime.datetime(2024, 6, 15, 13, 0, 0)
         insert_stack_frame(
             db_address, moluid='mol-dup', stack_num=1, frmtotal=3,
-            camera='cam1', filepath='/data/dup2.fits', is_last=False, dateobs=dateobs,
+            camera='cam1', filepath=None, is_last=True, dateobs=new_dateobs,
         )
         frames = get_stack_frames(db_address, 'mol-dup')
         assert len(frames) == 1
-        assert frames[0].filepath == '/data/dup1.fits'
+        frame = frames[0]
+        assert frame.status == 'active'
+        assert frame.completed_at is None
+        assert frame.filepath is None
+        assert frame.is_last is True
+        assert frame.dateobs == new_dateobs
 
     def test_update_stack_frame_filepath(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
