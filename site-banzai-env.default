@@ -26,12 +26,12 @@ STACK_QUEUE_NAME=banzai_stack_queue     # name of the rabbitmq queue that contai
 
 # Database
 DB_ADDRESS=postgresql+psycopg://banzai@postgresql:5432/banzai_local
-PUBLICATION_NAME=banzai_calibrations
 
 # Replication (cache-init handles these)
 AWS_DB_ADDRESS=                         # libpq keyword/value (host=... port=5432 dbname=... user=... password=...) or URI (postgresql://user:password@host:5432/dbname) — both accepted. Do not use a SQLAlchemy +driver prefix.
 # SLOT_NAME=                            # Override AWS replication slot name (leave blank or omit for default banzai_${SITE_ID}_slot).
                                         # Useful when running a second deployment that shares SITE_ID with an existing one.
+PUBLICATION_NAME=banzai_calibrations
 
 # API
 API_ROOT=https://archive-api.lco.global/

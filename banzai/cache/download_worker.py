@@ -125,15 +125,22 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
     failed_frameids: dict[int, float] = {}
     # Start at 0.0 so the first poll always logs a status line on worker startup.
     last_status_log = 0.0
+    last_logged_state: tuple | None = None
 
     while True:
         try:
             needed = get_calibrations_to_cache(db_address, site_id, instrument_types)
             needed_filenames = {cal.filename for cal in needed}
 
-            to_download = [cal for cal in needed
-                           if not os.path.exists(os.path.join(
-                               get_cache_path(processed_path, cal), cal.filename))]
+            to_download = []
+            to_reconcile = []
+            for cal in needed:
+                expected_path = get_cache_path(processed_path, cal)
+                if os.path.exists(os.path.join(expected_path, cal.filename)):
+                    if cal.filepath != expected_path:
+                        to_reconcile.append((cal, expected_path))
+                else:
+                    to_download.append(cal)
 
             cached_in_db = get_cached_calibrations(db_address, site_id, processed_path)
             to_delete = [c for c in cached_in_db if c.filename not in needed_filenames]
@@ -143,13 +150,18 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                                if now - t < FAILURE_RETRY_SECONDS}
             fresh_to_download = [c for c in to_download if c.frameid not in failed_frameids]
 
-            if fresh_to_download or to_delete or (now - last_status_log >= HEARTBEAT_INTERVAL):
-                cached_count = len(needed) - len(to_download)
+            cached_count = len(needed) - len(to_download)
+            state = (len(needed), cached_count, len(fresh_to_download),
+                     len(to_reconcile), len(failed_frameids), len(to_delete))
+            state_changed = state != last_logged_state
+            heartbeat_due = now - last_status_log >= HEARTBEAT_INTERVAL
+            if state_changed or heartbeat_due:
                 logger.info(
                     f"Cache status: {len(needed)} needed, {cached_count} cached, "
-                    f"{len(fresh_to_download)} to download, {len(failed_frameids)} failing, "
-                    f"{len(to_delete)} to delete"
+                    f"{len(fresh_to_download)} to download, {len(to_reconcile)} to reconcile, "
+                    f"{len(failed_frameids)} failing, {len(to_delete)} to delete"
                 )
+                last_logged_state = state
                 last_status_log = now
 
             downloaded_count = 0
@@ -163,6 +175,14 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                     failed_count += 1
                     logger.error(f"Failed to download {cal.filename}: {e}", exc_info=True)
 
+            reconciled_count = 0
+            for cal, expected_path in to_reconcile:
+                try:
+                    update_filepath(db_address, cal.id, expected_path)
+                    reconciled_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to reconcile filepath for {cal.filename}: {e}", exc_info=True)
+
             deleted_count = 0
             for cal in to_delete:
                 try:
@@ -171,10 +191,11 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                 except Exception as e:
                     logger.error(f"Failed to delete {cal.filename}: {e}", exc_info=True)
 
-            if downloaded_count or failed_count or deleted_count:
+            if downloaded_count or failed_count or reconciled_count or deleted_count:
                 logger.info(
                     f"Cache sync done: {downloaded_count} downloaded, "
-                    f"{failed_count} failed, {deleted_count} deleted"
+                    f"{failed_count} failed, {reconciled_count} reconciled, "
+                    f"{deleted_count} deleted"
                 )
 
             time.sleep(poll_interval)
