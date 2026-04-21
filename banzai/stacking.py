@@ -100,7 +100,7 @@ def finalize_stack(db_address, moluid, status='complete'):
 def check_timeout(db_address, camera, timeout_minutes):
     """Find stale active stacks and finalize them with status='timeout'."""
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(minutes=timeout_minutes)
-    with dbs.get_session(db_address) as session:
+    with dbs.get_session(db_address, site=True) as session:
         stale_moluids = session.query(dbs.StackFrame.moluid).filter(
             dbs.StackFrame.camera == camera,
             dbs.StackFrame.status == 'active',

@@ -35,7 +35,7 @@ class TestRunInitialization:
         with pytest.raises(SystemExit) as exc_info:
             init.run_initialization()
         assert exc_info.value.code == 0
-        mock_create_db.assert_called_once_with('sqlite:///test.db')
+        mock_create_db.assert_called_once_with('sqlite:///test.db', site=True)
 
     @mock.patch('banzai.cache.replication.setup_subscription')
     @mock.patch('banzai.dbs.create_db')
@@ -44,7 +44,7 @@ class TestRunInitialization:
         with pytest.raises(SystemExit) as exc_info:
             init.run_initialization()
         assert exc_info.value.code == 0
-        mock_create_db.assert_called_once_with('sqlite:///test.db')
+        mock_create_db.assert_called_once_with('sqlite:///test.db', site=True)
         mock_setup_sub.assert_called_once_with(
             'sqlite:///test.db', 'postgresql+psycopg://aws/db',
             slot_name='banzai_lsc_slot', publication_name='banzai_calibrations',

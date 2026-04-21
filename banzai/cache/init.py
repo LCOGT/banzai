@@ -35,7 +35,7 @@ def run_initialization():
 
     try:
         logger.info("Creating database schema...")
-        dbs.create_db(args.db_address)
+        dbs.create_db(args.db_address, site=True)
         logger.info("Database schema created successfully")
 
         if args.aws_db_address:

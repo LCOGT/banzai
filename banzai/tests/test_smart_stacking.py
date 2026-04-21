@@ -28,7 +28,7 @@ pytestmark = pytest.mark.smart_stacking
 def db_address(tmp_path):
     """Create a fresh SQLite DB per test with a site and two instruments."""
     addr = f'sqlite:///{tmp_path}/test.db'
-    dbs.create_db(addr)
+    dbs.create_db(addr, site=True)
     with dbs.get_session(addr) as session:
         session.add(dbs.Site(id='tst', timezone=0, latitude=0, longitude=0, elevation=0))
         session.add(dbs.Instrument(site='tst', camera='cam1', name='cam1', type='1m0-SciCam-Sinistro', nx=4096, ny=4096))

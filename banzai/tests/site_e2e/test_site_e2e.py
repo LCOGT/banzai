@@ -343,7 +343,7 @@ class TestSiteE2E:
         publish_raw_string_to_queue('banzai_stack_queue', body)
 
         def check():
-            with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+            with dbs.get_session(LOCAL_DB_ADDRESS, site=True) as session:
                 frames = session.query(dbs.StackFrame).filter(
                     dbs.StackFrame.moluid == 'mol-e2e-test'
                 ).all()
@@ -383,7 +383,7 @@ class TestSiteE2E:
             )
 
         def check():
-            with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+            with dbs.get_session(LOCAL_DB_ADDRESS, site=True) as session:
                 frames = session.query(dbs.StackFrame).filter(
                     dbs.StackFrame.moluid == 'mol-e2e-timeout'
                 ).all()
