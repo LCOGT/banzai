@@ -98,9 +98,9 @@ def add_ra_dec_to_catalog(image):
     if all(k in image.meta for k in ('OBSGEO-X', 'OBSGEO-Y', 'OBSGEO-Z')):
         loc = EarthLocation.from_geocentric(image.meta['OBSGEO-X'], image.meta['OBSGEO-Y'],
                                             image.meta['OBSGEO-Z'], unit=units.m)
-        image.meta['OBSGEO-L'] = loc.lon.deg
-        image.meta['OBSGEO-B'] = loc.lat.deg
-        image.meta['OBSGEO-H'] = loc.height.to(units.m).value
+        image.meta['OBSGEO-L'] = loc.lon.deg, '[deg] Longitude of telescope, East positive'
+        image.meta['OBSGEO-B'] = loc.lat.deg, '[deg] Latitude or telescope, North positive'
+        image.meta['OBSGEO-H'] = loc.height.to(units.m).value, '[m] Height of telescope'
     image_wcs = WCS(image.meta)
     image_catalog = image['CAT'].data
     ras, decs = image_wcs.all_pix2world(image_catalog['x'], image_catalog['y'], 1)
