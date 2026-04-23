@@ -15,7 +15,7 @@ class BadPixelMaskLoader(CalibrationUser):
         except:
             logger.error(f"Can't add BPM to image, stopping reduction: {format_exception()}", image=image)
             return None
-        image.meta['L1IDMASK'] = master_calibration_image.filename, 'Id. of mask file used'
+        image.meta['L1IDMASK'] = master_calibration_image.filename, 'ID of mask'
         return image
 
     def on_missing_master_calibration(self, image):

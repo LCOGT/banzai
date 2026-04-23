@@ -2,7 +2,7 @@ import requests
 from requests import ConnectionError, HTTPError
 
 from astropy.wcs import WCS
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, EarthLocation
 from astropy import units
 import numpy as np
 
@@ -95,6 +95,12 @@ class WCSSolver(Stage):
 
 
 def add_ra_dec_to_catalog(image):
+    if all(k in image.meta for k in ('OBSGEO-X', 'OBSGEO-Y', 'OBSGEO-Z')):
+        loc = EarthLocation.from_geocentric(image.meta['OBSGEO-X'], image.meta['OBSGEO-Y'],
+                                            image.meta['OBSGEO-Z'], unit=units.m)
+        image.meta['OBSGEO-L'] = loc.lon.deg, '[deg] Longitude of telescope, East positive'
+        image.meta['OBSGEO-B'] = loc.lat.deg, '[deg] Latitude or telescope, North positive'
+        image.meta['OBSGEO-H'] = loc.height.to(units.m).value, '[m] Height of telescope'
     image_wcs = WCS(image.meta)
     image_catalog = image['CAT'].data
     ras, decs = image_wcs.all_pix2world(image_catalog['x'], image_catalog['y'], 1)

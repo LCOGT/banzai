@@ -1,6 +1,13 @@
 Versions
 ========
 
+1.35.2 (2026-04-22)
+-------------------
+
+- Add OBSGEO keywords to headers to suppress astropy warning
+- Shortened comments in headers to prevent truncation
+- Fixed path in alembic.ini
+
 1.35.1 (2026-04-20)
 -------------------
 
