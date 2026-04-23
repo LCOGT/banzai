@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from astropy.io.fits import Header
+from celery.exceptions import Retry
 
 from sqlalchemy import text
 
@@ -460,6 +461,22 @@ class TestProcessSubframe:
         assert frames[0].is_last is expected_is_last
         assert frames[0].filepath == '/data/processed/frame-e09.fits'
         mock_redis.lpush.assert_called_once()
+
+    def test_process_subframe_retries_on_unreadable_header(self, db_address):
+        """If get_primary_header returns None (I/O error), the task must retry, not swallow the failure."""
+        body = {
+            'fits_file': '/path/to/corrupt.fits',
+            'last_frame': True,
+            'instrument_enqueue_timestamp': 1771023918500,
+        }
+        runtime_context = {'db_address': db_address, 'REDIS_URL': 'redis://localhost:6379/0'}
+
+        with patch('banzai.scheduling.fits_utils.get_primary_header', return_value=None), \
+             patch.object(process_subframe, 'retry', side_effect=Retry()) as mock_retry:
+            with pytest.raises(Retry):
+                process_subframe(body, runtime_context)
+
+        mock_retry.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

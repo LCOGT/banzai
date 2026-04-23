@@ -260,6 +260,8 @@ def process_subframe(self, body: dict, runtime_context: dict):
         filepath = body['fits_file']
 
         header = fits_utils.get_primary_header(filepath)
+        if header is None:
+            raise self.retry(countdown=30, exc=IOError(f"Could not read header from {filepath}"))
 
         camera = header.get('INSTRUME', '').strip()
         dateobs_str = header.get('DATE-OBS', '')
