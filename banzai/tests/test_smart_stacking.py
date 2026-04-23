@@ -154,10 +154,57 @@ class TestTimeout:
                 db_address, moluid='mol-stale', stack_num=i + 1, frmtotal=5,
                 camera='cam1', filepath=f'/data/stale{i}.fits', is_last=False, dateobs=old_dateobs,
             )
+        with dbs.get_session(db_address, site=True) as session:
+            session.execute(
+                text("UPDATE stack_frames SET created_at = :old WHERE moluid = :mol"),
+                {'old': datetime.datetime.utcnow() - datetime.timedelta(hours=2), 'mol': 'mol-stale'},
+            )
         check_timeout(db_address, 'cam1', timeout_minutes=60)
         frames = get_stack_frames(db_address, 'mol-stale')
         for f in frames:
             assert f.status == 'timeout'
+
+    def test_timeout_applies_to_null_dateobs_rows(self, db_address):
+        """Rows with NULL dateobs ingested before the cutoff must be timed out.
+
+        The old dateobs-based filter silently excluded these rows because SQL
+        NULL comparisons evaluate to UNKNOWN (never TRUE).
+        """
+        insert_stack_frame(
+            db_address, moluid='mol-null-date', stack_num=1, frmtotal=3,
+            camera='cam1', filepath='/data/null1.fits', is_last=False, dateobs=None,
+        )
+        # Back-date created_at so the row looks old enough to be stale.
+        with dbs.get_session(db_address, site=True) as session:
+            session.execute(
+                text("UPDATE stack_frames SET created_at = :old WHERE moluid = :mol"),
+                {'old': datetime.datetime.utcnow() - datetime.timedelta(hours=2), 'mol': 'mol-null-date'},
+            )
+        check_timeout(db_address, 'cam1', timeout_minutes=60)
+        frames = get_stack_frames(db_address, 'mol-null-date')
+        assert len(frames) == 1
+        assert frames[0].status == 'timeout', (
+            "NULL-dateobs row was not timed out; filter must use created_at, not dateobs"
+        )
+
+    def test_timeout_spares_recently_created_row_with_old_dateobs(self, db_address):
+        """A row with an ancient dateobs but a recent created_at must not be timed out.
+
+        This covers the reprocessing case: old data is re-ingested now, so
+        created_at is recent even though dateobs is in the distant past.
+        """
+        ancient_dateobs = datetime.datetime(2020, 1, 1, 0, 0, 0)
+        insert_stack_frame(
+            db_address, moluid='mol-reprocess', stack_num=1, frmtotal=3,
+            camera='cam1', filepath='/data/reproc1.fits', is_last=False, dateobs=ancient_dateobs,
+        )
+        # created_at defaults to utcnow() — well within the timeout window.
+        check_timeout(db_address, 'cam1', timeout_minutes=60)
+        frames = get_stack_frames(db_address, 'mol-reprocess')
+        assert len(frames) == 1
+        assert frames[0].status == 'active', (
+            "Reprocessed row with recent created_at was incorrectly timed out"
+        )
 
 
 # ---------------------------------------------------------------------------
