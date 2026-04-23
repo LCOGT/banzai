@@ -36,7 +36,7 @@ These tests validate the full system by:
      ```bash
      AUTH_TOKEN=your-lco-archive-api-token
      ```
-   - Absolute paths for `HOST_RAW_DIR`, `HOST_CALS_DIR`, `HOST_REDUCED_DIR`, and `HOST_POSTGRES_DIR`. Relative paths will cause tests to fail fast at collection time, because `docker-compose-site.yml` mounts these as `${HOST_*_DIR}:${HOST_*_DIR}` (same path inside and outside the container). Point them at `<your-checkout>/data/raw`, `/calibrations`, `/output`, and `/postgres`.
+   - Absolute paths for `HOST_RAW_DIR`, `HOST_CALS_DIR`, and `HOST_REDUCED_DIR`. Relative paths will cause tests to fail fast at collection time, because `docker-compose-site.yml` mounts these as `${HOST_*_DIR}:${HOST_*_DIR}` (same path inside and outside the container). Point them at `<your-checkout>/data/raw`, `/calibrations`, and `/output`. (PostgreSQL data lives in the `site-pgdata` Docker-managed named volume.)
 
    Other values have working defaults.
 
