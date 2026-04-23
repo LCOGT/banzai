@@ -104,7 +104,7 @@ def check_timeout(db_address, camera, timeout_minutes):
         stale_moluids = session.query(dbs.StackFrame.moluid).filter(
             dbs.StackFrame.camera == camera,
             dbs.StackFrame.status == 'active',
-            dbs.StackFrame.dateobs < cutoff,
+            dbs.StackFrame.created_at < cutoff,
         ).distinct().all()
     for (moluid,) in stale_moluids:
         finalize_stack(db_address, moluid, status='timeout')
