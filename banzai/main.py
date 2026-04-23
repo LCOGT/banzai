@@ -249,7 +249,12 @@ class SubframeListener(ConsumerMixin):
     def on_message(self, body, message):
         """Validate and dispatch to Celery for processing."""
         if isinstance(body, str):
-            body = json.loads(body)
+            try:
+                body = json.loads(body)
+            except json.JSONDecodeError as e:
+                logger.error('Malformed JSON payload, discarding message', extra_tags={'error': str(e)})
+                message.ack()
+                return
         if not validate_message(body):
             logger.error('Invalid message received, missing required fields')
             message.ack()

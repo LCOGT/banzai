@@ -340,6 +340,17 @@ class TestSubframeListenerOnMessage:
         mock_task.apply_async.assert_not_called()
         mock_message.ack.assert_called_once()
 
+    @patch('banzai.main.process_subframe')
+    def test_on_message_malformed_json_acks_and_no_dispatch(self, mock_task):
+        ctx = MagicMock(SUBFRAME_TASK_QUEUE_NAME='subframe_tasks')
+        listener = SubframeListener(ctx)
+        mock_message = MagicMock()
+
+        listener.on_message('{not valid json}', mock_message)
+
+        mock_task.apply_async.assert_not_called()
+        mock_message.ack.assert_called_once()
+
 
 # ---------------------------------------------------------------------------
 # process_subframe Celery task
