@@ -56,6 +56,20 @@ def get_calibrations_to_cache(db_address, site_id, instrument_types):
     return results
 
 
+def get_null_frameid_filenames(db_address, site_id, instrument_types):
+    """Return filenames of master calibrations with NULL frameid (cannot be downloaded)."""
+    with dbs.get_session(db_address) as session:
+        query = session.query(dbs.CalibrationImage.filename).join(dbs.Instrument).filter(
+            dbs.CalibrationImage.is_master == True,
+            dbs.CalibrationImage.is_bad == False,
+            dbs.CalibrationImage.frameid.is_(None),
+            dbs.Instrument.site == site_id,
+        )
+        if instrument_types != ['*']:
+            query = query.filter(dbs.Instrument.type.in_(instrument_types))
+        return [r.filename for r in query.all()]
+
+
 def get_cache_path(processed_path, cal):
     epoch = date_utils.epoch_date_to_string(cal.dateobs.date())
     return file_utils.get_processed_path(processed_path, cal.site, cal.camera, epoch)
@@ -135,6 +149,13 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                         runtime_context, poll_interval=10):
     """Main loop: poll DB, download missing files, delete stale ones."""
     logger.info("Download worker started")
+
+    null_frameid_filenames = get_null_frameid_filenames(db_address, site_id, instrument_types)
+    if null_frameid_filenames:
+        sample = ', '.join(null_frameid_filenames[:10])
+        suffix = f' (+{len(null_frameid_filenames) - 10} more)' if len(null_frameid_filenames) > 10 else ''
+        logger.info(f"Ignoring {len(null_frameid_filenames)} calibrations with NULL frameid: {sample}{suffix}")
+
     failed_frameids: dict[int, float] = {}
     # Start at 0.0 so the first poll always logs a status line on worker startup.
     last_status_log = 0.0
