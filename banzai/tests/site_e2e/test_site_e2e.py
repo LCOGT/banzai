@@ -382,6 +382,11 @@ class TestSiteE2E:
                 dateobs=stale_dateobs,
             )
 
+        with dbs.get_session(LOCAL_DB_ADDRESS, site=True) as session:
+            session.query(dbs.StackFrame).filter(
+                dbs.StackFrame.moluid == 'mol-e2e-timeout'
+            ).update({'created_at': stale_dateobs})
+
         def check():
             with dbs.get_session(LOCAL_DB_ADDRESS, site=True) as session:
                 frames = session.query(dbs.StackFrame).filter(
