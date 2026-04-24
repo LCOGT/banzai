@@ -71,10 +71,14 @@ def run_worker_loop(camera, db_address, redis_url, timeout_minutes=20, retention
     """Main loop: drain notifications, query DB, check completion, finalize."""
     redis_client = redis_lib.Redis.from_url(redis_url)
     while True:
-        process_notifications(db_address, redis_client, camera)
-        check_timeout(db_address, camera, timeout_minutes)
-        dbs.cleanup_old_records(db_address, retention_days)
-        time.sleep(poll_interval)
+        try:
+            process_notifications(db_address, redis_client, camera)
+            check_timeout(db_address, camera, timeout_minutes)
+            dbs.cleanup_old_records(db_address, retention_days)
+            time.sleep(poll_interval)
+        except Exception as e:
+            logger.error(f'Error in stacking worker loop: {e}', extra_tags={'camera': camera})
+            time.sleep(poll_interval)
 
 
 def process_notifications(db_address, redis_client, camera):

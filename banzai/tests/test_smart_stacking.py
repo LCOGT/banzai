@@ -14,7 +14,7 @@ from banzai.dbs import insert_stack_frame, get_stack_frames, mark_stack_complete
 from banzai.stacking import (validate_message, check_stack_complete,
                               push_notification, drain_notifications, REDIS_KEY_PREFIX,
                               process_notifications, finalize_stack, check_timeout,
-                              StackingSupervisor)
+                              run_worker_loop, StackingSupervisor)
 from banzai.scheduling import process_subframe
 from banzai.main import SubframeListener
 
@@ -497,3 +497,24 @@ class TestSupervisor:
         supervisor.start()
         assert mock_process_cls.call_count == 3
         assert mock_process_cls.return_value.start.call_count == 3
+
+
+# ---------------------------------------------------------------------------
+# Worker loop resilience
+# ---------------------------------------------------------------------------
+
+class TestWorkerLoopResilience:
+
+    @patch('banzai.stacking.redis_lib.Redis.from_url')
+    @patch('banzai.stacking.time.sleep')
+    @patch('banzai.stacking.process_notifications')
+    def test_worker_loop_continues_after_exception(self, mock_process, mock_sleep, mock_redis_cls):
+        """run_worker_loop must not crash when process_notifications raises; it should log and continue."""
+        # First call raises, second call raises KeyboardInterrupt to escape the infinite loop.
+        mock_process.side_effect = [Exception('boom'), KeyboardInterrupt]
+        with pytest.raises(KeyboardInterrupt):
+            run_worker_loop('cam1', 'sqlite:///fake.db', 'redis://localhost:6379', poll_interval=0)
+        # process_notifications was called twice: once raised Exception, once raised KeyboardInterrupt.
+        assert mock_process.call_count == 2
+        # sleep should have been called once (after the transient Exception, before continuing).
+        mock_sleep.assert_called_once_with(0)
