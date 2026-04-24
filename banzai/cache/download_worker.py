@@ -105,6 +105,17 @@ def delete_calibration(db_address, cal):
     update_filepath(db_address, cal.id, None)
 
 
+def _site_has_calibrations(db_address, site_id):
+    """True once any CalibrationImage row for this site is visible locally.
+    Replication of instruments/sites is effectively instant; calimages is the
+    table that lags on startup, so this is the signal that replication has
+    caught up enough for the worker's cache logic to be meaningful."""
+    with dbs.get_session(db_address) as session:
+        return session.query(dbs.CalibrationImage).join(dbs.Instrument).filter(
+            dbs.Instrument.site == site_id
+        ).first() is not None
+
+
 def get_cached_calibrations(db_address, site_id, processed_path):
     """Return all calibrations with a local filepath at this site."""
     with dbs.get_session(db_address) as session:
@@ -129,6 +140,15 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
 
     while True:
         try:
+            if not _site_has_calibrations(db_address, site_id):
+                now = time.monotonic()
+                if now - last_status_log >= HEARTBEAT_INTERVAL or last_logged_state is None:
+                    logger.info(f"Waiting for replication: no calibrations yet for site {site_id}")
+                    last_status_log = now
+                    last_logged_state = None
+                time.sleep(poll_interval)
+                continue
+
             needed = get_calibrations_to_cache(db_address, site_id, instrument_types)
             needed_filenames = {cal.filename for cal in needed}
 
