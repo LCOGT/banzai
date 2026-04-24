@@ -45,6 +45,7 @@ def get_calibrations_to_cache(db_address, site_id, instrument_types):
                 dbs.CalibrationImage.type == cal_type,
                 dbs.CalibrationImage.is_master == True,
                 dbs.CalibrationImage.is_bad == False,
+                dbs.CalibrationImage.frameid.isnot(None),
                 dbs.Instrument.site == site_id,
             )
             if instrument_types != ['*']:
@@ -67,18 +68,18 @@ def update_filepath(db_address, cal_id, filepath):
             cal.filepath = filepath
 
 
-def download_calibration(db_address, processed_path, runtime_context, cal):
-    """Download file, validate FITS, write to disk, update DB filepath."""
+def download_calibration(db_address, processed_path, runtime_context, cal) -> bool:
+    """Download file, validate FITS, write to disk, update DB filepath. Returns True if fetched."""
     dest_dir = get_cache_path(processed_path, cal)
     local_path = os.path.join(dest_dir, cal.filename)
 
     if os.path.exists(local_path):
         logger.info(f"Already on disk: {cal.filename}, updating DB filepath")
         update_filepath(db_address, cal.id, dest_dir)
-        return
+        return False
     if cal.frameid is None:
         logger.warning(f"Skipping {cal.filename} - NULL frameid")
-        return
+        return False
 
     os.makedirs(dest_dir, exist_ok=True)
     buffer = fits_utils.download_from_s3(
@@ -94,6 +95,7 @@ def download_calibration(db_address, processed_path, runtime_context, cal):
         buffer.close()
     update_filepath(db_address, cal.id, dest_dir)
     logger.info(f"Cached {cal.filename}")
+    return True
 
 
 def delete_calibration(db_address, cal):
@@ -188,8 +190,8 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
             failed_count = 0
             for cal in fresh_to_download:
                 try:
-                    download_calibration(db_address, processed_path, runtime_context, cal)
-                    downloaded_count += 1
+                    if download_calibration(db_address, processed_path, runtime_context, cal):
+                        downloaded_count += 1
                 except Exception as e:
                     failed_frameids[cal.frameid] = time.monotonic()
                     failed_count += 1

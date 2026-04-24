@@ -70,8 +70,9 @@ def test_skips_when_file_exists(tmp_path):
 
     with mock.patch('banzai.utils.fits_utils.download_from_s3') as dl, \
          mock.patch('banzai.cache.download_worker.update_filepath') as up:
-        download_calibration('sqlite:///test.db', processed_path, FakeContext(), cal)
+        result = download_calibration('sqlite:///test.db', processed_path, FakeContext(), cal)
 
+    assert result is False
     dl.assert_not_called()
     up.assert_called_once_with('sqlite:///test.db', 1, dest_dir)
 
@@ -79,7 +80,8 @@ def test_skips_when_file_exists(tmp_path):
 def test_skips_null_frameid(tmp_path):
     cal = _make_cal(frameid=None)
     with mock.patch('banzai.utils.fits_utils.download_from_s3') as dl:
-        download_calibration('sqlite:///test.db', str(tmp_path), FakeContext(), cal)
+        result = download_calibration('sqlite:///test.db', str(tmp_path), FakeContext(), cal)
+    assert result is False
     dl.assert_not_called()
 
 
@@ -207,6 +209,17 @@ def test_darks_partitioned_by_temperature(db_address):
                          'dark_t10_1.fits', 'dark_t10_2.fits'}
 
 
+def test_get_calibrations_to_cache_excludes_null_frameid(db_address):
+    inst_id = _seed_db(db_address)
+    bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
+    with dbs.get_session(db_address) as session:
+        _add_cal(session, inst_id, 'BIAS', 'has_frameid.fits', 1, datetime(2024, 1, 1), bias_attrs)
+        _add_cal(session, inst_id, 'BIAS', 'null_frameid.fits', None, datetime(2024, 1, 2), bias_attrs)
+
+    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'])}
+    assert filenames == {'has_frameid.fits'}
+
+
 def test_skyflats_partitioned_by_filter(db_address):
     inst_id = _seed_db(db_address)
     with dbs.get_session(db_address) as session:
@@ -235,8 +248,9 @@ def test_download_happy_path_with_real_db(db_address, tmp_path):
     processed_path = str(tmp_path)
     cal = _make_cal(id=cal_id)
     with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=_make_fits_buffer()) as dl:
-        download_calibration(db_address, processed_path, FakeContext(), cal)
+        result = download_calibration(db_address, processed_path, FakeContext(), cal)
 
+    assert result is True
     dl.assert_called_once()
     assert dl.call_args[0][0] == {'frameid': 123, 'filename': 'bias.fits'}
     assert dl.call_args[1]['is_raw_frame'] is False
