@@ -1,7 +1,7 @@
 services:
   banzai-worker:
     build: .
-    container_name: banzai-worker
+    container_name: ${CONTAINER_PREFIX:-banzai-}worker
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -10,20 +10,20 @@ services:
     environment:
       - TASK_HOST=${REDIS_URL}
       - FITS_BROKER=${RABBITMQ_URL}
-      - FITS_EXCHANGE=fits_files
-      - CELERY_TASK_QUEUE_NAME=reduction_task_queue
+      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
+      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - DATA_ROOT=/reduced
-    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "reduction_task_queue"]
+    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-worker-${CELERY_HOSTNAME_SUFFIX:-local}", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}"]
     restart: unless-stopped
 
   banzai-large-worker:
     build: .
-    container_name: banzai-large-worker
+    container_name: ${CONTAINER_PREFIX:-banzai-}large-worker
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -32,20 +32,20 @@ services:
     environment:
       - TASK_HOST=${REDIS_URL}
       - FITS_BROKER=${RABBITMQ_URL}
-      - FITS_EXCHANGE=fits_files
-      - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
+      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
+      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - DATA_ROOT=/reduced
-    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-large-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "large_reduction_task_queue"]
+    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-large-worker-${CELERY_HOSTNAME_SUFFIX:-local}", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}"]
     restart: unless-stopped
 
   banzai-listener:
     build: .
-    container_name: banzai-listener
+    container_name: ${CONTAINER_PREFIX:-banzai-}listener
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -59,14 +59,15 @@ services:
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
-      - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
-      - CELERY_TASK_QUEUE_NAME=reduction_task_queue
+      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}
+      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}
       - TASK_HOST=${REDIS_URL}
-      - FITS_EXCHANGE=fits_files
+      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
     entrypoint: ["banzai_run_realtime_pipeline", "--fpack", "--no-bpm",
                  "--broker-url=${RABBITMQ_URL}",
                  "--db-address=${DB_ADDRESS}",
-                 "--calibration-db-address=${CAL_DB_ADDRESS}",
-                 "--processed-path=/reduced"]
+                 "--calibration-db-address=${CAL_DB_ADDRESS:-${DB_ADDRESS}}",
+                 "--processed-path=/reduced",
+                 "--queue-name=${PIPELINE_QUEUE_NAME:-banzai_pipeline}"]
     restart: unless-stopped
