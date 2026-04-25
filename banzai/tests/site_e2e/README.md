@@ -71,13 +71,33 @@ pytest -m e2e_site_reduction banzai/tests/site_e2e/ -v
 
 ## Watching Logs
 
-While tests run, you can monitor service logs in separate terminals:
+While tests run, you can monitor service logs in separate terminals. The e2e
+fixture brings the site stack up under compose project `banzai-e2e` with the
+container prefix `e2e-banzai-`:
 
 ```bash
-docker logs -f banzai-download-worker  # Watch file downloads
-docker logs -f banzai-cache-init       # Watch replication setup
-docker logs -f banzai-worker           # Watch frame processing
+docker logs -f e2e-banzai-download-worker  # Watch file downloads
+docker logs -f e2e-banzai-cache-init       # Watch replication setup
+docker logs -f e2e-banzai-worker           # Watch frame processing
 ```
+
+## Running Alongside the local or site compose files
+
+The e2e stack is namespaced (compose project `banzai-e2e`, container prefix
+`e2e-banzai-`, explicit `e2e_*` queue/exchange names, postgres on host port
+5443) so it can run concurrently with a developer site/local stack on the same
+machine:
+
+- Container names don't collide (`e2e-banzai-worker` vs `banzai-worker`).
+- Queues don't collide (`e2e_reduction_task_queue` vs `reduction_task_queue`),
+  even though both stacks share the same `banzai-redis` / `banzai-rabbitmq`.
+- Postgres host ports don't collide (5443 for e2e, 5442 for site-up).
+- `docker compose down` from the e2e fixture is project-scoped — it cannot
+  tear down a docker-compose-site stack (project `banzai`).
+
+The only manual collision risk is the host data directories (`HOST_RAW_DIR`,
+`HOST_CALS_DIR`, `HOST_REDUCED_DIR`). The e2e default is `<repo>/data/...`;
+production site-up uses `/mnt/data/...`. Keep them on different paths.
 
 ## Troubleshooting
 
@@ -94,4 +114,4 @@ docker logs -f banzai-worker           # Watch frame processing
 
 **Files not downloading**
 - Verify your AUTH_TOKEN is valid and has archive access
-- Check download worker logs: `docker logs banzai-download-worker`
+- Check download worker logs: `docker logs e2e-banzai-download-worker`

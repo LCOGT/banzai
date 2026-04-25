@@ -1,9 +1,9 @@
 services:
   postgresql:
     image: postgres:14
-    container_name: banzai-postgresql
+    container_name: ${CONTAINER_PREFIX:-banzai-}postgresql
     ports:
-    - "5442:5432"
+    - "${SITE_PG_HOST_PORT:-5442}:5432"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -21,7 +21,7 @@ services:
 
   banzai-cache-init:
     build: .
-    container_name: banzai-cache-init
+    container_name: ${CONTAINER_PREFIX:-banzai-}cache-init
     depends_on:
       postgresql:
         condition: service_healthy
@@ -38,7 +38,7 @@ services:
 
   banzai-worker:
     build: .
-    container_name: banzai-worker
+    container_name: ${CONTAINER_PREFIX:-banzai-}worker
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -53,19 +53,19 @@ services:
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - TASK_HOST=${REDIS_URL}
       - FITS_BROKER=${RABBITMQ_URL}
-      - FITS_EXCHANGE=fits_files
-      - CELERY_TASK_QUEUE_NAME=reduction_task_queue
+      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
+      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - DATA_ROOT=${HOST_REDUCED_DIR}
-    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "reduction_task_queue"]
+    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-worker-${CELERY_HOSTNAME_SUFFIX:-local}", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}"]
     restart: unless-stopped
 
   banzai-large-worker:
     build: .
-    container_name: banzai-large-worker
+    container_name: ${CONTAINER_PREFIX:-banzai-}large-worker
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -80,19 +80,19 @@ services:
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - TASK_HOST=${REDIS_URL}
       - FITS_BROKER=${RABBITMQ_URL}
-      - FITS_EXCHANGE=fits_files
-      - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
+      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
+      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - DATA_ROOT=${HOST_REDUCED_DIR}
-    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-large-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "large_reduction_task_queue"]
+    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-large-worker-${CELERY_HOSTNAME_SUFFIX:-local}", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}"]
     restart: unless-stopped
 
   banzai-listener:
     build: .
-    container_name: banzai-listener
+    container_name: ${CONTAINER_PREFIX:-banzai-}listener
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -110,20 +110,21 @@ services:
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
-      - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
-      - CELERY_TASK_QUEUE_NAME=reduction_task_queue
+      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}
+      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}
       - TASK_HOST=${REDIS_URL}
-      - FITS_EXCHANGE=fits_files
+      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
     entrypoint: ["banzai_run_realtime_pipeline", "--fpack", "--no-bpm",
                  "--broker-url=${RABBITMQ_URL}",
                  "--db-address=${DB_ADDRESS}",
-                 "--calibration-db-address=${CAL_DB_ADDRESS}",
-                 "--processed-path=${HOST_REDUCED_DIR}"]
+                 "--calibration-db-address=${CAL_DB_ADDRESS:-${DB_ADDRESS}}",
+                 "--processed-path=${HOST_REDUCED_DIR}",
+                 "--queue-name=${PIPELINE_QUEUE_NAME:-banzai_pipeline}"]
     restart: unless-stopped
 
   banzai-download-worker:
     build: .
-    container_name: banzai-download-worker
+    container_name: ${CONTAINER_PREFIX:-banzai-}download-worker
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
@@ -142,7 +143,7 @@ services:
 
   banzai-subframe-listener:
     build: .
-    container_name: banzai-subframe-listener
+    container_name: ${CONTAINER_PREFIX:-banzai-}subframe-listener
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -151,7 +152,8 @@ services:
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - SUBFRAME_TASK_QUEUE_NAME=subframe_reduction_task_queue
+      - SUBFRAME_TASK_QUEUE_NAME=${SUBFRAME_TASK_QUEUE_NAME:-subframe_reduction_task_queue}
+      - STACK_QUEUE_NAME=${STACK_QUEUE_NAME:-banzai_stack_queue}
       - TASK_HOST=${REDIS_URL}
       - REDIS_URL=${REDIS_URL}
       - API_ROOT=${API_ROOT}
@@ -163,7 +165,7 @@ services:
 
   banzai-subframe-worker:
     build: .
-    container_name: banzai-subframe-worker
+    container_name: ${CONTAINER_PREFIX:-banzai-}subframe-worker
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -177,7 +179,8 @@ services:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - TASK_HOST=${REDIS_URL}
-      - SUBFRAME_TASK_QUEUE_NAME=subframe_reduction_task_queue
+      - SUBFRAME_TASK_QUEUE_NAME=${SUBFRAME_TASK_QUEUE_NAME:-subframe_reduction_task_queue}
+      - STACK_QUEUE_NAME=${STACK_QUEUE_NAME:-banzai_stack_queue}
       - REDIS_URL=${REDIS_URL}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
@@ -185,20 +188,22 @@ services:
       - AUTH_TOKEN=${AUTH_TOKEN}
       - DATA_ROOT=${HOST_REDUCED_DIR}
     command: ["celery", "-A", "banzai.scheduling", "worker",
-              "--hostname", "banzai-subframe-worker-local",
+              "--hostname", "banzai-subframe-worker-${CELERY_HOSTNAME_SUFFIX:-local}",
               "-l", "${BANZAI_WORKER_LOGLEVEL}",
               "-c", "4",
-              "-Q", "subframe_reduction_task_queue"]
+              "-Q", "${SUBFRAME_TASK_QUEUE_NAME:-subframe_reduction_task_queue}"]
     restart: unless-stopped
 
   banzai-stacking-supervisor:
     build: .
-    container_name: banzai-stacking-supervisor
+    container_name: ${CONTAINER_PREFIX:-banzai-}stacking-supervisor
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
+    environment:
+      - STACK_QUEUE_NAME=${STACK_QUEUE_NAME:-banzai_stack_queue}
     command: [
       "banzai_stacking_supervisor",
       "--site-id=${SITE_ID}",

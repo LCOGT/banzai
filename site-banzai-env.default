@@ -12,6 +12,11 @@ HOST_REDUCED_DIR=/mnt/data/reduced           # Pipeline output (reduced frames)
 # Message brokers (override to point at existing site infrastructure)
 REDIS_URL=redis://host.docker.internal:6379/0
 RABBITMQ_URL=amqp://host.docker.internal:5672
+FITS_EXCHANGE=fits_files
+PIPELINE_QUEUE_NAME=banzai_pipeline
+CELERY_TASK_QUEUE_NAME=reduction_task_queue
+CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
+SUBFRAME_TASK_QUEUE_NAME=subframe_reduction_task_queue
 
 # Worker
 BANZAI_WORKER_LOGLEVEL=debug
@@ -22,7 +27,7 @@ DOWNLOAD_WORKER_POLL_INTERVAL=10
 STACK_TIMEOUT_MINUTES=20                # Minutes since the first raw frame is received before creating the final stack (even if not all frames are present)
                                         # TODO: what if total stack exposure is >20min? Need to fix this.
 STACK_RETENTION_DAYS=30                 # Number of days to retain stack frame data after stacking has completed
-STACK_QUEUE_NAME=banzai_stack_queue     # name of the rabbitmq queue that contains incoming raw images to stack
+STACK_QUEUE_NAME=banzai_stack_queue     # RabbitMQ queue that contains incoming raw images to stack
 
 # Database
 DB_ADDRESS=postgresql+psycopg://banzai@postgresql:5432/banzai_local
