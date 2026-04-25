@@ -62,6 +62,7 @@ distribute-*.tar.gz
 # Local banzai runtime data
 local_banzai
 site_banzai
+data
 
 # Other
 .cache

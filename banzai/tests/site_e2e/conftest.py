@@ -6,10 +6,13 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
+from sqlalchemy import create_engine, text as sa_text
+from kombu import Connection, Queue
 
 import pytest
 
 from banzai.cache import replication
+from banzai.cache.replication import SUBSCRIPTION_NAME
 from banzai.logs import get_logger
 from banzai.tests.site_e2e.utils import populate_publication
 
@@ -33,6 +36,19 @@ def load_env_file(env_path):
 
 load_env_file(SITE_E2E_DIR / "site_e2e.env")
 
+# HOST_*_DIR paths must be absolute so that host-path:host-path volume
+# mounts in docker-compose-site.yml resolve correctly (mirrors the
+# production site-banzai-env contract).
+for _key in ('HOST_RAW_DIR', 'HOST_CALS_DIR', 'HOST_REDUCED_DIR'):
+    _val = os.environ.get(_key)
+    if not _val:
+        raise RuntimeError(f"{_key} is required in site_e2e.env")
+    if not os.path.isabs(_val):
+        raise RuntimeError(
+            f"{_key}={_val!r} must be an absolute path. "
+            f"Update banzai/tests/site_e2e/site_e2e.env."
+        )
+
 # Configuration constants (from env vars with defaults)
 PUBLICATION_DB_ADDRESS = os.environ.get(
     "PUBLICATION_DB_ADDRESS",
@@ -40,13 +56,18 @@ PUBLICATION_DB_ADDRESS = os.environ.get(
 )
 LOCAL_DB_ADDRESS = os.environ.get(
     "LOCAL_DB_ADDRESS",
-    "postgresql+psycopg://banzai@localhost:5442/banzai_local"
+    f"postgresql+psycopg://banzai@localhost:{os.environ.get('SITE_PG_HOST_PORT', '5443')}/banzai_local"
 )
 ARCHIVE_API_URL = os.environ.get("API_ROOT", "https://archive-api.lco.global/")
 DATA_DIR = REPO_ROOT / "data"
 CACHE_DIR = DATA_DIR / "calibrations"
 SITE_COMPOSE_FILE = REPO_ROOT / "docker-compose-site.yml"
+DEPS_COMPOSE_FILE = REPO_ROOT / "docker-compose-dependencies.yml"
 SITE_ENV_FILE = SITE_E2E_DIR / "site_e2e.env"
+# Compose project name for the e2e-managed site stack. Keeps `docker compose
+# ps`/`down` scoped to e2e-only containers so an unrelated `just site-up`
+# (project name "banzai") is left alone.
+SITE_PROJECT_NAME = "banzai-e2e"
 
 
 # ---------------------------------------------------------------------------
@@ -65,9 +86,49 @@ def poll_until(predicate, timeout, interval=5):
     return result
 
 
-def run_docker_compose(compose_file, *args, cwd=None, env=None):
+def publish_to_queue(queue_name, body, broker_url='amqp://localhost:5672'):
+    """Publish a JSON message to a RabbitMQ queue."""
+    with Connection(broker_url) as conn:
+        queue = Queue(queue_name, channel=conn.channel())
+        queue.declare()
+        with conn.Producer() as producer:
+            producer.publish(body, routing_key=queue_name, serializer='json')
+
+
+def publish_raw_string_to_queue(queue_name, raw_body, broker_url='amqp://localhost:5672'):
+    """Publish a raw string message to a RabbitMQ queue without JSON serialization.
+
+    This mimics how the instrument software publishes messages: as plain text
+    JSON strings rather than kombu-serialized dicts.
+    """
+    with Connection(broker_url) as conn:
+        queue = Queue(queue_name, channel=conn.channel())
+        queue.declare()
+        with conn.Producer() as producer:
+            producer.publish(raw_body, routing_key=queue_name,
+                             content_type='text/plain', content_encoding='utf-8')
+
+
+def _clean_data_dir(path):
+    """Remove a directory that may contain files owned by container UIDs."""
+    if not path.exists():
+        return
+    result = subprocess.run(
+        ["docker", "run", "--rm", "-v", f"{path}:/target", "alpine",
+         "sh", "-c", "rm -rf /target/*"],
+        capture_output=True, timeout=30,
+    )
+    if result.returncode != 0:
+        logger.warning(f"Docker cleanup failed for {path}: {result.stderr}")
+    shutil.rmtree(path, ignore_errors=True)
+
+
+def run_docker_compose(compose_file, *args, cwd=None, env=None, project=None):
     """Run a docker compose command and return the CompletedProcess result."""
-    cmd = ["docker", "compose", "-f", str(compose_file)] + list(args)
+    cmd = ["docker", "compose", "-f", str(compose_file)]
+    if project:
+        cmd += ["-p", project]
+    cmd += list(args)
     merged_env = {**os.environ, **(env or {})}
     return subprocess.run(
         cmd, cwd=cwd, env=merged_env, capture_output=True, text=True, check=False
@@ -75,16 +136,17 @@ def run_docker_compose(compose_file, *args, cwd=None, env=None):
 
 
 def run_site_compose(*args):
-    """Run docker compose for the site deployment."""
+    """Run docker compose for the site deployment, scoped to the e2e project."""
     return run_docker_compose(
-        SITE_COMPOSE_FILE, "--env-file", str(SITE_ENV_FILE), *args, cwd=REPO_ROOT
+        SITE_COMPOSE_FILE, "--env-file", str(SITE_ENV_FILE), *args,
+        cwd=REPO_ROOT, project=SITE_PROJECT_NAME,
     )
 
 
-def wait_for_healthy(compose_file, service_name=None, timeout=60, cwd=None, env=None):
+def wait_for_healthy(compose_file, service_name=None, timeout=60, cwd=None, env=None, project=None):
     """Wait for docker compose services to be healthy."""
     def check():
-        result = run_docker_compose(compose_file, "ps", "--format", "json", cwd=cwd, env=env)
+        result = run_docker_compose(compose_file, "ps", "--format", "json", cwd=cwd, env=env, project=project)
         if result.returncode != 0 or not result.stdout.strip():
             return False
         try:
@@ -109,10 +171,10 @@ def wait_for_healthy(compose_file, service_name=None, timeout=60, cwd=None, env=
     return poll_until(check, timeout, interval=2)
 
 
-def wait_for_service_exit(compose_file, service_name, expected_code=0, timeout=120, cwd=None, env=None):
+def wait_for_service_exit(compose_file, service_name, expected_code=0, timeout=120, cwd=None, env=None, project=None):
     """Wait for a one-shot service to exit with expected_code."""
     def check():
-        result = run_docker_compose(compose_file, "ps", "-a", "--format", "json", cwd=cwd, env=env)
+        result = run_docker_compose(compose_file, "ps", "-a", "--format", "json", cwd=cwd, env=env, project=project)
         if result.returncode != 0 or not result.stdout.strip():
             return False
         try:
@@ -130,9 +192,23 @@ def wait_for_service_exit(compose_file, service_name, expected_code=0, timeout=1
     return poll_until(check, timeout, interval=2)
 
 
+def drop_subscription_keep_slot(db_address, subscription_name):
+    """Drop a local subscription without dropping the replication slot on the publisher.
+
+    This simulates the scenario where the local DB is wiped but the publisher
+    retains the slot (e.g., container restart with a fresh volume).
+    """
+    engine = create_engine(db_address)
+    with engine.connect() as conn:
+        conn = conn.execution_options(isolation_level="AUTOCOMMIT")
+        conn.execute(sa_text(f"ALTER SUBSCRIPTION {subscription_name} DISABLE"))
+        conn.execute(sa_text(f"ALTER SUBSCRIPTION {subscription_name} SET (slot_name = NONE)"))
+        conn.execute(sa_text(f"DROP SUBSCRIPTION {subscription_name}"))
+    engine.dispose()
+
+
 def wait_for_subscription_active(timeout=60):
     """Wait for the replication subscription to be enabled with an active worker."""
-    from sqlalchemy import create_engine, text as sa_text
 
     engine = create_engine(LOCAL_DB_ADDRESS)
 
@@ -204,11 +280,11 @@ def site_deployment(publication_db):
     logger.info("\n[Site Deployment] Cleaning up any previous state...")
     run_site_compose("down", "-v", "--remove-orphans")
 
-    for subdir in ["raw", "calibrations", "output", "postgres"]:
+    for subdir in ["raw", "calibrations", "output"]:
         d = DATA_DIR / subdir
-        if d.exists():
-            shutil.rmtree(d, ignore_errors=True)
+        _clean_data_dir(d)
         d.mkdir(parents=True, exist_ok=True)
+        d.chmod(0o777)
 
     logger.info("[Site Deployment] Starting...")
     result = run_site_compose("up", "-d", "--build")
@@ -218,7 +294,7 @@ def site_deployment(publication_db):
     logger.info("[Site Deployment] Waiting for cache-init to complete...")
     if not wait_for_service_exit(
         SITE_COMPOSE_FILE, "banzai-cache-init", expected_code=0, timeout=180,
-        cwd=REPO_ROOT, env={"ENV_FILE": str(SITE_ENV_FILE)}
+        cwd=REPO_ROOT, project=SITE_PROJECT_NAME,
     ):
         logs = run_site_compose("logs", "banzai-cache-init")
         pytest.fail(f"Cache init did not complete. Logs:\n{logs.stdout}\n{logs.stderr}")
@@ -226,7 +302,7 @@ def site_deployment(publication_db):
     logger.info("[Site Deployment] Waiting for services to be healthy...")
     if not wait_for_healthy(
         SITE_COMPOSE_FILE, timeout=120,
-        cwd=REPO_ROOT, env={"ENV_FILE": str(SITE_ENV_FILE)}
+        cwd=REPO_ROOT, project=SITE_PROJECT_NAME,
     ):
         logs = run_site_compose("logs")
         pytest.fail(f"Site services not healthy. Logs:\n{logs.stdout}\n{logs.stderr}")
@@ -242,11 +318,10 @@ def cleanup(request):
 
     logger.info("\n[Cleanup] Starting cleanup...")
     pub_compose = SITE_E2E_DIR / "publication_db" / "docker-compose.yml"
-    site_id = os.environ.get("SITE_ID", "lsc")
 
     logger.info("[Cleanup] Dropping subscription...")
     try:
-        replication.drop_subscription(LOCAL_DB_ADDRESS, f"banzai_{site_id}_sub")
+        replication.drop_subscription(LOCAL_DB_ADDRESS, SUBSCRIPTION_NAME)
     except Exception as e:
         logger.warning(f"[Cleanup] Failed to drop subscription: {e}")
 
@@ -259,11 +334,6 @@ def cleanup(request):
         run_docker_compose(pub_compose, "down", "-v", "--remove-orphans")
 
     logger.info("[Cleanup] Removing data directory contents...")
-    if DATA_DIR.exists():
-        for item in DATA_DIR.iterdir():
-            if item.is_dir():
-                shutil.rmtree(item, ignore_errors=True)
-            else:
-                item.unlink(missing_ok=True)
+    _clean_data_dir(DATA_DIR)
 
     logger.info("[Cleanup] Complete")

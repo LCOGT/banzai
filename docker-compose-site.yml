@@ -1,15 +1,17 @@
 services:
   postgresql:
     image: postgres:14
-    container_name: banzai-postgresql
+    container_name: ${CONTAINER_PREFIX:-banzai-}postgresql
     ports:
-    - "5442:5432"
+    - "${SITE_PG_HOST_PORT:-5442}:5432"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - POSTGRES_DB=banzai_local
       - POSTGRES_USER=banzai
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
-      - ${HOST_POSTGRES_DIR}:/var/lib/postgresql/data
+      - site-pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U banzai -d banzai_local"]
       interval: 5s
@@ -19,7 +21,7 @@ services:
 
   banzai-cache-init:
     build: .
-    container_name: banzai-cache-init
+    container_name: ${CONTAINER_PREFIX:-banzai-}cache-init
     depends_on:
       postgresql:
         condition: service_healthy
@@ -28,134 +30,189 @@ services:
               "--aws-db-address=${AWS_DB_ADDRESS:-}",
               "--site-id=${SITE_ID}",
               "--publication-name=${PUBLICATION_NAME:-banzai_calibrations}",
-              "--slot-name=banzai_${SITE_ID}_slot"]
+              "--slot-name=${SLOT_NAME:-banzai_${SITE_ID}_slot}"]
     restart: "no"
 
-  redis:
-    image: redis:7
-    container_name: banzai-redis
-    restart: unless-stopped
-
-  rabbitmq:
-    image: rabbitmq:3.12-management
-    container_name: banzai-rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    restart: unless-stopped
-
-  # NOTE: download-worker and pipeline workers must mount HOST_CALS_DIR
-  # at the same container path (/calibrations) so DB filepaths resolve correctly.
+  # NOTE: HOST_*_DIR paths must be absolute. Volumes are mounted at the same
+  # path inside the container so that host-absolute file paths resolve as-is.
 
   banzai-worker:
     build: .
-    container_name: banzai-worker
+    container_name: ${CONTAINER_PREFIX:-banzai-}worker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
     volumes:
-      - ${HOST_RAW_DIR}:/raw
-      - ${HOST_CALS_DIR}:/calibrations
-      - ${HOST_REDUCED_DIR}:/reduced
+      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
+      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - TASK_HOST=redis://redis:6379/0
-      - FITS_BROKER=rabbitmq
-      - FITS_EXCHANGE=fits_files
-      - CELERY_TASK_QUEUE_NAME=reduction_task_queue
+      - TASK_HOST=${REDIS_URL}
+      - FITS_BROKER=${RABBITMQ_URL}
+      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
+      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
-      - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - DATA_ROOT=/reduced
-    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "reduction_task_queue"]
+      - DATA_ROOT=${HOST_REDUCED_DIR}
+    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-worker-${CELERY_HOSTNAME_SUFFIX:-local}", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}"]
     restart: unless-stopped
 
   banzai-large-worker:
     build: .
-    container_name: banzai-large-worker
+    container_name: ${CONTAINER_PREFIX:-banzai-}large-worker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
     volumes:
-      - ${HOST_RAW_DIR}:/raw
-      - ${HOST_CALS_DIR}:/calibrations
-      - ${HOST_REDUCED_DIR}:/reduced
+      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
+      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - TASK_HOST=redis://redis:6379/0
-      - FITS_BROKER=rabbitmq
-      - FITS_EXCHANGE=fits_files
-      - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
+      - TASK_HOST=${REDIS_URL}
+      - FITS_BROKER=${RABBITMQ_URL}
+      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
+      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
       - OMP_NUM_THREADS=${OMP_NUM_THREADS}
-      - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - DATA_ROOT=/reduced
-    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-large-worker-local", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "large_reduction_task_queue"]
+      - DATA_ROOT=${HOST_REDUCED_DIR}
+    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-large-worker-${CELERY_HOSTNAME_SUFFIX:-local}", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}"]
     restart: unless-stopped
 
   banzai-listener:
     build: .
-    container_name: banzai-listener
+    container_name: ${CONTAINER_PREFIX:-banzai-}listener
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
       banzai-worker:
         condition: service_started
     volumes:
-      - ${HOST_RAW_DIR}:/raw
-      - ${HOST_CALS_DIR}:/calibrations
-      - ${HOST_REDUCED_DIR}:/reduced
+      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
+      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
-      - CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
-      - CELERY_TASK_QUEUE_NAME=reduction_task_queue
-      - TASK_HOST=redis://redis:6379/0
-      - FITS_EXCHANGE=fits_files
-      - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
+      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}
+      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}
+      - TASK_HOST=${REDIS_URL}
+      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
     entrypoint: ["banzai_run_realtime_pipeline", "--fpack", "--no-bpm",
-                 "--broker-url=amqp://rabbitmq:5672",
+                 "--broker-url=${RABBITMQ_URL}",
                  "--db-address=${DB_ADDRESS}",
-                 "--calibration-db-address=${CAL_DB_ADDRESS}",
-                 "--processed-path=/reduced"]
+                 "--calibration-db-address=${CAL_DB_ADDRESS:-${DB_ADDRESS}}",
+                 "--processed-path=${HOST_REDUCED_DIR}",
+                 "--queue-name=${PIPELINE_QUEUE_NAME:-banzai_pipeline}"]
     restart: unless-stopped
 
   banzai-download-worker:
     build: .
-    container_name: banzai-download-worker
+    container_name: ${CONTAINER_PREFIX:-banzai-}download-worker
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
     volumes:
-      - ${HOST_CALS_DIR}:/calibrations
+      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
     environment:
-      - DB_ADDRESS=${DB_ADDRESS}
-      - SITE_ID=${SITE_ID}
-      - INSTRUMENT_TYPES=${INSTRUMENT_TYPES:-*}
-      - PROCESSED_PATH=/calibrations
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - DOWNLOAD_WORKER_POLL_INTERVAL=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}
-    command: ["banzai_download_worker"]
+    command: ["banzai_download_worker",
+              "--db-address=${DB_ADDRESS}",
+              "--site-id=${SITE_ID}",
+              "--instrument-types=${INSTRUMENT_TYPES:-*}",
+              "--processed-path=${HOST_CALS_DIR}",
+              "--poll-interval=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}"]
     restart: unless-stopped
+
+  banzai-subframe-listener:
+    build: .
+    container_name: ${CONTAINER_PREFIX:-banzai-}subframe-listener
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      banzai-cache-init:
+        condition: service_completed_successfully
+    environment:
+      - DB_ADDRESS=${DB_ADDRESS}
+      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
+      - SUBFRAME_TASK_QUEUE_NAME=${SUBFRAME_TASK_QUEUE_NAME:-subframe_reduction_task_queue}
+      - STACK_QUEUE_NAME=${STACK_QUEUE_NAME:-banzai_stack_queue}
+      - TASK_HOST=${REDIS_URL}
+      - REDIS_URL=${REDIS_URL}
+      - API_ROOT=${API_ROOT}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+    command: ["banzai_subframe_worker", "--broker-url=${RABBITMQ_URL}",
+              "--db-address=${DB_ADDRESS}", "--rlevel=9",
+              "--processed-path=${HOST_REDUCED_DIR}"]
+    restart: unless-stopped
+
+  banzai-subframe-worker:
+    build: .
+    container_name: ${CONTAINER_PREFIX:-banzai-}subframe-worker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      banzai-cache-init:
+        condition: service_completed_successfully
+    volumes:
+      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
+      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
+    environment:
+      - DB_ADDRESS=${DB_ADDRESS}
+      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
+      - TASK_HOST=${REDIS_URL}
+      - SUBFRAME_TASK_QUEUE_NAME=${SUBFRAME_TASK_QUEUE_NAME:-subframe_reduction_task_queue}
+      - STACK_QUEUE_NAME=${STACK_QUEUE_NAME:-banzai_stack_queue}
+      - REDIS_URL=${REDIS_URL}
+      - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
+      - OMP_NUM_THREADS=${OMP_NUM_THREADS}
+      - API_ROOT=${API_ROOT}
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      - DATA_ROOT=${HOST_REDUCED_DIR}
+    command: ["celery", "-A", "banzai.scheduling", "worker",
+              "--hostname", "banzai-subframe-worker-${CELERY_HOSTNAME_SUFFIX:-local}",
+              "-l", "${BANZAI_WORKER_LOGLEVEL}",
+              "-c", "4",
+              "-Q", "${SUBFRAME_TASK_QUEUE_NAME:-subframe_reduction_task_queue}"]
+    restart: unless-stopped
+
+  banzai-stacking-supervisor:
+    build: .
+    container_name: ${CONTAINER_PREFIX:-banzai-}stacking-supervisor
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      banzai-cache-init:
+        condition: service_completed_successfully
+    environment:
+      - STACK_QUEUE_NAME=${STACK_QUEUE_NAME:-banzai_stack_queue}
+    command: [
+      "banzai_stacking_supervisor",
+      "--site-id=${SITE_ID}",
+      "--db-address=${DB_ADDRESS}",
+      "--redis-url=${REDIS_URL}",
+      "--stack-timeout-minutes=${STACK_TIMEOUT_MINUTES:-20}",
+      "--stack-retention-days=${STACK_RETENTION_DAYS:-30}"
+    ]
+    restart: unless-stopped
+
+volumes:
+  site-pgdata:

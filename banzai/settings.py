@@ -163,3 +163,9 @@ LARGE_WORKER_THRESHOLD = 5000 * 5000
 LARGE_WORKER_QUEUE = os.getenv('CELERY_LARGE_TASK_QUEUE_NAME', 'celery_large')
 
 REFERENCE_CATALOG_URL = os.getenv('REFERENCE_CATALOG_URL', 'http://phot-catalog.lco.gtn/')
+
+SUBFRAME_TASK_QUEUE_NAME = os.getenv('SUBFRAME_TASK_QUEUE_NAME', 'subframe_tasks')
+STACK_QUEUE_NAME = os.getenv('STACK_QUEUE_NAME', 'banzai_stack_queue')
+
+REDIS_URL=os.getenv('REDIS_URL', 'redis://host.docker.internal:6379/0')
+RABBITMQ_URL=os.getenv('RABBITMQ_URL', 'amqp://host.docker.internal:5672')

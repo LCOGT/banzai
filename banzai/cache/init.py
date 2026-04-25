@@ -35,16 +35,16 @@ def run_initialization():
 
     try:
         logger.info("Creating database schema...")
-        dbs.create_db(args.db_address)
+        dbs.create_db(args.db_address, site=True)
         logger.info("Database schema created successfully")
 
         if args.aws_db_address:
             logger.info("Setting up replication subscription...")
+            slot_name = args.slot_name or f'banzai_{args.site_id}_slot'
             try:
                 replication.setup_subscription(args.db_address, args.aws_db_address,
-                                               site_id=args.site_id,
-                                               publication_name=args.publication_name,
-                                               slot_name=args.slot_name)
+                                               slot_name=slot_name,
+                                               publication_name=args.publication_name)
                 logger.info("Replication subscription created successfully")
             except ProgrammingError:
                 logger.info("Replication subscription already exists, skipping")

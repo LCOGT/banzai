@@ -1,19 +1,27 @@
 """End-to-end tests for site deployment caching system."""
 
+import datetime
 import os
+import shutil
 import subprocess
+import sys
+import time
+import json
 from pathlib import Path
 
 import pytest
 import requests
 from sqlalchemy import create_engine, text
+from astropy.io import fits
 
 from banzai import dbs
+from banzai.cache.replication import SUBSCRIPTION_NAME
 from banzai.tests.site_e2e.utils import populate_publication
 from banzai.tests.site_e2e.conftest import (
     PUBLICATION_DB_ADDRESS, LOCAL_DB_ADDRESS, CACHE_DIR, DATA_DIR,
-    ARCHIVE_API_URL, REPO_ROOT,
-    wait_for_subscription_active, poll_until, run_site_compose,
+    ARCHIVE_API_URL, REPO_ROOT, SITE_COMPOSE_FILE, SITE_PROJECT_NAME,
+    wait_for_subscription_active, wait_for_service_exit, poll_until,
+    run_site_compose, publish_raw_string_to_queue, drop_subscription_keep_slot,
 )
 
 
@@ -77,7 +85,7 @@ class TestSiteE2E:
         assert result.returncode == 0, f"docker compose ps failed: {result.stderr}"
 
         ps_output = result.stdout.lower()
-        for service in ['banzai-postgresql', 'banzai-redis', 'banzai-download-worker']:
+        for service in ['banzai-postgresql', 'banzai-download-worker']:
             assert service in ps_output, f"Service {service} not found in docker compose ps output"
 
     @pytest.mark.e2e_site_startup
@@ -148,11 +156,10 @@ class TestSiteE2E:
 
         result = subprocess.run(
             [
-                'uv', 'run', 'python', str(queue_script),
+                sys.executable, str(queue_script),
                 str(raw_dir),
                 '--broker-url', 'amqp://localhost:5672',
                 '--exchange', fits_exchange,
-                '--container-path', '/raw'
             ],
             capture_output=True, text=True, timeout=30, cwd=str(REPO_ROOT)
         )
@@ -162,7 +169,6 @@ class TestSiteE2E:
     @pytest.mark.e2e_site_reduction
     def test_07_reduction_completes(self, site_deployment):
         """Verify reduction completed by checking for processed output file."""
-        from astropy.io import fits
 
         raw_dir = DATA_DIR / 'raw'
         assert raw_dir.exists(), f"Raw directory not found: {raw_dir}"
@@ -205,8 +211,73 @@ class TestSiteE2E:
         if failures:
             pytest.fail(f"Reduction failed for {len(failures)}/{len(raw_files)} files:\n" + "\n".join(failures))
 
+    @pytest.mark.e2e_site_reduction
+    def test_08_reduction_used_cached_calibrations(self, site_deployment):
+        """Verify reduced frames used calibrations that exist in the local cache and DB."""
+
+        output_dir = DATA_DIR / 'output'
+        reduced_files = list(output_dir.rglob('*-e91.fits.fz'))
+        assert reduced_files, f"No reduced files found under {output_dir}"
+
+        cal_header_keys = {'L1IDBIAS': 'bias', 'L1IDDARK': 'dark', 'L1IDFLAT': 'flat'}
+        cached_files = {p.name for p in CACHE_DIR.rglob('*.fits.fz')}
+        errors = []
+
+        for reduced_path in reduced_files:
+            with fits.open(str(reduced_path)) as hdul:
+                ext = 'SCI' if 'SCI' in hdul else 0
+                header = hdul[ext].header
+
+            for key, cal_type in cal_header_keys.items():
+                val = header.get(key, '')
+                if not val or val == 'N/A':
+                    continue
+                basename = os.path.basename(val)
+
+                if basename not in cached_files:
+                    errors.append(
+                        f"{reduced_path.name}: {cal_type} file '{basename}' not found in cache"
+                    )
+
+                with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+                    cal = session.query(dbs.CalibrationImage).filter(
+                        dbs.CalibrationImage.filename == basename
+                    ).first()
+                cache_root = str(CACHE_DIR)
+                if not cal or not cal.filepath or not cal.filepath.startswith(cache_root):
+                    errors.append(
+                        f"{reduced_path.name}: {cal_type} file '{basename}' filepath="
+                        f"{cal.filepath if cal else None!r}, expected under {cache_root}"
+                    )
+
+        assert not errors, "Cached calibration verification failed:\n" + "\n".join(errors)
+
     @pytest.mark.e2e_site_cache
-    def test_08_add_older_calibrations(self):
+    @pytest.mark.parametrize("drifted_value", [None, "/archive/engineering/fake/path"])
+    def test_08b_filepath_reconciled_after_drift(self, site_deployment, drifted_value):
+        """Worker restores local filepath when DB value drifts for an on-disk cal."""
+        target = 'lsc0m476-sq34-20260121-bias-central30x30-bin1x1.fits.fz'
+
+        with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+            cal = session.query(dbs.CalibrationImage).filter_by(filename=target).first()
+            assert cal and cal.filepath and cal.filepath.startswith(str(CACHE_DIR)), (
+                f"pre-condition failed: {target} not locally cached before drift "
+                f"(filepath={cal.filepath if cal else None!r})"
+            )
+            expected = cal.filepath
+            cal.filepath = drifted_value
+
+        def check():
+            with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+                cal = session.query(dbs.CalibrationImage).filter_by(filename=target).first()
+                return cal.filepath if cal and cal.filepath == expected else None
+
+        assert poll_until(check, timeout=60, interval=2) == expected, (
+            f"worker did not reconcile {target} back to {expected} after drift to {drifted_value!r}"
+        )
+
+    @pytest.mark.e2e_site_cache
+    def test_09_add_older_calibrations(self):
         """Insert older calibrations to test cache updates."""
         populate_publication.insert_additional_calibrations(PUBLICATION_DB_ADDRESS)
 
@@ -222,7 +293,7 @@ class TestSiteE2E:
         )
 
     @pytest.mark.e2e_site_cache
-    def test_09_older_calibrations_replicated(self):
+    def test_10_older_calibrations_replicated(self):
         """Verify new calibrations replicated (now 13 total in DB)."""
         def check():
             with dbs.get_session(LOCAL_DB_ADDRESS) as session:
@@ -236,10 +307,113 @@ class TestSiteE2E:
             "Expected 13 calibrations in local DB after replication"
 
     @pytest.mark.e2e_site_cache
-    def test_10_cache_updated(self):
+    def test_11_cache_updated(self):
         """Verify cache settled to exactly 7 files after older calibrations added.
 
         The download worker keeps only the top 2 per config, so the 6 older
         calibrations should not persist in the cache.
         """
         _assert_cache_matches(PHASE1_EXPECTED_FILES, timeout=120)
+
+    @pytest.mark.e2e_site_reduction
+    def test_12_subframe_stack_completes(self, site_deployment):
+        """Verify subframe stacking processes a frame end-to-end.
+
+        Publishes as a raw JSON string to match how instruments send messages.
+        """
+
+        raw_dir = DATA_DIR / 'raw'
+        src_path = raw_dir / RAW_FRAME_FILENAME
+        subframe_path = raw_dir / 'subframe_test.fits.fz'
+
+        assert src_path.exists(), f"Raw frame not found: {src_path}"
+        shutil.copy2(str(src_path), str(subframe_path))
+
+        with fits.open(str(subframe_path), mode='update') as hdul:
+            hdul['SCI'].header['MOLUID'] = 'mol-e2e-test'
+            hdul['SCI'].header['MOLFRNUM'] = 1
+            hdul['SCI'].header['FRMTOTAL'] = 1
+            hdul['SCI'].header['STACK'] = 'T'
+
+        body = json.dumps({
+            'fits_file': str(DATA_DIR / 'raw' / 'subframe_test.fits.fz'),
+            'last_frame': True,
+            'instrument_enqueue_timestamp': int(time.time() * 1000),
+        })
+        stack_queue = os.environ.get('STACK_QUEUE_NAME', 'banzai_stack_queue')
+        publish_raw_string_to_queue(stack_queue, body)
+
+        def check():
+            with dbs.get_session(LOCAL_DB_ADDRESS, site=True) as session:
+                frames = session.query(dbs.StackFrame).filter(
+                    dbs.StackFrame.moluid == 'mol-e2e-test'
+                ).all()
+                if frames and all(f.status == 'complete' for f in frames):
+                    return [f.filepath for f in frames]
+                return None
+
+        filepaths = poll_until(check, timeout=300)
+        assert filepaths, "Subframe stack did not complete within timeout"
+
+        # Verify the reduced output file exists on disk.
+        # Paths in the DB are now absolute host paths, so check directly.
+        assert filepaths[0], "StackFrame has no filepath after completion"
+        expected_path = Path(filepaths[0])
+
+        found = poll_until(
+            lambda p=expected_path: p.exists() and p.stat().st_size > 0,
+            timeout=60, interval=5
+        )
+        assert found, f"Reduced subframe output not found: {expected_path}"
+
+    @pytest.mark.e2e_site_cache
+    def test_13_stack_timeout(self, site_deployment):
+        """Verify stacking supervisor times out incomplete stacks."""
+        stale_dateobs = datetime.datetime.utcnow() - datetime.timedelta(minutes=25)
+
+        for stack_num in [1, 2]:
+            dbs.insert_stack_frame(
+                LOCAL_DB_ADDRESS,
+                moluid='mol-e2e-timeout',
+                stack_num=stack_num,
+                frmtotal=3,
+                camera='sq34',
+                filepath='/tmp/fake.fits',
+                is_last=False,
+                dateobs=stale_dateobs,
+            )
+
+        with dbs.get_session(LOCAL_DB_ADDRESS, site=True) as session:
+            session.query(dbs.StackFrame).filter(
+                dbs.StackFrame.moluid == 'mol-e2e-timeout'
+            ).update({'created_at': stale_dateobs})
+
+        def check():
+            with dbs.get_session(LOCAL_DB_ADDRESS, site=True) as session:
+                frames = session.query(dbs.StackFrame).filter(
+                    dbs.StackFrame.moluid == 'mol-e2e-timeout'
+                ).all()
+                if frames and all(f.status == 'timeout' for f in frames):
+                    return frames
+                return None
+
+        result = poll_until(check, timeout=60)
+        assert result, "Stacking supervisor did not timeout the stale stack"
+        assert len(result) == 2, f"Expected 2 timed-out frames, found {len(result)}"
+
+    @pytest.mark.e2e_site_startup
+    def test_14_cache_init_reuses_existing_slot(self, site_deployment):
+        """Verify cache-init succeeds when the replication slot already exists on the publisher."""
+        drop_subscription_keep_slot(LOCAL_DB_ADDRESS, SUBSCRIPTION_NAME)
+
+        run_site_compose("rm", "-f", "banzai-cache-init")
+        result = run_site_compose("up", "-d", "banzai-cache-init")
+        assert result.returncode == 0, f"Failed to restart cache-init: {result.stderr}"
+
+        assert wait_for_service_exit(
+            SITE_COMPOSE_FILE, "banzai-cache-init", expected_code=0, timeout=60,
+            cwd=REPO_ROOT, project=SITE_PROJECT_NAME,
+        ), "cache-init did not exit successfully after reusing existing slot"
+
+        assert wait_for_subscription_active(timeout=60), \
+            "Replication subscription did not become active after slot reuse"

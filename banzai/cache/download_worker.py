@@ -1,5 +1,6 @@
 """Download worker for calibration file caching. Polls DB, downloads missing
 calibrations, deletes stale ones."""
+import argparse
 import os
 import sys
 import time
@@ -12,7 +13,8 @@ from banzai.context import Context
 from banzai.utils import date_utils, file_utils, fits_utils
 
 logger = logs.get_logger()
-HEARTBEAT_INTERVAL = 300
+HEARTBEAT_INTERVAL = 600        # seconds
+FAILURE_RETRY_SECONDS = 43200   # seconds
 
 
 def get_calibrations_to_cache(db_address, site_id, instrument_types):
@@ -43,6 +45,7 @@ def get_calibrations_to_cache(db_address, site_id, instrument_types):
                 dbs.CalibrationImage.type == cal_type,
                 dbs.CalibrationImage.is_master == True,
                 dbs.CalibrationImage.is_bad == False,
+                dbs.CalibrationImage.frameid.isnot(None),
                 dbs.Instrument.site == site_id,
             )
             if instrument_types != ['*']:
@@ -51,6 +54,20 @@ def get_calibrations_to_cache(db_address, site_id, instrument_types):
             subq = query.subquery()
             results.extend(session.query(subq).filter(subq.c.rank <= 2).all())
     return results
+
+
+def get_null_frameid_filenames(db_address, site_id, instrument_types):
+    """Return filenames of master calibrations with NULL frameid (cannot be downloaded)."""
+    with dbs.get_session(db_address) as session:
+        query = session.query(dbs.CalibrationImage.filename).join(dbs.Instrument).filter(
+            dbs.CalibrationImage.is_master == True,
+            dbs.CalibrationImage.is_bad == False,
+            dbs.CalibrationImage.frameid.is_(None),
+            dbs.Instrument.site == site_id,
+        )
+        if instrument_types != ['*']:
+            query = query.filter(dbs.Instrument.type.in_(instrument_types))
+        return [r.filename for r in query.all()]
 
 
 def get_cache_path(processed_path, cal):
@@ -65,24 +82,23 @@ def update_filepath(db_address, cal_id, filepath):
             cal.filepath = filepath
 
 
-def download_calibration(db_address, processed_path, runtime_context, cal):
-    """Download file, validate FITS, write to disk, update DB filepath."""
+def download_calibration(db_address, processed_path, runtime_context, cal) -> bool:
+    """Download file, validate FITS, write to disk, update DB filepath. Returns True if fetched."""
     dest_dir = get_cache_path(processed_path, cal)
     local_path = os.path.join(dest_dir, cal.filename)
 
     if os.path.exists(local_path):
         logger.info(f"Already on disk: {cal.filename}, updating DB filepath")
         update_filepath(db_address, cal.id, dest_dir)
-        return
+        return False
     if cal.frameid is None:
         logger.warning(f"Skipping {cal.filename} - NULL frameid")
-        return
+        return False
 
     os.makedirs(dest_dir, exist_ok=True)
-    logger.info(f"Downloading {cal.filename} (frameid={cal.frameid})")
     buffer = fits_utils.download_from_s3(
         {'frameid': cal.frameid, 'filename': cal.filename},
-        runtime_context, is_raw_frame=False
+        runtime_context, is_raw_frame=False, log_attempts=True,
     )
 
     try:
@@ -92,7 +108,8 @@ def download_calibration(db_address, processed_path, runtime_context, cal):
     finally:
         buffer.close()
     update_filepath(db_address, cal.id, dest_dir)
-    logger.info(f"Downloaded {cal.filename}")
+    logger.info(f"Cached {cal.filename}")
+    return True
 
 
 def delete_calibration(db_address, cal):
@@ -102,6 +119,17 @@ def delete_calibration(db_address, cal):
         os.remove(file_path)
         logger.info(f"Deleted {cal.filename}")
     update_filepath(db_address, cal.id, None)
+
+
+def _site_has_calibrations(db_address, site_id):
+    """True once any CalibrationImage row for this site is visible locally.
+    Replication of instruments/sites is effectively instant; calimages is the
+    table that lags on startup, so this is the signal that replication has
+    caught up enough for the worker's cache logic to be meaningful."""
+    with dbs.get_session(db_address) as session:
+        return session.query(dbs.CalibrationImage).join(dbs.Instrument).filter(
+            dbs.Instrument.site == site_id
+        ).first() is not None
 
 
 def get_cached_calibrations(db_address, site_id, processed_path):
@@ -121,41 +149,97 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                         runtime_context, poll_interval=10):
     """Main loop: poll DB, download missing files, delete stale ones."""
     logger.info("Download worker started")
-    last_heartbeat = time.monotonic()
+
+    null_frameid_filenames = get_null_frameid_filenames(db_address, site_id, instrument_types)
+    if null_frameid_filenames:
+        sample = ', '.join(null_frameid_filenames[:10])
+        suffix = f' (+{len(null_frameid_filenames) - 10} more)' if len(null_frameid_filenames) > 10 else ''
+        logger.info(f"Ignoring {len(null_frameid_filenames)} calibrations with NULL frameid: {sample}{suffix}")
+
+    failed_frameids: dict[int, float] = {}
+    # Start at 0.0 so the first poll always logs a status line on worker startup.
+    last_status_log = 0.0
+    last_logged_state: tuple | None = None
 
     while True:
         try:
+            if not _site_has_calibrations(db_address, site_id):
+                now = time.monotonic()
+                if now - last_status_log >= HEARTBEAT_INTERVAL or last_logged_state is None:
+                    logger.info(f"Waiting for replication: no calibrations yet for site {site_id}")
+                    last_status_log = now
+                    last_logged_state = None
+                time.sleep(poll_interval)
+                continue
+
             needed = get_calibrations_to_cache(db_address, site_id, instrument_types)
             needed_filenames = {cal.filename for cal in needed}
 
-            # Download calibrations not yet on local disk
-            to_download = [cal for cal in needed
-                           if not os.path.exists(os.path.join(
-                               get_cache_path(processed_path, cal), cal.filename))]
+            to_download = []
+            to_reconcile = []
+            for cal in needed:
+                expected_path = get_cache_path(processed_path, cal)
+                if os.path.exists(os.path.join(expected_path, cal.filename)):
+                    if cal.filepath != expected_path:
+                        to_reconcile.append((cal, expected_path))
+                else:
+                    to_download.append(cal)
 
-            # Find locally-cached cals no longer in the top-2 needed set
             cached_in_db = get_cached_calibrations(db_address, site_id, processed_path)
             to_delete = [c for c in cached_in_db if c.filename not in needed_filenames]
 
-            for cal in to_download:
+            now = time.monotonic()
+            failed_frameids = {fid: t for fid, t in failed_frameids.items()
+                               if now - t < FAILURE_RETRY_SECONDS}
+            fresh_to_download = [c for c in to_download if c.frameid not in failed_frameids]
+
+            cached_count = len(needed) - len(to_download)
+            state = (len(needed), cached_count, len(fresh_to_download),
+                     len(to_reconcile), len(failed_frameids), len(to_delete))
+            state_changed = state != last_logged_state
+            heartbeat_due = now - last_status_log >= HEARTBEAT_INTERVAL
+            if state_changed or heartbeat_due:
+                logger.info(
+                    f"Cache status: {len(needed)} needed, {cached_count} cached, "
+                    f"{len(fresh_to_download)} to download, {len(to_reconcile)} to reconcile, "
+                    f"{len(failed_frameids)} failing, {len(to_delete)} to delete"
+                )
+                last_logged_state = state
+                last_status_log = now
+
+            downloaded_count = 0
+            failed_count = 0
+            for cal in fresh_to_download:
                 try:
-                    download_calibration(db_address, processed_path, runtime_context, cal)
+                    if download_calibration(db_address, processed_path, runtime_context, cal):
+                        downloaded_count += 1
                 except Exception as e:
+                    failed_frameids[cal.frameid] = time.monotonic()
+                    failed_count += 1
                     logger.error(f"Failed to download {cal.filename}: {e}", exc_info=True)
+
+            reconciled_count = 0
+            for cal, expected_path in to_reconcile:
+                try:
+                    update_filepath(db_address, cal.id, expected_path)
+                    reconciled_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to reconcile filepath for {cal.filename}: {e}", exc_info=True)
+
+            deleted_count = 0
             for cal in to_delete:
                 try:
                     delete_calibration(db_address, cal)
+                    deleted_count += 1
                 except Exception as e:
                     logger.error(f"Failed to delete {cal.filename}: {e}", exc_info=True)
 
-            now = time.monotonic()
-            if to_download or to_delete:
-                logger.info(f"Cache sync: downloaded {len(to_download)}, "
-                            f"deleted {len(to_delete)}, total needed {len(needed)}")
-                last_heartbeat = now
-            elif now - last_heartbeat >= HEARTBEAT_INTERVAL:
-                logger.info(f"Cache healthy: {len(needed)} calibrations tracked")
-                last_heartbeat = now
+            if downloaded_count or failed_count or reconciled_count or deleted_count:
+                logger.info(
+                    f"Cache sync done: {downloaded_count} downloaded, "
+                    f"{failed_count} failed, {reconciled_count} reconciled, "
+                    f"{deleted_count} deleted"
+                )
 
             time.sleep(poll_interval)
         except Exception as e:
@@ -163,25 +247,32 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
             time.sleep(30)
 
 
+def create_parser():
+    parser = argparse.ArgumentParser(description='Run the calibration download worker.')
+    parser.add_argument('--db-address', dest='db_address', required=True,
+                        help='Database connection string')
+    parser.add_argument('--site-id', dest='site_id', required=True,
+                        help='Site identifier (e.g. lsc, ogg)')
+    parser.add_argument('--instrument-types', dest='instrument_types', default='*',
+                        help='Comma-separated instrument types, or * for all (default: *)')
+    parser.add_argument('--processed-path', dest='processed_path', default='/calibrations',
+                        help='Path for cached calibration files (default: /calibrations)')
+    parser.add_argument('--poll-interval', dest='poll_interval', type=int, default=10,
+                        help='Seconds between poll cycles (default: 10)')
+    return parser
+
+
 def run_download_worker_daemon():
-    """Entry point: read env vars, start worker loop."""
-    db_address = os.getenv('DB_ADDRESS')
-    site_id = os.getenv('SITE_ID')
-    instrument_types_str = os.getenv('INSTRUMENT_TYPES', '*')
-    processed_path = os.getenv('PROCESSED_PATH', '/data/processed')
-    poll_interval = int(os.getenv('DOWNLOAD_WORKER_POLL_INTERVAL', '10'))
+    """Entry point: parse args, start worker loop."""
+    args = create_parser().parse_args()
 
-    if not db_address or not site_id:
-        logger.error('DB_ADDRESS and SITE_ID environment variables are required')
-        sys.exit(1)
-
-    instrument_types = ([t.strip() for t in instrument_types_str.split(',')]
-                        if instrument_types_str != '*' else ['*'])
+    instrument_types = ([t.strip() for t in args.instrument_types.split(',')]
+                        if args.instrument_types != '*' else ['*'])
     runtime_context = Context(settings)
 
     try:
-        run_download_worker(db_address, site_id, instrument_types, processed_path,
-                            runtime_context, poll_interval)
+        run_download_worker(args.db_address, args.site_id, instrument_types, args.processed_path,
+                            runtime_context, args.poll_interval)
     except KeyboardInterrupt:
         logger.info("Download worker stopped")
         sys.exit(0)

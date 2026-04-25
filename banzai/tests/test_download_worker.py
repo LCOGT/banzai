@@ -70,8 +70,9 @@ def test_skips_when_file_exists(tmp_path):
 
     with mock.patch('banzai.utils.fits_utils.download_from_s3') as dl, \
          mock.patch('banzai.cache.download_worker.update_filepath') as up:
-        download_calibration('sqlite:///test.db', processed_path, FakeContext(), cal)
+        result = download_calibration('sqlite:///test.db', processed_path, FakeContext(), cal)
 
+    assert result is False
     dl.assert_not_called()
     up.assert_called_once_with('sqlite:///test.db', 1, dest_dir)
 
@@ -79,7 +80,8 @@ def test_skips_when_file_exists(tmp_path):
 def test_skips_null_frameid(tmp_path):
     cal = _make_cal(frameid=None)
     with mock.patch('banzai.utils.fits_utils.download_from_s3') as dl:
-        download_calibration('sqlite:///test.db', str(tmp_path), FakeContext(), cal)
+        result = download_calibration('sqlite:///test.db', str(tmp_path), FakeContext(), cal)
+    assert result is False
     dl.assert_not_called()
 
 
@@ -128,7 +130,7 @@ def _attrs_for_type(cal_type, **overrides):
     return attrs
 
 
-def test_returns_top_2_per_config(db_address, tmp_path):
+def test_returns_top_2_per_config(db_address):
     inst_id = _seed_db(db_address)
     bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
     with dbs.get_session(db_address) as session:
@@ -140,7 +142,7 @@ def test_returns_top_2_per_config(db_address, tmp_path):
     assert filenames == {'mid.fits', 'new.fits'}
 
 
-def test_partitions_independently_by_config(db_address, tmp_path):
+def test_partitions_independently_by_config(db_address):
     inst_id = _seed_db(db_address)
     with dbs.get_session(db_address) as session:
         for i, binning in enumerate(['1x1', '2x2']):
@@ -154,7 +156,7 @@ def test_partitions_independently_by_config(db_address, tmp_path):
                          'bias_2x2_1.fits', 'bias_2x2_2.fits'}
 
 
-def test_filters_by_instrument_type(db_address, tmp_path):
+def test_filters_by_instrument_type(db_address):
     sinistro_id = _seed_db(db_address, camera='fa01', inst_type='1m0-SciCam-Sinistro')
     floyds_id = _seed_db(db_address, camera='en01', inst_type='2m0-FLOYDS-SciCam')
     bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
@@ -167,7 +169,7 @@ def test_filters_by_instrument_type(db_address, tmp_path):
     assert filenames == {'sinistro.fits'}
 
 
-def test_wildcard_returns_all_instrument_types(db_address, tmp_path):
+def test_wildcard_returns_all_instrument_types(db_address):
     sinistro_id = _seed_db(db_address, camera='fa01', inst_type='1m0-SciCam-Sinistro')
     floyds_id = _seed_db(db_address, camera='en01', inst_type='2m0-FLOYDS-SciCam')
     bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
@@ -179,7 +181,7 @@ def test_wildcard_returns_all_instrument_types(db_address, tmp_path):
     assert filenames == {'sinistro.fits', 'floyds.fits'}
 
 
-def test_biases_ignore_filter(db_address, tmp_path):
+def test_biases_ignore_filter(db_address):
     """Biases taken with different filters should be grouped together."""
     inst_id = _seed_db(db_address)
     bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
@@ -192,7 +194,7 @@ def test_biases_ignore_filter(db_address, tmp_path):
     assert filenames == {'bias_B.fits', 'bias_R.fits'}
 
 
-def test_darks_partitioned_by_temperature(db_address, tmp_path):
+def test_darks_partitioned_by_temperature(db_address):
     inst_id = _seed_db(db_address)
     with dbs.get_session(db_address) as session:
         for i, temp in enumerate(['5', '10']):
@@ -207,7 +209,18 @@ def test_darks_partitioned_by_temperature(db_address, tmp_path):
                          'dark_t10_1.fits', 'dark_t10_2.fits'}
 
 
-def test_skyflats_partitioned_by_filter(db_address, tmp_path):
+def test_get_calibrations_to_cache_excludes_null_frameid(db_address):
+    inst_id = _seed_db(db_address)
+    bias_attrs = _attrs_for_type('BIAS', configuration_mode='default', binning='1x1')
+    with dbs.get_session(db_address) as session:
+        _add_cal(session, inst_id, 'BIAS', 'has_frameid.fits', 1, datetime(2024, 1, 1), bias_attrs)
+        _add_cal(session, inst_id, 'BIAS', 'null_frameid.fits', None, datetime(2024, 1, 2), bias_attrs)
+
+    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'])}
+    assert filenames == {'has_frameid.fits'}
+
+
+def test_skyflats_partitioned_by_filter(db_address):
     inst_id = _seed_db(db_address)
     with dbs.get_session(db_address) as session:
         for i, filt in enumerate(['V', 'B']):
@@ -235,8 +248,9 @@ def test_download_happy_path_with_real_db(db_address, tmp_path):
     processed_path = str(tmp_path)
     cal = _make_cal(id=cal_id)
     with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=_make_fits_buffer()) as dl:
-        download_calibration(db_address, processed_path, FakeContext(), cal)
+        result = download_calibration(db_address, processed_path, FakeContext(), cal)
 
+    assert result is True
     dl.assert_called_once()
     assert dl.call_args[0][0] == {'frameid': 123, 'filename': 'bias.fits'}
     assert dl.call_args[1]['is_raw_frame'] is False
@@ -249,15 +263,18 @@ def test_download_happy_path_with_real_db(db_address, tmp_path):
 
 # --- run_download_worker_daemon tests ---
 
-def test_daemon_exits_without_db_address():
-    with mock.patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(SystemExit) as exc:
+@pytest.mark.parametrize('types_arg,expected', [
+    ('*', ['*']),
+    ('1m0-SciCam-Sinistro', ['1m0-SciCam-Sinistro']),
+    ('1m0-SciCam-Sinistro,2m0-FLOYDS-SciCam', ['1m0-SciCam-Sinistro', '2m0-FLOYDS-SciCam']),
+    ('1m0-SciCam-Sinistro, 2m0-FLOYDS-SciCam', ['1m0-SciCam-Sinistro', '2m0-FLOYDS-SciCam']),
+])
+def test_daemon_parses_instrument_types(types_arg, expected):
+    argv = ['banzai_download_worker', '--db-address=sqlite:///test.db',
+            '--site-id=tst', f'--instrument-types={types_arg}']
+    with mock.patch('sys.argv', argv), \
+         mock.patch('banzai.cache.download_worker.run_download_worker') as run:
+        run.side_effect = SystemExit(0)
+        with pytest.raises(SystemExit):
             run_download_worker_daemon()
-        assert exc.value.code == 1
-
-
-def test_daemon_exits_without_site_id():
-    with mock.patch.dict(os.environ, {'DB_ADDRESS': 'sqlite:///test.db'}, clear=True):
-        with pytest.raises(SystemExit) as exc:
-            run_download_worker_daemon()
-        assert exc.value.code == 1
+    assert run.call_args[0][2] == expected
