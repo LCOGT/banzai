@@ -56,7 +56,7 @@ PUBLICATION_DB_ADDRESS = os.environ.get(
 )
 LOCAL_DB_ADDRESS = os.environ.get(
     "LOCAL_DB_ADDRESS",
-    "postgresql+psycopg://banzai@localhost:5442/banzai_local"
+    f"postgresql+psycopg://banzai@localhost:{os.environ.get('SITE_PG_HOST_PORT', '5443')}/banzai_local"
 )
 ARCHIVE_API_URL = os.environ.get("API_ROOT", "https://archive-api.lco.global/")
 DATA_DIR = REPO_ROOT / "data"
@@ -64,6 +64,10 @@ CACHE_DIR = DATA_DIR / "calibrations"
 SITE_COMPOSE_FILE = REPO_ROOT / "docker-compose-site.yml"
 DEPS_COMPOSE_FILE = REPO_ROOT / "docker-compose-dependencies.yml"
 SITE_ENV_FILE = SITE_E2E_DIR / "site_e2e.env"
+# Compose project name for the e2e-managed site stack. Keeps `docker compose
+# ps`/`down` scoped to e2e-only containers so an unrelated `just site-up`
+# (project name "banzai") is left alone.
+SITE_PROJECT_NAME = "banzai-e2e"
 
 
 # ---------------------------------------------------------------------------
@@ -119,9 +123,12 @@ def _clean_data_dir(path):
     shutil.rmtree(path, ignore_errors=True)
 
 
-def run_docker_compose(compose_file, *args, cwd=None, env=None):
+def run_docker_compose(compose_file, *args, cwd=None, env=None, project=None):
     """Run a docker compose command and return the CompletedProcess result."""
-    cmd = ["docker", "compose", "-f", str(compose_file)] + list(args)
+    cmd = ["docker", "compose", "-f", str(compose_file)]
+    if project:
+        cmd += ["-p", project]
+    cmd += list(args)
     merged_env = {**os.environ, **(env or {})}
     return subprocess.run(
         cmd, cwd=cwd, env=merged_env, capture_output=True, text=True, check=False
@@ -129,16 +136,17 @@ def run_docker_compose(compose_file, *args, cwd=None, env=None):
 
 
 def run_site_compose(*args):
-    """Run docker compose for the site deployment."""
+    """Run docker compose for the site deployment, scoped to the e2e project."""
     return run_docker_compose(
-        SITE_COMPOSE_FILE, "--env-file", str(SITE_ENV_FILE), *args, cwd=REPO_ROOT
+        SITE_COMPOSE_FILE, "--env-file", str(SITE_ENV_FILE), *args,
+        cwd=REPO_ROOT, project=SITE_PROJECT_NAME,
     )
 
 
-def wait_for_healthy(compose_file, service_name=None, timeout=60, cwd=None, env=None):
+def wait_for_healthy(compose_file, service_name=None, timeout=60, cwd=None, env=None, project=None):
     """Wait for docker compose services to be healthy."""
     def check():
-        result = run_docker_compose(compose_file, "ps", "--format", "json", cwd=cwd, env=env)
+        result = run_docker_compose(compose_file, "ps", "--format", "json", cwd=cwd, env=env, project=project)
         if result.returncode != 0 or not result.stdout.strip():
             return False
         try:
@@ -163,10 +171,10 @@ def wait_for_healthy(compose_file, service_name=None, timeout=60, cwd=None, env=
     return poll_until(check, timeout, interval=2)
 
 
-def wait_for_service_exit(compose_file, service_name, expected_code=0, timeout=120, cwd=None, env=None):
+def wait_for_service_exit(compose_file, service_name, expected_code=0, timeout=120, cwd=None, env=None, project=None):
     """Wait for a one-shot service to exit with expected_code."""
     def check():
-        result = run_docker_compose(compose_file, "ps", "-a", "--format", "json", cwd=cwd, env=env)
+        result = run_docker_compose(compose_file, "ps", "-a", "--format", "json", cwd=cwd, env=env, project=project)
         if result.returncode != 0 or not result.stdout.strip():
             return False
         try:
@@ -286,7 +294,7 @@ def site_deployment(publication_db):
     logger.info("[Site Deployment] Waiting for cache-init to complete...")
     if not wait_for_service_exit(
         SITE_COMPOSE_FILE, "banzai-cache-init", expected_code=0, timeout=180,
-        cwd=REPO_ROOT, env={"ENV_FILE": str(SITE_ENV_FILE)}
+        cwd=REPO_ROOT, project=SITE_PROJECT_NAME,
     ):
         logs = run_site_compose("logs", "banzai-cache-init")
         pytest.fail(f"Cache init did not complete. Logs:\n{logs.stdout}\n{logs.stderr}")
@@ -294,7 +302,7 @@ def site_deployment(publication_db):
     logger.info("[Site Deployment] Waiting for services to be healthy...")
     if not wait_for_healthy(
         SITE_COMPOSE_FILE, timeout=120,
-        cwd=REPO_ROOT, env={"ENV_FILE": str(SITE_ENV_FILE)}
+        cwd=REPO_ROOT, project=SITE_PROJECT_NAME,
     ):
         logs = run_site_compose("logs")
         pytest.fail(f"Site services not healthy. Logs:\n{logs.stdout}\n{logs.stderr}")

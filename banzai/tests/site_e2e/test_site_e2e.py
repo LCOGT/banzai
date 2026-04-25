@@ -19,7 +19,7 @@ from banzai.cache.replication import SUBSCRIPTION_NAME
 from banzai.tests.site_e2e.utils import populate_publication
 from banzai.tests.site_e2e.conftest import (
     PUBLICATION_DB_ADDRESS, LOCAL_DB_ADDRESS, CACHE_DIR, DATA_DIR,
-    ARCHIVE_API_URL, REPO_ROOT, SITE_COMPOSE_FILE,
+    ARCHIVE_API_URL, REPO_ROOT, SITE_COMPOSE_FILE, SITE_PROJECT_NAME,
     wait_for_subscription_active, wait_for_service_exit, poll_until,
     run_site_compose, publish_raw_string_to_queue, drop_subscription_keep_slot,
 )
@@ -340,7 +340,8 @@ class TestSiteE2E:
             'last_frame': True,
             'instrument_enqueue_timestamp': int(time.time() * 1000),
         })
-        publish_raw_string_to_queue('banzai_stack_queue', body)
+        stack_queue = os.environ.get('STACK_QUEUE_NAME', 'banzai_stack_queue')
+        publish_raw_string_to_queue(stack_queue, body)
 
         def check():
             with dbs.get_session(LOCAL_DB_ADDRESS, site=True) as session:
@@ -411,7 +412,7 @@ class TestSiteE2E:
 
         assert wait_for_service_exit(
             SITE_COMPOSE_FILE, "banzai-cache-init", expected_code=0, timeout=60,
-            cwd=REPO_ROOT
+            cwd=REPO_ROOT, project=SITE_PROJECT_NAME,
         ), "cache-init did not exit successfully after reusing existing slot"
 
         assert wait_for_subscription_active(timeout=60), \
