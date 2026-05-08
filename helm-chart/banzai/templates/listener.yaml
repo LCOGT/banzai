@@ -121,7 +121,7 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           command:
-            - "banzai_automate_stack_calibrations"
+            - "banzai_cron"
             - "--post-to-archive"
             - "--post-to-opensearch"
             - "--opensearch-url=$(OPENSEARCH_URL)"

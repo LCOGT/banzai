@@ -6,12 +6,17 @@ from celery import Celery
 from kombu import Queue
 from celery.exceptions import Retry
 from banzai import dbs, calibrations, logs
-from banzai.utils import date_utils, realtime_utils, stage_utils
+from banzai.query import cross_match_missing_frames
+from banzai.utils import date_utils, realtime_utils, stage_utils, import_utils
 from banzai.metrics import add_telemetry_span_attribute, add_telemetry_span_event
 from celery.signals import worker_process_init
 from banzai.context import Context
+from banzai import query
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
+from banzai.utils.instrument_utils import get_processing_queue
 from banzai.utils.date_utils import get_stacking_date_range
+
+
 try:
     from opentelemetry.instrumentation.celery import CeleryInstrumentor
     OPENTELEMETRY_AVAILABLE = True
@@ -247,3 +252,40 @@ def process_image(self, file_info: dict, runtime_context: dict):
     except Exception:
         logger.error("Exception processing frame: {error}".format(error=logs.format_exception()),
                      extra_tags={'file_info': file_info})
+
+
+@app.task(name='celery.requeue_missing_frames', reject_on_worker_lost=True, max_retries=5)
+def requeue_missing_frames(runtime_context: dict):
+    try:
+        runtime_context = Context(runtime_context)
+        logger.info('Checking for missing frames to requeue')
+        raw_frames = []
+        reduced_frames = []
+        for obstype in runtime_context.REQUEUE_OBSTYPES:
+            # Get the raw frames that we took
+            start = datetime.datetime.now(timezone.utc) - datetime.timedelta(hours=runtime_context.REQUEUE_LOOKBACK_HOURS)
+            end = datetime.datetime.now(timezone.utc)
+            raw_frames += query.from_archive(start, end, obstype, 0,  runtime_context, related_frames=False)
+            # Get the reduced frames
+            reduced_frames += query.from_archive(start, end, obstype, runtime_context.reduction_level,  runtime_context, related_frames=True)
+
+        # cross match to find any that are missing
+        missing_frames = cross_match_missing_frames(raw_frames, reduced_frames)
+        
+        with dbs.get_session(os.environ['DB_ADDRESS']) as db_session:
+            for frame in missing_frames:
+                frame['frameid'] = frame['id']
+                logger.info('Requeuing missing frame', extra_tags={'filename': frame['filename']})
+
+                # Set success = 0 for missing frames
+                db_row = db_session.query(dbs.ProcessedImage).filter(dbs.ProcessedImage.filename == frame['filename']).first()
+                if db_row is not None:
+                    db_row.success = False
+                    db_row.tries = 0
+                    db_session.add(db_row)
+                    db_session.commit()
+                # Requeue the missing frames
+                queue_name = get_processing_queue(frame, runtime_context)
+                process_image.apply_async(args=(frame, vars(runtime_context)), queue=queue_name)
+    except Exception:
+        logger.error("Exception checking for missing frames: {error}".format(error=logs.format_exception()))
