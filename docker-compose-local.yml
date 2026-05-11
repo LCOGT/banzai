@@ -5,8 +5,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ${HOST_RAW_DIR}:/raw
-      - ${HOST_REDUCED_DIR}:/reduced
+      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
       - TASK_HOST=${REDIS_URL}
       - FITS_BROKER=${RABBITMQ_URL}
@@ -17,7 +17,7 @@ services:
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - DATA_ROOT=/reduced
+      - DATA_ROOT=${HOST_REDUCED_DIR}
     command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-worker-${CELERY_HOSTNAME_SUFFIX:-local}", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}"]
     restart: unless-stopped
 
@@ -27,8 +27,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ${HOST_RAW_DIR}:/raw
-      - ${HOST_REDUCED_DIR}:/reduced
+      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
       - TASK_HOST=${REDIS_URL}
       - FITS_BROKER=${RABBITMQ_URL}
@@ -39,7 +39,7 @@ services:
       - OPENTSDB_PYTHON_METRICS_TEST_MODE=${OPENTSDB_PYTHON_METRICS_TEST_MODE}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - DATA_ROOT=/reduced
+      - DATA_ROOT=${HOST_REDUCED_DIR}
     command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-large-worker-${CELERY_HOSTNAME_SUFFIX:-local}", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}"]
     restart: unless-stopped
 
@@ -51,8 +51,8 @@ services:
     depends_on:
       - banzai-worker
     volumes:
-      - ${HOST_RAW_DIR}:/raw
-      - ${HOST_REDUCED_DIR}:/reduced
+      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
@@ -68,6 +68,6 @@ services:
                  "--broker-url=${RABBITMQ_URL}",
                  "--db-address=${DB_ADDRESS}",
                  "--calibration-db-address=${CAL_DB_ADDRESS:-${DB_ADDRESS}}",
-                 "--processed-path=/reduced",
+                 "--processed-path=${HOST_REDUCED_DIR}",
                  "--queue-name=${PIPELINE_QUEUE_NAME:-banzai_pipeline}"]
     restart: unless-stopped
