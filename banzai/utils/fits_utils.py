@@ -103,8 +103,10 @@ def download_from_s3(file_info, context, is_raw_frame=False):
         raise FrameNotAvailableError(f"Frame {frame_id} not found in archive")
 
     buffer = io.BytesIO()
+    # Note that url already includes the signed headers so we can't also pass
+    # the auth token here too.
     response = archive_get(response_data['url'], params={},
-                           auth_headers=archive_auth_header, timeout=60)
+                           auth_headers={}, timeout=60)
     downloaded_bytes = buffer.write(response.content)
     if downloaded_bytes == 0:
         logger.error(
