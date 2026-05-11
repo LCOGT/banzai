@@ -165,7 +165,7 @@ LARGE_WORKER_QUEUE = os.getenv('CELERY_LARGE_TASK_QUEUE_NAME', 'celery_large')
 
 REFERENCE_CATALOG_URL = os.getenv('REFERENCE_CATALOG_URL', 'http://phot-catalog.lco.gtn/')
 
-REQUEUE_MISSING_FRAMES_TIME = datetime.datetime(0, 0, 0, hour=14, minute=30)
+REQUEUE_MISSING_FRAMES_TIME = datetime.time(hour=14, minute=30)
 
 REQUEUE_OBSTYPES = ['EXPOSE', 'STANDARD']
 

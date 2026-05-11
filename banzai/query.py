@@ -1,6 +1,6 @@
 from tenacity import retry, wait_exponential, stop_after_attempt
 import requests
-from banzai.utils.logs import get_logger
+from banzai.logs import get_logger
 
 
 logger = get_logger()
