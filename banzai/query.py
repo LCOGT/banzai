@@ -32,7 +32,6 @@ def archive_get(url, params, auth_headers, timeout=30):
     return response
 
 
-
 def frames_from_archive(start, end, obstype, reduction_level, runtime_context, raw=False, related_frames=False):
     archive_params = {'OBSTYPE': obstype, 'reduction_level': reduction_level, 'related_frames': related_frames}
     archive_params['start'] = start.strftime('%Y-%m-%d %H:%M')
@@ -44,7 +43,7 @@ def frames_from_archive(start, end, obstype, reduction_level, runtime_context, r
     else:
         frame_url = runtime_context.ARCHIVE_FRAME_URL
         auth_headers = runtime_context.ARCHIVE_AUTH_HEADER
-    
+
     more_frames = True
     response = archive_get(frame_url, params=archive_params, auth_headers=auth_headers)
     frames = response.json()['results']

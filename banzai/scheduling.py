@@ -271,7 +271,7 @@ def requeue_missing_frames(runtime_context: dict):
 
         # cross match to find any that are missing
         missing_frames = cross_match_missing_frames(raw_frames, reduced_frames)
-        
+
         with dbs.get_session(os.environ['DB_ADDRESS']) as db_session:
             for frame in missing_frames:
                 frame['frameid'] = frame['id']

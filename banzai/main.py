@@ -64,7 +64,7 @@ class RealtimeModeListener(ConsumerMixin):
         except Exception:
             message.ack()
             return
-            
+
         process_image.apply_async(args=(body, vars(self.runtime_context)),
                                   queue=queue_name)
         message.ack()  # acknowledge to the sender we got this message (it can be popped)
