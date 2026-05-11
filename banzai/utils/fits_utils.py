@@ -91,8 +91,7 @@ def download_from_s3(file_info, context, is_raw_frame=False):
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
     logger.info(f"Requesting archive URL {url} (auth header present: {bool(archive_auth_header)})")
 
-    response = archive_get(url, params={}, auth_headers=archive_auth_header,
-                           related_frames=False)
+    response = archive_get(url, params={'include_related_frames': False}, auth_headers=archive_auth_header)
 
     # Parse the JSON response
     response_data = response.json()

@@ -371,7 +371,7 @@ def add_bpms_from_archive():
     # Query the archive for all bpm files
     url = f'{settings.ARCHIVE_FRAME_URL}/?OBSTYPE=BPM&limit=1000&include_related_frames=false'
     archive_auth_header = settings.ARCHIVE_AUTH_HEADER
-    response = archive_get(url, params={}, auth_headers=archive_auth_header)
+    response = archive_get(url, params={'include_related_frames': False}, auth_headers=archive_auth_header)
     results = response.json()['results']
 
     # Load each one, saving the calibration info for each
