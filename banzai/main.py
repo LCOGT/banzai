@@ -54,12 +54,6 @@ class RealtimeModeListener(ConsumerMixin):
     def on_message(self, body, message):
         logger.info('Received message', extra_tags={'filename': body['filename']})
         try:
-            instrument = LCOFrameFactory.get_instrument_from_header(body, self.runtime_context.db_address)
-        except Exception:
-            logger.error(f'Could not get instrument from header. {traceback.format_exc()}', extra_tags={'filename': body['filename']})
-            message.ack()
-            return
-        try:
             queue_name = get_processing_queue(body, self.runtime_context)
         except Exception:
             message.ack()
@@ -67,7 +61,7 @@ class RealtimeModeListener(ConsumerMixin):
 
         process_image.apply_async(args=(body, vars(self.runtime_context)),
                                   queue=queue_name)
-        message.ack()  # acknowledge to the sender we got this message (it can be popped)
+        message.ack()
 
 
 def add_settings_to_context(args, settings):
@@ -377,7 +371,7 @@ def add_bpms_from_archive():
     # Query the archive for all bpm files
     url = f'{settings.ARCHIVE_FRAME_URL}/?OBSTYPE=BPM&limit=1000&include_related_frames=false'
     archive_auth_header = settings.ARCHIVE_AUTH_HEADER
-    response = archive_get(url, params={}, headers=archive_auth_header)
+    response = archive_get(url, params={}, auth_headers=archive_auth_header)
     results = response.json()['results']
 
     # Load each one, saving the calibration info for each

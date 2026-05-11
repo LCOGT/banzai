@@ -84,15 +84,15 @@ def download_from_s3(file_info, context, is_raw_frame=False):
                             'attempt_number': download_from_s3.statistics['attempt_number']})
 
     if is_raw_frame:
-        url = f'{context.RAW_DATA_FRAME_URL}/{frame_id}/?include_related_frames=false'
+        url = f'{context.RAW_DATA_FRAME_URL}/{frame_id}/'
         archive_auth_header = context.RAW_DATA_AUTH_HEADER
     else:
-        url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}/?include_related_frames=false'
+        url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}/'
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
     logger.info(f"Requesting archive URL {url} (auth header present: {bool(archive_auth_header)})")
 
-    response = archive_get(url, params={'related_frames': False},
-                           auth_headers=archive_auth_header)
+    response = archive_get(url, params={}, auth_headers=archive_auth_header,
+                           related_frames=False)
 
     # Parse the JSON response
     response_data = response.json()
@@ -106,7 +106,7 @@ def download_from_s3(file_info, context, is_raw_frame=False):
     # Note that url already includes the signed headers so we can't also pass
     # the auth token here too.
     response = archive_get(response_data['url'], params={},
-                           auth_headers={}, timeout=60)
+                           auth_headers=None, timeout=60)
     downloaded_bytes = buffer.write(response.content)
     if downloaded_bytes == 0:
         logger.error(

@@ -263,16 +263,16 @@ def requeue_missing_frames(runtime_context: dict):
         reduced_frames = []
         for obstype in runtime_context.REQUEUE_OBSTYPES:
             # Get the raw frames that we took
-            start = datetime.datetime.now(timezone.utc) - datetime.timedelta(hours=runtime_context.REQUEUE_LOOKBACK_HOURS)
-            end = datetime.datetime.now(timezone.utc)
-            raw_frames += query.from_archive(start, end, obstype, 0,  runtime_context, related_frames=False)
+            start = datetime.now(timezone.utc) - timedelta(hours=runtime_context.REQUEUE_LOOKBACK_HOURS)
+            end = datetime.now(timezone.utc)
+            raw_frames += query.frames_from_archive(start, end, obstype, 0,  runtime_context, related_frames=False)
             # Get the reduced frames
-            reduced_frames += query.from_archive(start, end, obstype, runtime_context.reduction_level,  runtime_context, related_frames=True)
+            reduced_frames += query.frames_from_archive(start, end, obstype, runtime_context.reduction_level,  runtime_context, related_frames=True)
 
         # cross match to find any that are missing
         missing_frames = cross_match_missing_frames(raw_frames, reduced_frames)
 
-        with dbs.get_session(os.environ['DB_ADDRESS']) as db_session:
+        with dbs.get_session(runtime_context.db_address) as db_session:
             for frame in missing_frames:
                 frame['frameid'] = frame['id']
                 logger.info('Requeuing missing frame', extra_tags={'filename': frame['filename']})

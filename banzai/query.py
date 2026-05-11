@@ -18,7 +18,6 @@ def archive_get(url, params, auth_headers, timeout=30):
         logger.error(message,
                      extra_tags={'attempt_number': archive_get.statistics['attempt_number']}
         )
-        response.raise_for_status()
         raise
     except requests.exceptions.RequestException as e:
         message = "Archive download connection error when querying"
@@ -33,7 +32,7 @@ def archive_get(url, params, auth_headers, timeout=30):
 
 
 def frames_from_archive(start, end, obstype, reduction_level, runtime_context, raw=False, related_frames=False):
-    archive_params = {'OBSTYPE': obstype, 'reduction_level': reduction_level, 'related_frames': related_frames}
+    archive_params = {'OBSTYPE': obstype, 'reduction_level': reduction_level, 'include_related_frames': related_frames}
     archive_params['start'] = start.strftime('%Y-%m-%d %H:%M')
     archive_params['end'] = end.strftime('%Y-%m-%d %H:%M')
     archive_params['limit'] = 1000
