@@ -63,8 +63,22 @@ spec:
               readOnly: false
       volumes:
         - name: tmp
-          emptyDir:
-            sizeLimit: 20Gi
+          ephemeral:
+            volumeClaimTemplate:
+              metadata:
+                labels:
+                  app.kubernetes.io/name: {{ include "banzai.name" . }}
+                  app.kubernetes.io/instance: "{{ .Release.Name }}"
+                  app.kubernetes.io/component: worker
+                  volume: tmp
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 30Gi
+                volumeMode: Filesystem
+
     {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
