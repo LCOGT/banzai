@@ -163,13 +163,13 @@ Processed output will be saved in ``$HOST_REDUCED_DIR``.
 
 Tests
 -----
-Unit tests can be run using pytest. The end-to-end tests require more setup, so to run only the unit tests locally run:
+Unit tests can be run using pytest. End-to-end tests are skipped by default, so to run only the unit tests locally run:
 
 .. code-block:: bash
 
-    uv run pytest -m 'not e2e'
+    uv run pytest
 
-The `-m` is short for marker. The following markers are defined if you only want to run a subset of the tests:
+The default pytest options exclude the ``e2e`` and ``e2e_site`` markers. The following markers are defined if you only want to run a subset of the tests:
 
 * e2e: End-to-end tests. Skip these if you only want to run unit tests.
 * master_bias: Only test making a master bias
@@ -210,7 +210,7 @@ To run the site E2E tests:
     # Edit site_e2e.env and add your AUTH_TOKEN
 
     # Run the tests
-    pytest -m e2e_site banzai/tests/site_e2e/ -v -s
+    uv run pytest -m e2e_site banzai/tests/site_e2e/ -v -s
 
 The following markers can be used to run subsets of the site E2E tests:
 
