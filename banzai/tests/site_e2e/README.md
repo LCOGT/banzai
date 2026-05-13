@@ -44,7 +44,7 @@ These tests validate the full system by:
 
 Run all site E2E tests:
 ```bash
-pytest banzai/tests/site_e2e/ -v -s
+uv run pytest -m e2e_site banzai/tests/site_e2e/ -v -s
 ```
 
 The tests will automatically:
@@ -60,13 +60,13 @@ You can run specific test phases:
 
 ```bash
 # Startup tests only (publication DB, site deployment, replication)
-pytest -m e2e_site_startup banzai/tests/site_e2e/ -v
+uv run pytest -m e2e_site_startup banzai/tests/site_e2e/ -v
 
 # Cache tests only (replication sync, file downloads)
-pytest -m e2e_site_cache banzai/tests/site_e2e/ -v
+uv run pytest -m e2e_site_cache banzai/tests/site_e2e/ -v
 
 # Reduction tests only (frame processing)
-pytest -m e2e_site_reduction banzai/tests/site_e2e/ -v
+uv run pytest -m e2e_site_reduction banzai/tests/site_e2e/ -v
 ```
 
 ## Watching Logs

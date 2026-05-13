@@ -20,7 +20,7 @@ jobs:
       - name: Set up project
         run: uv sync --locked --extra test
       - name: Run tests
-        run: uv run pytest --pyargs banzai.tests -m "not e2e"
+        run: uv run pytest --pyargs banzai.tests -m "not e2e and not e2e_site"
   macos:
     runs-on: macos-latest
     strategy:
@@ -35,4 +35,4 @@ jobs:
       - name: Set up project
         run: uv sync --locked --extra test
       - name: Run tests
-        run: uv run pytest --pyargs banzai.tests -m "not e2e"
+        run: uv run pytest --pyargs banzai.tests -m "not e2e and not e2e_site"
