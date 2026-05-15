@@ -34,39 +34,15 @@ import requests
 logger = logs.get_logger()
 
 
-class RealtimeModeListener(ConsumerMixin):
-    def __init__(self, runtime_context):
-        self.runtime_context = runtime_context
-        self.broker_url = runtime_context.broker_url
-
-    def on_connection_error(self, exc, interval):
-        logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
-        self.connection = self.connection.clone()
-        self.connection.ensure_connection(max_retries=10)
-
-    def get_consumers(self, Consumer, channel):
-        consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
-        # Only fetch one thing off the queue at a time
-        consumer.qos(prefetch_count=1)
-        return [consumer]
-
-    def on_message(self, body, message):
-        logger.info('Received message', extra_tags={'filename': body['filename']})
-        try:
-            instrument = LCOFrameFactory.get_instrument_from_header(body, self.runtime_context.db_address)
-        except Exception:
-            logger.error(f'Could not get instrument from header. {traceback.format_exc()}', extra_tags={'filename': body['filename']})
-            message.ack()
-            return
-        if instrument is None or instrument.nx is None:
-            queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
-        elif instrument.nx * instrument.ny > self.runtime_context.LARGE_WORKER_THRESHOLD:
-            queue_name = self.runtime_context.LARGE_WORKER_QUEUE
-        else:
-            queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
-        process_image.apply_async(args=(body, vars(self.runtime_context)),
-                                  queue=queue_name)
-        message.ack()  # acknowledge to the sender we got this message (it can be popped)
+def decode_subframe_message(body):
+    """Normalize a subframe queue body into a dictionary."""
+    if isinstance(body, bytes):
+        body = body.decode('utf-8')
+    if isinstance(body, str):
+        body = json.loads(body)
+    if not isinstance(body, dict):
+        raise ValueError('Subframe message must decode to a JSON object')
+    return body
 
 
 def add_settings_to_context(args, settings):
@@ -197,16 +173,40 @@ def start_stacking_scheduler():
     app.Beat(schedule='/tmp/celerybeat-schedule', pidfile='/tmp/celerybeat.pid', working_directory='/tmp').run()
     logger.info('Starting celery beat')
 
-def run_realtime_pipeline():
-    extra_console_arguments = [{'args': ['--n-processes'],
-                                'kwargs': {'dest': 'n_processes', 'default': 12,
-                                           'help': 'Number of listener processes to spawn.', 'type': int}},
-                               {'args': ['--queue-name'],
-                                'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
-                                           'help': 'Name of the queue to listen to from the fits exchange.'}}]
 
-    runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
-    start_listener(runtime_context)
+class RealtimeModeListener(ConsumerMixin):
+    def __init__(self, runtime_context):
+        self.runtime_context = runtime_context
+        self.broker_url = runtime_context.broker_url
+
+    def on_connection_error(self, exc, interval):
+        logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
+        self.connection = self.connection.clone()
+        self.connection.ensure_connection(max_retries=10)
+
+    def get_consumers(self, Consumer, channel):
+        consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
+        # Only fetch one thing off the queue at a time
+        consumer.qos(prefetch_count=1)
+        return [consumer]
+
+    def on_message(self, body, message):
+        logger.info('Received message', extra_tags={'filename': body['filename']})
+        try:
+            instrument = LCOFrameFactory.get_instrument_from_header(body, self.runtime_context.db_address)
+        except Exception:
+            logger.error(f'Could not get instrument from header. {traceback.format_exc()}', extra_tags={'filename': body['filename']})
+            message.ack()
+            return
+        if instrument is None or instrument.nx is None:
+            queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
+        elif instrument.nx * instrument.ny > self.runtime_context.LARGE_WORKER_THRESHOLD:
+            queue_name = self.runtime_context.LARGE_WORKER_QUEUE
+        else:
+            queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
+        process_image.apply_async(args=(body, vars(self.runtime_context)),
+                                  queue=queue_name)
+        message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
 def start_listener(runtime_context):
@@ -230,6 +230,18 @@ def start_listener(runtime_context):
             logger.info('Shutting down pipeline listener.')
 
 
+def run_realtime_pipeline():
+    extra_console_arguments = [{'args': ['--n-processes'],
+                                'kwargs': {'dest': 'n_processes', 'default': 12,
+                                           'help': 'Number of listener processes to spawn.', 'type': int}},
+                               {'args': ['--queue-name'],
+                                'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
+                                           'help': 'Name of the queue to listen to from the fits exchange.'}}]
+
+    runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
+    start_listener(runtime_context)
+
+
 class SubframeListener(ConsumerMixin):
     def __init__(self, runtime_context):
         self.runtime_context = runtime_context
@@ -248,15 +260,18 @@ class SubframeListener(ConsumerMixin):
 
     def on_message(self, body, message):
         """Validate and dispatch to Celery for processing."""
-        if isinstance(body, str):
-            try:
-                body = json.loads(body)
-            except json.JSONDecodeError as e:
-                logger.error('Malformed JSON payload, discarding message', extra_tags={'error': str(e)})
-                message.ack()
-                return
+        try:
+            body = decode_subframe_message(body)
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as e:
+            # Producers are internal - a malformed payload is a producer bug.
+            # Ack to drain the poison message; the body is logged for forensics.
+            logger.error('Malformed subframe payload, discarding message',
+                         extra_tags={'error': str(e), 'body': repr(body)[:1000]})
+            message.ack()
+            return
         if not validate_message(body):
-            logger.error('Invalid message received, missing required fields')
+            logger.error('Invalid message received, missing required fields',
+                         extra_tags={'body': body})
             message.ack()
             return
 
