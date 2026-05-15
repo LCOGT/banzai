@@ -7,7 +7,6 @@ import subprocess
 import time
 from pathlib import Path
 from sqlalchemy import create_engine, text as sa_text
-from kombu import Connection, Queue
 
 import pytest
 
@@ -21,6 +20,7 @@ logger = get_logger()
 
 SITE_E2E_DIR = Path(__file__).parent.resolve()
 REPO_ROOT = SITE_E2E_DIR.parents[2]
+DATA_DIR = REPO_ROOT / "data"
 
 
 def load_env_file(env_path):
@@ -38,14 +38,19 @@ load_env_file(SITE_E2E_DIR / "site_e2e.env")
 
 # HOST_*_DIR paths must be absolute so that host-path:host-path volume
 # mounts in docker-compose-site.yml resolve correctly (mirrors the
-# production site-banzai-env contract).
-for _key in ('HOST_RAW_DIR', 'HOST_CALS_DIR', 'HOST_REDUCED_DIR'):
-    _val = os.environ.get(_key)
-    if not _val:
-        raise RuntimeError(f"{_key} is required in site_e2e.env")
-    if not os.path.isabs(_val):
+# production site-banzai-env contract). Default to <repo>/data/<subdir>
+# so a fresh checkout can run the e2e suite without editing site_e2e.env;
+# explicit overrides from the env file or shell still win via setdefault.
+_HOST_DIR_DEFAULTS = {
+    'HOST_RAW_DIR': DATA_DIR / 'raw',
+    'HOST_CALS_DIR': DATA_DIR / 'calibrations',
+    'HOST_REDUCED_DIR': DATA_DIR / 'output',
+}
+for _key, _default in _HOST_DIR_DEFAULTS.items():
+    os.environ.setdefault(_key, str(_default))
+    if not os.path.isabs(os.environ[_key]):
         raise RuntimeError(
-            f"{_key}={_val!r} must be an absolute path. "
+            f"{_key}={os.environ[_key]!r} must be an absolute path. "
             f"Update banzai/tests/site_e2e/site_e2e.env."
         )
 
@@ -59,8 +64,10 @@ LOCAL_DB_ADDRESS = os.environ.get(
     f"postgresql+psycopg://banzai@localhost:{os.environ.get('SITE_PG_HOST_PORT', '5443')}/banzai_local"
 )
 ARCHIVE_API_URL = os.environ.get("API_ROOT", "https://archive-api.lco.global/")
-DATA_DIR = REPO_ROOT / "data"
-CACHE_DIR = DATA_DIR / "calibrations"
+RAW_DIR = Path(os.environ['HOST_RAW_DIR'])
+CACHE_DIR = Path(os.environ['HOST_CALS_DIR'])
+OUTPUT_DIR = Path(os.environ['HOST_REDUCED_DIR'])
+HOST_DATA_DIRS = (RAW_DIR, CACHE_DIR, OUTPUT_DIR)
 SITE_COMPOSE_FILE = REPO_ROOT / "docker-compose-site.yml"
 DEPS_COMPOSE_FILE = REPO_ROOT / "docker-compose-dependencies.yml"
 SITE_ENV_FILE = SITE_E2E_DIR / "site_e2e.env"
@@ -84,29 +91,6 @@ def poll_until(predicate, timeout, interval=5):
             return result
         time.sleep(interval)
     return result
-
-
-def publish_to_queue(queue_name, body, broker_url='amqp://localhost:5672'):
-    """Publish a JSON message to a RabbitMQ queue."""
-    with Connection(broker_url) as conn:
-        queue = Queue(queue_name, channel=conn.channel())
-        queue.declare()
-        with conn.Producer() as producer:
-            producer.publish(body, routing_key=queue_name, serializer='json')
-
-
-def publish_raw_string_to_queue(queue_name, raw_body, broker_url='amqp://localhost:5672'):
-    """Publish a raw string message to a RabbitMQ queue without JSON serialization.
-
-    This mimics how the instrument software publishes messages: as plain text
-    JSON strings rather than kombu-serialized dicts.
-    """
-    with Connection(broker_url) as conn:
-        queue = Queue(queue_name, channel=conn.channel())
-        queue.declare()
-        with conn.Producer() as producer:
-            producer.publish(raw_body, routing_key=queue_name,
-                             content_type='text/plain', content_encoding='utf-8')
 
 
 def _clean_data_dir(path):
@@ -280,8 +264,7 @@ def site_deployment(publication_db):
     logger.info("\n[Site Deployment] Cleaning up any previous state...")
     run_site_compose("down", "-v", "--remove-orphans")
 
-    for subdir in ["raw", "calibrations", "output"]:
-        d = DATA_DIR / subdir
+    for d in HOST_DATA_DIRS:
         _clean_data_dir(d)
         d.mkdir(parents=True, exist_ok=True)
         d.chmod(0o777)
@@ -334,6 +317,7 @@ def cleanup(request):
         run_docker_compose(pub_compose, "down", "-v", "--remove-orphans")
 
     logger.info("[Cleanup] Removing data directory contents...")
-    _clean_data_dir(DATA_DIR)
+    for d in HOST_DATA_DIRS:
+        _clean_data_dir(d)
 
     logger.info("[Cleanup] Complete")

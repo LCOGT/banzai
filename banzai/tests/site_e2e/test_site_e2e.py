@@ -18,11 +18,12 @@ from banzai import dbs
 from banzai.cache.replication import SUBSCRIPTION_NAME
 from banzai.tests.site_e2e.utils import populate_publication
 from banzai.tests.site_e2e.conftest import (
-    PUBLICATION_DB_ADDRESS, LOCAL_DB_ADDRESS, CACHE_DIR, DATA_DIR,
+    PUBLICATION_DB_ADDRESS, LOCAL_DB_ADDRESS, RAW_DIR, CACHE_DIR, OUTPUT_DIR,
     ARCHIVE_API_URL, REPO_ROOT, SITE_COMPOSE_FILE, SITE_PROJECT_NAME,
     wait_for_subscription_active, wait_for_service_exit, poll_until,
-    run_site_compose, publish_raw_string_to_queue, drop_subscription_keep_slot,
+    run_site_compose, drop_subscription_keep_slot,
 )
+from banzai.utils.messaging import publish_raw_string_to_queue
 
 
 # Expected calibration filenames for phase 1 (7 files - top 2 per config + BPM)
@@ -132,7 +133,7 @@ class TestSiteE2E:
     @pytest.mark.e2e_site_reduction
     def test_06_queue_raw_frame(self, site_deployment, auth_token):
         """Download raw science frame and queue it for processing."""
-        raw_dir = DATA_DIR / 'raw'
+        raw_dir = RAW_DIR
         raw_dir.mkdir(parents=True, exist_ok=True)
         raw_frame_path = raw_dir / RAW_FRAME_FILENAME
 
@@ -170,7 +171,7 @@ class TestSiteE2E:
     def test_07_reduction_completes(self, site_deployment):
         """Verify reduction completed by checking for processed output file."""
 
-        raw_dir = DATA_DIR / 'raw'
+        raw_dir = RAW_DIR
         assert raw_dir.exists(), f"Raw directory not found: {raw_dir}"
 
         raw_files = list(raw_dir.glob('*.fits.fz'))
@@ -186,7 +187,7 @@ class TestSiteE2E:
                 instrument = header['INSTRUME'].strip().lower()
                 day_obs = header['DAY-OBS'].replace('-', '')
 
-            output_dir = DATA_DIR / 'output' / site / instrument / day_obs / 'processed'
+            output_dir = OUTPUT_DIR / site / instrument / day_obs / 'processed'
             expected_name = raw_path.name.replace('-e00.fits.fz', '-e91.fits.fz')
             expected_path = output_dir / expected_name
 
@@ -215,7 +216,7 @@ class TestSiteE2E:
     def test_08_reduction_used_cached_calibrations(self, site_deployment):
         """Verify reduced frames used calibrations that exist in the local cache and DB."""
 
-        output_dir = DATA_DIR / 'output'
+        output_dir = OUTPUT_DIR
         reduced_files = list(output_dir.rglob('*-e91.fits.fz'))
         assert reduced_files, f"No reduced files found under {output_dir}"
 
@@ -322,7 +323,7 @@ class TestSiteE2E:
         Publishes as a raw JSON string to match how instruments send messages.
         """
 
-        raw_dir = DATA_DIR / 'raw'
+        raw_dir = RAW_DIR
         src_path = raw_dir / RAW_FRAME_FILENAME
         subframe_path = raw_dir / 'subframe_test.fits.fz'
 
@@ -336,7 +337,7 @@ class TestSiteE2E:
             hdul['SCI'].header['STACK'] = 'T'
 
         body = json.dumps({
-            'fits_file': str(DATA_DIR / 'raw' / 'subframe_test.fits.fz'),
+            'fits_file': str(subframe_path),
             'last_frame': True,
             'instrument_enqueue_timestamp': int(time.time() * 1000),
         })
@@ -344,12 +345,12 @@ class TestSiteE2E:
         publish_raw_string_to_queue(stack_queue, body)
 
         def check():
-            with dbs.get_session(LOCAL_DB_ADDRESS, site=True) as session:
-                frames = session.query(dbs.StackFrame).filter(
-                    dbs.StackFrame.moluid == 'mol-e2e-test'
+            with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
+                subframes = session.query(dbs.Subframe).filter(
+                    dbs.Subframe.moluid == 'mol-e2e-test'
                 ).all()
-                if frames and all(f.status == 'complete' for f in frames):
-                    return [f.filepath for f in frames]
+                if subframes and all(s.status == 'complete' for s in subframes):
+                    return [s.filepath for s in subframes]
                 return None
 
         filepaths = poll_until(check, timeout=300)
@@ -357,7 +358,7 @@ class TestSiteE2E:
 
         # Verify the reduced output file exists on disk.
         # Paths in the DB are now absolute host paths, so check directly.
-        assert filepaths[0], "StackFrame has no filepath after completion"
+        assert filepaths[0], "Subframe has no filepath after completion"
         expected_path = Path(filepaths[0])
 
         found = poll_until(
@@ -372,7 +373,7 @@ class TestSiteE2E:
         stale_dateobs = datetime.datetime.utcnow() - datetime.timedelta(minutes=25)
 
         for stack_num in [1, 2]:
-            dbs.insert_stack_frame(
+            dbs.insert_subframe(
                 LOCAL_DB_ADDRESS,
                 moluid='mol-e2e-timeout',
                 stack_num=stack_num,
@@ -383,23 +384,23 @@ class TestSiteE2E:
                 dateobs=stale_dateobs,
             )
 
-        with dbs.get_session(LOCAL_DB_ADDRESS, site=True) as session:
-            session.query(dbs.StackFrame).filter(
-                dbs.StackFrame.moluid == 'mol-e2e-timeout'
+        with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
+            session.query(dbs.Subframe).filter(
+                dbs.Subframe.moluid == 'mol-e2e-timeout'
             ).update({'created_at': stale_dateobs})
 
         def check():
-            with dbs.get_session(LOCAL_DB_ADDRESS, site=True) as session:
-                frames = session.query(dbs.StackFrame).filter(
-                    dbs.StackFrame.moluid == 'mol-e2e-timeout'
+            with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
+                subframes = session.query(dbs.Subframe).filter(
+                    dbs.Subframe.moluid == 'mol-e2e-timeout'
                 ).all()
-                if frames and all(f.status == 'timeout' for f in frames):
-                    return frames
+                if subframes and all(s.status == 'timeout' for s in subframes):
+                    return subframes
                 return None
 
         result = poll_until(check, timeout=60)
         assert result, "Stacking supervisor did not timeout the stale stack"
-        assert len(result) == 2, f"Expected 2 timed-out frames, found {len(result)}"
+        assert len(result) == 2, f"Expected 2 timed-out subframes, found {len(result)}"
 
     @pytest.mark.e2e_site_startup
     def test_14_cache_init_reuses_existing_slot(self, site_deployment):
