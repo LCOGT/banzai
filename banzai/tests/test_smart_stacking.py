@@ -374,6 +374,26 @@ class TestSubframeListenerOnMessage:
         mock_message.ack.assert_called_once()
 
     @patch('banzai.main.process_subframe')
+    def test_on_message_parses_json_bytes(self, mock_task):
+        ctx = MagicMock(SUBFRAME_TASK_QUEUE_NAME='subframe_tasks')
+        listener = SubframeListener(ctx)
+
+        body = {
+            'fits_file': '/path/to/frame.fits',
+            'last_frame': False,
+            'instrument_enqueue_timestamp': 1771023918500,
+        }
+        mock_message = MagicMock()
+
+        listener.on_message(json.dumps(body).encode('utf-8'), mock_message)
+
+        mock_task.apply_async.assert_called_once_with(
+            args=(body, vars(ctx)),
+            queue='subframe_tasks',
+        )
+        mock_message.ack.assert_called_once()
+
+    @patch('banzai.main.process_subframe')
     def test_on_message_invalid_no_dispatch(self, mock_task):
         listener = SubframeListener(MagicMock())
 
@@ -395,6 +415,28 @@ class TestSubframeListenerOnMessage:
         mock_message = MagicMock()
 
         listener.on_message('{not valid json}', mock_message)
+
+        mock_task.apply_async.assert_not_called()
+        mock_message.ack.assert_called_once()
+
+    @patch('banzai.main.process_subframe')
+    def test_on_message_invalid_utf8_acks_and_no_dispatch(self, mock_task):
+        ctx = MagicMock(SUBFRAME_TASK_QUEUE_NAME='subframe_tasks')
+        listener = SubframeListener(ctx)
+        mock_message = MagicMock()
+
+        listener.on_message(b'\xff', mock_message)
+
+        mock_task.apply_async.assert_not_called()
+        mock_message.ack.assert_called_once()
+
+    @patch('banzai.main.process_subframe')
+    def test_on_message_non_object_json_acks_and_no_dispatch(self, mock_task):
+        ctx = MagicMock(SUBFRAME_TASK_QUEUE_NAME='subframe_tasks')
+        listener = SubframeListener(ctx)
+        mock_message = MagicMock()
+
+        listener.on_message(json.dumps(['not', 'an', 'object']), mock_message)
 
         mock_task.apply_async.assert_not_called()
         mock_message.ack.assert_called_once()
