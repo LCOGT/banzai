@@ -25,15 +25,15 @@ def validate_message(body):
     return all(field in body for field in REQUIRED_MESSAGE_FIELDS)
 
 
-def check_stack_complete(frames, frmtotal):
+def check_stack_complete(subframes, frmtotal):
     """Return True if the stack is ready to finalize.
 
-    A stack is complete when all received frames have been reduced and either
-    all expected frames are present or the instrument signalled is_last.
+    A stack is complete when all received subframes have been reduced and either
+    all expected subframes are present or the instrument signalled is_last.
     """
-    all_reduced = all(f.filepath is not None for f in frames)
-    all_arrived = len(frames) == frmtotal
-    has_last = any(f.is_last for f in frames)
+    all_reduced = all(s.filepath is not None for s in subframes)
+    all_arrived = len(subframes) == frmtotal
+    has_last = any(s.is_last for s in subframes)
     return all_reduced and (all_arrived or has_last)
 
 
@@ -74,7 +74,7 @@ def run_worker_loop(camera, db_address, redis_url, timeout_minutes=20, retention
         try:
             process_notifications(db_address, redis_client, camera)
             check_timeout(db_address, camera, timeout_minutes)
-            dbs.cleanup_old_records(db_address, retention_days)
+            dbs.cleanup_old_subframes(db_address, retention_days)
             time.sleep(poll_interval)
         except Exception as e:
             logger.error(f'Error in stacking worker loop: {e}', extra_tags={'camera': camera})
@@ -85,30 +85,30 @@ def process_notifications(db_address, redis_client, camera):
     """Drain, deduplicate, and process latest state for each moluid."""
     moluids = drain_notifications(redis_client, camera)
     for moluid in moluids:
-        frames = dbs.get_stack_frames(db_address, moluid)
-        if not frames:
+        subframes = dbs.get_subframes(db_address, moluid)
+        if not subframes:
             continue
-        frmtotal = frames[0].frmtotal
-        if check_stack_complete(frames, frmtotal):
+        frmtotal = subframes[0].frmtotal
+        if check_stack_complete(subframes, frmtotal):
             finalize_stack(db_address, moluid, status='complete')
 
 
 def finalize_stack(db_address, moluid, status='complete'):
     """Mark stack complete and log mock stacking/JPEG/ingester operations."""
     dbs.mark_stack_complete(db_address, moluid, status=status)
-    logger.info(f'Mock stacking complete for {moluid}', extra_tags={'moluid': moluid})
-    logger.info(f'Mock JPEG generation for {moluid}', extra_tags={'moluid': moluid})
-    logger.info(f'Mock ingester upload for {moluid}', extra_tags={'moluid': moluid})
+    logger.debug(f'Mock stacking complete for {moluid}', extra_tags={'moluid': moluid})
+    logger.debug(f'Mock JPEG generation for {moluid}', extra_tags={'moluid': moluid})
+    logger.debug(f'Mock ingester upload for {moluid}', extra_tags={'moluid': moluid})
 
 
 def check_timeout(db_address, camera, timeout_minutes):
     """Find stale active stacks and finalize them with status='timeout'."""
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(minutes=timeout_minutes)
-    with dbs.get_session(db_address, site=True) as session:
-        stale_moluids = session.query(dbs.StackFrame.moluid).filter(
-            dbs.StackFrame.camera == camera,
-            dbs.StackFrame.status == 'active',
-            dbs.StackFrame.created_at < cutoff,
+    with dbs.get_session(db_address, site_deploy=True) as session:
+        stale_moluids = session.query(dbs.Subframe.moluid).filter(
+            dbs.Subframe.camera == camera,
+            dbs.Subframe.status == 'active',
+            dbs.Subframe.created_at < cutoff,
         ).distinct().all()
     for (moluid,) in stale_moluids:
         finalize_stack(db_address, moluid, status='timeout')
@@ -167,7 +167,7 @@ class StackingSupervisor:
         self.workers.clear()
 
 
-def create_parser():
+def _stacking_worker_arg_parser():
     parser = argparse.ArgumentParser(description='Run the smart stacking supervisor.')
     parser.add_argument('--site-id', dest='site_id', required=True,
                         help='Site identifier (e.g. lsc, ogg)')
@@ -184,7 +184,7 @@ def create_parser():
 
 def run_supervisor():
     """Entry point for the stacking supervisor."""
-    args = create_parser().parse_args()
+    args = _stacking_worker_arg_parser().parse_args()
 
     supervisor = StackingSupervisor(args.site_id, args.db_address, args.redis_url,
                                     timeout_minutes=args.stack_timeout_minutes,

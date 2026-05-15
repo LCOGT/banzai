@@ -27,7 +27,7 @@ logger = get_logger()
 
 
 @contextmanager
-def get_session(db_address, site=False):
+def get_session(db_address, site_deploy=False):
     """
     Get a connection to the database.
 
@@ -37,13 +37,13 @@ def get_session(db_address, site=False):
     """
     # Build a new engine for each session. This makes things thread safe.
     engine = create_engine(db_address, poolclass=pool.NullPool)
-    if site:
+    if site_deploy:
         inspector = inspect(engine)
         missing = [t.name for t in SiteBase.metadata.tables.values()
                    if not inspector.has_table(t.name)]
         if missing:
             raise RuntimeError(
-                f"get_session called with site=True but site tables "
+                f"get_session called with site_deploy=True but site tables "
                 f"missing from {db_address}: {missing}. "
                 f"This deployment is not site-configured."
             )
@@ -128,8 +128,8 @@ class ProcessedImage(Base):
     tries = Column(Integer, default=0)
 
 
-class StackFrame(SiteBase):
-    __tablename__ = 'stack_frames'
+class Subframe(SiteBase):
+    __tablename__ = 'subframes'
     id = Column(Integer, primary_key=True, autoincrement=True)
     moluid = Column(String(100), nullable=False, index=True)
     stack_num = Column(Integer, nullable=False)
@@ -142,7 +142,7 @@ class StackFrame(SiteBase):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     __table_args__ = (
-        UniqueConstraint('moluid', 'stack_num', name='uq_stack_moluid_num'),
+        UniqueConstraint('moluid', 'stack_num', name='uq_subframe_moluid_num'),
     )
 
 
@@ -463,14 +463,14 @@ def mark_frame(filename, mark_as, db_address):
         db_session.commit()
 
 
-def create_db(db_address, site=False):
+def create_db(db_address, site_deploy=False):
     # Create an engine for the database
     engine = create_engine(db_address)
 
     # Create all tables in the engine
     # This only needs to be run once on initialization.
     Base.metadata.create_all(engine)
-    if site:
+    if site_deploy:
         SiteBase.metadata.create_all(engine)
 
 
@@ -624,10 +624,10 @@ def replicate_instrument(instrument_record, db_address):
         db_session.commit()
 
 
-def insert_stack_frame(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs):
-    """Upsert a stack frame record. On conflict (moluid, stack_num), reset the row
+def insert_subframe(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs):
+    """Upsert a subframe record. On conflict (moluid, stack_num), reset the row
     to a fresh active state so a requeue behaves like a retry from scratch."""
-    with get_session(db_address, site=True) as session:
+    with get_session(db_address, site_deploy=True) as session:
         dialect = session.bind.dialect.name
         if 'postgres' in dialect:
             insert = pg_insert
@@ -636,7 +636,7 @@ def insert_stack_frame(db_address, moluid, stack_num, frmtotal, camera, filepath
         else:
             raise NotImplementedError("Only postgres and sqlite are supported")
 
-        stmt = insert(StackFrame).values(
+        stmt = insert(Subframe).values(
             moluid=moluid, stack_num=stack_num, frmtotal=frmtotal, camera=camera,
             filepath=filepath, is_last=is_last, dateobs=dateobs,
         )
@@ -649,43 +649,44 @@ def insert_stack_frame(db_address, moluid, stack_num, frmtotal, camera, filepath
                 'dateobs': stmt.excluded.dateobs,
                 'filepath': stmt.excluded.filepath,
                 'status': 'active',
+                'created_at': datetime.datetime.utcnow(),
                 'completed_at': None,
             },
         )
         session.execute(stmt)
 
 
-def get_stack_frames(db_address, moluid):
-    """Get all stack frame records for a given moluid."""
-    with get_session(db_address, site=True) as session:
-        return session.query(StackFrame).filter(
-            StackFrame.moluid == moluid
+def get_subframes(db_address, moluid):
+    """Get all subframe records for a given moluid."""
+    with get_session(db_address, site_deploy=True) as session:
+        return session.query(Subframe).filter(
+            Subframe.moluid == moluid
         ).all()
 
 
 def mark_stack_complete(db_address, moluid, status='complete'):
-    """Mark all frames for a moluid as complete (or timeout)."""
+    """Mark all subframes for a moluid as complete (or timeout)."""
     now = datetime.datetime.utcnow()
-    with get_session(db_address, site=True) as session:
-        session.query(StackFrame).filter(
-            StackFrame.moluid == moluid
+    with get_session(db_address, site_deploy=True) as session:
+        session.query(Subframe).filter(
+            Subframe.moluid == moluid
         ).update({'status': status, 'completed_at': now})
 
 
-def update_stack_frame_filepath(db_address, moluid, stack_num, filepath):
-    """Set the reduced filepath on an existing stack frame record."""
-    with get_session(db_address, site=True) as session:
-        session.query(StackFrame).filter(
-            StackFrame.moluid == moluid,
-            StackFrame.stack_num == stack_num,
+def update_subframe_filepath(db_address, moluid, stack_num, filepath):
+    """Set the reduced filepath on an existing subframe record."""
+    with get_session(db_address, site_deploy=True) as session:
+        session.query(Subframe).filter(
+            Subframe.moluid == moluid,
+            Subframe.stack_num == stack_num,
         ).update({'filepath': filepath})
 
 
-def cleanup_old_records(db_address, retention_days):
-    """Delete completed stack frame records older than retention_days."""
+def cleanup_old_subframes(db_address, retention_days):
+    """Delete completed subframe records older than retention_days."""
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=retention_days)
-    with get_session(db_address, site=True) as session:
-        session.query(StackFrame).filter(
-            StackFrame.status != 'active',
-            StackFrame.completed_at < cutoff,
+    with get_session(db_address, site_deploy=True) as session:
+        session.query(Subframe).filter(
+            Subframe.status != 'active',
+            Subframe.completed_at < cutoff,
         ).delete()

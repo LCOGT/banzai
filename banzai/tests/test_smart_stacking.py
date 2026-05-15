@@ -10,7 +10,7 @@ from celery.exceptions import Retry
 from sqlalchemy import text
 
 from banzai import dbs
-from banzai.dbs import insert_stack_frame, get_stack_frames, mark_stack_complete, cleanup_old_records, update_stack_frame_filepath
+from banzai.dbs import insert_subframe, get_subframes, mark_stack_complete, cleanup_old_subframes, update_subframe_filepath
 from banzai.stacking import (validate_message, check_stack_complete,
                               push_notification, drain_notifications, REDIS_KEY_PREFIX,
                               process_notifications, finalize_stack, check_timeout,
@@ -29,7 +29,7 @@ pytestmark = pytest.mark.smart_stacking
 def db_address(tmp_path):
     """Create a fresh SQLite DB per test with a site and two instruments."""
     addr = f'sqlite:///{tmp_path}/test.db'
-    dbs.create_db(addr, site=True)
+    dbs.create_db(addr, site_deploy=True)
     with dbs.get_session(addr) as session:
         session.add(dbs.Site(id='tst', timezone=0, latitude=0, longitude=0, elevation=0))
         session.add(dbs.Instrument(site='tst', camera='cam1', name='cam1', type='1m0-SciCam-Sinistro', nx=4096, ny=4096))
@@ -53,60 +53,60 @@ def mock_redis():
 
 class TestDBOperations:
 
-    def test_insert_and_query(self, db_address):
+    def test_insert_subframe_and_get_subframes(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
-        insert_stack_frame(
+        insert_subframe(
             db_address, moluid='mol-001', stack_num=1, frmtotal=5,
             camera='cam1', filepath='/data/frame1.fits', is_last=False, dateobs=dateobs,
         )
-        frames = get_stack_frames(db_address, moluid='mol-001')
-        assert len(frames) == 1
-        frame = frames[0]
-        assert frame.moluid == 'mol-001'
-        assert frame.stack_num == 1
-        assert frame.frmtotal == 5
-        assert frame.camera == 'cam1'
-        assert frame.filepath == '/data/frame1.fits'
-        assert frame.is_last is False
-        assert frame.dateobs == dateobs
+        subframes = get_subframes(db_address, moluid='mol-001')
+        assert len(subframes) == 1
+        subframe = subframes[0]
+        assert subframe.moluid == 'mol-001'
+        assert subframe.stack_num == 1
+        assert subframe.frmtotal == 5
+        assert subframe.camera == 'cam1'
+        assert subframe.filepath == '/data/frame1.fits'
+        assert subframe.is_last is False
+        assert subframe.dateobs == dateobs
 
-    def test_duplicate_resets_state_for_retry(self, db_address):
+    def test_insert_subframe_duplicate_resets_state_for_retry(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
-        insert_stack_frame(
+        insert_subframe(
             db_address, moluid='mol-dup', stack_num=1, frmtotal=3,
             camera='cam1', filepath='/data/dup1.fits', is_last=False, dateobs=dateobs,
         )
         mark_stack_complete(db_address, 'mol-dup', 'complete')
-        frames = get_stack_frames(db_address, 'mol-dup')
-        assert frames[0].status == 'complete'
-        assert frames[0].completed_at is not None
+        subframes = get_subframes(db_address, 'mol-dup')
+        assert subframes[0].status == 'complete'
+        assert subframes[0].completed_at is not None
 
         new_dateobs = datetime.datetime(2024, 6, 15, 13, 0, 0)
-        insert_stack_frame(
+        insert_subframe(
             db_address, moluid='mol-dup', stack_num=1, frmtotal=3,
             camera='cam1', filepath=None, is_last=True, dateobs=new_dateobs,
         )
-        frames = get_stack_frames(db_address, 'mol-dup')
-        assert len(frames) == 1
-        frame = frames[0]
-        assert frame.status == 'active'
-        assert frame.completed_at is None
-        assert frame.filepath is None
-        assert frame.is_last is True
-        assert frame.dateobs == new_dateobs
+        subframes = get_subframes(db_address, 'mol-dup')
+        assert len(subframes) == 1
+        subframe = subframes[0]
+        assert subframe.status == 'active'
+        assert subframe.completed_at is None
+        assert subframe.filepath is None
+        assert subframe.is_last is True
+        assert subframe.dateobs == new_dateobs
 
-    def test_update_stack_frame_filepath(self, db_address):
+    def test_update_subframe_filepath(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
-        insert_stack_frame(
+        insert_subframe(
             db_address, moluid='mol-upd', stack_num=1, frmtotal=3,
             camera='cam1', filepath=None, is_last=False, dateobs=dateobs,
         )
-        frames = get_stack_frames(db_address, 'mol-upd')
-        assert frames[0].filepath is None
+        subframes = get_subframes(db_address, 'mol-upd')
+        assert subframes[0].filepath is None
 
-        update_stack_frame_filepath(db_address, 'mol-upd', 1, '/data/reduced.fits')
-        frames = get_stack_frames(db_address, 'mol-upd')
-        assert frames[0].filepath == '/data/reduced.fits'
+        update_subframe_filepath(db_address, 'mol-upd', 1, '/data/reduced.fits')
+        subframes = get_subframes(db_address, 'mol-upd')
+        assert subframes[0].filepath == '/data/reduced.fits'
 
 
 # ---------------------------------------------------------------------------
@@ -115,31 +115,31 @@ class TestDBOperations:
 
 class TestStatusTransitions:
 
-    def test_status_active_to_complete(self, db_address):
+    def test_mark_stack_complete_sets_complete(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         for i in range(3):
-            insert_stack_frame(
+            insert_subframe(
                 db_address, moluid='mol-comp', stack_num=i + 1, frmtotal=3,
                 camera='cam1', filepath=f'/data/comp{i}.fits', is_last=(i == 2), dateobs=dateobs,
             )
         mark_stack_complete(db_address, 'mol-comp', 'complete')
-        frames = get_stack_frames(db_address, 'mol-comp')
-        for f in frames:
-            assert f.status == 'complete'
-            assert f.completed_at is not None
+        subframes = get_subframes(db_address, 'mol-comp')
+        for s in subframes:
+            assert s.status == 'complete'
+            assert s.completed_at is not None
 
-    def test_status_active_to_timeout(self, db_address):
+    def test_mark_stack_complete_sets_timeout(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         for i in range(2):
-            insert_stack_frame(
+            insert_subframe(
                 db_address, moluid='mol-to', stack_num=i + 1, frmtotal=5,
                 camera='cam1', filepath=f'/data/to{i}.fits', is_last=False, dateobs=dateobs,
             )
         mark_stack_complete(db_address, 'mol-to', 'timeout')
-        frames = get_stack_frames(db_address, 'mol-to')
-        for f in frames:
-            assert f.status == 'timeout'
-            assert f.completed_at is not None
+        subframes = get_subframes(db_address, 'mol-to')
+        for s in subframes:
+            assert s.status == 'timeout'
+            assert s.completed_at is not None
 
 
 # ---------------------------------------------------------------------------
@@ -148,62 +148,62 @@ class TestStatusTransitions:
 
 class TestTimeout:
 
-    def test_timeout_finalizes_stale_stacks(self, db_address):
+    def test_check_timeout_finalizes_stale_stacks(self, db_address):
         old_dateobs = datetime.datetime.utcnow() - datetime.timedelta(hours=2)
         for i in range(3):
-            insert_stack_frame(
+            insert_subframe(
                 db_address, moluid='mol-stale', stack_num=i + 1, frmtotal=5,
                 camera='cam1', filepath=f'/data/stale{i}.fits', is_last=False, dateobs=old_dateobs,
             )
-        with dbs.get_session(db_address, site=True) as session:
+        with dbs.get_session(db_address, site_deploy=True) as session:
             session.execute(
-                text("UPDATE stack_frames SET created_at = :old WHERE moluid = :mol"),
+                text("UPDATE subframes SET created_at = :old WHERE moluid = :mol"),
                 {'old': datetime.datetime.utcnow() - datetime.timedelta(hours=2), 'mol': 'mol-stale'},
             )
         check_timeout(db_address, 'cam1', timeout_minutes=60)
-        frames = get_stack_frames(db_address, 'mol-stale')
-        for f in frames:
-            assert f.status == 'timeout'
+        subframes = get_subframes(db_address, 'mol-stale')
+        for s in subframes:
+            assert s.status == 'timeout'
 
-    def test_timeout_applies_to_null_dateobs_rows(self, db_address):
+    def test_check_timeout_applies_to_null_dateobs_rows(self, db_address):
         """Rows with NULL dateobs ingested before the cutoff must be timed out.
 
         The old dateobs-based filter silently excluded these rows because SQL
         NULL comparisons evaluate to UNKNOWN (never TRUE).
         """
-        insert_stack_frame(
+        insert_subframe(
             db_address, moluid='mol-null-date', stack_num=1, frmtotal=3,
             camera='cam1', filepath='/data/null1.fits', is_last=False, dateobs=None,
         )
         # Back-date created_at so the row looks old enough to be stale.
-        with dbs.get_session(db_address, site=True) as session:
+        with dbs.get_session(db_address, site_deploy=True) as session:
             session.execute(
-                text("UPDATE stack_frames SET created_at = :old WHERE moluid = :mol"),
+                text("UPDATE subframes SET created_at = :old WHERE moluid = :mol"),
                 {'old': datetime.datetime.utcnow() - datetime.timedelta(hours=2), 'mol': 'mol-null-date'},
             )
         check_timeout(db_address, 'cam1', timeout_minutes=60)
-        frames = get_stack_frames(db_address, 'mol-null-date')
-        assert len(frames) == 1
-        assert frames[0].status == 'timeout', (
+        subframes = get_subframes(db_address, 'mol-null-date')
+        assert len(subframes) == 1
+        assert subframes[0].status == 'timeout', (
             "NULL-dateobs row was not timed out; filter must use created_at, not dateobs"
         )
 
-    def test_timeout_spares_recently_created_row_with_old_dateobs(self, db_address):
+    def test_check_timeout_spares_recently_created_row_with_old_dateobs(self, db_address):
         """A row with an ancient dateobs but a recent created_at must not be timed out.
 
         This covers the reprocessing case: old data is re-ingested now, so
         created_at is recent even though dateobs is in the distant past.
         """
         ancient_dateobs = datetime.datetime(2020, 1, 1, 0, 0, 0)
-        insert_stack_frame(
+        insert_subframe(
             db_address, moluid='mol-reprocess', stack_num=1, frmtotal=3,
             camera='cam1', filepath='/data/reproc1.fits', is_last=False, dateobs=ancient_dateobs,
         )
         # created_at defaults to utcnow() — well within the timeout window.
         check_timeout(db_address, 'cam1', timeout_minutes=60)
-        frames = get_stack_frames(db_address, 'mol-reprocess')
-        assert len(frames) == 1
-        assert frames[0].status == 'active', (
+        subframes = get_subframes(db_address, 'mol-reprocess')
+        assert len(subframes) == 1
+        assert subframes[0].status == 'active', (
             "Reprocessed row with recent created_at was incorrectly timed out"
         )
 
@@ -218,7 +218,7 @@ class TestRedisNotifications:
         push_notification(mock_redis, 'cam1', 'mol-abc')
         mock_redis.lpush.assert_called_once_with(f'{REDIS_KEY_PREFIX}cam1', 'mol-abc')
 
-    def test_drain_for_camera(self, mock_redis):
+    def test_drain_notifications_for_camera(self, mock_redis):
         mock_redis.lrange.return_value = [b'mol-a', b'mol-a', b'mol-b']
         result = drain_notifications(mock_redis, 'cam1')
         assert result == {'mol-a', 'mol-b'}
@@ -234,25 +234,25 @@ class TestRedisNotifications:
 
 class TestConcurrentStacks:
 
-    def test_concurrent_stacks_same_camera(self, db_address):
+    def test_check_stack_complete_handles_concurrent_stacks_same_camera(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         for i in range(3):
-            insert_stack_frame(
+            insert_subframe(
                 db_address, moluid='mol-A', stack_num=i + 1, frmtotal=3,
                 camera='cam1', filepath=f'/data/a{i}.fits', is_last=(i == 2), dateobs=dateobs,
             )
         for i in range(2):
-            insert_stack_frame(
+            insert_subframe(
                 db_address, moluid='mol-B', stack_num=i + 1, frmtotal=5,
                 camera='cam1', filepath=f'/data/b{i}.fits', is_last=False, dateobs=dateobs,
             )
 
-        frames_a = get_stack_frames(db_address, 'mol-A')
-        frames_b = get_stack_frames(db_address, 'mol-B')
-        assert len(frames_a) == 3
-        assert len(frames_b) == 2
-        assert check_stack_complete(frames_a, frmtotal=3) is True
-        assert check_stack_complete(frames_b, frmtotal=5) is False
+        subframes_a = get_subframes(db_address, 'mol-A')
+        subframes_b = get_subframes(db_address, 'mol-B')
+        assert len(subframes_a) == 3
+        assert len(subframes_b) == 2
+        assert check_stack_complete(subframes_a, frmtotal=3) is True
+        assert check_stack_complete(subframes_b, frmtotal=5) is False
 
 
 # ---------------------------------------------------------------------------
@@ -262,29 +262,29 @@ class TestConcurrentStacks:
 class TestCheckStackComplete:
 
     @staticmethod
-    def _frame(filepath='/data/f.fits', is_last=False):
+    def _subframe(filepath='/data/f.fits', is_last=False):
         f = MagicMock()
         f.filepath = filepath
         f.is_last = is_last
         return f
 
-    def test_all_frames_arrived_and_reduced(self):
-        frames = [self._frame() for _ in range(3)]
-        assert check_stack_complete(frames, frmtotal=3) is True
+    def test_check_stack_complete_all_subframes_arrived_and_reduced(self):
+        subframes = [self._subframe() for _ in range(3)]
+        assert check_stack_complete(subframes, frmtotal=3) is True
 
-    def test_partial_without_is_last(self):
-        frames = [self._frame() for _ in range(3)]
-        assert check_stack_complete(frames, frmtotal=5) is False
+    def test_check_stack_complete_partial_without_is_last(self):
+        subframes = [self._subframe() for _ in range(3)]
+        assert check_stack_complete(subframes, frmtotal=5) is False
 
-    def test_partial_with_is_last(self):
-        frames = [self._frame() for _ in range(2)] + [self._frame(is_last=True)]
-        assert check_stack_complete(frames, frmtotal=5) is True
+    def test_check_stack_complete_partial_with_is_last(self):
+        subframes = [self._subframe() for _ in range(2)] + [self._subframe(is_last=True)]
+        assert check_stack_complete(subframes, frmtotal=5) is True
 
-    def test_is_last_waits_for_unreduced_frames(self):
-        frames = [self._frame(), self._frame(filepath=None, is_last=True)]
-        assert check_stack_complete(frames, frmtotal=5) is False
+    def test_check_stack_complete_is_last_waits_for_unreduced_subframes(self):
+        subframes = [self._subframe(), self._subframe(filepath=None, is_last=True)]
+        assert check_stack_complete(subframes, frmtotal=5) is False
 
-    def test_empty_frames(self):
+    def test_check_stack_complete_empty_subframes(self):
         assert check_stack_complete([], frmtotal=5) is False
 
 
@@ -294,10 +294,10 @@ class TestCheckStackComplete:
 
 class TestRetention:
 
-    def test_cleanup_old_records(self, db_address):
+    def test_cleanup_old_subframes(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         for i in range(3):
-            insert_stack_frame(
+            insert_subframe(
                 db_address, moluid='mol-old', stack_num=i + 1, frmtotal=3,
                 camera='cam1', filepath=f'/data/old{i}.fits', is_last=(i == 2), dateobs=dateobs,
             )
@@ -305,25 +305,25 @@ class TestRetention:
 
         with dbs.get_session(db_address) as session:
             session.execute(
-                text("UPDATE stack_frames SET completed_at = :old_date WHERE moluid = :mol"),
+                text("UPDATE subframes SET completed_at = :old_date WHERE moluid = :mol"),
                 {'old_date': datetime.datetime.utcnow() - datetime.timedelta(days=30), 'mol': 'mol-old'},
             )
 
-        cleanup_old_records(db_address, retention_days=7)
-        frames = get_stack_frames(db_address, 'mol-old')
-        assert len(frames) == 0
+        cleanup_old_subframes(db_address, retention_days=7)
+        subframes = get_subframes(db_address, 'mol-old')
+        assert len(subframes) == 0
 
-    def test_cleanup_preserves_recent(self, db_address):
+    def test_cleanup_old_subframes_preserves_recent(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         for i in range(3):
-            insert_stack_frame(
+            insert_subframe(
                 db_address, moluid='mol-recent', stack_num=i + 1, frmtotal=3,
                 camera='cam1', filepath=f'/data/recent{i}.fits', is_last=(i == 2), dateobs=dateobs,
             )
         mark_stack_complete(db_address, 'mol-recent', 'complete')
-        cleanup_old_records(db_address, retention_days=7)
-        frames = get_stack_frames(db_address, 'mol-recent')
-        assert len(frames) == 3
+        cleanup_old_subframes(db_address, retention_days=7)
+        subframes = get_subframes(db_address, 'mol-recent')
+        assert len(subframes) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -453,13 +453,13 @@ class TestProcessSubframe:
 
         mock_run_stages.assert_called_once()
 
-        frames = get_stack_frames(db_address, 'mol-xyz')
-        assert len(frames) == 1
-        assert frames[0].stack_num == 1
-        assert frames[0].frmtotal == 5
-        assert frames[0].camera == 'cam1'
-        assert frames[0].is_last is expected_is_last
-        assert frames[0].filepath == '/data/processed/frame-e09.fits'
+        subframes = get_subframes(db_address, 'mol-xyz')
+        assert len(subframes) == 1
+        assert subframes[0].stack_num == 1
+        assert subframes[0].frmtotal == 5
+        assert subframes[0].camera == 'cam1'
+        assert subframes[0].is_last is expected_is_last
+        assert subframes[0].filepath == '/data/processed/frame-e09.fits'
         mock_redis.lpush.assert_called_once()
 
     def test_process_subframe_retries_on_unreadable_header(self, db_address):
@@ -488,7 +488,7 @@ class TestSupervisor:
     @patch('banzai.stacking.dbs.get_instruments_at_site',
            return_value=[MagicMock(camera='cam1'), MagicMock(camera='cam2'), MagicMock(camera='cam3')])
     @patch('banzai.stacking.multiprocessing.Process')
-    def test_supervisor_spawns_per_camera(self, mock_process_cls, mock_discover):
+    def test_stacking_supervisor_spawns_per_camera(self, mock_process_cls, mock_discover):
         supervisor = StackingSupervisor(
             site_id='tst',
             db_address='sqlite:///fake.db',
@@ -508,7 +508,7 @@ class TestWorkerLoopResilience:
     @patch('banzai.stacking.redis_lib.Redis.from_url')
     @patch('banzai.stacking.time.sleep')
     @patch('banzai.stacking.process_notifications')
-    def test_worker_loop_continues_after_exception(self, mock_process, mock_sleep, mock_redis_cls):
+    def test_run_worker_loop_continues_after_exception(self, mock_process, mock_sleep, mock_redis_cls):
         """run_worker_loop must not crash when process_notifications raises; it should log and continue."""
         # First call raises, second call raises KeyboardInterrupt to escape the infinite loop.
         mock_process.side_effect = [Exception('boom'), KeyboardInterrupt]
