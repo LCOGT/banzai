@@ -16,7 +16,7 @@ from banzai import query
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
 from banzai.utils.instrument_utils import get_processing_queue
 from banzai.utils.date_utils import get_stacking_date_range, parse_date_obs
-from banzai.dbs import insert_stack_frame, update_stack_frame_filepath
+from banzai.dbs import insert_subframe, update_subframe_filepath
 from banzai.stacking import push_notification
 
 
@@ -326,7 +326,7 @@ def process_subframe(self, body: dict, runtime_context: dict):
         dateobs = parse_date_obs(dateobs_str) if dateobs_str else None
 
         # Phase 1: Insert DB record before reduction so stacking worker can see it
-        insert_stack_frame(
+        insert_subframe(
             runtime_context.db_address,
             moluid=header['MOLUID'],
             stack_num=header['MOLFRNUM'],
@@ -346,7 +346,7 @@ def process_subframe(self, body: dict, runtime_context: dict):
                 images[0].get_output_directory(runtime_context),
                 images[0].get_output_filename(runtime_context),
             )
-            update_stack_frame_filepath(
+            update_subframe_filepath(
                 runtime_context.db_address,
                 header['MOLUID'],
                 header['MOLFRNUM'],

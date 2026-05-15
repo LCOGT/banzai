@@ -13,8 +13,8 @@ from banzai.context import Context
 from banzai.utils import date_utils, file_utils, fits_utils
 
 logger = logs.get_logger()
-HEARTBEAT_INTERVAL = 600        # seconds
-FAILURE_RETRY_SECONDS = 43200   # seconds
+HEARTBEAT_INTERVAL = 600                # 10 min (in seconds)
+FAILURE_RETRY_SECONDS = 60 * 60 * 2     # 2 hours (in seconds)
 
 
 def get_calibrations_to_cache(db_address, site_id, instrument_types):
@@ -92,7 +92,7 @@ def download_calibration(db_address, processed_path, runtime_context, cal) -> bo
         update_filepath(db_address, cal.id, dest_dir)
         return False
     if cal.frameid is None:
-        logger.warning(f"Skipping {cal.filename} - NULL frameid")
+        logger.debug(f"Skipping {cal.filename} - NULL frameid")
         return False
 
     os.makedirs(dest_dir, exist_ok=True)
@@ -247,7 +247,7 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
             time.sleep(30)
 
 
-def create_parser():
+def _download_worker_arg_parser():
     parser = argparse.ArgumentParser(description='Run the calibration download worker.')
     parser.add_argument('--db-address', dest='db_address', required=True,
                         help='Database connection string')
@@ -264,7 +264,7 @@ def create_parser():
 
 def run_download_worker_daemon():
     """Entry point: parse args, start worker loop."""
-    args = create_parser().parse_args()
+    args = _download_worker_arg_parser().parse_args()
 
     instrument_types = ([t.strip() for t in args.instrument_types.split(',')]
                         if args.instrument_types != '*' else ['*'])
