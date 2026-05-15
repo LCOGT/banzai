@@ -10,7 +10,7 @@ import argparse
 import os
 import glob
 from astropy.io import fits
-from banzai.utils.file_utils import post_to_archive_queue
+from banzai.utils.messaging import post_to_archive_queue
 
 
 def main():
