@@ -30,15 +30,19 @@ These tests validate the full system by:
    cp banzai/tests/site_e2e/site_e2e.env.template banzai/tests/site_e2e/site_e2e.env
    ```
 
-2. Edit `site_e2e.env` and fill in:
+2. Edit `site_e2e.env` and fill in your archive API token:
+   ```bash
+   AUTH_TOKEN=your-lco-archive-api-token
+   ```
 
-   - Your archive API token:
-     ```bash
-     AUTH_TOKEN=your-lco-archive-api-token
-     ```
-   - Absolute paths for `HOST_RAW_DIR`, `HOST_CALS_DIR`, and `HOST_REDUCED_DIR`. Relative paths will cause tests to fail fast at collection time, because `docker-compose-site.yml` mounts these as `${HOST_*_DIR}:${HOST_*_DIR}` (same path inside and outside the container). Point them at `<your-checkout>/data/raw`, `/calibrations`, and `/output`. (PostgreSQL data lives in the `site-pgdata` Docker-managed named volume.)
-
-   Other values have working defaults.
+   Everything else has a working default, including the host data directories.
+   `HOST_RAW_DIR`, `HOST_CALS_DIR`, and `HOST_REDUCED_DIR` default to
+   `<repo>/data/{raw,calibrations,output}` (resolved to absolute paths in
+   `conftest.py`). Override only if you want fixture data on a different disk —
+   relative paths are rejected at collection time, because
+   `docker-compose-site.yml` mounts these as `${HOST_*_DIR}:${HOST_*_DIR}`
+   (same path inside and outside the container). (PostgreSQL data lives in
+   the `site-pgdata` Docker-managed named volume.)
 
 ## Running the Tests
 
