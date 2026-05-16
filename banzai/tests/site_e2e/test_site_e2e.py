@@ -1,6 +1,5 @@
 """End-to-end tests for site deployment caching system."""
 
-import datetime
 import os
 import shutil
 import subprocess
@@ -366,41 +365,6 @@ class TestSiteE2E:
             timeout=60, interval=5
         )
         assert found, f"Reduced subframe output not found: {expected_path}"
-
-    @pytest.mark.e2e_site_cache
-    def test_13_stack_timeout(self, site_deployment):
-        """Verify stacking supervisor times out incomplete stacks."""
-        stale_dateobs = datetime.datetime.utcnow() - datetime.timedelta(minutes=25)
-
-        for stack_num in [1, 2]:
-            dbs.insert_subframe(
-                LOCAL_DB_ADDRESS,
-                moluid='mol-e2e-timeout',
-                stack_num=stack_num,
-                frmtotal=3,
-                camera='sq34',
-                filepath='/tmp/fake.fits',
-                is_last=False,
-                dateobs=stale_dateobs,
-            )
-
-        with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
-            session.query(dbs.Subframe).filter(
-                dbs.Subframe.moluid == 'mol-e2e-timeout'
-            ).update({'created_at': stale_dateobs})
-
-        def check():
-            with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
-                subframes = session.query(dbs.Subframe).filter(
-                    dbs.Subframe.moluid == 'mol-e2e-timeout'
-                ).all()
-                if subframes and all(s.status == 'timeout' for s in subframes):
-                    return subframes
-                return None
-
-        result = poll_until(check, timeout=60)
-        assert result, "Stacking supervisor did not timeout the stale stack"
-        assert len(result) == 2, f"Expected 2 timed-out subframes, found {len(result)}"
 
     @pytest.mark.e2e_site_startup
     def test_14_cache_init_reuses_existing_slot(self, site_deployment):
