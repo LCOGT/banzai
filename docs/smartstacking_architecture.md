@@ -136,16 +136,23 @@ sequenceDiagram
 
 ---
 
-## 3. Worker tick and cleanup
+## 3. Worker tick, adaptive timeout, and cleanup
 
-The complete-stack path is notification-driven in the current implementation:
-the worker polls Redis, then queries the DB for each notified `moluid`. If a
-stack is still incomplete, its rows remain `active` until another notification
-arrives.
+The primary complete-stack path is notification-driven: the worker polls Redis,
+then queries the DB for each notified `moluid`. Each tick also runs an active-row
+sweep so complete stacks can still reach terminal state if a notification was
+missed. If a stack is still incomplete, its rows remain `active` until another
+notification arrives or the adaptive timeout sweep finalizes it.
 
-Timeout finalization is intentionally deferred. A follow-up change should add
-timeout handling based on reduced-subframe cadence rather than raw subframe
-arrival rows.
+Timeout finalization is currently adaptive and uses reduced-row insert time
+(`created_at`) as the approximate reduced-subframe arrival time. The first
+arriving frame's `EXPTIME` is treated as the exposure duration for the whole
+stack. Before a second reduced row arrives, the stack times out after
+`EXPTIME + 60s`. Once two rows exist, the worker computes the adjusted baseline
+as `(arrival_2 - arrival_1) - EXPTIME`. If that adjusted baseline is zero or
+negative, it falls back to `60s`. Later observed reduced-row gaps, and the
+currently missing next-frame gap, time out the stack when their adjusted gap
+exceeds twice that baseline.
 
 ```mermaid
 flowchart TD
@@ -157,20 +164,26 @@ flowchart TD
     complete{"Complete?"}
     mark_complete["Mark status complete"]
     keep_active["Leave active"]
+    sweep["Adaptive timeout scan<br/>active rows for camera"]
+    timed_out{"Timed out?"}
+    mark_timeout["Mark status timeout"]
     cleanup["Cleanup old terminal rows"]
     sleep["Sleep poll interval"]
 
     tick --> drain --> any_notify
     any_notify -- "yes" --> each --> load --> complete
-    complete -- "yes" --> mark_complete --> cleanup
-    complete -- "no" --> keep_active --> cleanup
-    any_notify -- "no" --> cleanup
+    complete -- "yes" --> mark_complete --> sweep
+    complete -- "no" --> keep_active --> sweep
+    any_notify -- "no" --> sweep
+    sweep --> timed_out
+    timed_out -- "yes" --> mark_timeout --> cleanup
+    timed_out -- "no" --> cleanup
     cleanup --> sleep --> tick
 ```
 
 `retention_days` defaults to 30 (see `stacking._stacking_worker_arg_parser` for
 the current default). Cleanup only removes terminal rows, so incomplete stacks
-remain active until completed by a later notification or finalized by future
+remain active until completed by a later notification or finalized by adaptive
 timeout handling.
 
 ---
@@ -239,6 +252,7 @@ Defined in `banzai/dbs.py` as `Subframe`. Unique constraint on
 | `is_last` | bool | Instrument signalled the final subframe of the sequence. |
 | `status` | str | `'active'`, `'complete'`, or `'timeout'`. |
 | `dateobs` | datetime | Observation timestamp (FITS `DATE-OBS`). |
+| `exptime` | float / NULL | Exposure duration in seconds (FITS `EXPTIME`); the first arriving row drives adaptive timeout calculations. |
 | `created_at` | datetime | Row creation time. |
 | `completed_at` | datetime / NULL | Set when `status` transitions to `'complete'` or `'timeout'`. |
 

@@ -139,6 +139,7 @@ class Subframe(SiteBase):
     is_last = Column(Boolean, default=False)
     status = Column(String(20), default='active', nullable=False)
     dateobs = Column(DateTime, nullable=True)
+    exptime = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     __table_args__ = (
@@ -624,7 +625,7 @@ def replicate_instrument(instrument_record, db_address):
         db_session.commit()
 
 
-def insert_subframe(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs):
+def insert_subframe(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs, exptime=None):
     """Upsert a subframe record. On conflict (moluid, stack_num), reset the row
     to a fresh active state so a requeue behaves like a retry from scratch."""
     if filepath is None:
@@ -641,7 +642,7 @@ def insert_subframe(db_address, moluid, stack_num, frmtotal, camera, filepath, i
 
         stmt = insert(Subframe).values(
             moluid=moluid, stack_num=stack_num, frmtotal=frmtotal, camera=camera,
-            filepath=filepath, is_last=is_last, dateobs=dateobs,
+            filepath=filepath, is_last=is_last, dateobs=dateobs, exptime=exptime,
         )
         stmt = stmt.on_conflict_do_update(
             index_elements=['moluid', 'stack_num'],
@@ -650,6 +651,7 @@ def insert_subframe(db_address, moluid, stack_num, frmtotal, camera, filepath, i
                 'camera': stmt.excluded.camera,
                 'is_last': stmt.excluded.is_last,
                 'dateobs': stmt.excluded.dateobs,
+                'exptime': stmt.excluded.exptime,
                 'filepath': stmt.excluded.filepath,
                 'status': 'active',
                 'created_at': datetime.datetime.utcnow(),
@@ -664,6 +666,19 @@ def get_subframes(db_address, moluid):
     with get_session(db_address, site_deploy=True) as session:
         return session.query(Subframe).filter(
             Subframe.moluid == moluid
+        ).all()
+
+
+def get_active_subframes_for_camera(db_address, camera):
+    """Get active subframe records for a camera ordered by stack and arrival time."""
+    with get_session(db_address, site_deploy=True) as session:
+        return session.query(Subframe).filter(
+            Subframe.camera == camera,
+            Subframe.status == 'active',
+        ).order_by(
+            Subframe.moluid,
+            Subframe.created_at,
+            Subframe.stack_num,
         ).all()
 
 

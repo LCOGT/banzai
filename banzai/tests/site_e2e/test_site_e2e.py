@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 import json
+import datetime
 from pathlib import Path
 
 import pytest
@@ -349,22 +350,77 @@ class TestSiteE2E:
                     dbs.Subframe.moluid == 'mol-e2e-test'
                 ).all()
                 if subframes and all(s.status == 'complete' for s in subframes):
-                    return [s.filepath for s in subframes]
+                    return subframes
                 return None
 
-        filepaths = poll_until(check, timeout=300)
-        assert filepaths, "Subframe stack did not complete within timeout"
+        subframes = poll_until(check, timeout=300)
+        assert subframes, "Subframe stack did not complete within timeout"
+        assert subframes[0].exptime is not None
 
         # Verify the reduced output file exists on disk.
         # Paths in the DB are now absolute host paths, so check directly.
-        assert filepaths[0], "Subframe has no filepath after completion"
-        expected_path = Path(filepaths[0])
+        assert subframes[0].filepath, "Subframe has no filepath after completion"
+        expected_path = Path(subframes[0].filepath)
 
         found = poll_until(
             lambda p=expected_path: p.exists() and p.stat().st_size > 0,
             timeout=60, interval=5
         )
         assert found, f"Reduced subframe output not found: {expected_path}"
+
+    @pytest.mark.e2e_site_startup
+    def test_13_subframe_stack_times_out(self, site_deployment):
+        """Verify the deployed stacking supervisor can mark an incomplete stack timeout."""
+
+        raw_dir = RAW_DIR
+        src_path = raw_dir / RAW_FRAME_FILENAME
+        subframe_path = raw_dir / 'subframe_timeout_test.fits.fz'
+        moluid = 'mol-e2e-timeout-test'
+
+        assert src_path.exists(), f"Raw frame not found: {src_path}"
+        shutil.copy2(str(src_path), str(subframe_path))
+
+        with fits.open(str(subframe_path), mode='update') as hdul:
+            hdul['SCI'].header['MOLUID'] = moluid
+            hdul['SCI'].header['MOLFRNUM'] = 1
+            hdul['SCI'].header['FRMTOTAL'] = 2
+            hdul['SCI'].header['STACK'] = 'T'
+
+        body = json.dumps({
+            'fits_file': str(subframe_path),
+            'last_frame': False,
+            'instrument_enqueue_timestamp': int(time.time() * 1000),
+        })
+        stack_queue = os.environ.get('STACK_QUEUE_NAME', 'banzai_stack_queue')
+        publish_raw_string_to_queue(stack_queue, body)
+
+        def row_exists():
+            with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
+                return session.query(dbs.Subframe).filter(
+                    dbs.Subframe.moluid == moluid
+                ).first()
+
+        assert poll_until(row_exists, timeout=120, interval=2), \
+            "Timed-out subframe row was not inserted"
+
+        stale_created_at = datetime.datetime.utcnow() - datetime.timedelta(hours=2)
+        with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
+            session.execute(
+                text("UPDATE subframes SET created_at = :created_at WHERE moluid = :moluid"),
+                {'created_at': stale_created_at, 'moluid': moluid},
+            )
+
+        def timed_out():
+            with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
+                subframes = session.query(dbs.Subframe).filter(
+                    dbs.Subframe.moluid == moluid
+                ).all()
+                if subframes and all(s.status == 'timeout' for s in subframes):
+                    return subframes
+                return None
+
+        assert poll_until(timed_out, timeout=120, interval=2), \
+            "Incomplete subframe stack was not marked timeout"
 
     @pytest.mark.e2e_site_startup
     def test_14_cache_init_reuses_existing_slot(self, site_deployment):

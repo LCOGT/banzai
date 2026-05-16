@@ -1,8 +1,10 @@
 """Smart stacking: worker, supervisor, and helper functions."""
 import argparse
+import datetime
 import multiprocessing
 import signal
 import time
+from collections import defaultdict
 
 import redis as redis_lib
 
@@ -17,6 +19,9 @@ logger = get_logger()
 # ---------------------------------------------------------------------------
 
 REQUIRED_MESSAGE_FIELDS = ('fits_file', 'last_frame', 'instrument_enqueue_timestamp')
+INITIAL_FRAME_TIMEOUT_BUFFER_SECONDS = 60.0
+INVALID_BASELINE_FALLBACK_SECONDS = 60.0
+ADAPTIVE_TIMEOUT_MULTIPLIER = 2.0
 
 
 def validate_message(body):
@@ -34,6 +39,91 @@ def check_stack_complete(subframes, frmtotal):
     all_arrived = len(subframes) == frmtotal
     has_last = any(s.is_last for s in subframes)
     return bool(subframes) and (all_arrived or has_last)
+
+
+def _arrival_ordered_subframes(subframes):
+    return sorted(
+        subframes,
+        key=lambda s: (
+            s.created_at or datetime.datetime.max,
+            s.stack_num or 0,
+        ),
+    )
+
+
+def _exptime_seconds(subframe):
+    try:
+        exptime = float(subframe.exptime or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+    return max(exptime, 0.0)
+
+
+def adaptive_timeout_baseline_seconds(subframes):
+    """Return the adjusted first-to-second-frame baseline or invalid-value fallback."""
+    ordered_subframes = _arrival_ordered_subframes(subframes)
+    if len(ordered_subframes) < 2:
+        return None
+
+    # The first two arrivals establish the expected post-exposure delivery cadence
+    # for this moluid; later timeout checks compare against this baseline.
+    exptime = _exptime_seconds(ordered_subframes[0])
+    first_arrival = ordered_subframes[0].created_at
+    second_arrival = ordered_subframes[1].created_at
+    if first_arrival is None or second_arrival is None:
+        return INVALID_BASELINE_FALLBACK_SECONDS
+
+    # Subtract exposure duration because it is unrelated to processing/transport
+    # delay, which is the signal this timeout is trying to detect.
+    adjusted_gap = (second_arrival - first_arrival).total_seconds() - exptime
+    # A zero or negative adjusted gap means the timing data is not usable, so
+    # fall back to a conservative positive baseline instead of timing out instantly.
+    if adjusted_gap <= 0:
+        return INVALID_BASELINE_FALLBACK_SECONDS
+    return adjusted_gap
+
+
+def stack_has_timed_out(subframes, now=None):
+    """Return True when a stack has exceeded the adaptive arrival timeout."""
+    ordered_subframes = _arrival_ordered_subframes(subframes)
+    if not ordered_subframes:
+        return False
+
+    now = now or datetime.datetime.utcnow()
+    # Use the first frame's exposure time for the whole stack; smart-stack subframes
+    # are expected to have consistent exposure durations.
+    exptime = _exptime_seconds(ordered_subframes[0])
+    first_arrival = ordered_subframes[0].created_at
+    if first_arrival is None:
+        return False
+
+    # Until frame 2 arrives, there is no cadence measurement yet, so use the
+    # first-frame exposure plus a fixed post-exposure buffer.
+    if len(ordered_subframes) == 1:
+        first_frame_timeout = exptime + INITIAL_FRAME_TIMEOUT_BUFFER_SECONDS
+        return (now - first_arrival).total_seconds() > first_frame_timeout
+
+    # After frame 2, the first-to-second adjusted gap defines the expected
+    # post-exposure arrival cadence; future gaps get twice that allowance.
+    baseline = adaptive_timeout_baseline_seconds(ordered_subframes)
+    timeout_threshold = baseline * ADAPTIVE_TIMEOUT_MULTIPLIER
+
+    # Late frames should still cause a timeout even if they eventually arrived;
+    # the arrival timestamps preserve those delayed adjacent gaps.
+    for previous_frame, current_frame in zip(ordered_subframes, ordered_subframes[1:]):
+        if previous_frame.created_at is None or current_frame.created_at is None:
+            continue
+        adjusted_gap = (current_frame.created_at - previous_frame.created_at).total_seconds() - exptime
+        if adjusted_gap > timeout_threshold:
+            return True
+
+    # If no already-observed gap was too long, check whether the next expected
+    # frame has now been missing for too long.
+    latest_arrival = ordered_subframes[-1].created_at
+    if latest_arrival is None:
+        return False
+    missing_frame_gap = (now - latest_arrival).total_seconds() - exptime
+    return missing_frame_gap > timeout_threshold
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +162,7 @@ def run_worker_loop(camera, db_address, redis_url, retention_days=30, poll_inter
     while True:
         try:
             process_notifications(db_address, redis_client, camera)
+            check_timeouts(db_address, camera)
             dbs.cleanup_old_subframes(db_address, retention_days)
             time.sleep(poll_interval)
         except Exception as e:
@@ -97,6 +188,27 @@ def finalize_stack(db_address, moluid, status='complete'):
     logger.debug(f'Mock stacking complete for {moluid}', extra_tags={'moluid': moluid})
     logger.debug(f'Mock JPEG generation for {moluid}', extra_tags={'moluid': moluid})
     logger.debug(f'Mock ingester upload for {moluid}', extra_tags={'moluid': moluid})
+
+
+def check_timeouts(db_address, camera, now=None):
+    """Finalize active stacks that are complete or have exceeded adaptive timeout."""
+    active_subframes = dbs.get_active_subframes_for_camera(db_address, camera)
+    # The DB scan is camera-wide, so regroup rows into independent stack states
+    # before making terminal-status decisions.
+    subframes_by_moluid = defaultdict(list)
+    for subframe in active_subframes:
+        subframes_by_moluid[subframe.moluid].append(subframe)
+
+    for moluid, subframes in subframes_by_moluid.items():
+        frmtotal = subframes[0].frmtotal
+        # Completion wins over timeout so a fully reduced stack cannot be marked
+        # partial just because its cadence also exceeded the adaptive threshold.
+        if check_stack_complete(subframes, frmtotal):
+            finalize_stack(db_address, moluid, status='complete')
+        # Incomplete active stacks are finalized only when their arrival cadence
+        # indicates that the next expected frame is no longer arriving normally.
+        elif stack_has_timed_out(subframes, now=now):
+            finalize_stack(db_address, moluid, status='timeout')
 
 
 # ---------------------------------------------------------------------------
