@@ -146,7 +146,7 @@ class TestStatusTransitions:
 # Timeout
 # ---------------------------------------------------------------------------
 
-class TestTimeout:
+class TestStackTimeout:
 
     def test_check_timeout_finalizes_stale_stacks(self, db_address):
         old_dateobs = datetime.datetime.utcnow() - datetime.timedelta(hours=2)
