@@ -202,12 +202,6 @@ two separate roles:
   notification only tells the worker *when to look*; it does not carry
   decision-making state.
 
-The important caveat is that the current implementation still depends on the
-Redis notification list for complete-stack detection. If a completion
-notification is lost, active rows can remain active indefinitely. A more robust
-version would either add a DB fallback for complete-ready stacks or remove the
-notification list entirely and discover actionable stacks directly from the DB.
-
 ### Alternatives we did not take
 
 - **Single Celery task per "stack maybe complete" event.** Would force
