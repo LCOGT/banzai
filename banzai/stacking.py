@@ -1,6 +1,5 @@
 """Smart stacking: worker, supervisor, and helper functions."""
 import argparse
-import datetime
 import multiprocessing
 import signal
 import time
@@ -67,13 +66,12 @@ def drain_notifications(redis_client, camera):
 # Worker
 # ---------------------------------------------------------------------------
 
-def run_worker_loop(camera, db_address, redis_url, timeout_minutes=20, retention_days=30, poll_interval=5):
+def run_worker_loop(camera, db_address, redis_url, retention_days=30, poll_interval=5):
     """Main loop: drain notifications, query DB, check completion, finalize."""
     redis_client = redis_lib.Redis.from_url(redis_url)
     while True:
         try:
             process_notifications(db_address, redis_client, camera)
-            check_timeout(db_address, camera, timeout_minutes)
             dbs.cleanup_old_subframes(db_address, retention_days)
             time.sleep(poll_interval)
         except Exception as e:
@@ -101,34 +99,20 @@ def finalize_stack(db_address, moluid, status='complete'):
     logger.debug(f'Mock ingester upload for {moluid}', extra_tags={'moluid': moluid})
 
 
-def check_timeout(db_address, camera, timeout_minutes):
-    """Find stale active stacks and finalize them with status='timeout'."""
-    cutoff = datetime.datetime.utcnow() - datetime.timedelta(minutes=timeout_minutes)
-    with dbs.get_session(db_address, site_deploy=True) as session:
-        stale_moluids = session.query(dbs.Subframe.moluid).filter(
-            dbs.Subframe.camera == camera,
-            dbs.Subframe.status == 'active',
-            dbs.Subframe.created_at < cutoff,
-        ).distinct().all()
-    for (moluid,) in stale_moluids:
-        finalize_stack(db_address, moluid, status='timeout')
-
-
 # ---------------------------------------------------------------------------
 # Supervisor
 # ---------------------------------------------------------------------------
 
 class StackingSupervisor:
-    def __init__(self, site_id, db_address, redis_url, timeout_minutes=20, retention_days=30):
+    def __init__(self, site_id, db_address, redis_url, retention_days=30):
         self.site_id = site_id
         self.db_address = db_address
         self.redis_url = redis_url
-        self.timeout_minutes = timeout_minutes
         self.retention_days = retention_days
         self.workers = {}
 
     def _worker_args(self, camera):
-        return (camera, self.db_address, self.redis_url, self.timeout_minutes, self.retention_days)
+        return (camera, self.db_address, self.redis_url, self.retention_days)
 
     def start(self):
         """Discover cameras and spawn one worker process per camera."""
@@ -175,8 +159,6 @@ def _stacking_worker_arg_parser():
                         help='Database connection string')
     parser.add_argument('--redis-url', dest='redis_url', required=True,
                         help='Redis URL')
-    parser.add_argument('--stack-timeout-minutes', dest='stack_timeout_minutes', type=int, default=20,
-                        help='Minutes before an incomplete stack times out (default: 20)')
     parser.add_argument('--stack-retention-days', dest='stack_retention_days', type=int, default=30,
                         help='Days to retain completed stacks (default: 30)')
     return parser
@@ -187,7 +169,6 @@ def run_supervisor():
     args = _stacking_worker_arg_parser().parse_args()
 
     supervisor = StackingSupervisor(args.site_id, args.db_address, args.redis_url,
-                                    timeout_minutes=args.stack_timeout_minutes,
                                     retention_days=args.stack_retention_days)
 
     def handle_signal(signum, frame):

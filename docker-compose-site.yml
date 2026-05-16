@@ -209,7 +209,6 @@ services:
       "--site-id=${SITE_ID}",
       "--db-address=${DB_ADDRESS}",
       "--redis-url=${REDIS_URL}",
-      "--stack-timeout-minutes=${STACK_TIMEOUT_MINUTES:-20}",
       "--stack-retention-days=${STACK_RETENTION_DAYS:-30}"
     ]
     restart: unless-stopped
