@@ -75,6 +75,15 @@ SITE_ENV_FILE = SITE_E2E_DIR / "site_e2e.env"
 # ps`/`down` scoped to e2e-only containers so an unrelated `just site-up`
 # (project name "banzai") is left alone.
 SITE_PROJECT_NAME = "banzai-e2e"
+RABBITMQ_CONTAINER_NAME = "banzai-rabbitmq"
+E2E_QUEUE_ENV_VARS = (
+    "PIPELINE_QUEUE_NAME",
+    "CELERY_TASK_QUEUE_NAME",
+    "CELERY_LARGE_TASK_QUEUE_NAME",
+    "SUBFRAME_TASK_QUEUE_NAME",
+    "STACK_QUEUE_NAME",
+)
+E2E_QUEUE_PREFIX = "e2e_"
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +114,78 @@ def _clean_data_dir(path):
     if result.returncode != 0:
         logger.warning(f"Docker cleanup failed for {path}: {result.stderr}")
     shutil.rmtree(path, ignore_errors=True)
+
+
+def _e2e_rabbitmq_queue_names():
+    """Return configured e2e RabbitMQ queues after validating their names."""
+    queue_names = []
+    invalid = []
+    for env_var in E2E_QUEUE_ENV_VARS:
+        queue_name = os.environ.get(env_var, "").strip()
+        if not queue_name or not queue_name.startswith(E2E_QUEUE_PREFIX):
+            invalid.append(f"{env_var}={queue_name!r}")
+        else:
+            queue_names.append(queue_name)
+
+    if invalid:
+        raise RuntimeError(
+            "Refusing to purge RabbitMQ queues because all site e2e queue names "
+            f"must be non-empty and start with {E2E_QUEUE_PREFIX!r}. Invalid: "
+            + ", ".join(invalid)
+        )
+
+    return tuple(dict.fromkeys(queue_names))
+
+
+def _rabbitmqctl(*args):
+    """Run rabbitmqctl inside the shared dependency container."""
+    return subprocess.run(
+        ["docker", "exec", RABBITMQ_CONTAINER_NAME, "rabbitmqctl", "-q", *args],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+
+def purge_e2e_rabbitmq_queues(required=True):
+    """Purge only the configured e2e RabbitMQ queues.
+
+    The shared RabbitMQ container may also hold queues for a developer site or
+    local stack. The name guard makes it impossible for this helper to purge
+    those non-e2e queues by accident.
+    """
+    queue_names = _e2e_rabbitmq_queue_names()
+    result = _rabbitmqctl("list_queues", "name")
+    if result.returncode != 0:
+        message = (
+            f"Failed to list RabbitMQ queues in {RABBITMQ_CONTAINER_NAME}: "
+            f"{result.stderr or result.stdout}"
+        )
+        if required:
+            raise RuntimeError(message)
+        logger.warning(message)
+        return
+
+    existing_queues = {
+        line.strip()
+        for line in result.stdout.splitlines()
+        if line.strip()
+    }
+    for queue_name in queue_names:
+        if queue_name not in existing_queues:
+            continue
+        result = _rabbitmqctl("purge_queue", queue_name)
+        if result.returncode != 0:
+            message = (
+                f"Failed to purge RabbitMQ queue {queue_name!r}: "
+                f"{result.stderr or result.stdout}"
+            )
+            if required:
+                raise RuntimeError(message)
+            logger.warning(message)
+        else:
+            logger.info(f"Purged RabbitMQ queue {queue_name!r}")
 
 
 def run_docker_compose(compose_file, *args, cwd=None, env=None, project=None):
@@ -263,6 +344,7 @@ def site_deployment(publication_db):
 
     logger.info("\n[Site Deployment] Cleaning up any previous state...")
     run_site_compose("down", "-v", "--remove-orphans")
+    purge_e2e_rabbitmq_queues(required=True)
 
     for d in HOST_DATA_DIRS:
         _clean_data_dir(d)
@@ -311,6 +393,7 @@ def cleanup(request):
     logger.info("[Cleanup] Stopping site deployment...")
     if SITE_COMPOSE_FILE.exists():
         run_site_compose("down", "-v", "--remove-orphans")
+    purge_e2e_rabbitmq_queues(required=False)
 
     logger.info("[Cleanup] Stopping publication database...")
     if pub_compose.exists():

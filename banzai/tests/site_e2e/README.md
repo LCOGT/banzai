@@ -95,6 +95,9 @@ machine:
 - Container names don't collide (`e2e-banzai-worker` vs `banzai-worker`).
 - Queues don't collide (`e2e_reduction_task_queue` vs `reduction_task_queue`),
   even though both stacks share the same `banzai-redis` / `banzai-rabbitmq`.
+- At setup and teardown, the e2e fixture purges only the configured `e2e_*`
+  RabbitMQ queues. It refuses to purge anything if any configured queue name is
+  missing or does not start with `e2e_`.
 - Postgres host ports don't collide (5443 for e2e, 5442 for site-up).
 - `docker compose down` from the e2e fixture is project-scoped — it cannot
   tear down a docker-compose-site stack (project `banzai`).
