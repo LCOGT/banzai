@@ -13,7 +13,7 @@ from celery.signals import worker_process_init
 from banzai.context import Context
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
 from banzai.utils.date_utils import get_stacking_date_range, parse_date_obs
-from banzai.dbs import insert_subframe, update_subframe_filepath
+from banzai.dbs import insert_subframe
 from banzai.stacking import push_notification
 try:
     from opentelemetry.instrumentation.celery import CeleryInstrumentor
@@ -267,35 +267,30 @@ def process_subframe(self, body: dict, runtime_context: dict):
         dateobs_str = header.get('DATE-OBS', '')
         dateobs = parse_date_obs(dateobs_str) if dateobs_str else None
 
-        # Phase 1: Insert DB record before reduction so stacking worker can see it
+        # Phase 1: Run reduction pipeline
+        images = stage_utils.run_pipeline_stages([{'path': filepath}], runtime_context)
+        if not images:
+            logger.error('Subframe reduction produced no output image',
+                         extra_tags={'filepath': filepath, 'moluid': header['MOLUID']})
+            return
+
+        reduced_path = os.path.join(
+            images[0].get_output_directory(runtime_context),
+            images[0].get_output_filename(runtime_context),
+        )
+        # Phase 2: Record only reduced subframes so filepath is never null for new rows.
         insert_subframe(
             runtime_context.db_address,
             moluid=header['MOLUID'],
             stack_num=header['MOLFRNUM'],
             frmtotal=header['FRMTOTAL'],
             camera=camera,
-            filepath=None,
+            filepath=reduced_path,
             is_last=body.get('last_frame', False),
             dateobs=dateobs,
         )
 
-        # Phase 2: Run reduction pipeline
-        images = stage_utils.run_pipeline_stages([{'path': filepath}], runtime_context)
-
-        # Phase 3: Update DB record with reduced filepath
-        if images:
-            reduced_path = os.path.join(
-                images[0].get_output_directory(runtime_context),
-                images[0].get_output_filename(runtime_context),
-            )
-            update_subframe_filepath(
-                runtime_context.db_address,
-                header['MOLUID'],
-                header['MOLFRNUM'],
-                reduced_path,
-            )
-
-        # Phase 4: Notify the stack worker that a new subframe is available
+        # Phase 3: Notify the stack worker that a new subframe is available
         redis_url = getattr(runtime_context, 'REDIS_URL', None)
         if redis_url:
             redis_client = redis.Redis.from_url(redis_url)

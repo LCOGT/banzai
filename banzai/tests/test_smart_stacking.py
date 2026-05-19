@@ -10,7 +10,7 @@ from celery.exceptions import Retry
 from sqlalchemy import text
 
 from banzai import dbs
-from banzai.dbs import insert_subframe, get_subframes, mark_stack_complete, cleanup_old_subframes, update_subframe_filepath
+from banzai.dbs import insert_subframe, get_subframes, mark_stack_complete, cleanup_old_subframes
 from banzai.stacking import (validate_message, check_stack_complete,
                               push_notification, drain_notifications, REDIS_KEY_PREFIX,
                               process_notifications, finalize_stack, run_worker_loop,
@@ -84,29 +84,24 @@ class TestDBOperations:
         new_dateobs = datetime.datetime(2024, 6, 15, 13, 0, 0)
         insert_subframe(
             db_address, moluid='mol-dup', stack_num=1, frmtotal=3,
-            camera='cam1', filepath=None, is_last=True, dateobs=new_dateobs,
+            camera='cam1', filepath='/data/dup2.fits', is_last=True, dateobs=new_dateobs,
         )
         subframes = get_subframes(db_address, 'mol-dup')
         assert len(subframes) == 1
         subframe = subframes[0]
         assert subframe.status == 'active'
         assert subframe.completed_at is None
-        assert subframe.filepath is None
+        assert subframe.filepath == '/data/dup2.fits'
         assert subframe.is_last is True
         assert subframe.dateobs == new_dateobs
 
-    def test_update_subframe_filepath(self, db_address):
+    def test_insert_subframe_requires_filepath(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
-        insert_subframe(
-            db_address, moluid='mol-upd', stack_num=1, frmtotal=3,
-            camera='cam1', filepath=None, is_last=False, dateobs=dateobs,
-        )
-        subframes = get_subframes(db_address, 'mol-upd')
-        assert subframes[0].filepath is None
-
-        update_subframe_filepath(db_address, 'mol-upd', 1, '/data/reduced.fits')
-        subframes = get_subframes(db_address, 'mol-upd')
-        assert subframes[0].filepath == '/data/reduced.fits'
+        with pytest.raises(ValueError, match='filepath is required'):
+            insert_subframe(
+                db_address, moluid='mol-upd', stack_num=1, frmtotal=3,
+                camera='cam1', filepath=None, is_last=False, dateobs=dateobs,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -202,7 +197,7 @@ class TestCheckStackComplete:
         f.is_last = is_last
         return f
 
-    def test_check_stack_complete_all_subframes_arrived_and_reduced(self):
+    def test_check_stack_complete_all_subframes_arrived(self):
         subframes = [self._subframe() for _ in range(3)]
         assert check_stack_complete(subframes, frmtotal=3) is True
 
@@ -214,12 +209,11 @@ class TestCheckStackComplete:
         subframes = [self._subframe() for _ in range(2)] + [self._subframe(is_last=True)]
         assert check_stack_complete(subframes, frmtotal=5) is True
 
-    def test_check_stack_complete_is_last_waits_for_unreduced_subframes(self):
-        subframes = [self._subframe(), self._subframe(filepath=None, is_last=True)]
-        assert check_stack_complete(subframes, frmtotal=5) is False
-
     def test_check_stack_complete_empty_subframes(self):
         assert check_stack_complete([], frmtotal=5) is False
+
+    def test_check_stack_complete_empty_subframes_with_zero_total(self):
+        assert check_stack_complete([], frmtotal=0) is False
 
 
 # ---------------------------------------------------------------------------
@@ -437,6 +431,52 @@ class TestProcessSubframe:
         assert subframes[0].is_last is expected_is_last
         assert subframes[0].filepath == '/data/processed/frame-e09.fits'
         mock_redis.lpush.assert_called_once()
+
+    @patch('banzai.scheduling.insert_subframe')
+    @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
+    def test_process_subframe_inserts_only_after_reduction(self, mock_run_stages, mock_insert, db_address,
+                                                           mock_redis):
+        mock_image = self._make_mock_image()
+
+        def _run_stages(*args, **kwargs):
+            mock_insert.assert_not_called()
+            return [mock_image]
+
+        mock_run_stages.side_effect = _run_stages
+        header = self._make_fits_header()
+        body = {
+            'fits_file': '/path/to/frame.fits',
+            'last_frame': False,
+            'instrument_enqueue_timestamp': 1771023918500,
+        }
+        runtime_context = {'db_address': db_address, 'REDIS_URL': 'redis://localhost:6379/0'}
+
+        with patch('banzai.scheduling.fits_utils.get_primary_header', return_value=header), \
+             patch('banzai.scheduling.redis.Redis.from_url', return_value=mock_redis):
+            process_subframe(body, runtime_context)
+
+        mock_insert.assert_called_once()
+        assert mock_insert.call_args.kwargs['filepath'] == '/data/processed/frame-e09.fits'
+        mock_redis.lpush.assert_called_once()
+
+    @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
+    def test_process_subframe_does_not_insert_or_notify_without_reduced_image(self, mock_run_stages, db_address,
+                                                                              mock_redis):
+        mock_run_stages.return_value = []
+        header = self._make_fits_header()
+        body = {
+            'fits_file': '/path/to/frame.fits',
+            'last_frame': False,
+            'instrument_enqueue_timestamp': 1771023918500,
+        }
+        runtime_context = {'db_address': db_address, 'REDIS_URL': 'redis://localhost:6379/0'}
+
+        with patch('banzai.scheduling.fits_utils.get_primary_header', return_value=header), \
+             patch('banzai.scheduling.redis.Redis.from_url', return_value=mock_redis):
+            process_subframe(body, runtime_context)
+
+        assert get_subframes(db_address, 'mol-xyz') == []
+        mock_redis.lpush.assert_not_called()
 
     def test_process_subframe_retries_on_unreadable_header(self, db_address):
         """If get_primary_header returns None (I/O error), the task must retry, not swallow the failure."""
