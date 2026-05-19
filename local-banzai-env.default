@@ -7,9 +7,20 @@ DB_ADDRESS=sqlite:///banzai.db
 API_ROOT=https://archive-api.lco.global/
 AUTH_TOKEN=
 
-# Host paths
-HOST_RAW_DIR=./local_banzai/raw
-HOST_REDUCED_DIR=./local_banzai/reduced
+# Host paths — must be absolute. Containers bind these at the same path inside the
+# container (mirror-mount), so queue_images.py can publish host paths directly.
+HOST_RAW_DIR=/tmp/banzai-local/raw
+HOST_REDUCED_DIR=/tmp/banzai-local/reduced
+
+# Message brokers
+REDIS_URL=redis://host.docker.internal:6379/0
+RABBITMQ_URL=amqp://host.docker.internal:5672
+FITS_EXCHANGE=fits_files
+PIPELINE_QUEUE_NAME=banzai_pipeline
+CELERY_TASK_QUEUE_NAME=reduction_task_queue
+CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
+SUBFRAME_TASK_QUEUE_NAME=subframe_reduction_task_queue
+STACK_QUEUE_NAME=banzai_stack_queue
 
 # Worker
 BANZAI_WORKER_LOGLEVEL=debug

@@ -8,6 +8,7 @@ Author
 October 2015
 """
 import argparse
+import json
 import os
 import os.path
 import logging
@@ -22,7 +23,8 @@ from banzai.lco import LCOFrameFactory
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
-from banzai.scheduling import process_image, app, schedule_calibration_stacking
+from banzai.scheduling import process_image, process_subframe, app, schedule_calibration_stacking
+from banzai.stacking import validate_message
 from banzai.data import DataProduct
 from celery.schedules import crontab
 import celery
@@ -32,39 +34,15 @@ import requests
 logger = logs.get_logger()
 
 
-class RealtimeModeListener(ConsumerMixin):
-    def __init__(self, runtime_context):
-        self.runtime_context = runtime_context
-        self.broker_url = runtime_context.broker_url
-
-    def on_connection_error(self, exc, interval):
-        logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
-        self.connection = self.connection.clone()
-        self.connection.ensure_connection(max_retries=10)
-
-    def get_consumers(self, Consumer, channel):
-        consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
-        # Only fetch one thing off the queue at a time
-        consumer.qos(prefetch_count=1)
-        return [consumer]
-
-    def on_message(self, body, message):
-        logger.info('Received message', extra_tags={'filename': body['filename']})
-        try:
-            instrument = LCOFrameFactory.get_instrument_from_header(body, self.runtime_context.db_address)
-        except Exception:
-            logger.error(f'Could not get instrument from header. {traceback.format_exc()}', extra_tags={'filename': body['filename']})
-            message.ack()
-            return
-        if instrument is None or instrument.nx is None:
-            queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
-        elif instrument.nx * instrument.ny > self.runtime_context.LARGE_WORKER_THRESHOLD:
-            queue_name = self.runtime_context.LARGE_WORKER_QUEUE
-        else:
-            queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
-        process_image.apply_async(args=(body, vars(self.runtime_context)),
-                                  queue=queue_name)
-        message.ack()  # acknowledge to the sender we got this message (it can be popped)
+def decode_subframe_message(body):
+    """Normalize a subframe queue body into a dictionary."""
+    if isinstance(body, bytes):
+        body = body.decode('utf-8')
+    if isinstance(body, str):
+        body = json.loads(body)
+    if not isinstance(body, dict):
+        raise ValueError('Subframe message must decode to a JSON object')
+    return body
 
 
 def add_settings_to_context(args, settings):
@@ -195,16 +173,40 @@ def start_stacking_scheduler():
     app.Beat(schedule='/tmp/celerybeat-schedule', pidfile='/tmp/celerybeat.pid', working_directory='/tmp').run()
     logger.info('Starting celery beat')
 
-def run_realtime_pipeline():
-    extra_console_arguments = [{'args': ['--n-processes'],
-                                'kwargs': {'dest': 'n_processes', 'default': 12,
-                                           'help': 'Number of listener processes to spawn.', 'type': int}},
-                               {'args': ['--queue-name'],
-                                'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
-                                           'help': 'Name of the queue to listen to from the fits exchange.'}}]
 
-    runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
-    start_listener(runtime_context)
+class RealtimeModeListener(ConsumerMixin):
+    def __init__(self, runtime_context):
+        self.runtime_context = runtime_context
+        self.broker_url = runtime_context.broker_url
+
+    def on_connection_error(self, exc, interval):
+        logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
+        self.connection = self.connection.clone()
+        self.connection.ensure_connection(max_retries=10)
+
+    def get_consumers(self, Consumer, channel):
+        consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
+        # Only fetch one thing off the queue at a time
+        consumer.qos(prefetch_count=1)
+        return [consumer]
+
+    def on_message(self, body, message):
+        logger.info('Received message', extra_tags={'filename': body['filename']})
+        try:
+            instrument = LCOFrameFactory.get_instrument_from_header(body, self.runtime_context.db_address)
+        except Exception:
+            logger.error(f'Could not get instrument from header. {traceback.format_exc()}', extra_tags={'filename': body['filename']})
+            message.ack()
+            return
+        if instrument is None or instrument.nx is None:
+            queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
+        elif instrument.nx * instrument.ny > self.runtime_context.LARGE_WORKER_THRESHOLD:
+            queue_name = self.runtime_context.LARGE_WORKER_QUEUE
+        else:
+            queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
+        process_image.apply_async(args=(body, vars(self.runtime_context)),
+                                  queue=queue_name)
+        message.ack()  # acknowledge to the sender we got this message (it can be popped)
 
 
 def start_listener(runtime_context):
@@ -226,6 +228,78 @@ def start_listener(runtime_context):
             listener.ensure_connection(max_retries=10)
         except KeyboardInterrupt:
             logger.info('Shutting down pipeline listener.')
+
+
+def run_realtime_pipeline():
+    extra_console_arguments = [{'args': ['--n-processes'],
+                                'kwargs': {'dest': 'n_processes', 'default': 12,
+                                           'help': 'Number of listener processes to spawn.', 'type': int}},
+                               {'args': ['--queue-name'],
+                                'kwargs': {'dest': 'queue_name', 'default': 'banzai_pipeline',
+                                           'help': 'Name of the queue to listen to from the fits exchange.'}}]
+
+    runtime_context = parse_args(settings, extra_console_arguments=extra_console_arguments)
+    start_listener(runtime_context)
+
+
+class SubframeListener(ConsumerMixin):
+    def __init__(self, runtime_context):
+        self.runtime_context = runtime_context
+
+    def on_connection_error(self, exc, interval):
+        logger.error('{0}. Retrying connection in {1} seconds...'.format(exc, interval))
+        self.connection = self.connection.clone()
+        self.connection.ensure_connection(max_retries=10)
+
+    def get_consumers(self, Consumer, channel):
+        """Bind to banzai_stack_queue."""
+        queue = Queue(self.runtime_context.STACK_QUEUE_NAME)
+        consumer = Consumer(queues=[queue], callbacks=[self.on_message])
+        consumer.qos(prefetch_count=1)
+        return [consumer]
+
+    def on_message(self, body, message):
+        """Validate and dispatch to Celery for processing."""
+        try:
+            body = decode_subframe_message(body)
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as e:
+            # Producers are internal - a malformed payload is a producer bug.
+            # Ack to drain the poison message; the body is logged for forensics.
+            logger.error('Malformed subframe payload, discarding message',
+                         extra_tags={'error': str(e), 'body': repr(body)[:1000]})
+            message.ack()
+            return
+        if not validate_message(body):
+            logger.error('Invalid message received, missing required fields',
+                         extra_tags={'body': body})
+            message.ack()
+            return
+
+        process_subframe.apply_async(
+            args=(body, vars(self.runtime_context)),
+            queue=self.runtime_context.SUBFRAME_TASK_QUEUE_NAME,
+        )
+        message.ack()
+
+
+def run_subframe_worker():
+    """Entry point for the subframe listener."""
+    runtime_context = parse_args(settings)
+
+    logging.getLogger('amqp').setLevel(logging.WARNING)
+    logger.info('Starting subframe listener')
+
+    listener = SubframeListener(runtime_context)
+
+    with Connection(runtime_context.broker_url) as connection:
+        listener.connection = connection.clone()
+        try:
+            listener.run()
+        except listener.connection.connection_errors:
+            listener.connection = connection.clone()
+            listener.ensure_connection(max_retries=10)
+        except KeyboardInterrupt:
+            logger.info('Shutting down subframe listener.')
 
 
 def mark_frame(mark_as):
