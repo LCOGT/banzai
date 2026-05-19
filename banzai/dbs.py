@@ -135,7 +135,7 @@ class Subframe(SiteBase):
     stack_num = Column(Integer, nullable=False)
     frmtotal = Column(Integer, nullable=False)
     camera = Column(String(50), nullable=False, index=True)
-    filepath = Column(String(255), nullable=True)
+    filepath = Column(String(255), nullable=False)
     is_last = Column(Boolean, default=False)
     status = Column(String(20), default='active', nullable=False)
     dateobs = Column(DateTime, nullable=True)
@@ -627,6 +627,9 @@ def replicate_instrument(instrument_record, db_address):
 def insert_subframe(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs):
     """Upsert a subframe record. On conflict (moluid, stack_num), reset the row
     to a fresh active state so a requeue behaves like a retry from scratch."""
+    if filepath is None:
+        raise ValueError("Subframe filepath is required")
+
     with get_session(db_address, site_deploy=True) as session:
         dialect = session.bind.dialect.name
         if 'postgres' in dialect:
@@ -671,15 +674,6 @@ def mark_stack_complete(db_address, moluid, status='complete'):
         session.query(Subframe).filter(
             Subframe.moluid == moluid
         ).update({'status': status, 'completed_at': now})
-
-
-def update_subframe_filepath(db_address, moluid, stack_num, filepath):
-    """Set the reduced filepath on an existing subframe record."""
-    with get_session(db_address, site_deploy=True) as session:
-        session.query(Subframe).filter(
-            Subframe.moluid == moluid,
-            Subframe.stack_num == stack_num,
-        ).update({'filepath': filepath})
 
 
 def cleanup_old_subframes(db_address, retention_days):

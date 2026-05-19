@@ -50,9 +50,8 @@ flowchart LR
     rabbit -- "consumes" --> listener
     listener -- "enqueue process_subframe" --> celery_broker
     celery_broker -- "delivers task" --> celery
-    celery -- "insert active row" --> db
     celery -- "run reduction pipeline" --> reduced
-    celery -- "update filepath" --> db
+    celery -- "insert reduced row" --> db
     celery -- "subframe moluid" --> notify_redis
     wA -- "poll, drain" --> notify_redis
     wB -- "poll, drain" --> notify_redis
@@ -104,9 +103,8 @@ sequenceDiagram
 
     CB->>W: deliver Celery task
     activate W
-    W->>DB: INSERT Subframe with filepath NULL
     W->>W: run_pipeline_stages
-    W->>DB: UPDATE filepath to reduced_path
+    W->>DB: INSERT Subframe with reduced filepath
     W->>NR: LPUSH moluid notification
     deactivate W
 
@@ -125,10 +123,10 @@ sequenceDiagram
 
 ```
 
-- The DB row is inserted **before** reduction starts, so the stacking worker
-  can see "subframe N has arrived but is not yet reduced" (`filepath = NULL`).
-- The Redis notification is pushed **after** the filepath is updated, so when
-  the stacking worker drains and queries, it observes the post-reduction
+- The DB row is inserted **after** reduction succeeds, so every new
+  `subframes.filepath` value points at a reduced file.
+- The Redis notification is pushed **after** the reduced row is inserted, so
+  when the stacking worker drains and queries, it observes the ready-to-stack
   state.
 - `drain_notifications` uses `RENAME` + `LRANGE` + `DEL` to atomically swap
   the list, so notifications pushed during a drain aren't lost.
@@ -146,8 +144,8 @@ stack is still incomplete, its rows remain `active` until another notification
 arrives.
 
 Timeout finalization is intentionally deferred. A follow-up change should add
-adaptive timeout handling based on subframe arrival cadence, using DB insert
-times and exposure duration rather than a fixed stack age.
+timeout handling based on reduced-subframe cadence rather than raw subframe
+arrival rows.
 
 ```mermaid
 flowchart TD
@@ -237,16 +235,16 @@ Defined in `banzai/dbs.py` as `Subframe`. Unique constraint on
 | `stack_num` | int | Position in stack (FITS `MOLFRNUM`). |
 | `frmtotal` | int | Expected subframe count (FITS `FRMTOTAL`). |
 | `camera` | str | Camera identifier (FITS `INSTRUME`). |
-| `filepath` | str / NULL | Path to the reduced subframe; NULL until reduction completes. |
+| `filepath` | str | Path to the reduced subframe. |
 | `is_last` | bool | Instrument signalled the final subframe of the sequence. |
 | `status` | str | `'active'`, `'complete'`, or `'timeout'`. |
 | `dateobs` | datetime | Observation timestamp (FITS `DATE-OBS`). |
 | `created_at` | datetime | Row creation time. |
 | `completed_at` | datetime / NULL | Set when `status` transitions to `'complete'` or `'timeout'`. |
 
-A stack is **complete** when every received subframe has a non-null filepath
-AND either `len(subframes) == frmtotal` OR `any(is_last)` — see
-`stacking.check_stack_complete`.
+A stack is **complete** when `len(subframes) == frmtotal` OR `any(is_last)` —
+see `stacking.check_stack_complete`. New rows are only inserted after
+reduction succeeds.
 
 ---
 
@@ -257,7 +255,7 @@ AND either `len(subframes) == frmtotal` OR `any(is_last)` — see
 | `banzai/main.py` | `SubframeListener`, `run_subframe_worker` entry point. |
 | `banzai/scheduling.py` | `process_subframe` Celery task. |
 | `banzai/stacking.py` | `validate_message`, `check_stack_complete`, `drain_notifications`, `run_worker_loop`, `StackingSupervisor`, `run_supervisor`. |
-| `banzai/dbs.py` | `Subframe` model, `insert_subframe`, `update_subframe_filepath`, `get_subframes`, `mark_stack_complete`, `cleanup_old_subframes`. |
+| `banzai/dbs.py` | `Subframe` model, `insert_subframe`, `get_subframes`, `mark_stack_complete`, `cleanup_old_subframes`. |
 | `banzai/settings.py` | `SUBFRAME_TASK_QUEUE_NAME`, `STACK_QUEUE_NAME`, `REDIS_URL`, `RABBITMQ_URL`. |
 | `docker-compose-site.yml` | `banzai-subframe-listener`, `banzai-subframe-worker`, `banzai-stacking-supervisor` services. |
 | `pyproject.toml` | `banzai_subframe_worker`, `banzai_stacking_supervisor` console entry points. |

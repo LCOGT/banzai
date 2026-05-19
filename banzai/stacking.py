@@ -27,13 +27,13 @@ def validate_message(body):
 def check_stack_complete(subframes, frmtotal):
     """Return True if the stack is ready to finalize.
 
-    A stack is complete when all received subframes have been reduced and either
-    all expected subframes are present or the instrument signalled is_last.
+    Subframe rows are written only after reduction succeeds, so a stack is
+    complete when all expected rows are present or the instrument signalled
+    is_last.
     """
-    all_reduced = all(s.filepath is not None for s in subframes)
     all_arrived = len(subframes) == frmtotal
     has_last = any(s.is_last for s in subframes)
-    return all_reduced and (all_arrived or has_last)
+    return bool(subframes) and (all_arrived or has_last)
 
 
 # ---------------------------------------------------------------------------
