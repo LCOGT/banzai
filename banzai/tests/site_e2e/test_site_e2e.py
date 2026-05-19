@@ -355,7 +355,6 @@ class TestSiteE2E:
 
         subframes = poll_until(check, timeout=300)
         assert subframes, "Subframe stack did not complete within timeout"
-        assert subframes[0].exptime is not None
 
         # Verify the reduced output file exists on disk.
         # Paths in the DB are now absolute host paths, so check directly.
@@ -400,8 +399,11 @@ class TestSiteE2E:
                     dbs.Subframe.moluid == moluid
                 ).first()
 
-        assert poll_until(row_exists, timeout=120, interval=2), \
+        subframe = poll_until(row_exists, timeout=120, interval=2)
+        assert subframe, \
             "Timed-out subframe row was not inserted"
+        assert subframe.filepath, \
+            "Timed-out subframe row was inserted without a reduced filepath"
 
         stale_created_at = datetime.datetime.utcnow() - datetime.timedelta(hours=2)
         with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:

@@ -140,14 +140,22 @@ database level.
 4. Checks the completion rule when at least one row is active.
 5. Marks a complete group as `complete`.
 6. Repeats from step 1 until the sorted set is empty.
-7. Deletes old terminal rows according to the retention setting.
-8. Sleeps for the polling interval.
+7. Sweeps active rows for its camera to recover missed notifications and apply timeouts.
+8. Deletes old terminal rows according to the retention setting.
+9. Sleeps for the polling interval.
+
+After the notification set is empty, the worker scans active rows for its
+camera. This fallback sweep lets complete stacks reach terminal state even if
+a notification was missed. It also marks an incomplete stack as `timeout` when
+no newer reduced row has arrived within 15 minutes of the latest row's
+`created_at`. A newer reduced row resets that window. Completion is checked
+before timeout, so complete stacks become `complete` rather than `timeout`.
 
 The worker does not build stack state from Redis messages. Ten notifications
 for the same pending `MOLUID` become one sorted-set member and one database
 query. Multiple `MOLUID`s may be active for one camera. None exclusively owns
-the worker: an incomplete group waits for another notification while older
-pending work for other groups continues in FIFO order.
+the worker: an incomplete group waits for another notification or the fallback
+sweep while older pending work for other groups continues in FIFO order.
 
 ```mermaid
 flowchart TD
@@ -158,6 +166,9 @@ flowchart TD
     active{"Any active rows?"}
     complete{"Completion rule true?"}
     mark["Mark every row complete"]
+    sweep["Scan active rows<br/>for this camera"]
+    eligible{"Complete or timed out?"}
+    finalize["Mark complete or timeout"]
     cleanup["Delete old terminal rows"]
     sleep["Sleep"]
 
@@ -167,7 +178,9 @@ flowchart TD
     active -->|"no"| pop
     complete -->|"yes"| mark --> pop
     complete -->|"no"| pop
-    notified -->|"no"| cleanup
+    notified -->|"no"| sweep --> eligible
+    eligible -->|"yes"| finalize --> cleanup
+    eligible -->|"no"| cleanup
     cleanup --> sleep --> tick
 ```
 
@@ -208,7 +221,7 @@ one or more raw e00 subframes
 | `banzai-subframe-listener` | `banzai.main:run_subframe_worker` | Consume and validate RabbitMQ messages; dispatch Celery tasks. Despite the CLI name, this is the listener process. |
 | `banzai-subframe-worker` | Celery worker consuming `SUBFRAME_TASK_QUEUE_NAME` | Reduce the FITS file, upsert the reduced row, and send a notification. |
 | `banzai-stacking-supervisor` | `banzai.stacking:run_supervisor` | Discover cameras at startup, start one child per camera, and restart children that exit. |
-| `stacking-worker-{camera}` | `banzai.stacking:run_worker_loop` | Process unique notifications in FIFO order, query stack state, mark complete groups, and run retention cleanup. |
+| `stacking-worker-{camera}` | `banzai.stacking:run_worker_loop` | Process unique notifications in FIFO order, sweep active stacks for completion or timeout, and run retention cleanup. |
 
 Camera discovery uses `dbs.get_instruments_at_site(site_id, db_address)` once
 when the supervisor starts. Adding a camera to the database does not create a
@@ -264,7 +277,7 @@ state.
 | `is_last` | Copy of the queue message's `last_frame` flag. |
 | `status` | Expected values are `active`, `complete`, and `timeout`. |
 | `dateobs` | Observation time from `DATE-OBS`, when available. |
-| `created_at` | Time the row was inserted or reset by an upsert. |
+| `created_at` | Time the reduced row was inserted or reset; the fixed timeout is measured from the newest value in a stack. |
 | `completed_at` | Time the group was marked terminal. |
 
 Current transitions are:
@@ -273,16 +286,17 @@ Current transitions are:
 stateDiagram-v2
     [*] --> active: reduced row upserted
     active --> complete: completion rule passes
+    active --> timeout: no newer reduced row for 15 minutes
     complete --> active: same subframe is reprocessed
     timeout --> active: same subframe is reprocessed
 ```
 
-The model and database helper support `timeout`, but no production worker path
-currently sets it.
-
 Retention cleanup deletes rows whose status is not `active` and whose
 `completed_at` is older than `STACK_RETENTION_DAYS` (30 days by default).
-Active rows are retained indefinitely.
+Active rows remain until the completion rule passes or the fixed timeout
+expires. `STACK_TIMEOUT_MINUTES` in `site-banzai-env.default` is a legacy,
+unused setting; the worker timeout is the 15-minute constant in
+`banzai.stacking`.
 
 ## Current limitations and failure behavior
 
@@ -290,16 +304,6 @@ These details are important when debugging or extending the subsystem:
 
 - **No `e45` stack product is generated.** Completion currently means a
   database transition only; only the individual `e09` inputs exist.
-- **No timeout finalization runs.** `STACK_TIMEOUT_MINUTES` remains in
-  `site-banzai-env.default`, but the current Python code does not read it.
-- **There is no fallback database sweep.** An active stack is reconsidered only
-  after a Redis notification for its `MOLUID`. If notification is disabled,
-  lost, or missed, the stack remains active until another notification arrives.
-- **The in-flight notification has a crash window.** `ZPOPMIN` removes one
-  `MOLUID` before its database work begins. A worker crash can lose that one
-  notification, but all other members remain ordered in the sorted set.
-  PostgreSQL remains correct, but there is currently no sweep to rediscover an
-  active stack whose final notification was lost.
 - **Cleanup is repeated per camera.** Every camera worker calls the same
   database-wide terminal-row cleanup each tick. This is correct but redundant.
 - **Camera discovery is startup-only.** Restart the supervisor after adding or
