@@ -14,7 +14,7 @@ from banzai.dbs import insert_subframe, get_subframes, mark_stack_complete, clea
 from banzai.stacking import (validate_message, check_stack_complete,
                               push_notification, drain_notifications, REDIS_KEY_PREFIX,
                               process_notifications, finalize_stack, check_timeouts,
-                              stack_has_timed_out, adaptive_timeout_baseline_seconds,
+                              stack_has_timed_out, STACK_TIMEOUT_SECONDS,
                               run_worker_loop, StackingSupervisor)
 from banzai.scheduling import process_subframe
 from banzai.main import SubframeListener
@@ -70,18 +70,18 @@ class TestDBOperations:
         assert subframe.filepath == '/data/frame1.fits'
         assert subframe.is_last is False
         assert subframe.dateobs == dateobs
-        assert subframe.exptime is None
 
-    def test_insert_subframe_stores_exptime(self, db_address):
+    def test_get_subframes_orders_by_stack_num(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
-        insert_subframe(
-            db_address, moluid='mol-exp', stack_num=1, frmtotal=5,
-            camera='cam1', filepath='/data/frame1.fits', is_last=False, dateobs=dateobs,
-            exptime=30.0,
-        )
-        subframes = get_subframes(db_address, moluid='mol-exp')
-        assert len(subframes) == 1
-        assert subframes[0].exptime == 30.0
+        for stack_num in (3, 1, 2):
+            insert_subframe(
+                db_address, moluid='mol-ordered', stack_num=stack_num, frmtotal=3,
+                camera='cam1', filepath=f'/data/frame{stack_num}.fits', is_last=False, dateobs=dateobs,
+            )
+
+        subframes = get_subframes(db_address, moluid='mol-ordered')
+
+        assert [subframe.stack_num for subframe in subframes] == [1, 2, 3]
 
     def test_insert_subframe_duplicate_resets_state_for_retry(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
@@ -107,23 +107,6 @@ class TestDBOperations:
         assert subframe.filepath == '/data/dup2.fits'
         assert subframe.is_last is True
         assert subframe.dateobs == new_dateobs
-
-    def test_insert_subframe_duplicate_refreshes_exptime(self, db_address):
-        dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
-        insert_subframe(
-            db_address, moluid='mol-exp-dup', stack_num=1, frmtotal=3,
-            camera='cam1', filepath='/data/dup1.fits', is_last=False, dateobs=dateobs,
-            exptime=10.0,
-        )
-        insert_subframe(
-            db_address, moluid='mol-exp-dup', stack_num=1, frmtotal=3,
-            camera='cam1', filepath='/data/dup2.fits', is_last=False, dateobs=dateobs,
-            exptime=45.0,
-        )
-        subframes = get_subframes(db_address, 'mol-exp-dup')
-        assert len(subframes) == 1
-        assert subframes[0].exptime == 45.0
-        assert subframes[0].filepath == '/data/dup2.fits'
 
     def test_insert_subframe_requires_filepath(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
@@ -168,10 +151,10 @@ class TestStatusTransitions:
 
 
 # ---------------------------------------------------------------------------
-# Adaptive timeout
+# Fixed reduced-subframe timeout
 # ---------------------------------------------------------------------------
 
-class TestAdaptiveTimeout:
+class TestFixedReducedSubframeTimeout:
 
     @staticmethod
     def _created(base, seconds):
@@ -179,12 +162,11 @@ class TestAdaptiveTimeout:
 
     @staticmethod
     def _insert_frame(db_address, moluid, stack_num, created_at, camera='cam1',
-                      filepath='/data/reduced.fits', frmtotal=5, exptime=30.0, is_last=False):
+                      filepath='/data/reduced.fits', frmtotal=5, is_last=False):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         insert_subframe(
             db_address, moluid=moluid, stack_num=stack_num, frmtotal=frmtotal,
             camera=camera, filepath=filepath, is_last=is_last, dateobs=dateobs,
-            exptime=exptime,
         )
         with dbs.get_session(db_address, site_deploy=True) as session:
             session.execute(
@@ -192,65 +174,63 @@ class TestAdaptiveTimeout:
                 {'created_at': created_at, 'moluid': moluid, 'stack_num': stack_num},
             )
 
-    def test_one_frame_stack_uses_exptime_plus_initial_buffer(self, db_address):
+    def test_one_reduced_row_times_out_only_after_fixed_threshold(self, db_address):
         start = datetime.datetime(2024, 1, 1, 0, 0, 0)
-        self._insert_frame(db_address, 'mol-one', 1, start, exptime=30.0)
+        self._insert_frame(db_address, 'mol-one', 1, start)
 
-        subframes = get_subframes(db_address, 'mol-one')
-        assert stack_has_timed_out(subframes, now=self._created(start, 90)) is False
-        assert stack_has_timed_out(subframes, now=self._created(start, 91)) is True
+        check_timeouts(db_address, 'cam1', now=self._created(start, STACK_TIMEOUT_SECONDS))
 
-    def test_two_frame_stack_uses_first_to_second_baseline(self, db_address):
+        assert {s.status for s in get_subframes(db_address, 'mol-one')} == {'active'}
+
+        check_timeouts(db_address, 'cam1', now=self._created(start, STACK_TIMEOUT_SECONDS + 1))
+
+        assert {s.status for s in get_subframes(db_address, 'mol-one')} == {'timeout'}
+
+    def test_newer_reduced_row_resets_timeout(self, db_address):
         start = datetime.datetime(2024, 1, 1, 0, 0, 0)
-        self._insert_frame(db_address, 'mol-two', 1, start, exptime=30.0)
-        self._insert_frame(db_address, 'mol-two', 2, self._created(start, 120), exptime=30.0)
+        second_arrival = self._created(start, STACK_TIMEOUT_SECONDS + 1)
+        self._insert_frame(db_address, 'mol-reset', 1, start)
+        self._insert_frame(db_address, 'mol-reset', 2, second_arrival)
 
-        subframes = get_subframes(db_address, 'mol-two')
-        assert adaptive_timeout_baseline_seconds(subframes) == 90.0
-        assert stack_has_timed_out(subframes, now=self._created(start, 330)) is False
-        assert stack_has_timed_out(subframes, now=self._created(start, 331)) is True
+        check_timeouts(
+            db_address,
+            'cam1',
+            now=self._created(second_arrival, STACK_TIMEOUT_SECONDS),
+        )
 
-    def test_positive_baseline_below_fallback_is_used_directly(self, db_address):
+        subframes = get_subframes(db_address, 'mol-reset')
+        assert stack_has_timed_out(subframes, now=self._created(second_arrival, STACK_TIMEOUT_SECONDS)) is False
+        assert {s.status for s in subframes} == {'active'}
+
+    def test_latest_reduced_row_over_threshold_times_out(self, db_address):
         start = datetime.datetime(2024, 1, 1, 0, 0, 0)
-        self._insert_frame(db_address, 'mol-fast', 1, start, exptime=30.0)
-        self._insert_frame(db_address, 'mol-fast', 2, self._created(start, 40), exptime=30.0)
+        second_arrival = self._created(start, 60)
+        self._insert_frame(db_address, 'mol-latest-timeout', 1, start)
+        self._insert_frame(db_address, 'mol-latest-timeout', 2, second_arrival)
 
-        subframes = get_subframes(db_address, 'mol-fast')
-        assert adaptive_timeout_baseline_seconds(subframes) == 10.0
-        assert stack_has_timed_out(subframes, now=self._created(start, 89)) is False
-        assert stack_has_timed_out(subframes, now=self._created(start, 91)) is True
+        check_timeouts(db_address, 'cam1', now=self._created(second_arrival, STACK_TIMEOUT_SECONDS + 1))
 
-    def test_baseline_uses_fallback_when_adjusted_gap_is_nonpositive(self, db_address):
+        assert {s.status for s in get_subframes(db_address, 'mol-latest-timeout')} == {'timeout'}
+
+    def test_later_newer_reduced_row_resets_timeout(self, db_address):
         start = datetime.datetime(2024, 1, 1, 0, 0, 0)
-        self._insert_frame(db_address, 'mol-clamp', 1, start, exptime=30.0)
-        self._insert_frame(db_address, 'mol-clamp', 2, self._created(start, 20), exptime=30.0)
+        third_arrival = self._created(start, 60 + STACK_TIMEOUT_SECONDS + 1)
+        self._insert_frame(db_address, 'mol-late-reset', 1, start)
+        self._insert_frame(db_address, 'mol-late-reset', 2, self._created(start, 60))
+        self._insert_frame(
+            db_address,
+            'mol-late-reset',
+            3,
+            third_arrival,
+        )
 
-        subframes = get_subframes(db_address, 'mol-clamp')
-        assert adaptive_timeout_baseline_seconds(subframes) == 60.0
-        assert stack_has_timed_out(subframes, now=self._created(start, 170)) is False
-        assert stack_has_timed_out(subframes, now=self._created(start, 171)) is True
-
-    def test_late_observed_later_frame_gap_triggers_timeout(self, db_address):
-        start = datetime.datetime(2024, 1, 1, 0, 0, 0)
-        self._insert_frame(db_address, 'mol-late-gap', 1, start, exptime=30.0)
-        self._insert_frame(db_address, 'mol-late-gap', 2, self._created(start, 120), exptime=30.0)
-        self._insert_frame(db_address, 'mol-late-gap', 3, self._created(start, 331), exptime=30.0)
-
-        subframes = get_subframes(db_address, 'mol-late-gap')
-        assert stack_has_timed_out(subframes, now=self._created(start, 340)) is True
-
-    def test_missing_next_frame_beyond_threshold_triggers_timeout(self, db_address):
-        start = datetime.datetime(2024, 1, 1, 0, 0, 0)
-        self._insert_frame(db_address, 'mol-missing', 1, start, exptime=30.0)
-        self._insert_frame(db_address, 'mol-missing', 2, self._created(start, 120), exptime=30.0)
-
-        subframes = get_subframes(db_address, 'mol-missing')
-        assert stack_has_timed_out(subframes, now=self._created(start, 331)) is True
+        subframes = get_subframes(db_address, 'mol-late-reset')
+        assert stack_has_timed_out(subframes, now=self._created(third_arrival, 1)) is False
 
     def test_incomplete_stack_inside_timeout_window_remains_active(self, db_address):
         start = datetime.datetime(2024, 1, 1, 0, 0, 0)
-        self._insert_frame(db_address, 'mol-active', 1, start, exptime=30.0)
-        self._insert_frame(db_address, 'mol-active', 2, self._created(start, 120), exptime=30.0)
+        self._insert_frame(db_address, 'mol-active', 1, start)
+        self._insert_frame(db_address, 'mol-active', 2, self._created(start, 120))
 
         check_timeouts(db_address, 'cam1', now=self._created(start, 200))
 
@@ -259,10 +239,10 @@ class TestAdaptiveTimeout:
 
     def test_check_timeouts_marks_timeout_for_worker_camera_only(self, db_address):
         start = datetime.datetime(2024, 1, 1, 0, 0, 0)
-        self._insert_frame(db_address, 'mol-timeout', 1, start, camera='cam1', exptime=30.0)
-        self._insert_frame(db_address, 'mol-other-camera', 1, start, camera='cam2', exptime=30.0)
+        self._insert_frame(db_address, 'mol-timeout', 1, start, camera='cam1')
+        self._insert_frame(db_address, 'mol-other-camera', 1, start, camera='cam2')
 
-        check_timeouts(db_address, 'cam1', now=self._created(start, 91))
+        check_timeouts(db_address, 'cam1', now=self._created(start, STACK_TIMEOUT_SECONDS + 1))
 
         assert {s.status for s in get_subframes(db_address, 'mol-timeout')} == {'timeout'}
         assert {s.status for s in get_subframes(db_address, 'mol-other-camera')} == {'active'}
@@ -271,20 +251,23 @@ class TestAdaptiveTimeout:
         start = datetime.datetime(2024, 1, 1, 0, 0, 0)
         for stack_num in range(1, 4):
             self._insert_frame(
-                db_address, 'mol-complete-wins', stack_num, self._created(start, stack_num * 300),
-                frmtotal=3, exptime=30.0, is_last=(stack_num == 3),
+                db_address,
+                'mol-complete-wins',
+                stack_num,
+                self._created(start, (stack_num - 1) * (STACK_TIMEOUT_SECONDS + 1)),
+                frmtotal=3, is_last=(stack_num == 3),
             )
 
-        check_timeouts(db_address, 'cam1', now=self._created(start, 1000))
+        check_timeouts(db_address, 'cam1', now=self._created(start, 3 * (STACK_TIMEOUT_SECONDS + 1)))
 
         assert {s.status for s in get_subframes(db_address, 'mol-complete-wins')} == {'complete'}
 
     def test_check_timeouts_ignores_terminal_rows(self, db_address):
         start = datetime.datetime(2024, 1, 1, 0, 0, 0)
-        self._insert_frame(db_address, 'mol-terminal', 1, start, exptime=30.0)
+        self._insert_frame(db_address, 'mol-terminal', 1, start)
         mark_stack_complete(db_address, 'mol-terminal', 'complete')
 
-        check_timeouts(db_address, 'cam1', now=self._created(start, 91))
+        check_timeouts(db_address, 'cam1', now=self._created(start, STACK_TIMEOUT_SECONDS + 1))
 
         assert {s.status for s in get_subframes(db_address, 'mol-terminal')} == {'complete'}
 
@@ -539,7 +522,6 @@ class TestProcessSubframe:
         h['MOLFRNUM'] = 1
         h['FRMTOTAL'] = 5
         h['MOLUID'] = 'mol-xyz'
-        h['EXPTIME'] = 30.0
         for k, v in overrides.items():
             h[k] = v
         return h
@@ -582,7 +564,6 @@ class TestProcessSubframe:
         assert subframes[0].frmtotal == 5
         assert subframes[0].camera == 'cam1'
         assert subframes[0].is_last is expected_is_last
-        assert subframes[0].exptime == 30.0
         assert subframes[0].filepath == '/data/processed/frame-e09.fits'
         mock_redis.lpush.assert_called_once()
 
@@ -703,7 +684,7 @@ class TestWorkerLoopResilience:
     def test_run_worker_loop_invokes_timeout_sweep(
         self, mock_process, mock_cleanup, mock_check_timeouts, mock_sleep, mock_redis_cls
     ):
-        """run_worker_loop should sweep adaptive timeouts after notification processing."""
+        """run_worker_loop should sweep fixed timeouts after notification processing."""
         mock_process.side_effect = [None, KeyboardInterrupt]
         with pytest.raises(KeyboardInterrupt):
             run_worker_loop('cam1', 'sqlite:///fake.db', 'redis://localhost:6379', poll_interval=0)

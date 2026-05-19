@@ -266,7 +266,6 @@ def process_subframe(self, body: dict, runtime_context: dict):
         camera = header.get('INSTRUME', '').strip()
         dateobs_str = header.get('DATE-OBS', '')
         dateobs = parse_date_obs(dateobs_str) if dateobs_str else None
-        exptime = header.get('EXPTIME')
 
         # Phase 1: Run reduction pipeline
         images = stage_utils.run_pipeline_stages([{'path': filepath}], runtime_context)
@@ -289,7 +288,6 @@ def process_subframe(self, body: dict, runtime_context: dict):
             filepath=reduced_path,
             is_last=body.get('last_frame', False),
             dateobs=dateobs,
-            exptime=exptime,
         )
 
         # Phase 3: Notify the stack worker that a new subframe is available
