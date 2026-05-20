@@ -664,6 +664,19 @@ def get_subframes(db_address, moluid):
     with get_session(db_address, site_deploy=True) as session:
         return session.query(Subframe).filter(
             Subframe.moluid == moluid
+        ).order_by(Subframe.stack_num).all()
+
+
+def get_active_subframes_for_camera(db_address, camera):
+    """Get active subframe records for a camera ordered by stack and arrival time."""
+    with get_session(db_address, site_deploy=True) as session:
+        return session.query(Subframe).filter(
+            Subframe.camera == camera,
+            Subframe.status == 'active',
+        ).order_by(
+            Subframe.moluid,
+            Subframe.created_at,
+            Subframe.stack_num,
         ).all()
 
 

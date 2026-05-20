@@ -13,8 +13,9 @@ from banzai import dbs
 from banzai.dbs import insert_subframe, get_subframes, mark_stack_complete, cleanup_old_subframes
 from banzai.stacking import (validate_message, check_stack_complete,
                               push_notification, drain_notifications, REDIS_KEY_PREFIX,
-                              process_notifications, finalize_stack, run_worker_loop,
-                              StackingSupervisor)
+                              process_notifications, finalize_stack, check_timeouts,
+                              stack_has_timed_out, STACK_TIMEOUT_SECONDS,
+                              run_worker_loop, StackingSupervisor)
 from banzai.scheduling import process_subframe
 from banzai.main import SubframeListener
 
@@ -69,6 +70,18 @@ class TestDBOperations:
         assert subframe.filepath == '/data/frame1.fits'
         assert subframe.is_last is False
         assert subframe.dateobs == dateobs
+
+    def test_get_subframes_orders_by_stack_num(self, db_address):
+        dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
+        for stack_num in (3, 1, 2):
+            insert_subframe(
+                db_address, moluid='mol-ordered', stack_num=stack_num, frmtotal=3,
+                camera='cam1', filepath=f'/data/frame{stack_num}.fits', is_last=False, dateobs=dateobs,
+            )
+
+        subframes = get_subframes(db_address, moluid='mol-ordered')
+
+        assert [subframe.stack_num for subframe in subframes] == [1, 2, 3]
 
     def test_insert_subframe_duplicate_resets_state_for_retry(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
@@ -135,6 +148,128 @@ class TestStatusTransitions:
         for s in subframes:
             assert s.status == 'timeout'
             assert s.completed_at is not None
+
+
+# ---------------------------------------------------------------------------
+# Fixed reduced-subframe timeout
+# ---------------------------------------------------------------------------
+
+class TestFixedReducedSubframeTimeout:
+
+    @staticmethod
+    def _created(base, seconds):
+        return base + datetime.timedelta(seconds=seconds)
+
+    @staticmethod
+    def _insert_frame(db_address, moluid, stack_num, created_at, camera='cam1',
+                      filepath='/data/reduced.fits', frmtotal=5, is_last=False):
+        dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
+        insert_subframe(
+            db_address, moluid=moluid, stack_num=stack_num, frmtotal=frmtotal,
+            camera=camera, filepath=filepath, is_last=is_last, dateobs=dateobs,
+        )
+        with dbs.get_session(db_address, site_deploy=True) as session:
+            session.execute(
+                text("UPDATE subframes SET created_at = :created_at WHERE moluid = :moluid AND stack_num = :stack_num"),
+                {'created_at': created_at, 'moluid': moluid, 'stack_num': stack_num},
+            )
+
+    def test_one_reduced_row_times_out_only_after_fixed_threshold(self, db_address):
+        start = datetime.datetime(2024, 1, 1, 0, 0, 0)
+        self._insert_frame(db_address, 'mol-one', 1, start)
+
+        check_timeouts(db_address, 'cam1', now=self._created(start, STACK_TIMEOUT_SECONDS))
+
+        assert {s.status for s in get_subframes(db_address, 'mol-one')} == {'active'}
+
+        check_timeouts(db_address, 'cam1', now=self._created(start, STACK_TIMEOUT_SECONDS + 1))
+
+        assert {s.status for s in get_subframes(db_address, 'mol-one')} == {'timeout'}
+
+    def test_newer_reduced_row_resets_timeout(self, db_address):
+        start = datetime.datetime(2024, 1, 1, 0, 0, 0)
+        second_arrival = self._created(start, STACK_TIMEOUT_SECONDS + 1)
+        self._insert_frame(db_address, 'mol-reset', 1, start)
+        self._insert_frame(db_address, 'mol-reset', 2, second_arrival)
+
+        check_timeouts(
+            db_address,
+            'cam1',
+            now=self._created(second_arrival, STACK_TIMEOUT_SECONDS),
+        )
+
+        subframes = get_subframes(db_address, 'mol-reset')
+        assert stack_has_timed_out(subframes, now=self._created(second_arrival, STACK_TIMEOUT_SECONDS)) is False
+        assert {s.status for s in subframes} == {'active'}
+
+    def test_latest_reduced_row_over_threshold_times_out(self, db_address):
+        start = datetime.datetime(2024, 1, 1, 0, 0, 0)
+        second_arrival = self._created(start, 60)
+        self._insert_frame(db_address, 'mol-latest-timeout', 1, start)
+        self._insert_frame(db_address, 'mol-latest-timeout', 2, second_arrival)
+
+        check_timeouts(db_address, 'cam1', now=self._created(second_arrival, STACK_TIMEOUT_SECONDS + 1))
+
+        assert {s.status for s in get_subframes(db_address, 'mol-latest-timeout')} == {'timeout'}
+
+    def test_later_newer_reduced_row_resets_timeout(self, db_address):
+        start = datetime.datetime(2024, 1, 1, 0, 0, 0)
+        third_arrival = self._created(start, 60 + STACK_TIMEOUT_SECONDS + 1)
+        self._insert_frame(db_address, 'mol-late-reset', 1, start)
+        self._insert_frame(db_address, 'mol-late-reset', 2, self._created(start, 60))
+        self._insert_frame(
+            db_address,
+            'mol-late-reset',
+            3,
+            third_arrival,
+        )
+
+        subframes = get_subframes(db_address, 'mol-late-reset')
+        assert stack_has_timed_out(subframes, now=self._created(third_arrival, 1)) is False
+
+    def test_incomplete_stack_inside_timeout_window_remains_active(self, db_address):
+        start = datetime.datetime(2024, 1, 1, 0, 0, 0)
+        self._insert_frame(db_address, 'mol-active', 1, start)
+        self._insert_frame(db_address, 'mol-active', 2, self._created(start, 120))
+
+        check_timeouts(db_address, 'cam1', now=self._created(start, 200))
+
+        subframes = get_subframes(db_address, 'mol-active')
+        assert {s.status for s in subframes} == {'active'}
+
+    def test_check_timeouts_marks_timeout_for_worker_camera_only(self, db_address):
+        start = datetime.datetime(2024, 1, 1, 0, 0, 0)
+        self._insert_frame(db_address, 'mol-timeout', 1, start, camera='cam1')
+        self._insert_frame(db_address, 'mol-other-camera', 1, start, camera='cam2')
+
+        check_timeouts(db_address, 'cam1', now=self._created(start, STACK_TIMEOUT_SECONDS + 1))
+
+        assert {s.status for s in get_subframes(db_address, 'mol-timeout')} == {'timeout'}
+        assert {s.status for s in get_subframes(db_address, 'mol-other-camera')} == {'active'}
+
+    def test_check_timeouts_marks_complete_before_timeout(self, db_address):
+        start = datetime.datetime(2024, 1, 1, 0, 0, 0)
+        for stack_num in range(1, 4):
+            self._insert_frame(
+                db_address,
+                'mol-complete-wins',
+                stack_num,
+                self._created(start, (stack_num - 1) * (STACK_TIMEOUT_SECONDS + 1)),
+                frmtotal=3, is_last=(stack_num == 3),
+            )
+
+        check_timeouts(db_address, 'cam1', now=self._created(start, 3 * (STACK_TIMEOUT_SECONDS + 1)))
+
+        assert {s.status for s in get_subframes(db_address, 'mol-complete-wins')} == {'complete'}
+
+    def test_check_timeouts_ignores_terminal_rows(self, db_address):
+        start = datetime.datetime(2024, 1, 1, 0, 0, 0)
+        self._insert_frame(db_address, 'mol-terminal', 1, start)
+        mark_stack_complete(db_address, 'mol-terminal', 'complete')
+
+        check_timeouts(db_address, 'cam1', now=self._created(start, STACK_TIMEOUT_SECONDS + 1))
+
+        assert {s.status for s in get_subframes(db_address, 'mol-terminal')} == {'complete'}
 
 
 # ---------------------------------------------------------------------------
@@ -523,8 +658,12 @@ class TestWorkerLoopResilience:
 
     @patch('banzai.stacking.redis_lib.Redis.from_url')
     @patch('banzai.stacking.time.sleep')
+    @patch('banzai.stacking.check_timeouts')
+    @patch('banzai.stacking.dbs.cleanup_old_subframes')
     @patch('banzai.stacking.process_notifications')
-    def test_run_worker_loop_continues_after_exception(self, mock_process, mock_sleep, mock_redis_cls):
+    def test_run_worker_loop_continues_after_exception(
+        self, mock_process, mock_cleanup, mock_check_timeouts, mock_sleep, mock_redis_cls
+    ):
         """run_worker_loop must not crash when process_notifications raises; it should log and continue."""
         # First call raises, second call raises KeyboardInterrupt to escape the infinite loop.
         mock_process.side_effect = [Exception('boom'), KeyboardInterrupt]
@@ -532,5 +671,24 @@ class TestWorkerLoopResilience:
             run_worker_loop('cam1', 'sqlite:///fake.db', 'redis://localhost:6379', poll_interval=0)
         # process_notifications was called twice: once raised Exception, once raised KeyboardInterrupt.
         assert mock_process.call_count == 2
+        mock_check_timeouts.assert_not_called()
+        mock_cleanup.assert_not_called()
         # sleep should have been called once (after the transient Exception, before continuing).
+        mock_sleep.assert_called_once_with(0)
+
+    @patch('banzai.stacking.redis_lib.Redis.from_url')
+    @patch('banzai.stacking.time.sleep')
+    @patch('banzai.stacking.check_timeouts')
+    @patch('banzai.stacking.dbs.cleanup_old_subframes')
+    @patch('banzai.stacking.process_notifications')
+    def test_run_worker_loop_invokes_timeout_sweep(
+        self, mock_process, mock_cleanup, mock_check_timeouts, mock_sleep, mock_redis_cls
+    ):
+        """run_worker_loop should sweep fixed timeouts after notification processing."""
+        mock_process.side_effect = [None, KeyboardInterrupt]
+        with pytest.raises(KeyboardInterrupt):
+            run_worker_loop('cam1', 'sqlite:///fake.db', 'redis://localhost:6379', poll_interval=0)
+
+        mock_check_timeouts.assert_called_once_with('sqlite:///fake.db', 'cam1')
+        mock_cleanup.assert_called_once_with('sqlite:///fake.db', 30)
         mock_sleep.assert_called_once_with(0)

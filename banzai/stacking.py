@@ -1,8 +1,10 @@
 """Smart stacking: worker, supervisor, and helper functions."""
 import argparse
+import datetime
 import multiprocessing
 import signal
 import time
+from collections import defaultdict
 
 import redis as redis_lib
 
@@ -16,6 +18,8 @@ logger = get_logger()
 # Helpers
 # ---------------------------------------------------------------------------
 
+# Time that may elapse after the latest reduced subframe before a stack times out.
+STACK_TIMEOUT_SECONDS = 15 * 60
 REQUIRED_MESSAGE_FIELDS = ('fits_file', 'last_frame', 'instrument_enqueue_timestamp')
 
 
@@ -35,6 +39,22 @@ def check_stack_complete(subframes, frmtotal):
     has_last = any(s.is_last for s in subframes)
     return bool(subframes) and (all_arrived or has_last)
 
+
+def stack_has_timed_out(subframes, now=None):
+    """Return True when no newer reduced subframe has arrived before the timeout."""
+    latest_reduced_time = max(
+        (
+            subframe.created_at
+            for subframe in subframes
+            if subframe.created_at is not None
+        ),
+        default=None,
+    )
+    if latest_reduced_time is None:
+        return False
+
+    now = now or datetime.datetime.utcnow()
+    return (now - latest_reduced_time).total_seconds() > STACK_TIMEOUT_SECONDS
 
 # ---------------------------------------------------------------------------
 # Notifications
@@ -72,6 +92,7 @@ def run_worker_loop(camera, db_address, redis_url, retention_days=30, poll_inter
     while True:
         try:
             process_notifications(db_address, redis_client, camera)
+            check_timeouts(db_address, camera)
             dbs.cleanup_old_subframes(db_address, retention_days)
             time.sleep(poll_interval)
         except Exception as e:
@@ -97,6 +118,27 @@ def finalize_stack(db_address, moluid, status='complete'):
     logger.debug(f'Mock stacking complete for {moluid}', extra_tags={'moluid': moluid})
     logger.debug(f'Mock JPEG generation for {moluid}', extra_tags={'moluid': moluid})
     logger.debug(f'Mock ingester upload for {moluid}', extra_tags={'moluid': moluid})
+
+
+def check_timeouts(db_address, camera, now=None):
+    """Finalize active stacks that are complete or have exceeded the fixed timeout."""
+    active_subframes = dbs.get_active_subframes_for_camera(db_address, camera)
+    # The DB scan is camera-wide, so regroup rows into independent stack states
+    # before making terminal-status decisions.
+    subframes_by_moluid = defaultdict(list)
+    for subframe in active_subframes:
+        subframes_by_moluid[subframe.moluid].append(subframe)
+
+    for moluid, subframes in subframes_by_moluid.items():
+        frmtotal = subframes[0].frmtotal
+        # Completion wins over timeout so a fully reduced stack cannot be marked
+        # partial just because its cadence also exceeded the fixed threshold.
+        if check_stack_complete(subframes, frmtotal):
+            finalize_stack(db_address, moluid, status='complete')
+        # Incomplete active stacks are finalized only when reduced-row timing
+        # indicates that the next expected frame is no longer arriving normally.
+        elif stack_has_timed_out(subframes, now=now):
+            finalize_stack(db_address, moluid, status='timeout')
 
 
 # ---------------------------------------------------------------------------
