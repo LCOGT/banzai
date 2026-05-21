@@ -7,7 +7,6 @@ from collections import OrderedDict
 from banzai import logs
 from banzai.exceptions import FrameNotAvailableError
 
-import numpy as np
 from astropy.io import fits
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_not_exception_type
 import io

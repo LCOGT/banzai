@@ -255,7 +255,18 @@ def process_image(self, file_info: dict, runtime_context: dict):
 
 
 @app.task(name='celery.requeue_missing_frames', reject_on_worker_lost=True, max_retries=5)
-def requeue_missing_frames(runtime_context: dict):
+def requeue_missing_frames(site: str, runtime_context: dict):
+    """Celery task to check for missing frames and requeue them for processing.
+
+    Parameters
+    ----------
+    site: str
+        The site to check for missing frames.
+
+    runtime_context: dict
+        The runtime context to use for the task. Note this is a dict and not a Context object
+        so that Celery can serialize it to pass to the task.
+    """
     try:
         runtime_context = Context(runtime_context)
         logger.info('Checking for missing frames to requeue')
@@ -265,9 +276,12 @@ def requeue_missing_frames(runtime_context: dict):
             # Get the raw frames that we took
             start = datetime.now(timezone.utc) - timedelta(hours=runtime_context.REQUEUE_LOOKBACK_HOURS)
             end = datetime.now(timezone.utc)
-            raw_frames += query.frames_from_archive(start, end, obstype, 0,  runtime_context, related_frames=False)
+            raw_frames += query.frames_from_archive(start, end, obstype, site, 0,
+                                                    runtime_context, related_frames=False)
             # Get the reduced frames
-            reduced_frames += query.frames_from_archive(start, end, obstype, runtime_context.reduction_level,  runtime_context, related_frames=True)
+            reduced_frames += query.frames_from_archive(start, end, obstype, site,
+                                                        runtime_context.reduction_level,
+                                                        runtime_context, related_frames=True)
 
         # cross match to find any that are missing
         missing_frames = cross_match_missing_frames(raw_frames, reduced_frames)
@@ -278,7 +292,9 @@ def requeue_missing_frames(runtime_context: dict):
                 logger.info('Requeuing missing frame', extra_tags={'filename': frame['filename']})
 
                 # Set success = 0 for missing frames
-                db_row = db_session.query(dbs.ProcessedImage).filter(dbs.ProcessedImage.filename == frame['filename']).first()
+                processed_query = db_session.query(dbs.ProcessedImage)
+                processed_query = processed_query.filter(dbs.ProcessedImage.filename == frame['filename'])
+                db_row = processed_query.first()
                 if db_row is not None:
                     db_row.success = False
                     db_row.tries = 0

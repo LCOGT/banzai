@@ -188,12 +188,21 @@ def start_banzai_cron():
         app.add_periodic_task(crontab(minute=entry['minute'], hour=entry['hour']),
                               schedule_calibration_stacking.s(site=site, runtime_context=vars(runtime_context)),
                               queue=runtime_context.CELERY_TASK_QUEUE_NAME)
-    app.add_periodic_task(crontab(hour=runtime_context.REQUEUE_MISSING_FRAMES_TIME.hour,
-                                  minute=runtime_context.REQUEUE_MISSING_FRAMES_TIME.minute),
-                                  requeue_missing_frames.s(runtime_context=vars(runtime_context)),
-                                  queue=runtime_context.CELERY_TASK_QUEUE_NAME)
+
+        timezone = dbs.get_site(site, runtime_context.db_address).timezone
+
+        local_time_in_utc = date_utils.local_to_utc(
+            settings.REQUEUE_MISSING_FRAMES_TIME,
+            timezone
+        )
+        app.add_periodic_task(
+            crontab(hour=local_time_in_utc.hour, minute=local_time_in_utc.minute),
+            requeue_missing_frames.s(site, runtime_context=vars(runtime_context)),
+            queue=runtime_context.CELERY_TASK_QUEUE_NAME
+        )
     app.Beat(schedule='/tmp/celerybeat-schedule', pidfile='/tmp/celerybeat.pid', working_directory='/tmp').run()
     logger.info('Starting celery beat')
+
 
 def run_realtime_pipeline():
     extra_console_arguments = [{'args': ['--n-processes'],
