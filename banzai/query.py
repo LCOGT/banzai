@@ -120,7 +120,7 @@ def cross_match_missing_frames(raw_frames, reduced_frames):
     -------
     list of dicts
         The raw frames that are missing from the reduced frames.
-    
+
     Notes
     -----
     The reduced frames list should include related frames in the query to create the list.
