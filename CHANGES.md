@@ -1,6 +1,12 @@
 Versions
 ========
 
+1.36.1 (2026-05-26)
+-------------------
+
+- Fix to banzai.utils.date_utils.local_to_utc to take both datetime
+  and time objects.
+
 1.36.0 (2026-05-08)
 -------------------
 

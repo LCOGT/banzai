@@ -1164,7 +1164,7 @@ wheels = [
 
 [[package]]
 name = "lco-banzai"
-version = "1.36.0"
+version = "1.36.1"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
