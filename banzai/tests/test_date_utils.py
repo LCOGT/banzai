@@ -64,7 +64,7 @@ def test_get_dayobs(mock_datetime):
     (time(6, 30, 0), 10, time(20, 30, 0, tzinfo=timezone.utc)),
     (time(21, 0, 0), -4, time(1, 0, 0, tzinfo=timezone.utc)),
     (time(12, 0, 0), 0, time(12, 0, 0, tzinfo=timezone.utc)),
-    (datetime(2019, 5, 1, 6, 30, 0), 10, time(20, 30, 0, tzinfo=timezone.utc)),
+    (datetime(2019, 5, 1, 6, 30, 0), 10, datetime(2019, 4, 30, 20, 30, 0, tzinfo=timezone.utc)),
 ])
 def test_local_to_utc(local_time, tz_offset, expected_utc):
     assert date_utils.local_to_utc(local_time, tz_offset) == expected_utc
