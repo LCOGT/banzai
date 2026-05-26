@@ -2,10 +2,12 @@ import requests
 import copy
 from dateutil.parser import parse
 from banzai.logs import get_logger
+import tenacity
 
 logger = get_logger()
 
 
+@tenacity.retry(wait=tenacity.wait_exponential(multiplier=2, min=4, max=10), stop=tenacity.stop_after_attempt(4), reraise=True)
 def get_calibration_blocks_for_time_range(site, start_before, start_after, context):
     payload = {'start_before': start_before, 'start_after': start_after, 'site': site,
                'proposal': context.CALIBRATE_PROPOSAL_ID, 'aborted': 'false', 'canceled': 'false', 'order': '-start',

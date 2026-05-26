@@ -8,6 +8,7 @@ settings.py: Settings script for banzai.
 """
 import os
 import banzai
+import datetime
 
 FRAME_SELECTION_CRITERIA = [('type', 'not contains', 'FLOYDS'), ('type', 'not contains', 'NRES')]
 
@@ -163,3 +164,9 @@ LARGE_WORKER_THRESHOLD = 5000 * 5000
 LARGE_WORKER_QUEUE = os.getenv('CELERY_LARGE_TASK_QUEUE_NAME', 'celery_large')
 
 REFERENCE_CATALOG_URL = os.getenv('REFERENCE_CATALOG_URL', 'http://phot-catalog.lco.gtn/')
+
+REQUEUE_OBSTYPES = ['EXPOSE', 'STANDARD']
+
+REQUEUE_LOOKBACK_HOURS = 48
+
+REQUEUE_MISSING_FRAMES_TIME = datetime.time(hour=12, minute=0)

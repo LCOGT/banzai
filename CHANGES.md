@@ -1,6 +1,11 @@
 Versions
 ========
 
+1.36.0 (2026-05-08)
+-------------------
+
+- Added daily requeuing mechanism to the celery cron
+
 1.35.2 (2026-04-22)
 -------------------
 

@@ -7,12 +7,12 @@ from collections import OrderedDict
 from banzai import logs
 from banzai.exceptions import FrameNotAvailableError
 
-import numpy as np
 from astropy.io import fits
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_not_exception_type
 import io
 import os
 from banzai.metrics import add_telemetry_span_attribute, trace_function
+from banzai.query import archive_get
 
 logger = logs.get_logger()
 
@@ -83,38 +83,14 @@ def download_from_s3(file_info, context, is_raw_frame=False):
                             'attempt_number': download_from_s3.statistics['attempt_number']})
 
     if is_raw_frame:
-        url = f'{context.RAW_DATA_FRAME_URL}/{frame_id}/?include_related_frames=false'
+        url = f'{context.RAW_DATA_FRAME_URL}/{frame_id}/'
         archive_auth_header = context.RAW_DATA_AUTH_HEADER
     else:
-        url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}/?include_related_frames=false'
+        url = f'{context.ARCHIVE_FRAME_URL}/{frame_id}/'
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
     logger.info(f"Requesting archive URL {url} (auth header present: {bool(archive_auth_header)})")
 
-    try:
-        response = requests.get(url, headers=archive_auth_header, timeout=30)
-        response.raise_for_status()
-    except requests.exceptions.HTTPError:
-        message = 'Error downloading file from archive.'
-        if int(response.status_code) == 429:
-            message += ' Rate limited.'
-        logger.error(
-                message,
-                extra_tags={
-                    'filename': file_info.get('filename'),
-                    'attempt_number': download_from_s3.statistics['attempt_number']
-                }
-            )
-        raise
-    except requests.exceptions.RequestException as e:
-        message = "Archive download connection error."
-        logger.error(
-            f"{message} {e}",
-            extra_tags={
-                'filename': file_info.get('filename'),
-                'attempt_number': download_from_s3.statistics['attempt_number']
-            }
-        )
-        raise
+    response = archive_get(url, params={'include_related_frames': False}, auth_headers=archive_auth_header)
 
     # Parse the JSON response
     response_data = response.json()
@@ -125,31 +101,10 @@ def download_from_s3(file_info, context, is_raw_frame=False):
         raise FrameNotAvailableError(f"Frame {frame_id} not found in archive")
 
     buffer = io.BytesIO()
-    try:
-        response = requests.get(response_data['url'], timeout=60)
-        response.raise_for_status()
-    except requests.exceptions.HTTPError:
-        message = f'Error downloading file from S3. {response.status_code} {response.reason}.'
-        if int(response.status_code) == 429:
-            message += ' Rate limited.'
-        logger.error(
-            message,
-            extra_tags={
-                'filename': file_info.get('filename'),
-                'attempt_number': download_from_s3.statistics['attempt_number']
-            }
-        )
-        raise
-    except requests.exceptions.RequestException as e:
-        message = "S3 download connection error."
-        logger.error(
-            f"{message} {e}",
-            extra_tags={
-                'filename': file_info.get('filename'),
-                'attempt_number': download_from_s3.statistics['attempt_number']
-            }
-        )
-        raise
+    # Note that url already includes the signed headers so we can't also pass
+    # the auth token here too.
+    response = archive_get(response_data['url'], params={},
+                           auth_headers=None, timeout=60)
     downloaded_bytes = buffer.write(response.content)
     if downloaded_bytes == 0:
         logger.error(

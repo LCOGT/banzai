@@ -131,3 +131,23 @@ def get_stacking_date_range(timezone: int, lookback_days: float = 0.5) -> (str, 
     min_date = utc_noon_at_site - datetime.timedelta(days=lookback_days)
     max_date = utc_noon_at_site + datetime.timedelta(days=0.5)
     return min_date.strftime(TIMESTAMP_FORMAT), max_date.strftime(TIMESTAMP_FORMAT)
+
+
+def local_to_utc(local_time, timezone):
+    """
+    Convert a local time to UTC based on the timezone of the site.
+
+    Parameters
+    ----------
+    local_time : datetime.time
+        Local time to convert to UTC.
+    timezone : int
+        Timezone offset in hours.
+
+    Returns
+    -------
+    datetime.time
+        UTC time.
+    """
+    local_time = local_time.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=timezone)))
+    return local_time.astimezone(datetime.timezone.utc)

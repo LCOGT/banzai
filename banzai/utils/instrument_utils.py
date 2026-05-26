@@ -1,5 +1,10 @@
 import operator
+import traceback
+from banzai.utils import import_utils
+from banzai import logs
 
+
+logger = logs.get_logger()
 
 class InstrumentCriterion:
     def __init__(self, attribute, comparison_operator, comparison_value):
@@ -31,3 +36,33 @@ def instrument_passes_criteria(instrument, criteria):
         if not criterion.instrument_passes(instrument):
             passes = False
     return passes
+
+
+def get_processing_queue(message_body, runtime_context):
+    """ Determine whether we should use the normal or the large processing queue by checking
+    the instrument's image dimensions.
+
+    Parameters
+    ----------
+    message_body: dict
+        The message body from the fits exchange. This calls get_instrument_from_header
+        so, we only need whatever that function uses. For LCO, that is
+        INSTRUME, SITEID, and TELESCOP.
+    runtime_context: Context object
+        The runtime context object containing configuration settings.
+    """
+    try:
+        factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)
+        instrument = factory.get_instrument_from_header(message_body, runtime_context.db_address)
+    except Exception:
+        logger.error(f'Could not get instrument from header. {traceback.format_exc()}',
+                     extra_tags={'filename': message_body['filename']})
+        raise
+
+    if instrument is None or instrument.nx is None:
+        queue_name = runtime_context.CELERY_TASK_QUEUE_NAME
+    elif instrument.nx * instrument.ny > runtime_context.LARGE_WORKER_THRESHOLD:
+        queue_name = runtime_context.LARGE_WORKER_QUEUE
+    else:
+        queue_name = runtime_context.CELERY_TASK_QUEUE_NAME
+    return queue_name

@@ -21,13 +21,16 @@ from types import ModuleType
 from banzai.lco import LCOFrameFactory
 from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
+from banzai.query import archive_get
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
-from banzai.scheduling import process_image, app, schedule_calibration_stacking
+from banzai.scheduling import process_image, app, requeue_missing_frames, schedule_calibration_stacking
 from banzai.data import DataProduct
 from celery.schedules import crontab
 import celery
 import celery.bin.beat
 import requests
+
+from banzai.utils.instrument_utils import get_processing_queue
 
 logger = logs.get_logger()
 
@@ -51,20 +54,14 @@ class RealtimeModeListener(ConsumerMixin):
     def on_message(self, body, message):
         logger.info('Received message', extra_tags={'filename': body['filename']})
         try:
-            instrument = LCOFrameFactory.get_instrument_from_header(body, self.runtime_context.db_address)
+            queue_name = get_processing_queue(body, self.runtime_context)
         except Exception:
-            logger.error(f'Could not get instrument from header. {traceback.format_exc()}', extra_tags={'filename': body['filename']})
             message.ack()
             return
-        if instrument is None or instrument.nx is None:
-            queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
-        elif instrument.nx * instrument.ny > self.runtime_context.LARGE_WORKER_THRESHOLD:
-            queue_name = self.runtime_context.LARGE_WORKER_QUEUE
-        else:
-            queue_name = self.runtime_context.CELERY_TASK_QUEUE_NAME
+
         process_image.apply_async(args=(body, vars(self.runtime_context)),
                                   queue=queue_name)
-        message.ack()  # acknowledge to the sender we got this message (it can be popped)
+        message.ack()
 
 
 def add_settings_to_context(args, settings):
@@ -184,7 +181,7 @@ def make_master_calibrations():
                                           runtime_context.min_date, runtime_context.max_date, runtime_context)
 
 
-def start_stacking_scheduler():
+def start_banzai_cron():
     logger.info('Entered entrypoint to celery beat scheduling')
     runtime_context = parse_args(settings)
     for site, entry in runtime_context.SCHEDULE_STACKING_CRON_ENTRIES.items():
@@ -192,8 +189,20 @@ def start_stacking_scheduler():
                               schedule_calibration_stacking.s(site=site, runtime_context=vars(runtime_context)),
                               queue=runtime_context.CELERY_TASK_QUEUE_NAME)
 
+        timezone = dbs.get_site(site, runtime_context.db_address).timezone
+
+        local_time_in_utc = date_utils.local_to_utc(
+            settings.REQUEUE_MISSING_FRAMES_TIME,
+            timezone
+        )
+        app.add_periodic_task(
+            crontab(hour=local_time_in_utc.hour, minute=local_time_in_utc.minute),
+            requeue_missing_frames.s(site, runtime_context=vars(runtime_context)),
+            queue=runtime_context.CELERY_TASK_QUEUE_NAME
+        )
     app.Beat(schedule='/tmp/celerybeat-schedule', pidfile='/tmp/celerybeat.pid', working_directory='/tmp').run()
     logger.info('Starting celery beat')
+
 
 def run_realtime_pipeline():
     extra_console_arguments = [{'args': ['--n-processes'],
@@ -371,8 +380,7 @@ def add_bpms_from_archive():
     # Query the archive for all bpm files
     url = f'{settings.ARCHIVE_FRAME_URL}/?OBSTYPE=BPM&limit=1000&include_related_frames=false'
     archive_auth_header = settings.ARCHIVE_AUTH_HEADER
-    response = requests.get(url, headers=archive_auth_header)
-    response.raise_for_status()
+    response = archive_get(url, params={'include_related_frames': False}, auth_headers=archive_auth_header)
     results = response.json()['results']
 
     # Load each one, saving the calibration info for each

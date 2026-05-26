@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.11,<4"
-version = "1.35.2"
+version = "1.36.0"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
@@ -101,7 +101,7 @@ zip-safe = false
 banzai_reduce_individual_frame = "banzai.main:reduce_single_frame"
 banzai_reduce_directory = "banzai.main:reduce_directory"
 banzai_make_master_calibrations = "banzai.main:make_master_calibrations"
-banzai_automate_stack_calibrations = "banzai.main:start_stacking_scheduler"
+banzai_cron = "banzai.main:start_banzai_cron"
 banzai_run_realtime_pipeline = "banzai.main:run_realtime_pipeline"
 banzai_mark_frame_as_good = "banzai.main:mark_frame_as_good"
 banzai_mark_frame_as_bad = "banzai.main:mark_frame_as_bad"
