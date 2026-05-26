@@ -149,5 +149,9 @@ def local_to_utc(local_time, timezone):
     datetime.time
         UTC time.
     """
-    local_time = local_time.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=timezone)))
-    return local_time.astimezone(datetime.timezone.utc)
+    tz = datetime.timezone(datetime.timedelta(hours=timezone))
+    if isinstance(local_time, datetime.datetime):
+        local_dt = local_time.replace(tzinfo=tz)
+    else:
+        local_dt = datetime.datetime.combine(datetime.date.today(), local_time, tzinfo=tz)
+    return local_dt.astimezone(datetime.timezone.utc).timetz()
