@@ -1,6 +1,11 @@
 Versions
 ========
 
+1.36.2 (2026-06-02)
+-------------------
+
+- Bump ingester to use tagged version instead of branch
+
 1.36.1 (2026-05-26)
 -------------------
 

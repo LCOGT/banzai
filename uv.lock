@@ -1164,7 +1164,7 @@ wheels = [
 
 [[package]]
 name = "lco-banzai"
-version = "1.36.1"
+version = "1.36.2"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
@@ -1240,7 +1240,7 @@ requires-dist = [
     { name = "nbsphinx", marker = "extra == 'docs'" },
     { name = "numcodecs", specifier = ">=0.16.0" },
     { name = "numpy", specifier = ">=2" },
-    { name = "ocs-ingester", git = "https://github.com/observatorycontrolsystem/ingester?branch=fix%2Fpoetry_and_update_deps" },
+    { name = "ocs-ingester", specifier = ">=3.2.0,<4.0.0" },
     { name = "opensearch-py" },
     { name = "photutils" },
     { name = "psycopg", extras = ["binary"] },
@@ -1633,7 +1633,7 @@ wheels = [
 [[package]]
 name = "ocs-archive"
 version = "0.5.0"
-source = { git = "https://github.com/observatorycontrolsystem/ocs_archive.git?rev=fix%2Freduction_level_parsing#6aeea9e1e91edd99e285b72c25d26498aa7ae517" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "astropy" },
     { name = "boto3" },
@@ -1641,11 +1641,15 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "requests" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/39/4d/b2833b176689241d61bd28f67ca91d863cdc0e371b70c1826d9b8910239c/ocs_archive-0.5.0.tar.gz", hash = "sha256:8db59b244747c70b7784713d7e56efd68030958a855aab9444e4ce381ae63474", size = 33678, upload-time = "2026-05-07T23:47:29.871Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f9/de/13e4ab57f43ed3b654fe2381f413bf45f1c1cb96366b0eec5c730263bd5a/ocs_archive-0.5.0-py3-none-any.whl", hash = "sha256:6216cb84c9f014be2f850736cafb3d2652b1c517977199f6eadd9949646b01be", size = 37309, upload-time = "2026-05-07T23:47:28.949Z" },
+]
 
 [[package]]
 name = "ocs-ingester"
 version = "3.2.0"
-source = { git = "https://github.com/observatorycontrolsystem/ingester?branch=fix%2Fpoetry_and_update_deps#440c3e84089f566a91eaeec8241e9253c5f51d57" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "astropy" },
     { name = "boto3" },
@@ -1655,6 +1659,10 @@ dependencies = [
     { name = "opentsdb-python-metrics" },
     { name = "python-dateutil" },
     { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a2/5f/c978138d89765704ff077683b1a0bd24c89aaa8945874dbdcc9bf1ec764e/ocs_ingester-3.2.0.tar.gz", hash = "sha256:f16d1924d7f3c017d77dac05bbb1250d626d191e82a5142acb332d3f3e58df6a", size = 23402, upload-time = "2026-05-08T04:55:45.677Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d1/78/80f326a415c10b145ca5e89106a586ff77cf5450fcd624564921b3b59cb0/ocs_ingester-3.2.0-py3-none-any.whl", hash = "sha256:b3166489a761767937c9494b0be9e566b8d7692a375f79b2834740b4f9aec21f", size = 24904, upload-time = "2026-05-08T04:55:44.53Z" },
 ]
 
 [[package]]
@@ -1843,14 +1851,14 @@ wheels = [
 
 [[package]]
 name = "opentsdb-python-metrics"
-version = "0.2.0"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "opentsdb-http-client" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/34/24/8bebb5c3bef4e65862fc4e8d3d2e041f61ea875a63182d9dc68b22ee1a54/opentsdb_python_metrics-0.2.0.tar.gz", hash = "sha256:b446fcbf7995080d1c1243e4852e9a056e8628232602f741ce4f914e2a33aed7", size = 6526, upload-time = "2020-03-06T18:52:59.79Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/aa/437cdc63abade4328f0e868f3279f36b71a887e6b0d42f82147362d1d51f/opentsdb_python_metrics-0.3.0.tar.gz", hash = "sha256:fbe25c809654e94b56d71a3b247fd38ec9e345e47ff19695f8e4af98c37eb789", size = 7220, upload-time = "2026-04-03T00:23:17.186Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/0b/288f55ec6c0906ee1f6f5d0810998ccfe896b6540002e923eaf322eee759/opentsdb_python_metrics-0.2.0-py3-none-any.whl", hash = "sha256:23ac5ccf9b2cda3f4d6b45c481ec81012a235ad3c5c2464c16467add2543974d", size = 3887, upload-time = "2020-03-06T18:52:58.409Z" },
+    { url = "https://files.pythonhosted.org/packages/98/70/a8f15473e8fe0eadc9b0261c1d62a18161c3f2b148fd0c4b7124214d0125/opentsdb_python_metrics-0.3.0-py3-none-any.whl", hash = "sha256:c80890f4cbfa6165a0d6d124d8a5ceb30eca9468129622bbd241b3934e93ccf7", size = 4057, upload-time = "2026-04-03T00:23:16.13Z" },
 ]
 
 [[package]]

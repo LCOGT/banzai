@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.11,<4"
-version = "1.36.1"
+version = "1.36.2"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
@@ -36,7 +36,7 @@ dependencies = [
   "psycopg[binary]",
   "celery[redis]>=5.5.0rc5",
   "apscheduler",
-  "ocs_ingester>=3.0.4,<4.0.0",
+  "ocs_ingester>=3.2.0,<4.0.0",
   "tenacity>=8.5",
   "python-dateutil",
   "emcee",
@@ -79,7 +79,6 @@ otel = [
 
 
 [tool.uv.sources]
-ocs_ingester = { git = "https://github.com/observatorycontrolsystem/ingester", branch = "fix/poetry_and_update_deps" }
 torch = { index = "pytorch-cpu" }
 
 [[tool.uv.index]]
