@@ -72,7 +72,7 @@ def test_skips_when_file_exists(tmp_path):
          mock.patch('banzai.cache.download_worker.update_filepath') as up:
         result = download_calibration('sqlite:///test.db', processed_path, FakeContext(), cal)
 
-    assert result is False
+    assert result is None
     dl.assert_not_called()
     up.assert_called_once_with('sqlite:///test.db', 1, dest_dir)
 
@@ -81,7 +81,7 @@ def test_skips_null_frameid(tmp_path):
     cal = _make_cal(frameid=None)
     with mock.patch('banzai.utils.fits_utils.download_from_s3') as dl:
         result = download_calibration('sqlite:///test.db', str(tmp_path), FakeContext(), cal)
-    assert result is False
+    assert result is None
     dl.assert_not_called()
 
 
@@ -250,7 +250,7 @@ def test_download_happy_path_with_real_db(db_address, tmp_path):
     with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=_make_fits_buffer()) as dl:
         result = download_calibration(db_address, processed_path, FakeContext(), cal)
 
-    assert result is True
+    assert result is None
     dl.assert_called_once()
     assert dl.call_args[0][0] == {'frameid': 123, 'filename': 'bias.fits'}
     assert dl.call_args[1]['is_raw_frame'] is False

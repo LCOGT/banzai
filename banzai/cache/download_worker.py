@@ -82,18 +82,18 @@ def update_filepath(db_address, cal_id, filepath):
             cal.filepath = filepath
 
 
-def download_calibration(db_address, processed_path, runtime_context, cal) -> bool:
-    """Download file, validate FITS, write to disk, update DB filepath. Returns True if fetched."""
+def download_calibration(db_address, processed_path, runtime_context, cal):
+    """Ensure cal is cached: download, validate FITS, write to disk, update DB filepath. """
     dest_dir = get_cache_path(processed_path, cal)
     local_path = os.path.join(dest_dir, cal.filename)
 
     if os.path.exists(local_path):
         logger.info(f"Already on disk: {cal.filename}, updating DB filepath")
         update_filepath(db_address, cal.id, dest_dir)
-        return False
+        return
     if cal.frameid is None:
         logger.debug(f"Skipping {cal.filename} - NULL frameid")
-        return False
+        return
 
     os.makedirs(dest_dir, exist_ok=True)
     buffer = fits_utils.download_from_s3(
@@ -109,7 +109,6 @@ def download_calibration(db_address, processed_path, runtime_context, cal) -> bo
         buffer.close()
     update_filepath(db_address, cal.id, dest_dir)
     logger.info(f"Cached {cal.filename}")
-    return True
 
 
 def delete_calibration(db_address, cal):
@@ -207,16 +206,15 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                 last_logged_state = state
                 last_status_log = now
 
-            downloaded_count = 0
             failed_count = 0
             for cal in fresh_to_download:
                 try:
-                    if download_calibration(db_address, processed_path, runtime_context, cal):
-                        downloaded_count += 1
+                    download_calibration(db_address, processed_path, runtime_context, cal)
                 except Exception as e:
                     failed_frameids[cal.frameid] = time.monotonic()
                     failed_count += 1
                     logger.error(f"Failed to download {cal.filename}: {e}", exc_info=True)
+            downloaded_count = len(fresh_to_download) - failed_count
 
             reconciled_count = 0
             for cal, expected_path in to_reconcile:
