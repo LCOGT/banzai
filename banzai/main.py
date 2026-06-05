@@ -38,35 +38,6 @@ from banzai.utils.instrument_utils import get_processing_queue
 logger = logs.get_logger()
 
 
-class RealtimeModeListener(ConsumerMixin):
-    def __init__(self, runtime_context):
-        self.runtime_context = runtime_context
-        self.broker_url = runtime_context.broker_url
-
-    def on_connection_error(self, exc, interval):
-        logger.error("{0}. Retrying connection in {1} seconds...".format(exc, interval))
-        self.connection = self.connection.clone()
-        self.connection.ensure_connection(max_retries=10)
-
-    def get_consumers(self, Consumer, channel):
-        consumer = Consumer(queues=[self.queue], callbacks=[self.on_message])
-        # Only fetch one thing off the queue at a time
-        consumer.qos(prefetch_count=1)
-        return [consumer]
-
-    def on_message(self, body, message):
-        logger.info('Received message', extra_tags={'filename': body['filename']})
-        try:
-            queue_name = get_processing_queue(body, self.runtime_context)
-        except Exception:
-            message.ack()
-            return
-
-        process_image.apply_async(args=(body, vars(self.runtime_context)),
-                                  queue=queue_name)
-        message.ack()
-
-
 def decode_subframe_message(body):
     """Normalize a subframe queue body into a dictionary."""
     if isinstance(body, bytes):
@@ -218,25 +189,67 @@ def start_banzai_cron():
     logger.info('Starting celery beat')
 
 
-def start_listener(runtime_context):
+class BanzaiQueueListener(ConsumerMixin):
+    def __init__(self, runtime_context):
+        self.runtime_context = runtime_context
+
+    def on_connection_error(self, exc, interval):
+        logger.error('{0}. Retrying connection in {1} seconds...'.format(exc, interval))
+        self.connection = self.connection.clone()
+        self.connection.ensure_connection(max_retries=10)
+
+    def get_queue(self):
+        raise NotImplementedError
+
+    def get_consumers(self, Consumer, channel):
+        consumer = Consumer(queues=[self.get_queue()], callbacks=[self.on_message])
+        # Only fetch one thing off the queue at a time
+        consumer.qos(prefetch_count=1)
+        return [consumer]
+
+
+class RealtimeModeListener(BanzaiQueueListener):
+    def get_queue(self):
+        fits_exchange = Exchange(self.runtime_context.FITS_EXCHANGE, type='fanout')
+        return Queue(self.runtime_context.queue_name, fits_exchange)
+
+    def on_message(self, body, message):
+        logger.info('Received message', extra_tags={'filename': body['filename']})
+        try:
+            queue_name = get_processing_queue(body, self.runtime_context)
+        except Exception:
+            message.ack()
+            return
+
+        process_image.apply_async(args=(body, vars(self.runtime_context)),
+                                  queue=queue_name)
+        message.ack()
+
+
+def run_listener(runtime_context, listener, start_message, shutdown_message):
     # Need to keep the amqp logger level at least as high as INFO,
     # or else it send heartbeat check messages every second
     logging.getLogger('amqp').setLevel(logging.WARNING)
-    logger.info('Starting pipeline listener')
-
-    fits_exchange = Exchange(runtime_context.FITS_EXCHANGE, type='fanout')
-    listener = RealtimeModeListener(runtime_context)
+    logger.info(start_message)
 
     with Connection(runtime_context.broker_url) as connection:
         listener.connection = connection.clone()
-        listener.queue = Queue(runtime_context.queue_name, fits_exchange)
         try:
             listener.run()
         except listener.connection.connection_errors:
             listener.connection = connection.clone()
             listener.ensure_connection(max_retries=10)
         except KeyboardInterrupt:
-            logger.info('Shutting down pipeline listener.')
+            logger.info(shutdown_message)
+
+
+def start_listener(runtime_context):
+    run_listener(
+        runtime_context,
+        RealtimeModeListener(runtime_context),
+        'Starting pipeline listener',
+        'Shutting down pipeline listener.',
+    )
 
 
 def run_realtime_pipeline():
@@ -251,21 +264,10 @@ def run_realtime_pipeline():
     start_listener(runtime_context)
 
 
-class SubframeListener(ConsumerMixin):
-    def __init__(self, runtime_context):
-        self.runtime_context = runtime_context
-
-    def on_connection_error(self, exc, interval):
-        logger.error('{0}. Retrying connection in {1} seconds...'.format(exc, interval))
-        self.connection = self.connection.clone()
-        self.connection.ensure_connection(max_retries=10)
-
-    def get_consumers(self, Consumer, channel):
+class SubframeListener(BanzaiQueueListener):
+    def get_queue(self):
         """Bind to banzai_stack_queue."""
-        queue = Queue(self.runtime_context.STACK_QUEUE_NAME)
-        consumer = Consumer(queues=[queue], callbacks=[self.on_message])
-        consumer.qos(prefetch_count=1)
-        return [consumer]
+        return Queue(self.runtime_context.STACK_QUEUE_NAME)
 
     def on_message(self, body, message):
         """Validate and dispatch to Celery for processing."""
@@ -295,20 +297,12 @@ def run_subframe_worker():
     """Entry point for the subframe listener."""
     runtime_context = parse_args(settings)
 
-    logging.getLogger('amqp').setLevel(logging.WARNING)
-    logger.info('Starting subframe listener')
-
-    listener = SubframeListener(runtime_context)
-
-    with Connection(runtime_context.broker_url) as connection:
-        listener.connection = connection.clone()
-        try:
-            listener.run()
-        except listener.connection.connection_errors:
-            listener.connection = connection.clone()
-            listener.ensure_connection(max_retries=10)
-        except KeyboardInterrupt:
-            logger.info('Shutting down subframe listener.')
+    run_listener(
+        runtime_context,
+        SubframeListener(runtime_context),
+        'Starting subframe listener',
+        'Shutting down subframe listener.',
+    )
 
 
 def mark_frame(mark_as):
