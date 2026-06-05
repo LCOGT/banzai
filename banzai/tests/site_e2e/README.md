@@ -1,6 +1,9 @@
 # Site Deployment E2E Tests
 
-End-to-end tests that verify the complete site deployment caching system works correctly.
+These are opt-in deployment tests for the site caching stack, not ordinary unit
+tests. They exercise a real Docker Compose site deployment, a simulated
+publication database, shared Redis/RabbitMQ dependencies, real archive downloads,
+and worker-driven reductions.
 
 ## What These Tests Verify
 
@@ -18,10 +21,42 @@ These tests validate the full system by:
 
 5. **Frame Reduction** - A raw science frame is processed using the cached calibrations.
 
+6. **Cache Drift Reconciliation** - The download worker restores local cache
+   filepaths when replicated database state drifts.
+
+7. **Subframe Stacking** - The site subframe queue and stacking supervisor can
+   process a subframe message end to end.
+
+8. **Replication Slot Reuse** - Cache initialization succeeds when a publisher
+   replication slot already exists.
+
+## What These Tests Touch
+
+- Docker containers for the publication database and site deployment stack.
+- Shared Redis/RabbitMQ containers from `docker-compose-dependencies.yml`.
+- The LCO archive API, using `AUTH_TOKEN`.
+- RabbitMQ queues and exchanges configured with the `e2e_` prefix.
+- Host data directories: `HOST_RAW_DIR`, `HOST_CALS_DIR`, and
+  `HOST_REDUCED_DIR`.
+- Docker volumes for PostgreSQL state.
+
+The checked-in wrapper starts Redis/RabbitMQ. Pytest fixtures currently start,
+populate, and tear down the publication database and site deployment containers.
+They also clean the configured host data directories and purge only guarded
+`e2e_` RabbitMQ queues.
+
+## When To Run Them
+
+Run these tests when changing cache replication, cache initialization, download
+worker behavior, site deployment environment wiring, `docker-compose-site.yml`,
+end-to-end reduction queue wiring, or subframe processing. They are usually not
+needed for ordinary unit-level stage changes.
+
 ## Prerequisites
 
-- Docker and Docker Compose installed
-- Access to the LCO archive API (requires an auth token)
+- Docker and Docker Compose installed.
+- `uv` installed.
+- Access to the LCO archive API with an auth token.
 
 ## Configuration
 
@@ -48,19 +83,38 @@ These tests validate the full system by:
 
 Run all site E2E tests:
 ```bash
-uv run pytest -m e2e_site banzai/tests/site_e2e/ -v -s
+scripts/run_site_e2e.sh
 ```
 
-The tests will automatically:
-- Start the publication database container
-- Populate it with test calibration metadata
-- Start the full site deployment (PostgreSQL, Redis, RabbitMQ, workers)
-- Run the test suite
-- Clean up all containers and data when finished
+The wrapper will:
+- Start shared Redis/RabbitMQ dependencies with
+  `docker compose -f docker-compose-dependencies.yml up -d`.
+- Run the full site E2E pytest suite.
+- Leave Redis/RabbitMQ running because they are shared developer dependencies.
+
+During pytest, the fixtures will:
+- Start the publication database container.
+- Populate it with test calibration metadata.
+- Start the site deployment stack: site PostgreSQL, cache init, workers,
+  listener, download worker, subframe worker, and stacking supervisor.
+- Clean up the pytest-managed containers, volumes, queues, and host data dirs
+  when finished.
+
+For advanced debugging, you can pass a full pytest argument list to the wrapper:
+```bash
+scripts/run_site_e2e.sh -m e2e_site_cache banzai/tests/site_e2e/test_site_e2e.py -v -s
+```
+
+Or run pytest directly after starting Redis/RabbitMQ yourself:
+```bash
+docker compose -f docker-compose-dependencies.yml up -d
+uv run pytest -m e2e_site banzai/tests/site_e2e/test_site_e2e.py -v -s
+```
 
 ## Test Markers
 
-You can run specific test phases:
+You can run specific test phases with raw pytest commands after Redis/RabbitMQ
+are running:
 
 ```bash
 # Startup tests only (publication DB, site deployment, replication)
@@ -110,6 +164,11 @@ production site-up uses `/mnt/data/...`. Keep them on different paths.
 
 **Tests skip with "AUTH_TOKEN environment variable required"**
 - Ensure you copied the template and set your token in `site_e2e.env`
+
+**Wrapper fails before pytest starts**
+- Ensure Docker, Docker Compose, and `uv` are installed.
+- Ensure `banzai/tests/site_e2e/site_e2e.env` exists and has a non-empty
+  `AUTH_TOKEN`.
 
 **Publication DB fails to start**
 - Check if port 5433 is already in use

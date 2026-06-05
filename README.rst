@@ -197,9 +197,13 @@ After all of the containers are up, run
 Site Deployment E2E Tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 The site E2E tests validate the full site deployment caching system, including PostgreSQL
-logical replication, calibration file caching, and frame reduction. These tests require
-Docker, an LCO archive API token, and Redis/RabbitMQ running via
-``docker compose -f docker-compose-dependencies.yml up -d``.
+logical replication, calibration file caching, and frame reduction. These tests are
+opt-in and are excluded from default pytest runs by the ``e2e_site`` marker.
+
+They require Docker, Docker Compose, ``uv``, and an LCO archive API token. The
+recommended entrypoint starts the shared Redis/RabbitMQ dependencies, then runs pytest.
+Pytest currently starts and tears down the publication database and site deployment
+containers.
 
 To run the site E2E tests:
 
@@ -210,7 +214,15 @@ To run the site E2E tests:
     # Edit site_e2e.env and add your AUTH_TOKEN
 
     # Run the tests
-    uv run pytest -m e2e_site banzai/tests/site_e2e/ -v -s
+    scripts/run_site_e2e.sh
+
+For advanced debugging, you can run pytest directly after starting Redis/RabbitMQ
+yourself:
+
+.. code-block:: bash
+
+    docker compose -f docker-compose-dependencies.yml up -d
+    uv run pytest -m e2e_site banzai/tests/site_e2e/test_site_e2e.py -v -s
 
 The following markers can be used to run subsets of the site E2E tests:
 
