@@ -149,6 +149,14 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
     """Main loop: poll DB, download missing files, delete stale ones."""
     logger.info("Download worker started")
 
+    if not os.access(processed_path, os.W_OK):
+        logger.error(
+            f"Processed path {processed_path} is not writable by uid {os.getuid()} — "
+            f"calibration downloads will fail with PermissionError. On Linux, Docker "
+            f"creates missing bind-mount dirs as root:root 0755; fix on the host with "
+            f"chmod/chown so uid {os.getuid()} can write. No restart needed after fixing."
+        )
+
     null_frameid_filenames = get_null_frameid_filenames(db_address, site_id, instrument_types)
     if null_frameid_filenames:
         sample = ', '.join(null_frameid_filenames[:10])
