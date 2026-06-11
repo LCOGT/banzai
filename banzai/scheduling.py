@@ -336,7 +336,7 @@ def process_subframe(self, body: dict, runtime_context: dict):
             images[0].get_output_directory(runtime_context),
             images[0].get_output_filename(runtime_context),
         )
-        # Phase 2: Record reduced subframes in the Subframes table; ready for stacking
+        # Phase 2: Record reduced subframes in the Subframes table: ready to be stacked
         insert_subframe(
             runtime_context.db_address,
             moluid=header['MOLUID'],

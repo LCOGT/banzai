@@ -1,262 +1,332 @@
 # Smart Stacking Architecture
 
-**Status:** in progress on `feature/separate-site-deps`
-**Scope:** subframe ingestion → reduction → per-camera coordination → finalized stack
+**Implementation status:** orchestration scaffolding is in place. BANZAI reduces
+subframes, records them, detects complete groups, and marks those groups
+complete. It does **not yet create a stacked FITS file, JPEG preview, or archive
+upload**.
 
-This document describes the process layout and message flow for the
-smart-stacking subsystem deployed at each observatory site.
-It aims to give a clearer picture of *who runs what*, *how completion is
-signalled*, and *why the current implementation uses RabbitMQ plus two Redis
-roles*.
+This document describes the smart-stacking code as it exists today. It is
+intended to answer four questions for a new developer:
 
----
+1. What problem does this subsystem solve?
+2. Which process owns each part of the work?
+3. Where is state stored, and what triggers a completion check?
+4. Which parts are still placeholders?
 
-## 1. Process layout
+## The short version
 
-Three long-running services cooperate at each site, plus the shared
-infrastructure they depend on. Boxes are OS processes or process groups.
-Arrows show the main runtime relationships and state changes.
+A smart stack is a set of reduced `e09` subframes with the same FITS `MOLUID`.
+Those subframes begin as raw `e00` files. The eventual combined stack is
+expected to be an `e45` product, but that output does not exist yet.
+
+The system uses two asynchronous steps:
+
+1. A listener receives a path to a raw subframe and sends reduction work to
+   Celery.
+2. After reduction succeeds, a per-camera stacking worker is notified. It
+   reloads the group from PostgreSQL and checks whether the stack is complete.
+
+PostgreSQL is the source of truth. Redis notifications only mean:
+
+> Something changed for this `MOLUID`; query the database again.
+
+When a group is complete, the current implementation changes its database
+status to `complete`. The function is named `finalize_stack`, but product
+creation is still represented by mock log messages.
 
 ```mermaid
 flowchart LR
-    subgraph site["Site deployment"]
-        direction LR
-        listener["banzai-subframe-listener
-          (SubframeListener)"]
-        celery["banzai-subframe-worker
-          (Celery worker pool)"]
-        supervisor["banzai-stacking-supervisor
-          (StackingSupervisor)"]
-        wA["stacking-worker-camA
-          (run_worker_loop)"]
-        wB["stacking-worker-camB
-          (run_worker_loop)"]
-        wN["stacking-worker-camN"]
-        supervisor -- "spawns and monitors" --> wA
-        supervisor -- "spawns and monitors" --> wB
-        supervisor -- "spawns and monitors" --> wN
-    end
+    producer["Instrument or test producer<br/>raw e00 FITS"]
+    rabbit["RabbitMQ<br/>incoming subframe queue"]
+    listener["SubframeListener"]
+    celery_broker["Redis<br/>Celery broker"]
+    reduction["Celery process_subframe task"]
+    files["Reduced e09 FITS files"]
+    db[("PostgreSQL<br/>subframes")]
+    notify["Redis<br/>per-camera notifications"]
+    stack_worker["Per-camera stacking worker"]
 
-    rabbit[("RabbitMQ
-    STACK_QUEUE_NAME")]
-    celery_broker[("Redis Celery broker
-      TASK_HOST")]
-    notify_redis[("Redis
-      stack:notify:{camera}")]
-    db[("PostgreSQL
-      subframes table")]
-    reduced["Reduced FITS files"]
-
-    rabbit -- "consumes" --> listener
-    listener -- "enqueue process_subframe" --> celery_broker
-    celery_broker -- "delivers task" --> celery
-    celery -- "run reduction pipeline" --> reduced
-    celery -- "insert reduced row" --> db
-    celery -- "subframe moluid" --> notify_redis
-    wA -- "poll, drain" --> notify_redis
-    wB -- "poll, drain" --> notify_redis
-    wA -- "get state and update stack status" --> db
-    wB -- "get state and update stack status" --> db
+    producer -->|"JSON containing a file path"| rabbit
+    rabbit --> listener
+    listener -->|"enqueue reduction"| celery_broker
+    celery_broker --> reduction
+    reduction --> files
+    reduction -->|"upsert reduced subframe"| db
+    reduction -->|"notify after DB write"| notify
+    notify --> stack_worker
+    stack_worker -->|"reload group and update status"| db
 ```
 
-**Process responsibilities at a glance:**
+## Terminology
 
-| Process | Entry point | Role |
-|---------|-------------|------|
-| `banzai-subframe-listener` | `banzai.main:run_subframe_worker` | RabbitMQ consumer; validates payload, dispatches Celery task. |
-| `banzai-subframe-worker` | Celery worker on `SUBFRAME_TASK_QUEUE_NAME` | Runs `process_subframe`: insert row, reduce frame, update row, notify stack workers through Redis. |
-| `banzai-stacking-supervisor` | `banzai.stacking:run_supervisor` | Discovers cameras at site; spawns and monitors one worker per camera. |
-| `stacking-worker-{camera}` | `banzai.stacking:run_worker_loop` (`multiprocessing` child) | Coalesces per-camera notifications and decides when a stack is complete. |
+| Term | Meaning |
+|------|---------|
+| **Subframe** | One exposure that belongs to a multi-frame observing group. |
+| **Stack** | All `subframes` rows sharing a `MOLUID`. |
+| **`MOLUID`** | Identifier used to group subframes into one stack. |
+| **`MOLFRNUM`** | A subframe's position within the stack. |
+| **`FRMTOTAL`** | Expected number of subframes in the stack. |
+| **`last_frame`** | Queue-message flag saying the producer considers this the final subframe. It is stored as `is_last`. |
+| **Notification** | A Redis list entry containing only a `MOLUID`; it is a prompt to query PostgreSQL. |
+| **Finalization** | Currently, marking all rows for a `MOLUID` terminal in the database. It does not yet produce a stacked image. |
 
-Cameras are discovered once at supervisor startup from
-`dbs.get_instruments_at_site(site_id)`. Each per-camera worker is a separate OS
-process so a crash in one camera's loop doesn't affect the others; the
-supervisor restarts crashed workers.
+### File types and reduction levels
 
----
+The shorthand `e00`, `e09`, and `e45` refers to the exposure file's
+reduction-level suffix, not to different FITS container formats. For this
+workflow:
 
-## 2. Subframe → stack sequence
+| Suffix | Reduction level | Meaning in smart stacking |
+|--------|-----------------|---------------------------|
+| `e00` | Raw / `RLEVEL=0` | Raw subframe received from the instrument, for example `...-e00.fits.fz`. Raw files may omit `RLEVEL`; BANZAI treats them as level 0. |
+| `e09` | `RLEVEL=9` | Individually reduced subframe written by `process_subframe` and stored in `subframes.filepath`. The site listener selects this level with `--rlevel=9`. |
+| `e45` | `RLEVEL=45` | Planned final image produced by combining the reduced `e09` subframes. No `e45` product is currently generated. |
 
-This is what happens when a single subframe arrives and ultimately triggers
-stack finalization. The inbound subframe
-payload is consumed from RabbitMQ, the reduction task is delivered by Celery
-through `TASK_HOST`, and notifications of new subframes being ready go
-through a Redis list.
+The queue message and FITS file provide different information:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Inst as Instrument producer
-    participant MQ as RabbitMQ STACK_QUEUE_NAME
-    participant L as SubframeListener
-    participant CB as Redis Celery broker
-    participant W as process_subframe worker
-    participant DB as Postgres subframes
-    participant NR as Redis stack notify camera
-    participant S as Per-camera stack worker
+- The JSON message contains `fits_file`, `last_frame`, and
+  `instrument_enqueue_timestamp`.
+- The FITS header supplies `MOLUID`, `MOLFRNUM`, `FRMTOTAL`, `INSTRUME`, and
+  `DATE-OBS`.
+- `fits_file` is a path, not file contents. The reduction worker must be able to
+  read that path through the site's shared filesystem mounts.
 
-    Inst->>MQ: publish JSON payload
-    MQ->>L: deliver message
-    L->>L: validate_message(body)
-    L->>CB: enqueue process_subframe task
-    L-->>MQ: ack
+## Happy path
 
-    CB->>W: deliver Celery task
-    activate W
-    W->>W: run_pipeline_stages
-    W->>DB: INSERT Subframe with reduced filepath
-    W->>NR: LPUSH moluid notification
-    deactivate W
+### 1. Receive and dispatch
 
-    loop stack worker tick
-        S->>NR: poll and drain notifications for camera
-        NR-->>S: deduplicated moluid set
-        S->>DB: load subframes for each moluid
-        DB-->>S: current durable state
-        alt stack is complete
-            S->>DB: mark_stack_complete(status complete)
-            S->>S: finalize stack products
-        else stack is still incomplete
-            S->>S: leave active until another tick
-        end
-    end
+`SubframeListener` consumes `STACK_QUEUE_NAME` from RabbitMQ.
 
-```
+It decodes the body as a JSON object and checks that the three required message
+fields are present. A valid message is submitted to the Celery queue named by
+`SUBFRAME_TASK_QUEUE_NAME`, then acknowledged on RabbitMQ.
 
-- The DB row is inserted **after** reduction succeeds, so every new
-  `subframes.filepath` value points at a reduced file.
-- The Redis notification is pushed **after** the reduced row is inserted, so
-  when the stacking worker drains and queries, it observes the ready-to-stack
-  state.
-- `drain_notifications` uses `RENAME` + `LRANGE` + `DEL` to atomically swap
-  the list, so notifications pushed during a drain aren't lost.
-- Multiple subframes for the same moluid collapse into a single drained
-  notification — the worker queries the DB for the full state of the stack,
-  not the contents of the notification.
+Malformed JSON and messages missing required fields are logged, acknowledged,
+and discarded. Validation checks field presence only; FITS metadata is read
+later by the Celery task.
 
----
+### 2. Reduce and record
 
-## 3. Worker tick and cleanup
+The Celery `process_subframe` task:
 
-The complete-stack path is notification-driven in the current implementation:
-the worker polls Redis, then queries the DB for each notified `moluid`. If a
-stack is still incomplete, its rows remain `active` until another notification
-arrives.
+1. Opens the raw `e00` FITS header from `fits_file`.
+2. Runs the normal BANZAI reduction pipeline.
+3. Computes the reduced `e09` output path.
+4. Upserts a `subframes` row.
+5. Pushes the row's `MOLUID` to the Redis notification list for its camera.
 
-Timeout finalization is intentionally deferred. A follow-up change should add
-timeout handling based on reduced-subframe cadence rather than raw subframe
-arrival rows.
+The database write happens only after reduction returns an output image, and
+the notification happens only after the database write. A stacking worker
+therefore treats every notified row as a reduced `e09` input ready to inspect.
+
+The unique key is `(moluid, stack_num)`. Reprocessing the same subframe updates
+that row and resets it to `active`, which makes queue retries idempotent at the
+database level.
+
+### 3. Recheck the stack
+
+`StackingSupervisor` starts one OS process per camera. Each process repeatedly:
+
+1. Drains its camera's Redis notification list.
+2. Deduplicates the resulting `MOLUID` values.
+3. Loads all rows for each `MOLUID` from PostgreSQL.
+4. Checks the completion rule.
+5. Marks complete groups as `complete`.
+6. Deletes old terminal rows according to the retention setting.
+7. Sleeps for the polling interval.
+
+The worker does not build stack state from Redis messages. Ten notifications
+for the same `MOLUID` during one polling interval become one database query.
 
 ```mermaid
 flowchart TD
     tick["Worker tick"]
-    drain["Drain Redis notifications<br/>for this camera"]
-    any_notify{"Any moluids?"}
-    each["For each deduped moluid"]
-    load["Load subframes<br/>for moluid from DB"]
-    complete{"Complete?"}
-    mark_complete["Mark status complete"]
-    keep_active["Leave active"]
-    cleanup["Cleanup old terminal rows"]
-    sleep["Sleep poll interval"]
+    drain["Drain and deduplicate<br/>camera notifications"]
+    notified{"Any MOLUIDs?"}
+    load["Load all subframes<br/>for one MOLUID"]
+    complete{"Completion rule true?"}
+    mark["Mark every row complete"]
+    cleanup["Delete old terminal rows"]
+    sleep["Sleep"]
 
-    tick --> drain --> any_notify
-    any_notify -- "yes" --> each --> load --> complete
-    complete -- "yes" --> mark_complete --> cleanup
-    complete -- "no" --> keep_active --> cleanup
-    any_notify -- "no" --> cleanup
+    tick --> drain --> notified
+    notified -->|"yes"| load --> complete
+    complete -->|"yes"| mark --> cleanup
+    complete -->|"no"| cleanup
+    notified -->|"no"| cleanup
     cleanup --> sleep --> tick
 ```
 
-`retention_days` defaults to 30 (see `stacking._stacking_worker_arg_parser` for
-the current default). Cleanup only removes terminal rows, so incomplete stacks
-remain active until completed by a later notification or finalized by future
-timeout handling.
+### 4. Decide whether the group is complete
 
----
+`check_stack_complete` returns true when the group is non-empty and either:
 
-## 4. Design rationale: why RabbitMQ and Redis?
+- `len(subframes) == FRMTOTAL`, or
+- any row has `is_last == true`.
 
-The current implementation uses RabbitMQ for the inbound site queue and Redis for
-two separate roles:
+This is an exact count check, not an "at least" check. The database uniqueness
+constraint prevents duplicate `(MOLUID, MOLFRNUM)` rows, but the predicate does
+not independently verify that frame numbers are contiguous or that all rows
+agree on `FRMTOTAL`.
 
-- **RabbitMQ (`STACK_QUEUE_NAME`)** carries inbound subframe messages from the
-  producer to `SubframeListener`. The listener validates each payload, submits
-  a Celery task, then acks the RabbitMQ message.
+### 5. "Finalize" the group
 
-- **Redis as Celery broker (`TASK_HOST`)** carries the `process_subframe`
-  Celery tasks consumed by `banzai-subframe-worker`.
+`finalize_stack` currently:
 
-- **Redis (`stack:notify:{camera}`)** carries *coalesced state-change
-  notifications*. The stacking worker does not need to see every individual
-  subframe — it needs to know "the state of moluid X may have changed,
-  re-query the DB." If three subframes for the same moluid arrive within one
-  poll interval, we want to handle them as **one** decision, not three.
-  `drain_notifications` collapses duplicates with a `set`, which is
-  effectively free with Redis lists + `RENAME`.
+- sets every row for the `MOLUID` to `status='complete'`;
+- sets `completed_at`; and
+- emits debug logs standing in for stacking, JPEG generation, and upload.
 
-- **The DB is the source of truth.** The notification path converges on
-  `get_subframes(moluid)` and the `check_stack_complete` predicate. The
-  notification only tells the worker *when to look*; it does not carry
-  decision-making state.
+There is no combined `e45` FITS product yet. Code that needs a real smart-stack
+product must not treat `status='complete'` as proof that one exists. The
+intended product flow is:
 
-### Alternatives we did not take
+```text
+one or more raw e00 subframes
+    -> individually reduced e09 subframes
+    -> one combined e45 smart-stack image (planned)
+```
 
-- **Single Celery task per "stack maybe complete" event.** Would force
-  per-frame fan-out (no coalescing) and put decision logic on workers that
-  don't have per-camera affinity. We'd have to add a per-moluid lock to
-  prevent races, which is exactly what the per-camera worker process already
-  gives us for free.
-- **PostgreSQL `LISTEN/NOTIFY` instead of Redis.** Workable, but coalescing
-  is harder (every NOTIFY is delivered) and it couples notification
-  semantics to whichever DB session is open. Redis lists are a more natural
-  fit for "drain whatever's accumulated since I last looked."
-- **Pure polling (no Redis at all).** Simpler, but each worker would have
-  to poll the DB at a rate fast enough to feel responsive. This is likely the
-  simplest operational model if the query is scoped by camera/status and backed
-  by an appropriate index.
+## Processes and ownership
 
-If the supervisor/worker architecture ever needs to go away entirely, the natural
-endpoint is a Celery task on subframe-completion that does the
-`check_stack_complete` decision inline, plus a separate periodic Celery beat
-task for timeout/fallback discovery. That is a larger refactor and explicitly
-out of scope for the initial smart-stacking PR.
+| Runtime component | Entry point | Responsibility |
+|-------------------|-------------|----------------|
+| `banzai-subframe-listener` | `banzai.main:run_subframe_worker` | Consume and validate RabbitMQ messages; dispatch Celery tasks. Despite the CLI name, this is the listener process. |
+| `banzai-subframe-worker` | Celery worker consuming `SUBFRAME_TASK_QUEUE_NAME` | Reduce the FITS file, upsert the reduced row, and send a notification. |
+| `banzai-stacking-supervisor` | `banzai.stacking:run_supervisor` | Discover cameras at startup, start one child per camera, and restart children that exit. |
+| `stacking-worker-{camera}` | `banzai.stacking:run_worker_loop` | Coalesce notifications, query stack state, mark complete groups, and run retention cleanup. |
 
----
+Camera discovery uses `dbs.get_instruments_at_site(site_id, db_address)` once
+when the supervisor starts. Adding a camera to the database does not create a
+worker until the supervisor restarts.
 
-## 5. Data model: `subframes`
+Each camera loop is a separate process, so an unhandled process failure is
+isolated and the supervisor can restart that worker. Exceptions raised inside
+a normal worker tick are logged by the loop, followed by another attempt after
+the polling interval.
 
-Defined in `banzai/dbs.py` as `Subframe`. Unique constraint on
-`(moluid, stack_num)`.
+## State and messaging
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| `moluid` | str | Stack group identifier (FITS `MOLUID`). |
-| `stack_num` | int | Position in stack (FITS `MOLFRNUM`). |
-| `frmtotal` | int | Expected subframe count (FITS `FRMTOTAL`). |
-| `camera` | str | Camera identifier (FITS `INSTRUME`). |
-| `filepath` | str | Path to the reduced subframe. |
-| `is_last` | bool | Instrument signalled the final subframe of the sequence. |
-| `status` | str | `'active'`, `'complete'`, or `'timeout'`. |
-| `dateobs` | datetime | Observation timestamp (FITS `DATE-OBS`). |
-| `created_at` | datetime | Row creation time. |
-| `completed_at` | datetime / NULL | Set when `status` transitions to `'complete'` or `'timeout'`. |
+The subsystem uses four storage or transport roles:
 
-A stack is **complete** when `len(subframes) == frmtotal` OR `any(is_last)` —
-see `stacking.check_stack_complete`. New rows are only inserted after
-reduction succeeds.
+| System | Role | Authoritative? |
+|--------|------|----------------|
+| RabbitMQ | Carries incoming subframe messages to the listener. | No |
+| Redis as the Celery broker (`TASK_HOST`) | Carries `process_subframe` tasks to Celery workers. | No |
+| Redis notification lists (`REDIS_URL`) | Prompts a camera worker to re-query a `MOLUID`. | No |
+| PostgreSQL `subframes` table | Stores reduced inputs and stack status. | **Yes** |
 
----
+The two Redis roles normally point at the same Redis deployment, but they are
+logically separate: Celery owns its task data, while smart stacking owns keys
+named `stack:notify:{camera}`.
 
-## 6. Code map
+### Why notifications instead of stack state in Redis?
 
-| File | Contains |
-|------|----------|
-| `banzai/main.py` | `SubframeListener`, `run_subframe_worker` entry point. |
-| `banzai/scheduling.py` | `process_subframe` Celery task. |
-| `banzai/stacking.py` | `validate_message`, `check_stack_complete`, `drain_notifications`, `run_worker_loop`, `StackingSupervisor`, `run_supervisor`. |
-| `banzai/dbs.py` | `Subframe` model, `insert_subframe`, `get_subframes`, `mark_stack_complete`, `cleanup_old_subframes`. |
-| `banzai/settings.py` | `SUBFRAME_TASK_QUEUE_NAME`, `STACK_QUEUE_NAME`, `REDIS_URL`, `RABBITMQ_URL`. |
-| `docker-compose-site.yml` | `banzai-subframe-listener`, `banzai-subframe-worker`, `banzai-stacking-supervisor` services. |
-| `pyproject.toml` | `banzai_subframe_worker`, `banzai_stacking_supervisor` console entry points. |
-| `banzai/tests/test_smart_stacking.py` | Coverage for DB operations, status transitions, notifications, completion logic, listener dispatch, and supervisor spawning. |
+Reduction tasks may finish concurrently and in a different order from the raw
+frames. Keeping the durable state in PostgreSQL gives every completion check a
+single current view. Redis can then carry only a lightweight change signal
+rather than a second copy of stack state.
+
+The per-camera process also serializes completion decisions for that camera in
+the normal case, without requiring a lock per `MOLUID`.
+
+## Database model
+
+`Subframe` is a site-only SQLAlchemy model in
+[`banzai/dbs.py`](../banzai/dbs.py).
+
+| Column | Meaning |
+|--------|---------|
+| `moluid` | Stack group identifier from `MOLUID`. |
+| `stack_num` | Position in the stack from `MOLFRNUM`. |
+| `frmtotal` | Expected group size from `FRMTOTAL`. |
+| `camera` | Camera identifier from `INSTRUME`. |
+| `filepath` | Path to the reduced `e09` subframe; it is non-nullable. |
+| `is_last` | Copy of the queue message's `last_frame` flag. |
+| `status` | Expected values are `active`, `complete`, and `timeout`. |
+| `dateobs` | Observation time from `DATE-OBS`, when available. |
+| `created_at` | Time the row was inserted or reset by an upsert. |
+| `completed_at` | Time the group was marked terminal. |
+
+Current transitions are:
+
+```mermaid
+stateDiagram-v2
+    [*] --> active: reduced row upserted
+    active --> complete: completion rule passes
+    complete --> active: same subframe is reprocessed
+    timeout --> active: same subframe is reprocessed
+```
+
+The model and database helper support `timeout`, but no production worker path
+currently sets it.
+
+Retention cleanup deletes rows whose status is not `active` and whose
+`completed_at` is older than `STACK_RETENTION_DAYS` (30 days by default).
+Active rows are retained indefinitely.
+
+## Current limitations and failure behavior
+
+These details are important when debugging or extending the subsystem:
+
+- **No `e45` stack product is generated.** Completion currently means a
+  database transition only; only the individual `e09` inputs exist.
+- **No timeout finalization runs.** `STACK_TIMEOUT_MINUTES` remains in
+  `site-banzai-env.default`, but the current Python code does not read it.
+- **There is no fallback database sweep.** An active stack is reconsidered only
+  after a Redis notification for its `MOLUID`. If notification is disabled,
+  lost, or missed, the stack remains active until another notification arrives.
+- **Redis draining has a crash window.** `drain_notifications` uses
+  `RENAME`, `LRANGE`, and `DEL` so notifications pushed during a drain stay on
+  the live key. A worker crash after the rename can leave or lose work from the
+  temporary `:draining` key; PostgreSQL remains correct, but there is currently
+  no sweep to rediscover that active stack.
+- **Cleanup is repeated per camera.** Every camera worker calls the same
+  database-wide terminal-row cleanup each tick. This is correct but redundant.
+- **Camera discovery is startup-only.** Restart the supervisor after adding or
+  removing site instruments.
+- **Terminal states are not protected from repeat work.** The normal upsert
+  path intentionally resets a duplicate subframe to `active`.
+
+These are descriptions of current behavior, not guarantees the eventual
+product-generating design should preserve.
+
+## Deployment configuration
+
+The site deployment is defined in
+[`docker-compose-site.yml`](../docker-compose-site.yml). The most relevant
+settings are:
+
+| Setting | Used for |
+|---------|----------|
+| `RABBITMQ_URL` | Passed to the listener as `--broker-url`. |
+| `STACK_QUEUE_NAME` | RabbitMQ queue consumed by `SubframeListener`. |
+| `TASK_HOST` | Celery broker URL; the compose file sets it from `REDIS_URL`. |
+| `SUBFRAME_TASK_QUEUE_NAME` | Celery queue consumed by the subframe worker. |
+| `REDIS_URL` | Smart-stacking notification Redis URL. |
+| `DB_ADDRESS` | Site database containing `subframes` and instruments. |
+| `SITE_ID` | Site whose cameras the supervisor discovers. |
+| `STACK_RETENTION_DAYS` | Age after which terminal rows are deleted. |
+
+See [`site-banzai-env.default`](../site-banzai-env.default) for the annotated
+site environment template.
+
+## Code map
+
+Start with these files:
+
+| File | What to read |
+|------|--------------|
+| [`banzai/main.py`](../banzai/main.py) | `decode_subframe_message`, `SubframeListener`, and `run_subframe_worker`. |
+| [`banzai/scheduling.py`](../banzai/scheduling.py) | The Celery `process_subframe` reduction task. |
+| [`banzai/stacking.py`](../banzai/stacking.py) | Notification helpers, completion predicate, worker loop, placeholder finalization, and supervisor. |
+| [`banzai/dbs.py`](../banzai/dbs.py) | `Subframe` plus its insert, query, status, and cleanup helpers. |
+| [`banzai/tests/test_smart_stacking.py`](../banzai/tests/test_smart_stacking.py) | Executable examples of the current unit-level behavior. |
+| [`banzai/tests/site_e2e/test_site_e2e.py`](../banzai/tests/site_e2e/test_site_e2e.py) | Site test proving message -> reduction -> DB completion. It does not assert a combined stack product. |
+
+Useful commands:
+
+```bash
+uv run pytest banzai/tests/test_smart_stacking.py -v
+uv run pytest -m smart_stacking
+```
