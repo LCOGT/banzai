@@ -67,7 +67,7 @@ flowchart LR
 | **`MOLFRNUM`** | A subframe's position within the stack. |
 | **`FRMTOTAL`** | Expected number of subframes in the stack. |
 | **`last_frame`** | Queue-message flag saying the producer considers this the final subframe. It is stored as `is_last`. |
-| **Notification** | A Redis list entry containing only a `MOLUID`; it is a prompt to query PostgreSQL. |
+| **Notification** | A member of a per-camera Redis sorted set containing a `MOLUID`; it is a prompt to query PostgreSQL. |
 | **Finalization** | Currently, marking all rows for a `MOLUID` terminal in the database. It does not yet produce a stacked image. |
 
 ### File types and reduction levels
@@ -113,11 +113,18 @@ The Celery `process_subframe` task:
 2. Runs the normal BANZAI reduction pipeline.
 3. Computes the reduced `e09` output path.
 4. Upserts a `subframes` row.
-5. Pushes the row's `MOLUID` to the Redis notification list for its camera.
+5. Adds the row's `MOLUID` to the Redis notification sorted set for its camera.
 
 The database write happens only after reduction returns an output image, and
 the notification happens only after the database write. A stacking worker
-therefore treats every notified row as a reduced `e09` input ready to inspect.
+therefore treats every notified group as having reduced `e09` input ready to
+inspect.
+
+Notification insertion uses an atomic Redis script. If the `MOLUID` is not
+already pending, the script increments `stack:notify:{camera}:sequence` and
+uses that sequence as the member's score. If the `MOLUID` is already pending,
+the script leaves its original score unchanged. Duplicate notifications are
+therefore coalesced without moving an older group behind newer work.
 
 The unique key is `(moluid, stack_num)`. Reprocessing the same subframe updates
 that row and resets it to `active`, which makes queue retries idempotent at the
@@ -127,32 +134,39 @@ database level.
 
 `StackingSupervisor` starts one OS process per camera. Each process repeatedly:
 
-1. Drains its camera's Redis notification list.
-2. Deduplicates the resulting `MOLUID` values.
-3. Loads all rows for each `MOLUID` from PostgreSQL.
-4. Checks the completion rule.
-5. Marks complete groups as `complete`.
-6. Deletes old terminal rows according to the retention setting.
-7. Sleeps for the polling interval.
+1. Removes the oldest pending `MOLUID` with `ZPOPMIN`.
+2. Loads all rows for that `MOLUID` from PostgreSQL.
+3. Skips the notification if every row is already terminal.
+4. Checks the completion rule when at least one row is active.
+5. Marks a complete group as `complete`.
+6. Repeats from step 1 until the sorted set is empty.
+7. Deletes old terminal rows according to the retention setting.
+8. Sleeps for the polling interval.
 
 The worker does not build stack state from Redis messages. Ten notifications
-for the same `MOLUID` during one polling interval become one database query.
+for the same pending `MOLUID` become one sorted-set member and one database
+query. Multiple `MOLUID`s may be active for one camera. None exclusively owns
+the worker: an incomplete group waits for another notification while older
+pending work for other groups continues in FIFO order.
 
 ```mermaid
 flowchart TD
     tick["Worker tick"]
-    drain["Drain and deduplicate<br/>camera notifications"]
-    notified{"Any MOLUIDs?"}
+    pop["ZPOPMIN oldest<br/>camera notification"]
+    notified{"MOLUID returned?"}
     load["Load all subframes<br/>for one MOLUID"]
+    active{"Any active rows?"}
     complete{"Completion rule true?"}
     mark["Mark every row complete"]
     cleanup["Delete old terminal rows"]
     sleep["Sleep"]
 
-    tick --> drain --> notified
-    notified -->|"yes"| load --> complete
-    complete -->|"yes"| mark --> cleanup
-    complete -->|"no"| cleanup
+    tick --> pop --> notified
+    notified -->|"yes"| load --> active
+    active -->|"yes"| complete
+    active -->|"no"| pop
+    complete -->|"yes"| mark --> pop
+    complete -->|"no"| pop
     notified -->|"no"| cleanup
     cleanup --> sleep --> tick
 ```
@@ -194,7 +208,7 @@ one or more raw e00 subframes
 | `banzai-subframe-listener` | `banzai.main:run_subframe_worker` | Consume and validate RabbitMQ messages; dispatch Celery tasks. Despite the CLI name, this is the listener process. |
 | `banzai-subframe-worker` | Celery worker consuming `SUBFRAME_TASK_QUEUE_NAME` | Reduce the FITS file, upsert the reduced row, and send a notification. |
 | `banzai-stacking-supervisor` | `banzai.stacking:run_supervisor` | Discover cameras at startup, start one child per camera, and restart children that exit. |
-| `stacking-worker-{camera}` | `banzai.stacking:run_worker_loop` | Coalesce notifications, query stack state, mark complete groups, and run retention cleanup. |
+| `stacking-worker-{camera}` | `banzai.stacking:run_worker_loop` | Process unique notifications in FIFO order, query stack state, mark complete groups, and run retention cleanup. |
 
 Camera discovery uses `dbs.get_instruments_at_site(site_id, db_address)` once
 when the supervisor starts. Adding a camera to the database does not create a
@@ -213,12 +227,13 @@ The subsystem uses four storage or transport roles:
 |--------|------|----------------|
 | RabbitMQ | Carries incoming subframe messages to the listener. | No |
 | Redis as the Celery broker (`TASK_HOST`) | Carries `process_subframe` tasks to Celery workers. | No |
-| Redis notification lists (`REDIS_URL`) | Prompts a camera worker to re-query a `MOLUID`. | No |
+| Redis notification sorted sets (`REDIS_URL`) | Orders unique prompts for a camera worker to re-query a `MOLUID`. | No |
 | PostgreSQL `subframes` table | Stores reduced inputs and stack status. | **Yes** |
 
 The two Redis roles normally point at the same Redis deployment, but they are
 logically separate: Celery owns its task data, while smart stacking owns keys
-named `stack:notify:{camera}`.
+named `stack:notify:{camera}` and sequence counters named
+`stack:notify:{camera}:sequence`.
 
 ### Why notifications instead of stack state in Redis?
 
@@ -228,7 +243,11 @@ single current view. Redis can then carry only a lightweight change signal
 rather than a second copy of stack state.
 
 The per-camera process also serializes completion decisions for that camera in
-the normal case, without requiring a lock per `MOLUID`.
+the normal case, without requiring a lock per `MOLUID`. Redis sequence scores
+preserve notification arrival order across concurrent reduction workers. Once
+`ZPOPMIN` removes a member, a later notification may add the same `MOLUID`
+again with a new score; the next database query will see the latest group
+state.
 
 ## Database model
 
@@ -276,11 +295,11 @@ These details are important when debugging or extending the subsystem:
 - **There is no fallback database sweep.** An active stack is reconsidered only
   after a Redis notification for its `MOLUID`. If notification is disabled,
   lost, or missed, the stack remains active until another notification arrives.
-- **Redis draining has a crash window.** `drain_notifications` uses
-  `RENAME`, `LRANGE`, and `DEL` so notifications pushed during a drain stay on
-  the live key. A worker crash after the rename can leave or lose work from the
-  temporary `:draining` key; PostgreSQL remains correct, but there is currently
-  no sweep to rediscover that active stack.
+- **The in-flight notification has a crash window.** `ZPOPMIN` removes one
+  `MOLUID` before its database work begins. A worker crash can lose that one
+  notification, but all other members remain ordered in the sorted set.
+  PostgreSQL remains correct, but there is currently no sweep to rediscover an
+  active stack whose final notification was lost.
 - **Cleanup is repeated per camera.** Every camera worker calls the same
   database-wide terminal-row cleanup each tick. This is correct but redundant.
 - **Camera discovery is startup-only.** Restart the supervisor after adding or
@@ -310,6 +329,13 @@ settings are:
 
 See [`site-banzai-env.default`](../site-banzai-env.default) for the annotated
 site environment template.
+
+Changing `stack:notify:{camera}` from a Redis list to a sorted set requires a
+coordinated deployment of notification producers and stacking workers. Stop
+both sides and delete only the `stack:notify:*` keys, including any legacy
+`:draining` keys, before restarting them. Do not flush the shared Redis
+database: it also carries Celery broker state. Pending smart-stacking
+notifications removed during this rollout are not reseeded.
 
 ## Code map
 

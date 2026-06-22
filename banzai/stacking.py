@@ -41,25 +41,44 @@ def check_stack_complete(subframes, frmtotal):
 # ---------------------------------------------------------------------------
 
 REDIS_KEY_PREFIX = 'stack:notify:'
+ENQUEUE_NOTIFICATION_SCRIPT = """
+local existing_score = redis.call('ZSCORE', KEYS[1], ARGV[1])
+if existing_score then
+    return 0
+end
+
+local sequence = redis.call('INCR', KEYS[2])
+redis.call('ZADD', KEYS[1], sequence, ARGV[1])
+return 1
+"""
+
+
+def _notification_key(camera):
+    return f'{REDIS_KEY_PREFIX}{camera}'
+
+
+def _notification_sequence_key(camera):
+    return f'{_notification_key(camera)}:sequence'
 
 
 def push_notification(redis_client, camera, moluid):
-    """Push a moluid notification onto the Redis list for a camera."""
-    redis_client.lpush(f'{REDIS_KEY_PREFIX}{camera}', moluid)
+    """Add a moluid to a camera's FIFO notification set unless it is already pending."""
+    return redis_client.eval(
+        ENQUEUE_NOTIFICATION_SCRIPT,
+        2,
+        _notification_key(camera),
+        _notification_sequence_key(camera),
+        moluid,
+    )
 
 
-def drain_notifications(redis_client, camera):
-    """Drain and return a deduplicated set of moluids from the Redis list for a camera."""
-    key = f'{REDIS_KEY_PREFIX}{camera}'
-    drain_key = f'{key}:draining'
-    # Atomic rename so notifications pushed between read and delete aren't lost
-    try:
-        redis_client.rename(key, drain_key)
-    except redis_lib.exceptions.ResponseError:
-        return set()
-    raw = redis_client.lrange(drain_key, 0, -1)
-    redis_client.delete(drain_key)
-    return {item.decode() if isinstance(item, bytes) else item for item in raw}
+def pop_notification(redis_client, camera):
+    """Pop and return the oldest pending moluid for a camera."""
+    pending = redis_client.zpopmin(_notification_key(camera), count=1)
+    if not pending:
+        return None
+    moluid = pending[0][0]
+    return moluid.decode() if isinstance(moluid, bytes) else moluid
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +86,7 @@ def drain_notifications(redis_client, camera):
 # ---------------------------------------------------------------------------
 
 def run_worker_loop(camera, db_address, redis_url, retention_days=30, poll_interval=5):
-    """Main loop: drain notifications, query DB, check completion, finalize."""
+    """Main loop: process notifications, query DB, check completion, finalize."""
     redis_client = redis_lib.Redis.from_url(redis_url)
     while True:
         try:
@@ -80,11 +99,15 @@ def run_worker_loop(camera, db_address, redis_url, retention_days=30, poll_inter
 
 
 def process_notifications(db_address, redis_client, camera):
-    """Drain, deduplicate, and process latest state for each moluid."""
-    moluids = drain_notifications(redis_client, camera)
-    for moluid in moluids:
+    """Process pending moluids one at a time in notification order."""
+    while True:
+        moluid = pop_notification(redis_client, camera)
+        if moluid is None:
+            return
         subframes = dbs.get_subframes(db_address, moluid)
         if not subframes:
+            continue
+        if not any(subframe.status == 'active' for subframe in subframes):
             continue
         frmtotal = subframes[0].frmtotal
         if check_stack_complete(subframes, frmtotal):

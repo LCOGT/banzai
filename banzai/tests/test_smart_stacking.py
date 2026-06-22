@@ -12,7 +12,7 @@ from sqlalchemy import text
 from banzai import dbs
 from banzai.dbs import insert_subframe, get_subframes, mark_stack_complete, cleanup_old_subframes
 from banzai.stacking import (validate_message, check_stack_complete,
-                              push_notification, drain_notifications, REDIS_KEY_PREFIX,
+                              push_notification, pop_notification, REDIS_KEY_PREFIX,
                               process_notifications, finalize_stack, run_worker_loop,
                               StackingSupervisor)
 from banzai.scheduling import process_subframe
@@ -41,10 +41,36 @@ def db_address(tmp_path):
 def mock_redis():
     """Return a MagicMock standing in for a Redis client."""
     r = MagicMock()
-    r.lpush = MagicMock()
-    r.lrange = MagicMock(return_value=[])
-    r.delete = MagicMock()
+    r.eval = MagicMock(return_value=1)
+    r.zpopmin = MagicMock(return_value=[])
     return r
+
+
+class FakeNotificationRedis:
+    """Small Redis sorted-set test double for notification ordering tests."""
+
+    def __init__(self):
+        self.sequences = {}
+        self.pending = {}
+
+    def eval(self, script, numkeys, pending_key, sequence_key, moluid):
+        assert numkeys == 2
+        pending = self.pending.setdefault(pending_key, {})
+        if moluid in pending:
+            return 0
+        sequence = self.sequences.get(sequence_key, 0) + 1
+        self.sequences[sequence_key] = sequence
+        pending[moluid] = sequence
+        return 1
+
+    def zpopmin(self, key, count=1):
+        assert count == 1
+        pending = self.pending.setdefault(key, {})
+        if not pending:
+            return []
+        moluid = min(pending, key=pending.get)
+        score = pending.pop(moluid)
+        return [(moluid.encode(), score)]
 
 
 # ---------------------------------------------------------------------------
@@ -145,16 +171,123 @@ class TestRedisNotifications:
 
     def test_push_notification(self, mock_redis):
         push_notification(mock_redis, 'cam1', 'mol-abc')
-        mock_redis.lpush.assert_called_once_with(f'{REDIS_KEY_PREFIX}cam1', 'mol-abc')
+        args = mock_redis.eval.call_args.args
+        assert args[1:] == (
+            2,
+            f'{REDIS_KEY_PREFIX}cam1',
+            f'{REDIS_KEY_PREFIX}cam1:sequence',
+            'mol-abc',
+        )
+        assert "redis.call('ZSCORE'" in args[0]
+        assert "redis.call('INCR'" in args[0]
+        assert "redis.call('ZADD'" in args[0]
 
-    def test_drain_notifications_for_camera(self, mock_redis):
-        mock_redis.lrange.return_value = [b'mol-a', b'mol-a', b'mol-b']
-        result = drain_notifications(mock_redis, 'cam1')
-        assert result == {'mol-a', 'mol-b'}
-        mock_redis.rename.assert_called_once_with(
-            f'{REDIS_KEY_PREFIX}cam1', f'{REDIS_KEY_PREFIX}cam1:draining')
-        mock_redis.lrange.assert_called_once_with(f'{REDIS_KEY_PREFIX}cam1:draining', 0, -1)
-        mock_redis.delete.assert_called_once_with(f'{REDIS_KEY_PREFIX}cam1:draining')
+    def test_notifications_are_unique_and_fifo(self):
+        redis_client = FakeNotificationRedis()
+        key = f'{REDIS_KEY_PREFIX}cam1'
+
+        assert push_notification(redis_client, 'cam1', 'mol-a') == 1
+        assert push_notification(redis_client, 'cam1', 'mol-b') == 1
+        assert push_notification(redis_client, 'cam1', 'mol-a') == 0
+        assert redis_client.pending[key] == {'mol-a': 1, 'mol-b': 2}
+
+        assert pop_notification(redis_client, 'cam1') == 'mol-a'
+        assert pop_notification(redis_client, 'cam1') == 'mol-b'
+        assert pop_notification(redis_client, 'cam1') is None
+
+    def test_notification_requeued_after_pop_gets_new_sequence(self):
+        redis_client = FakeNotificationRedis()
+        key = f'{REDIS_KEY_PREFIX}cam1'
+
+        push_notification(redis_client, 'cam1', 'mol-a')
+        push_notification(redis_client, 'cam1', 'mol-b')
+        assert pop_notification(redis_client, 'cam1') == 'mol-a'
+        push_notification(redis_client, 'cam1', 'mol-a')
+
+        assert redis_client.pending[key] == {'mol-b': 2, 'mol-a': 3}
+        assert pop_notification(redis_client, 'cam1') == 'mol-b'
+        assert pop_notification(redis_client, 'cam1') == 'mol-a'
+
+    def test_pop_notification_handles_string_member(self, mock_redis):
+        mock_redis.zpopmin.return_value = [('mol-a', 1)]
+        assert pop_notification(mock_redis, 'cam1') == 'mol-a'
+
+
+class TestProcessNotifications:
+
+    @staticmethod
+    def _insert_stack(db_address, moluid, frmtotal, count, complete=False):
+        dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
+        for stack_num in range(1, count + 1):
+            insert_subframe(
+                db_address, moluid=moluid, stack_num=stack_num, frmtotal=frmtotal,
+                camera='cam1', filepath=f'/data/{moluid}-{stack_num}.fits',
+                is_last=(complete and stack_num == count), dateobs=dateobs,
+            )
+
+    def test_processes_each_moluid_before_popping_next(self, db_address, mock_redis):
+        self._insert_stack(db_address, 'mol-a', frmtotal=1, count=1, complete=True)
+        self._insert_stack(db_address, 'mol-b', frmtotal=1, count=1, complete=True)
+        events = []
+        notifications = iter([[(b'mol-a', 1)], [(b'mol-b', 2)], []])
+
+        def pop_next(*args, **kwargs):
+            value = next(notifications)
+            events.append(f'pop-{value[0][0].decode()}' if value else 'pop-empty')
+            return value
+
+        def finalize(db_address, moluid, status):
+            events.append(f'finalize-{moluid}')
+
+        mock_redis.zpopmin.side_effect = pop_next
+        with patch('banzai.stacking.finalize_stack', side_effect=finalize):
+            process_notifications(db_address, mock_redis, 'cam1')
+
+        assert events == ['pop-mol-a', 'finalize-mol-a', 'pop-mol-b', 'finalize-mol-b', 'pop-empty']
+
+    def test_processes_b_while_a_waits_for_more_frames(self, db_address, mock_redis):
+        self._insert_stack(db_address, 'mol-a', frmtotal=2, count=1)
+        self._insert_stack(db_address, 'mol-b', frmtotal=1, count=1, complete=True)
+        mock_redis.zpopmin.side_effect = [[(b'mol-a', 1)], [(b'mol-b', 2)], []]
+
+        with patch('banzai.stacking.finalize_stack') as mock_finalize:
+            process_notifications(db_address, mock_redis, 'cam1')
+
+        mock_finalize.assert_called_once_with(db_address, 'mol-b', status='complete')
+
+    def test_terminal_notification_is_noop(self, db_address, mock_redis):
+        self._insert_stack(db_address, 'mol-a', frmtotal=1, count=1, complete=True)
+        mark_stack_complete(db_address, 'mol-a')
+        mock_redis.zpopmin.side_effect = [[(b'mol-a', 1)], []]
+
+        with patch('banzai.stacking.finalize_stack') as mock_finalize:
+            process_notifications(db_address, mock_redis, 'cam1')
+
+        mock_finalize.assert_not_called()
+
+    def test_mixed_terminal_and_active_rows_are_reevaluated(self, db_address, mock_redis):
+        self._insert_stack(db_address, 'mol-a', frmtotal=2, count=2, complete=True)
+        mark_stack_complete(db_address, 'mol-a')
+        insert_subframe(
+            db_address, moluid='mol-a', stack_num=1, frmtotal=2, camera='cam1',
+            filepath='/data/mol-a-1-reprocessed.fits', is_last=False,
+            dateobs=datetime.datetime(2024, 6, 15, 13, 0, 0),
+        )
+        mock_redis.zpopmin.side_effect = [[(b'mol-a', 1)], []]
+
+        with patch('banzai.stacking.finalize_stack') as mock_finalize:
+            process_notifications(db_address, mock_redis, 'cam1')
+
+        mock_finalize.assert_called_once_with(db_address, 'mol-a', status='complete')
+
+    def test_failure_does_not_pop_next_notification(self, db_address, mock_redis):
+        mock_redis.zpopmin.side_effect = [[(b'mol-a', 1)], [(b'mol-b', 2)]]
+
+        with patch('banzai.stacking.dbs.get_subframes', side_effect=RuntimeError('boom')):
+            with pytest.raises(RuntimeError, match='boom'):
+                process_notifications(db_address, mock_redis, 'cam1')
+
+        assert mock_redis.zpopmin.call_count == 1
 
 
 # ---------------------------------------------------------------------------
@@ -430,7 +563,7 @@ class TestProcessSubframe:
         assert subframes[0].camera == 'cam1'
         assert subframes[0].is_last is expected_is_last
         assert subframes[0].filepath == '/data/processed/frame-e09.fits'
-        mock_redis.lpush.assert_called_once()
+        mock_redis.eval.assert_called_once()
 
     @patch('banzai.scheduling.insert_subframe')
     @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
@@ -457,7 +590,7 @@ class TestProcessSubframe:
 
         mock_insert.assert_called_once()
         assert mock_insert.call_args.kwargs['filepath'] == '/data/processed/frame-e09.fits'
-        mock_redis.lpush.assert_called_once()
+        mock_redis.eval.assert_called_once()
 
     @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
     def test_process_subframe_does_not_insert_or_notify_without_reduced_image(self, mock_run_stages, db_address,
@@ -476,7 +609,7 @@ class TestProcessSubframe:
             process_subframe(body, runtime_context)
 
         assert get_subframes(db_address, 'mol-xyz') == []
-        mock_redis.lpush.assert_not_called()
+        mock_redis.eval.assert_not_called()
 
     def test_process_subframe_retries_on_unreadable_header(self, db_address):
         """If get_primary_header returns None (I/O error), the task must retry, not swallow the failure."""
