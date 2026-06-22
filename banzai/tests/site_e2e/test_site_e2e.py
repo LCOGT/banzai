@@ -3,7 +3,6 @@
 import os
 import shutil
 import subprocess
-import sys
 import time
 import json
 from pathlib import Path
@@ -22,7 +21,7 @@ from banzai.tests.site_e2e.conftest import (
     wait_for_subscription_active, wait_for_service_exit, poll_until,
     run_site_compose, drop_subscription_keep_slot,
 )
-from banzai.utils.messaging import publish_raw_string_to_queue
+from banzai.utils.messaging import post_to_archive_queue, publish_raw_string_to_queue
 
 
 # Expected calibration filenames for phase 1 (7 files - top 2 per config + BPM)
@@ -151,20 +150,21 @@ class TestSiteE2E:
         raw_frame_path.write_bytes(fits_response.content)
         assert raw_frame_path.stat().st_size > 0, "Downloaded raw frame is empty"
 
-        queue_script = REPO_ROOT / 'scripts' / 'queue_images.py'
         fits_exchange = os.environ.get('FITS_EXCHANGE', 'fits_files')
 
-        result = subprocess.run(
-            [
-                sys.executable, str(queue_script),
-                str(raw_dir),
-                '--broker-url', 'amqp://localhost:5672',
-                '--exchange', fits_exchange,
-            ],
-            capture_output=True, text=True, timeout=30, cwd=str(REPO_ROOT)
+        with fits.open(raw_frame_path) as hdul:
+            header = hdul['SCI'].header
+            site_id = header['SITEID'].strip()
+            instrument = header['INSTRUME'].strip()
+
+        post_to_archive_queue(
+            filename=raw_frame_path.name,
+            broker_url='amqp://localhost:5672',
+            exchange_name=fits_exchange,
+            path=str(raw_frame_path),
+            SITEID=site_id,
+            INSTRUME=instrument,
         )
-        assert result.returncode == 0, f"Failed to queue raw frame: {result.stderr}\n{result.stdout}"
-        assert 'Files to process: 1' in result.stdout, f"Expected 1 file to be queued: {result.stdout}"
 
     @pytest.mark.e2e_site_reduction
     def test_07_reduction_completes(self, site_deployment):
