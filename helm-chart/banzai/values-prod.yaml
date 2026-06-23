@@ -32,7 +32,7 @@ ingester:
 banzai:
   astrometryServiceUrl: http://gaia-astrometry-net-service/catalog
   configdbUrl: http://configdb3/sites/
-  observationPortalUrl: http://observation-portal-internal.prod.svc/api/observations/
+  observationPortalUrl: http://internal-api.prod-obs-portal.svc/api/observations/
   useDifferentArchiveSources: false
   calibrateProposalId: calibrate
   banzaiWorkerLogLevel: info
