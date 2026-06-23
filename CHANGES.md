@@ -1,7 +1,12 @@
 Versions
 ========
 
-1.36.2 (2026-06-02)
+1.36.3 (2026-06-23)
+-------------------
+
+- Remove related frames from basename query in requeing to reduce load on archive
+
+1.36.2 (2026-06-23)
 -------------------
 
 - Bump ingester to use tagged version instead of branch

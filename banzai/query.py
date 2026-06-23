@@ -130,6 +130,6 @@ def cross_match_missing_frames(raw_frames, reduced_frames):
         raw_frames_that_have_been_reduced += reduced_frame['related_frames']
     missing_raw_frames = []
     for raw_frame in raw_frames:
-        if raw_frame['basename'] not in raw_frames_that_have_been_reduced:
+        if raw_frame['id'] not in raw_frames_that_have_been_reduced:
             missing_raw_frames.append(raw_frame)
     return missing_raw_frames
