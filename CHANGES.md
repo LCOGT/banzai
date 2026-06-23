@@ -5,6 +5,7 @@ Versions
 -------------------
 
 - Remove related frames from basename query in requeing to reduce load on archive
+- Updated to new internal archive url
 
 1.36.2 (2026-06-23)
 -------------------
