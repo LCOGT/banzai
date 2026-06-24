@@ -9,7 +9,14 @@ Versions
 - Separated Redis and RabbitMQ into reusable site deployment dependencies.
 - Improved calibration-cache reliability and site end-to-end testing.
 
-1.36.2 (2026-06-02)
+1.36.3 (2026-06-23)
+-------------------
+
+- Remove related frames from basename query in requeing to reduce load on archive
+- Updated to new internal archive url
+- Fix to search for id in related frames when requeuing
+
+1.36.2 (2026-06-23)
 -------------------
 
 - Bump ingester to use tagged version instead of branch
