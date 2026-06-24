@@ -1,0 +1,16 @@
+name: banzai-deps
+services:
+  redis:
+    image: redis:7
+    container_name: banzai-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: banzai-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: unless-stopped

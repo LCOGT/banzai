@@ -131,10 +131,21 @@ See the `docker-compose-local.yml` file for details on this setup.
 Running Locally
 ---------------
 
-To run BANZAI as a local pipeline, use `docker-compose-local.yml`. This is the recommended setup
+To run BANZAI as a local pipeline, use ``docker-compose-local.yml``. This is the recommended setup
 for development and for processing data independently of LCO's site infrastructure.
 
-1. Copy `local-banzai-env.default` to `local-banzai-env` and set your `AUTH_TOKEN` and `DB_ADDRESS`.
+Redis and RabbitMQ are managed separately via ``docker-compose-dependencies.yml`` so they can be
+left running across pipeline restarts. Start them first:
+
+.. code-block:: bash
+
+    docker compose -f docker-compose-dependencies.yml up -d
+
+Pipeline containers connect via the ``REDIS_URL`` and ``RABBITMQ_URL`` environment variables
+(defaulting to ``host.docker.internal``). Site deployments can point these at existing
+infrastructure instead.
+
+1. Copy ``local-banzai-env.default`` to ``local-banzai-env`` and set your ``AUTH_TOKEN`` and ``DB_ADDRESS``.
 
 2. Start the containers:
 
@@ -142,23 +153,23 @@ for development and for processing data independently of LCO's site infrastructu
 
     docker compose -f docker-compose-local.yml --env-file local-banzai-env up -d --build
 
-3. Queue images for processing. Raw files must be in `$HOST_RAW_DIR`:
+3. Queue images for processing. Raw files must be in ``$HOST_RAW_DIR``:
 
 .. code-block:: bash
 
     uv run python scripts/queue_images.py $HOST_RAW_DIR
 
-Processed output will be saved in `$HOST_REDUCED_DIR`.
+Processed output will be saved in ``$HOST_REDUCED_DIR``.
 
 Tests
 -----
-Unit tests can be run using pytest. The end-to-end tests require more setup, so to run only the unit tests locally run:
+Unit tests can be run using pytest. End-to-end tests are skipped by default, so to run only the unit tests locally run:
 
 .. code-block:: bash
 
-    uv run pytest -m 'not e2e'
+    uv run pytest
 
-The `-m` is short for marker. The following markers are defined if you only want to run a subset of the tests:
+The default pytest options exclude the ``e2e`` and ``e2e_site`` markers. The following markers are defined if you only want to run a subset of the tests:
 
 * e2e: End-to-end tests. Skip these if you only want to run unit tests.
 * master_bias: Only test making a master bias
@@ -186,8 +197,13 @@ After all of the containers are up, run
 Site Deployment E2E Tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 The site E2E tests validate the full site deployment caching system, including PostgreSQL
-logical replication, calibration file caching, and frame reduction. These tests require
-Docker and an LCO archive API token.
+logical replication, calibration file caching, and frame reduction. These tests are
+opt-in and are excluded from default pytest runs by the ``e2e_site`` marker.
+
+They require Docker, Docker Compose, ``uv``, and an LCO archive API token. The
+recommended entrypoint starts the shared Redis/RabbitMQ dependencies, then runs pytest.
+Pytest currently starts and tears down the publication database and site deployment
+containers.
 
 To run the site E2E tests:
 
@@ -198,7 +214,15 @@ To run the site E2E tests:
     # Edit site_e2e.env and add your AUTH_TOKEN
 
     # Run the tests
-    pytest -m e2e_site banzai/tests/site_e2e/ -v -s
+    scripts/run_site_e2e.sh
+
+For advanced debugging, you can run pytest directly after starting Redis/RabbitMQ
+yourself:
+
+.. code-block:: bash
+
+    docker compose -f docker-compose-dependencies.yml up -d
+    uv run pytest -m e2e_site banzai/tests/site_e2e/test_site_e2e.py -v -s
 
 The following markers can be used to run subsets of the site E2E tests:
 

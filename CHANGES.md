@@ -1,6 +1,14 @@
 Versions
 ========
 
+1.37.0 (2026-06-24)
+-------------------
+
+- Added site-side smart-stacking routine for ingesting and reducing subframes
+  and tracking stack completion.
+- Separated Redis and RabbitMQ into reusable site deployment dependencies.
+- Improved calibration-cache reliability and site end-to-end testing.
+
 1.36.3 (2026-06-23)
 -------------------
 

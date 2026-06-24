@@ -1,6 +1,9 @@
 # Site Deployment E2E Tests
 
-End-to-end tests that verify the complete site deployment caching system works correctly.
+These are opt-in deployment tests for the site caching stack, not ordinary unit
+tests. They exercise a real Docker Compose site deployment, a simulated
+publication database, shared Redis/RabbitMQ dependencies, real archive downloads,
+and worker-driven reductions.
 
 ## What These Tests Verify
 
@@ -18,10 +21,42 @@ These tests validate the full system by:
 
 5. **Frame Reduction** - A raw science frame is processed using the cached calibrations.
 
+6. **Cache Drift Reconciliation** - The download worker restores local cache
+   filepaths when replicated database state drifts.
+
+7. **Subframe Stacking** - The site subframe queue and stacking supervisor can
+   process a subframe message end to end.
+
+8. **Replication Slot Reuse** - Cache initialization succeeds when a publisher
+   replication slot already exists.
+
+## What These Tests Touch
+
+- Docker containers for the publication database and site deployment stack.
+- Shared Redis/RabbitMQ containers from `docker-compose-dependencies.yml`.
+- The LCO archive API, using `AUTH_TOKEN`.
+- RabbitMQ queues and exchanges configured with the `e2e_` prefix.
+- Host data directories: `HOST_RAW_DIR`, `HOST_CALS_DIR`, and
+  `HOST_REDUCED_DIR`.
+- Docker volumes for PostgreSQL state.
+
+The checked-in wrapper starts Redis/RabbitMQ. Pytest fixtures currently start,
+populate, and tear down the publication database and site deployment containers.
+They also clean the configured host data directories and purge only guarded
+`e2e_` RabbitMQ queues.
+
+## When To Run Them
+
+Run these tests when changing cache replication, cache initialization, download
+worker behavior, site deployment environment wiring, `docker-compose-site.yml`,
+end-to-end reduction queue wiring, or subframe processing. They are usually not
+needed for ordinary unit-level stage changes.
+
 ## Prerequisites
 
-- Docker and Docker Compose installed
-- Access to the LCO archive API (requires an auth token)
+- Docker and Docker Compose installed.
+- `uv` installed.
+- Access to the LCO archive API with an auth token.
 
 ## Configuration
 
@@ -35,51 +70,105 @@ These tests validate the full system by:
    AUTH_TOKEN=your-lco-archive-api-token
    ```
 
-   All other values have working defaults. The token is required to download calibration and science frames from the archive.
+   Everything else has a working default, including the host data directories.
+   `HOST_RAW_DIR`, `HOST_CALS_DIR`, and `HOST_REDUCED_DIR` default to
+   `<repo>/data/{raw,calibrations,output}` (resolved to absolute paths in
+   `conftest.py`). Override only if you want fixture data on a different disk —
+   relative paths are rejected at collection time, because
+   `docker-compose-site.yml` mounts these as `${HOST_*_DIR}:${HOST_*_DIR}`
+   (same path inside and outside the container). (PostgreSQL data lives in
+   the `site-pgdata` Docker-managed named volume.)
 
 ## Running the Tests
 
 Run all site E2E tests:
 ```bash
-pytest banzai/tests/site_e2e/ -v -s
+scripts/run_site_e2e.sh
 ```
 
-The tests will automatically:
-- Start the publication database container
-- Populate it with test calibration metadata
-- Start the full site deployment (PostgreSQL, Redis, RabbitMQ, workers)
-- Run the test suite
-- Clean up all containers and data when finished
+The wrapper will:
+- Start shared Redis/RabbitMQ dependencies with
+  `docker compose -f docker-compose-dependencies.yml up -d`.
+- Run the full site E2E pytest suite.
+- Leave Redis/RabbitMQ running because they are shared developer dependencies.
+
+During pytest, the fixtures will:
+- Start the publication database container.
+- Populate it with test calibration metadata.
+- Start the site deployment stack: site PostgreSQL, cache init, workers,
+  listener, download worker, subframe worker, and stacking supervisor.
+- Clean up the pytest-managed containers, volumes, queues, and host data dirs
+  when finished.
+
+For advanced debugging, you can pass a full pytest argument list to the wrapper:
+```bash
+scripts/run_site_e2e.sh -m e2e_site_cache banzai/tests/site_e2e/test_site_e2e.py -v -s
+```
+
+Or run pytest directly after starting Redis/RabbitMQ yourself:
+```bash
+docker compose -f docker-compose-dependencies.yml up -d
+uv run pytest -m e2e_site banzai/tests/site_e2e/test_site_e2e.py -v -s
+```
 
 ## Test Markers
 
-You can run specific test phases:
+You can run specific test phases with raw pytest commands after Redis/RabbitMQ
+are running:
 
 ```bash
 # Startup tests only (publication DB, site deployment, replication)
-pytest -m e2e_site_startup banzai/tests/site_e2e/ -v
+uv run pytest -m e2e_site_startup banzai/tests/site_e2e/ -v
 
 # Cache tests only (replication sync, file downloads)
-pytest -m e2e_site_cache banzai/tests/site_e2e/ -v
+uv run pytest -m e2e_site_cache banzai/tests/site_e2e/ -v
 
 # Reduction tests only (frame processing)
-pytest -m e2e_site_reduction banzai/tests/site_e2e/ -v
+uv run pytest -m e2e_site_reduction banzai/tests/site_e2e/ -v
 ```
 
 ## Watching Logs
 
-While tests run, you can monitor service logs in separate terminals:
+While tests run, you can monitor service logs in separate terminals. The e2e
+fixture brings the site stack up under compose project `banzai-e2e` with the
+container prefix `e2e-banzai-`:
 
 ```bash
-docker logs -f banzai-download-worker  # Watch file downloads
-docker logs -f banzai-cache-init       # Watch replication setup
-docker logs -f banzai-worker           # Watch frame processing
+docker logs -f e2e-banzai-download-worker  # Watch file downloads
+docker logs -f e2e-banzai-cache-init       # Watch replication setup
+docker logs -f e2e-banzai-worker           # Watch frame processing
 ```
+
+## Running Alongside the local or site compose files
+
+The e2e stack is namespaced (compose project `banzai-e2e`, container prefix
+`e2e-banzai-`, explicit `e2e_*` queue/exchange names, postgres on host port
+5443) so it can run concurrently with a developer site/local stack on the same
+machine:
+
+- Container names don't collide (`e2e-banzai-worker` vs `banzai-worker`).
+- Queues don't collide (`e2e_reduction_task_queue` vs `reduction_task_queue`),
+  even though both stacks share the same `banzai-redis` / `banzai-rabbitmq`.
+- At setup and teardown, the e2e fixture purges only the configured `e2e_*`
+  RabbitMQ queues. It refuses to purge anything if any configured queue name is
+  missing or does not start with `e2e_`.
+- Postgres host ports don't collide (5443 for e2e, 5442 for site-up).
+- `docker compose down` from the e2e fixture is project-scoped — it cannot
+  tear down a docker-compose-site stack (project `banzai`).
+
+The only manual collision risk is the host data directories (`HOST_RAW_DIR`,
+`HOST_CALS_DIR`, `HOST_REDUCED_DIR`). The e2e default is `<repo>/data/...`;
+production site-up uses `/mnt/data/...`. Keep them on different paths.
 
 ## Troubleshooting
 
 **Tests skip with "AUTH_TOKEN environment variable required"**
 - Ensure you copied the template and set your token in `site_e2e.env`
+
+**Wrapper fails before pytest starts**
+- Ensure Docker, Docker Compose, and `uv` are installed.
+- Ensure `banzai/tests/site_e2e/site_e2e.env` exists and has a non-empty
+  `AUTH_TOKEN`.
 
 **Publication DB fails to start**
 - Check if port 5433 is already in use
@@ -91,4 +180,4 @@ docker logs -f banzai-worker           # Watch frame processing
 
 **Files not downloading**
 - Verify your AUTH_TOKEN is valid and has archive access
-- Check download worker logs: `docker logs banzai-download-worker`
+- Check download worker logs: `docker logs e2e-banzai-download-worker`

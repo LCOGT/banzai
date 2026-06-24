@@ -18,4 +18,4 @@ jobs:
       - name: Set up project
         run: uv sync --locked --extra test
       - name: Run coverage
-        run: uv run pytest --pyargs banzai.tests -m "not e2e" --cov banzai --cov-config="setup.cfg"
+        run: uv run pytest --pyargs banzai.tests -m "not e2e and not e2e_site" --cov banzai --cov-config="setup.cfg"

@@ -13,7 +13,7 @@ from types import ModuleType
 from banzai.scheduling import app, schedule_calibration_stacking
 from banzai.dbs import get_session, CalibrationImage, get_timezone, populate_instrument_tables
 from banzai.dbs import mark_frame, query_for_instrument
-from banzai.utils import file_utils
+from banzai.utils import messaging
 from banzai.tests.utils import FakeResponse, get_min_and_max_dates, FakeContext
 from astropy.io import fits, ascii
 from banzai.logs import get_logger
@@ -75,10 +75,10 @@ def run_reduce_individual_frames(filename_pattern):
     logger.info('Reducing individual frames for filenames: {filenames}'.format(filenames=filename_pattern))
     for frame in TEST_FRAMES:
         if filename_pattern in frame['filename']:
-            file_utils.post_to_archive_queue(frame['filename'], os.getenv('FITS_BROKER'),
-                                             exchange_name=os.getenv('FITS_EXCHANGE'),
-                                             frameid=frame['frameid'],
-                                             SITEID=frame['site'], INSTRUME=frame['instrument'])
+            messaging.post_to_archive_queue(frame['filename'], os.getenv('FITS_BROKER'),
+                                            exchange_name=os.getenv('FITS_EXCHANGE'),
+                                            frameid=frame['frameid'],
+                                            SITEID=frame['site'], INSTRUME=frame['instrument'])
     celery_join()
     logger.info('Finished reducing individual frames for filenames: {filenames}'.format(filenames=filename_pattern))
 
