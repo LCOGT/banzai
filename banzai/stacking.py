@@ -7,6 +7,7 @@ database so a restarted worker can continue where the previous process stopped.
 import datetime
 import multiprocessing
 import multiprocessing.connection
+import os
 import sys
 import time
 
@@ -25,7 +26,12 @@ logger = get_logger()
 REQUIRED_MESSAGE_FIELDS = ('fits_file', 'last_frame')
 
 # Backoff between finalize attempts; after the ladder is exhausted the stack is marked 'error'.
-FINALIZE_BACKOFF_SECONDS = [60, 300, 900, 3600]
+# Read from the environment (comma-separated seconds) so deployments — notably the site e2e
+# suite — can shorten the ladder without changing the default production cadence.
+_backoff_env = os.getenv('FINALIZE_BACKOFF_SECONDS', '60,300,900,3600')
+FINALIZE_BACKOFF_SECONDS = [int(seconds) for seconds in _backoff_env.split(',') if seconds.strip()]
+if not FINALIZE_BACKOFF_SECONDS:
+    raise ValueError(f'FINALIZE_BACKOFF_SECONDS must contain at least one integer, got {_backoff_env!r}')
 MAX_FINALIZE_ATTEMPTS = len(FINALIZE_BACKOFF_SECONDS) + 1
 CLEANUP_INTERVAL_SECONDS = 3600
 
