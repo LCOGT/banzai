@@ -171,7 +171,7 @@ REQUEUE_LOOKBACK_HOURS = 48
 
 REQUEUE_MISSING_FRAMES_TIME = datetime.time(hour=12, minute=0)
 
-SUBFRAME_TASK_QUEUE_NAME = os.getenv('SUBFRAME_TASK_QUEUE_NAME', 'subframe_tasks')
+STACKFRAME_TASK_QUEUE_NAME = os.getenv('STACKFRAME_TASK_QUEUE_NAME', 'stackframe_tasks')
 STACK_QUEUE_NAME = os.getenv('STACK_QUEUE_NAME', 'banzai_stack_queue')
 
 REDIS_URL = os.getenv('REDIS_URL', 'redis://host.docker.internal:6379/0')

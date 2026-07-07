@@ -13,7 +13,9 @@ from dateutil.parser import parse
 import requests
 from sqlalchemy import create_engine, pool, func, make_url, inspect
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint, Float, Text
+from sqlalchemy import BigInteger, Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint
+from sqlalchemy import Float, Text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import true
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -128,21 +130,32 @@ class ProcessedImage(Base):
     tries = Column(Integer, default=0)
 
 
-class Subframe(SiteBase):
-    __tablename__ = 'subframes'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    moluid = Column(String(100), nullable=False, index=True)
-    stack_num = Column(Integer, nullable=False)
-    frmtotal = Column(Integer, nullable=False)
-    camera = Column(String(50), nullable=False, index=True)
-    filepath = Column(String(255), nullable=False)
-    is_last = Column(Boolean, default=False)
-    status = Column(String(20), default='active', nullable=False)
-    dateobs = Column(DateTime, nullable=True)
+class Stack(SiteBase):
+    __tablename__ = 'stacks'
+    moluid = Column(String(100), primary_key=True)
+    camera = Column(String(50), index=True)
+    frmtotal = Column(Integer)
+    status = Column(String(20), default='active')
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    last_stackframe_at = Column(DateTime, default=datetime.datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
+    finalize_attempts = Column(Integer, default=0)
+    next_attempt_at = Column(DateTime, nullable=True)
+    last_preview_count = Column(Integer, default=0)
+
+
+class Stackframe(SiteBase):
+    __tablename__ = 'stackframes'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    moluid = Column(String(100), ForeignKey('stacks.moluid', ondelete='CASCADE'), index=True)
+    stack_num = Column(Integer)
+    filepath = Column(String(255), nullable=False)
+    dateobs = Column(DateTime, nullable=True)
+    is_last = Column(Boolean, default=False)
+    instrument_enqueue_timestamp = Column(BigInteger, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
     __table_args__ = (
-        UniqueConstraint('moluid', 'stack_num', name='uq_subframe_moluid_num'),
+        UniqueConstraint('moluid', 'stack_num', name='uq_stackframe_moluid_num'),
     )
 
 
@@ -624,63 +637,135 @@ def replicate_instrument(instrument_record, db_address):
         db_session.commit()
 
 
-def insert_subframe(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs):
-    """Upsert a subframe record. On conflict (moluid, stack_num), reset the row
-    to a fresh active state so a requeue behaves like a retry from scratch."""
+def _insert_for_session(session):
+    dialect = session.bind.dialect.name
+    if 'postgres' in dialect:
+        return pg_insert
+    if 'sqlite' in dialect:
+        return sqlite_insert
+    raise NotImplementedError("Only postgres and sqlite are supported")
+
+
+def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs,
+                                instrument_enqueue_timestamp=None):
+    """Upsert a stack and one stackframe in a single transaction."""
     if filepath is None:
-        raise ValueError("Subframe filepath is required")
+        raise ValueError("Stackframe filepath is required")
 
+    for attempt in range(2):  # Workers can race on Stack primary key; IntegrityError loser retries via session.get.
+        try:
+            with get_session(db_address, site_deploy=True) as session:
+                now = datetime.datetime.utcnow()
+                stack = session.get(Stack, moluid)
+                if stack is None:
+                    stack = Stack(
+                        moluid=moluid,
+                        camera=camera,
+                        frmtotal=frmtotal,
+                        status='active',
+                        last_stackframe_at=now,
+                        completed_at=None,
+                        finalize_attempts=0,
+                        next_attempt_at=None,
+                    )
+                    session.add(stack)
+                    session.flush()
+                else:
+                    stack.camera = camera
+                    stack.frmtotal = frmtotal
+                    stack.status = 'active'
+                    stack.last_stackframe_at = now
+                    stack.completed_at = None
+                    stack.finalize_attempts = 0
+                    stack.next_attempt_at = None
+
+                insert = _insert_for_session(session)
+                stmt = insert(Stackframe).values(
+                    moluid=moluid,
+                    stack_num=stack_num,
+                    filepath=filepath,
+                    dateobs=dateobs,
+                    is_last=is_last,
+                    instrument_enqueue_timestamp=instrument_enqueue_timestamp,
+                    created_at=now,
+                )
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=['moluid', 'stack_num'],
+                    set_={
+                        'filepath': stmt.excluded.filepath,
+                        'dateobs': stmt.excluded.dateobs,
+                        'is_last': stmt.excluded.is_last,
+                        'instrument_enqueue_timestamp': stmt.excluded.instrument_enqueue_timestamp,
+                        'created_at': stmt.excluded.created_at,
+                    },
+                )
+                session.execute(stmt)
+            return
+        except IntegrityError:
+            if attempt == 1:
+                raise
+
+
+def get_active_stacks(db_address, camera):
+    """Get active stacks for one camera."""
     with get_session(db_address, site_deploy=True) as session:
-        dialect = session.bind.dialect.name
-        if 'postgres' in dialect:
-            insert = pg_insert
-        elif 'sqlite' in dialect:
-            insert = sqlite_insert
-        else:
-            raise NotImplementedError("Only postgres and sqlite are supported")
-
-        stmt = insert(Subframe).values(
-            moluid=moluid, stack_num=stack_num, frmtotal=frmtotal, camera=camera,
-            filepath=filepath, is_last=is_last, dateobs=dateobs,
-        )
-        stmt = stmt.on_conflict_do_update(
-            index_elements=['moluid', 'stack_num'],
-            set_={
-                'frmtotal': stmt.excluded.frmtotal,
-                'camera': stmt.excluded.camera,
-                'is_last': stmt.excluded.is_last,
-                'dateobs': stmt.excluded.dateobs,
-                'filepath': stmt.excluded.filepath,
-                'status': 'active',
-                'created_at': datetime.datetime.utcnow(),
-                'completed_at': None,
-            },
-        )
-        session.execute(stmt)
+        return session.query(Stack).filter(
+            Stack.camera == camera,
+            Stack.status == 'active',
+        ).order_by(Stack.created_at, Stack.moluid).all()
 
 
-def get_subframes(db_address, moluid):
-    """Get all subframe records for a given moluid."""
+def get_stackframes(db_address, moluid):
+    """Get all stackframes for a stack ordered by stack number."""
     with get_session(db_address, site_deploy=True) as session:
-        return session.query(Subframe).filter(
-            Subframe.moluid == moluid
-        ).all()
+        return session.query(Stackframe).filter(
+            Stackframe.moluid == moluid
+        ).order_by(Stackframe.stack_num).all()
 
 
-def mark_stack_complete(db_address, moluid, status='complete'):
-    """Mark all subframes for a moluid as complete (or timeout)."""
+def claim_finalize_attempt(db_address, moluid, backoff_seconds):
+    """Claim and return the next finalize attempt number.
+
+    The attempt is claimed BEFORE the work starts, so a violent crash mid-finalize has already burned an attempt.
+    That lets poison stacks self-heal to 'error' after the backoff ladder instead of crash-looping forever.
+    """
+    with get_session(db_address, site_deploy=True) as session:
+        stack = session.query(Stack).filter(Stack.moluid == moluid).with_for_update().one()
+        stack.finalize_attempts += 1
+        attempt = stack.finalize_attempts
+        backoff_index = min(attempt - 1, len(backoff_seconds) - 1)
+        stack.next_attempt_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=backoff_seconds[backoff_index])
+        return attempt
+
+
+def mark_stack_terminal(db_address, moluid, status):
+    """Mark a stack as complete, timeout, or error."""
     now = datetime.datetime.utcnow()
     with get_session(db_address, site_deploy=True) as session:
-        session.query(Subframe).filter(
-            Subframe.moluid == moluid
+        session.query(Stack).filter(
+            Stack.moluid == moluid
         ).update({'status': status, 'completed_at': now})
 
 
-def cleanup_old_subframes(db_address, retention_days):
-    """Delete completed subframe records older than retention_days."""
+def set_preview_count(db_address, moluid, preview_count):
+    """Store the number of stackframes included in the newest preview."""
+    with get_session(db_address, site_deploy=True) as session:
+        session.query(Stack).filter(
+            Stack.moluid == moluid
+        ).update({'last_preview_count': preview_count})
+
+
+def cleanup_old_stacks(db_address, retention_days):
+    """Delete terminal stacks older than retention_days and explicitly delete their stackframes."""
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=retention_days)
     with get_session(db_address, site_deploy=True) as session:
-        session.query(Subframe).filter(
-            Subframe.status != 'active',
-            Subframe.completed_at < cutoff,
-        ).delete()
+        moluids = [
+            row[0] for row in session.query(Stack.moluid).filter(
+                Stack.status != 'active',
+                Stack.completed_at < cutoff,
+            ).all()
+        ]
+        if not moluids:
+            return
+        session.query(Stackframe).filter(Stackframe.moluid.in_(moluids)).delete(synchronize_session=False)
+        session.query(Stack).filter(Stack.moluid.in_(moluids)).delete(synchronize_session=False)

@@ -2,7 +2,6 @@ import os
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse
 
-import redis
 from celery import Celery
 from kombu import Queue
 from celery.exceptions import Retry
@@ -16,8 +15,7 @@ from banzai import query
 from banzai.utils.observation_utils import filter_calibration_blocks_for_type, get_calibration_blocks_for_time_range
 from banzai.utils.instrument_utils import get_processing_queue
 from banzai.utils.date_utils import get_stacking_date_range, parse_date_obs
-from banzai.dbs import insert_subframe
-from banzai.stacking import push_notification
+from banzai.dbs import upsert_stack_and_stackframe
 
 
 try:
@@ -310,9 +308,9 @@ def requeue_missing_frames(site: str, runtime_context: dict):
         logger.error("Exception checking for missing frames: {error}".format(error=logs.format_exception()))
 
 
-@app.task(name='celery.process_subframe', bind=True, reject_on_worker_lost=True, max_retries=5)
-def process_subframe(self, body: dict, runtime_context: dict):
-    """Reduce a subframe, record it in the DB, and notify the stacking worker."""
+@app.task(name='celery.process_stackframe', bind=True, reject_on_worker_lost=True, max_retries=5)
+def process_stackframe(self, body: dict, runtime_context: dict):
+    """Reduce a stackframe and record it in the DB for the stacking worker to poll."""
     try:
         runtime_context = Context(runtime_context)
         filepath = body['fits_file']
@@ -328,7 +326,7 @@ def process_subframe(self, body: dict, runtime_context: dict):
         # Phase 1: Run reduction pipeline
         images = stage_utils.run_pipeline_stages([{'path': filepath}], runtime_context)
         if not images:
-            logger.error('Subframe reduction produced no output image',
+            logger.error('Stackframe reduction produced no output image',
                          extra_tags={'filepath': filepath, 'moluid': header['MOLUID']})
             return
 
@@ -336,8 +334,8 @@ def process_subframe(self, body: dict, runtime_context: dict):
             images[0].get_output_directory(runtime_context),
             images[0].get_output_filename(runtime_context),
         )
-        # Phase 2: Record reduced subframes in the Subframes table: ready to be stacked
-        insert_subframe(
+        # Phase 2: Record reduced stackframes in the DB; the stacking worker polls from there.
+        upsert_stack_and_stackframe(
             runtime_context.db_address,
             moluid=header['MOLUID'],
             stack_num=header['MOLFRNUM'],
@@ -346,15 +344,10 @@ def process_subframe(self, body: dict, runtime_context: dict):
             filepath=reduced_path,
             is_last=body.get('last_frame', False),
             dateobs=dateobs,
+            instrument_enqueue_timestamp=body.get('instrument_enqueue_timestamp'),
         )
-
-        # Phase 3: Notify the stack worker that a new subframe is available
-        redis_url = getattr(runtime_context, 'REDIS_URL', None)
-        if redis_url:
-            redis_client = redis.Redis.from_url(redis_url)
-            push_notification(redis_client, camera, header['MOLUID'])
 
     except Retry:
         raise
     except Exception:
-        logger.error("Error processing subframe: {error}".format(error=logs.format_exception()))
+        logger.error("Error processing stackframe: {error}".format(error=logs.format_exception()))
