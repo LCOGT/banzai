@@ -202,16 +202,27 @@ services:
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
+    volumes:
+      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
+      - DB_ADDRESS=${DB_ADDRESS}
       - STACK_QUEUE_NAME=${STACK_QUEUE_NAME:-banzai_stack_queue}
+      - SHIPPER_EXCHANGE=${SHIPPER_EXCHANGE:-ship_files}
+      - SHIPPER_QUEUE_NAME=${SHIPPER_QUEUE_NAME:-ship}
+      - SMARTSTACK_PREVIEWS=${SMARTSTACK_PREVIEWS:-true}
+      - DATA_ROOT=${HOST_REDUCED_DIR}
     command: [
       "banzai_stacking_supervisor",
       "--site-id=${SITE_ID}",
+      "--instrument-types=${INSTRUMENT_TYPES:-*}",
       "--db-address=${DB_ADDRESS}",
-      "--redis-url=${REDIS_URL}",
-      "--stack-retention-days=${STACK_RETENTION_DAYS:-30}"
+      "--broker-url=${RABBITMQ_URL}",
+      "--processed-path=${HOST_REDUCED_DIR}",
+      "--rlevel=45",
+      "--stack-retention-days=${STACK_RETENTION_DAYS:-30}",
+      "--stack-timeout-minutes=${STACK_TIMEOUT_MINUTES:-20}"
     ]
-    restart: unless-stopped
+    restart: always
 
 volumes:
   site-pgdata:

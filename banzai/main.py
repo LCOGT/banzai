@@ -26,7 +26,7 @@ from banzai.query import archive_get
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
 from banzai.scheduling import (app, process_image, process_stackframe, requeue_missing_frames,
                                schedule_calibration_stacking)
-from banzai.stacking import validate_message
+from banzai import stacking
 from banzai.data import DataProduct
 from celery.schedules import crontab
 import celery
@@ -280,7 +280,7 @@ class StackframeListener(BanzaiQueueListener):
                          extra_tags={'error': str(e), 'body': repr(body)[:1000]})
             message.ack()
             return
-        if not validate_message(body):
+        if not stacking.validate_message(body):
             logger.error('Invalid message received, missing required fields',
                          extra_tags={'body': body})
             message.ack()
