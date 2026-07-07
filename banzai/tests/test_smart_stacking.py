@@ -1,6 +1,7 @@
 """Unit tests for the smart stacking feature."""
 import datetime
 import json
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,7 +11,9 @@ from celery.exceptions import Retry
 from sqlalchemy import text
 
 from banzai import dbs, scheduling
-from banzai.stacking import check_stack_complete, run_worker_loop, StackingSupervisor
+from banzai.stacking import (check_stack_complete, stack_has_timed_out, finalize_stack,
+                             process_camera_tick, run_worker_loop, run_supervisor,
+                             FINALIZE_BACKOFF_SECONDS, MAX_FINALIZE_ATTEMPTS)
 from banzai.scheduling import process_stackframe
 from banzai.main import StackframeListener
 
@@ -659,23 +662,265 @@ class TestProcessStackframe:
 
 
 # ---------------------------------------------------------------------------
-# Supervisor
+# Worker: finalize / preview / timeout helpers
 # ---------------------------------------------------------------------------
 
-class TestSupervisor:
+def _runtime_context(**overrides):
+    """Fake runtime context exposing exactly the attributes the worker reads."""
+    defaults = dict(
+        db_address='sqlite:///fake.db',
+        broker_url='amqp://localhost:5672',
+        SHIPPER_EXCHANGE='ship_files',
+        SHIPPER_QUEUE_NAME='ship',
+        SMARTSTACK_PREVIEWS=True,
+        stack_timeout_minutes=20,
+        stack_retention_days=30,
+    )
+    defaults.update(overrides)
+    return SimpleNamespace(**defaults)
 
-    @patch('banzai.stacking.dbs.get_instruments_at_site',
-           return_value=[MagicMock(camera='cam1'), MagicMock(camera='cam2'), MagicMock(camera='cam3')])
-    @patch('banzai.stacking.multiprocessing.Process')
-    def test_stacking_supervisor_spawns_per_camera(self, mock_process_cls, mock_discover):
-        supervisor = StackingSupervisor(
-            site_id='tst',
-            db_address='sqlite:///fake.db',
-            redis_url='redis://localhost:6379',
+
+def _stack(moluid='mol-w', frmtotal=3, finalize_attempts=0, next_attempt_at=None,
+           last_preview_count=0, last_stackframe_at=None):
+    if last_stackframe_at is None:
+        last_stackframe_at = datetime.datetime.utcnow()
+    return SimpleNamespace(
+        moluid=moluid, camera='cam1', frmtotal=frmtotal, status='active',
+        finalize_attempts=finalize_attempts, next_attempt_at=next_attempt_at,
+        last_preview_count=last_preview_count, last_stackframe_at=last_stackframe_at,
+    )
+
+
+def _frame(stack_num, is_last=False, instrument_enqueue_timestamp=None, filepath=None):
+    return SimpleNamespace(
+        stack_num=stack_num, is_last=is_last,
+        instrument_enqueue_timestamp=instrument_enqueue_timestamp,
+        filepath=filepath or f'/data/f{stack_num}.fits',
+    )
+
+
+class TestFinalizeStack:
+
+    def test_finalize_claims_before_work(self):
+        """The attempt is claimed first, then run_final -> publish -> mark_terminal, in that order."""
+        rc = _runtime_context()
+        stack = _stack(finalize_attempts=0, next_attempt_at=None)
+        stackframes = [_frame(1, instrument_enqueue_timestamp=111),
+                       _frame(2, is_last=True, instrument_enqueue_timestamp=222)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.smartstack_products') as mock_products, \
+             patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
+            mock_products.run_final.return_value = ('/o/e45.fits', '/o/small.jpg', '/o/large.jpg')
+            manager = MagicMock()
+            manager.attach_mock(mock_dbs.claim_finalize_attempt, 'claim')
+            manager.attach_mock(mock_products.run_final, 'run_final')
+            manager.attach_mock(mock_publish, 'publish')
+            manager.attach_mock(mock_dbs.mark_stack_terminal, 'mark_terminal')
+
+            finalize_stack(rc, stack, stackframes, 'complete')
+
+        assert [call[0] for call in manager.mock_calls] == ['claim', 'run_final', 'publish', 'mark_terminal']
+        mock_dbs.claim_finalize_attempt.assert_called_once_with(rc.db_address, stack.moluid, FINALIZE_BACKOFF_SECONDS)
+        mock_publish.assert_called_once_with(
+            rc.broker_url, rc.SHIPPER_EXCHANGE, rc.SHIPPER_QUEUE_NAME,
+            fits_path='/o/e45.fits', small_thumbnail='/o/small.jpg', large_thumbnail='/o/large.jpg',
+            instrument_enqueue_timestamp=222,
         )
-        supervisor.start()
-        assert mock_process_cls.call_count == 3
-        assert mock_process_cls.return_value.start.call_count == 3
+        mock_dbs.mark_stack_terminal.assert_called_once_with(rc.db_address, stack.moluid, 'complete')
+
+    def test_finalize_failure_leaves_stack_active(self):
+        """run_final raising: attempt already burned by claim, but no mark_terminal and no exception escapes."""
+        rc = _runtime_context()
+        stack = _stack()
+        stackframes = [_frame(1, instrument_enqueue_timestamp=111)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.smartstack_products') as mock_products, \
+             patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
+            mock_products.run_final.side_effect = RuntimeError('stack blew up')
+
+            finalize_stack(rc, stack, stackframes, 'complete')
+
+        mock_dbs.claim_finalize_attempt.assert_called_once()
+        mock_publish.assert_not_called()
+        mock_dbs.mark_stack_terminal.assert_not_called()
+
+    def test_publish_failure_leaves_stack_active(self):
+        """post_to_shipper_queue raising: the stack is not marked terminal (publish-before-mark)."""
+        rc = _runtime_context()
+        stack = _stack()
+        stackframes = [_frame(1, instrument_enqueue_timestamp=111)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.smartstack_products') as mock_products, \
+             patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
+            mock_products.run_final.return_value = ('/o/e45.fits', '/o/small.jpg', '/o/large.jpg')
+            mock_publish.side_effect = RuntimeError('broker down')
+
+            finalize_stack(rc, stack, stackframes, 'complete')
+
+        mock_dbs.claim_finalize_attempt.assert_called_once()
+        mock_products.run_final.assert_called_once()
+        mock_dbs.mark_stack_terminal.assert_not_called()
+
+    def test_exhausted_attempts_marks_error(self):
+        """At/over MAX attempts, the stack is marked 'error' without claiming or doing any work."""
+        rc = _runtime_context()
+        stack = _stack(finalize_attempts=MAX_FINALIZE_ATTEMPTS, next_attempt_at=None)
+        stackframes = [_frame(1, instrument_enqueue_timestamp=111)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.smartstack_products') as mock_products, \
+             patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
+
+            finalize_stack(rc, stack, stackframes, 'complete')
+
+        mock_dbs.mark_stack_terminal.assert_called_once_with(rc.db_address, stack.moluid, 'error')
+        mock_dbs.claim_finalize_attempt.assert_not_called()
+        mock_products.run_final.assert_not_called()
+        mock_publish.assert_not_called()
+
+
+class TestStackTimedOut:
+
+    def test_stack_has_timed_out_boundary(self):
+        now = datetime.datetime(2024, 6, 15, 12, 0, 0)
+        stale = _stack(last_stackframe_at=now - datetime.timedelta(minutes=21))
+        fresh = _stack(last_stackframe_at=now - datetime.timedelta(minutes=19))
+        assert stack_has_timed_out(stale, 20, now=now) is True
+        assert stack_has_timed_out(fresh, 20, now=now) is False
+
+
+class TestProcessCameraTick:
+
+    def test_backoff_window_respected(self):
+        """A terminal stack whose next_attempt_at is in the future is not finalized this tick."""
+        rc = _runtime_context()
+        now = datetime.datetime.utcnow()
+        stack = _stack(frmtotal=3, finalize_attempts=1, next_attempt_at=now + datetime.timedelta(minutes=5))
+        stackframes = [_frame(i, is_last=(i == 3)) for i in (1, 2, 3)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.finalize_stack') as mock_finalize, \
+             patch('banzai.stacking.smartstack_products') as mock_products:
+            mock_dbs.get_active_stacks.return_value = [stack]
+            mock_dbs.get_stackframes.return_value = stackframes
+
+            process_camera_tick(rc, 'cam1')
+
+        mock_finalize.assert_not_called()
+        mock_products.run_preview.assert_not_called()
+
+    def test_timeout_finalizes_partial(self):
+        """A partial stack past the cadence timeout is finalized with status 'timeout'."""
+        rc = _runtime_context(stack_timeout_minutes=20)
+        stack = _stack(frmtotal=5, last_stackframe_at=datetime.datetime.utcnow() - datetime.timedelta(minutes=21))
+        stackframes = [_frame(1), _frame(2)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.finalize_stack') as mock_finalize:
+            mock_dbs.get_active_stacks.return_value = [stack]
+            mock_dbs.get_stackframes.return_value = stackframes
+
+            process_camera_tick(rc, 'cam1')
+
+        mock_finalize.assert_called_once_with(rc, stack, stackframes, 'timeout')
+
+    def test_fresh_stackframe_resets_timeout_clock(self):
+        """A fresh arrival keeps the stack active: no timeout finalize."""
+        rc = _runtime_context(stack_timeout_minutes=20, SMARTSTACK_PREVIEWS=False)
+        stack = _stack(frmtotal=5, last_stackframe_at=datetime.datetime.utcnow() - datetime.timedelta(minutes=5))
+        stackframes = [_frame(1), _frame(2)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.finalize_stack') as mock_finalize:
+            mock_dbs.get_active_stacks.return_value = [stack]
+            mock_dbs.get_stackframes.return_value = stackframes
+
+            process_camera_tick(rc, 'cam1')
+
+        mock_finalize.assert_not_called()
+
+    def test_complete_wins_over_timeout(self):
+        """A stack that is both complete and past the timeout finalizes as 'complete'."""
+        rc = _runtime_context(stack_timeout_minutes=20)
+        stack = _stack(frmtotal=3, last_stackframe_at=datetime.datetime.utcnow() - datetime.timedelta(minutes=30))
+        stackframes = [_frame(i, is_last=(i == 3)) for i in (1, 2, 3)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.finalize_stack') as mock_finalize:
+            mock_dbs.get_active_stacks.return_value = [stack]
+            mock_dbs.get_stackframes.return_value = stackframes
+
+            process_camera_tick(rc, 'cam1')
+
+        mock_finalize.assert_called_once_with(rc, stack, stackframes, 'complete')
+
+    def test_complete_stack_never_previews(self):
+        """A complete stack takes the finalize path even if the preview count would grow."""
+        rc = _runtime_context(SMARTSTACK_PREVIEWS=True)
+        stack = _stack(frmtotal=3, last_preview_count=0)
+        stackframes = [_frame(i, is_last=(i == 3)) for i in (1, 2, 3)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.finalize_stack') as mock_finalize, \
+             patch('banzai.stacking.smartstack_products') as mock_products:
+            mock_dbs.get_active_stacks.return_value = [stack]
+            mock_dbs.get_stackframes.return_value = stackframes
+
+            process_camera_tick(rc, 'cam1')
+
+        mock_finalize.assert_called_once_with(rc, stack, stackframes, 'complete')
+        mock_products.run_preview.assert_not_called()
+        mock_dbs.set_preview_count.assert_not_called()
+
+    def test_preview_only_when_count_grew(self):
+        """Only stacks whose stackframe count exceeds last_preview_count get a new preview."""
+        rc = _runtime_context(SMARTSTACK_PREVIEWS=True)
+        grown = _stack(moluid='grown', frmtotal=5, last_preview_count=2)
+        same = _stack(moluid='same', frmtotal=5, last_preview_count=3)
+        frames_by_mol = {
+            'grown': [_frame(1), _frame(2), _frame(3)],
+            'same': [_frame(1), _frame(2), _frame(3)],
+        }
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.finalize_stack') as mock_finalize, \
+             patch('banzai.stacking.smartstack_products') as mock_products:
+            mock_dbs.get_active_stacks.return_value = [grown, same]
+            mock_dbs.get_stackframes.side_effect = lambda db_address, moluid: frames_by_mol[moluid]
+
+            process_camera_tick(rc, 'cam1')
+
+        mock_finalize.assert_not_called()
+        mock_products.run_preview.assert_called_once_with(frames_by_mol['grown'], rc, 'grown')
+        mock_dbs.set_preview_count.assert_called_once_with(rc.db_address, 'grown', 3)
+
+    def test_preview_failure_does_not_update_count(self):
+        """If run_preview raises, the preview count is not advanced and the tick keeps going."""
+        rc = _runtime_context(SMARTSTACK_PREVIEWS=True)
+        stack = _stack(frmtotal=5, last_preview_count=2)
+        stackframes = [_frame(1), _frame(2), _frame(3)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.finalize_stack') as mock_finalize, \
+             patch('banzai.stacking.smartstack_products') as mock_products:
+            mock_dbs.get_active_stacks.return_value = [stack]
+            mock_dbs.get_stackframes.return_value = stackframes
+            mock_products.run_preview.side_effect = RuntimeError('render failed')
+
+            process_camera_tick(rc, 'cam1')
+
+        mock_products.run_preview.assert_called_once()
+        mock_dbs.set_preview_count.assert_not_called()
+        mock_finalize.assert_not_called()
+
+    def test_previews_disabled_kill_switch(self):
+        """With SMARTSTACK_PREVIEWS off, a growing active stack renders no preview."""
+        rc = _runtime_context(SMARTSTACK_PREVIEWS=False)
+        stack = _stack(frmtotal=5, last_preview_count=0)
+        stackframes = [_frame(1), _frame(2), _frame(3)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.finalize_stack') as mock_finalize, \
+             patch('banzai.stacking.smartstack_products') as mock_products:
+            mock_dbs.get_active_stacks.return_value = [stack]
+            mock_dbs.get_stackframes.return_value = stackframes
+
+            process_camera_tick(rc, 'cam1')
+
+        mock_products.run_preview.assert_not_called()
+        mock_dbs.set_preview_count.assert_not_called()
+        mock_finalize.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -684,16 +929,94 @@ class TestSupervisor:
 
 class TestWorkerLoopResilience:
 
-    @patch('banzai.stacking.redis_lib.Redis.from_url')
+    @patch('banzai.stacking.dbs.cleanup_old_stacks')
     @patch('banzai.stacking.time.sleep')
-    @patch('banzai.stacking.process_notifications')
-    def test_run_worker_loop_continues_after_exception(self, mock_process, mock_sleep, mock_redis_cls):
-        """run_worker_loop must not crash when process_notifications raises; it should log and continue."""
-        # First call raises, second call raises KeyboardInterrupt to escape the infinite loop.
-        mock_process.side_effect = [Exception('boom'), KeyboardInterrupt]
+    @patch('banzai.stacking.process_camera_tick')
+    def test_run_worker_loop_continues_after_exception(self, mock_tick, mock_sleep, mock_cleanup):
+        """run_worker_loop must not die when process_camera_tick raises; it logs and keeps polling."""
+        # First tick raises a normal Exception (caught); second raises KeyboardInterrupt to escape the loop.
+        mock_tick.side_effect = [Exception('boom'), KeyboardInterrupt]
+        runtime_context_dict = {'db_address': 'sqlite:///fake.db', 'stack_retention_days': 30}
         with pytest.raises(KeyboardInterrupt):
-            run_worker_loop('cam1', 'sqlite:///fake.db', 'redis://localhost:6379', poll_interval=0)
-        # process_notifications was called twice: once raised Exception, once raised KeyboardInterrupt.
-        assert mock_process.call_count == 2
-        # sleep should have been called once (after the transient Exception, before continuing).
+            run_worker_loop('cam1', runtime_context_dict, poll_interval=0)
+        assert mock_tick.call_count == 2
+        # sleep runs once: after the caught Exception. The KeyboardInterrupt escapes before the second sleep.
         mock_sleep.assert_called_once_with(0)
+
+    @patch('banzai.stacking.dbs.cleanup_old_stacks')
+    @patch('banzai.stacking.time.sleep')
+    @patch('banzai.stacking.process_camera_tick')
+    def test_run_worker_loop_throttles_cleanup(self, mock_tick, mock_sleep, mock_cleanup):
+        """cleanup_old_stacks runs on the first tick, then is throttled within the hour window."""
+        # Two clean ticks, then KeyboardInterrupt to escape. time.monotonic is left real.
+        mock_tick.side_effect = [None, None, KeyboardInterrupt]
+        runtime_context_dict = {'db_address': 'sqlite:///fake.db', 'stack_retention_days': 30}
+        with pytest.raises(KeyboardInterrupt):
+            run_worker_loop('cam1', runtime_context_dict, poll_interval=0)
+        assert mock_tick.call_count == 3
+        # First tick triggers cleanup; the second is inside the hour window, so it does not.
+        mock_cleanup.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Supervisor
+# ---------------------------------------------------------------------------
+
+class TestSupervisor:
+
+    @patch('banzai.stacking.sys.exit', side_effect=SystemExit(1))
+    @patch('banzai.stacking.multiprocessing.connection.wait')
+    @patch('banzai.stacking.multiprocessing.Process')
+    @patch('banzai.stacking.dbs.get_instruments_at_site',
+           return_value=[SimpleNamespace(camera='cam1'), SimpleNamespace(camera='cam2'),
+                         SimpleNamespace(camera='cam3')])
+    @patch('banzai.stacking.main.parse_args')
+    def test_run_supervisor_spawns_process_per_camera(self, mock_parse, mock_instruments,
+                                                      mock_process_cls, mock_wait, mock_exit):
+        mock_parse.return_value = SimpleNamespace(
+            site_id='tst', db_address='sqlite:///fake.db',
+            stack_retention_days=30, stack_timeout_minutes=20, instrument_types='*',
+        )
+        with pytest.raises(SystemExit):
+            run_supervisor()
+
+        assert mock_process_cls.call_count == 3
+        assert mock_process_cls.return_value.start.call_count == 3
+        mock_wait.assert_called_once()
+        mock_exit.assert_called_once_with(1)
+
+    @patch('banzai.stacking.sys.exit', side_effect=SystemExit(1))
+    @patch('banzai.stacking.multiprocessing.Process')
+    @patch('banzai.stacking.dbs.get_instruments_at_site', return_value=[])
+    @patch('banzai.stacking.main.parse_args')
+    def test_run_supervisor_exits_when_no_cameras(self, mock_parse, mock_instruments,
+                                                  mock_process_cls, mock_exit):
+        mock_parse.return_value = SimpleNamespace(
+            site_id='tst', db_address='sqlite:///fake.db',
+            stack_retention_days=30, stack_timeout_minutes=20, instrument_types='*',
+        )
+        with pytest.raises(SystemExit):
+            run_supervisor()
+
+        mock_process_cls.assert_not_called()
+        mock_exit.assert_called_once_with(1)
+
+    @patch('banzai.stacking.sys.exit', side_effect=SystemExit(1))
+    @patch('banzai.stacking.multiprocessing.connection.wait')
+    @patch('banzai.stacking.multiprocessing.Process')
+    @patch('banzai.stacking.dbs.get_instruments_at_site',
+           return_value=[SimpleNamespace(camera='cam1', type='1m0-SciCam-Sinistro'),
+                         SimpleNamespace(camera='cam2', type='1m0-SciCam-Sinistro'),
+                         SimpleNamespace(camera='cam3', type='NRES')])
+    @patch('banzai.stacking.main.parse_args')
+    def test_run_supervisor_filters_by_instrument_type(self, mock_parse, mock_instruments,
+                                                       mock_process_cls, mock_wait, mock_exit):
+        mock_parse.return_value = SimpleNamespace(
+            site_id='tst', db_address='sqlite:///fake.db',
+            stack_retention_days=30, stack_timeout_minutes=20,
+            instrument_types='1m0-SciCam-Sinistro',
+        )
+        with pytest.raises(SystemExit):
+            run_supervisor()
+
+        assert mock_process_cls.call_count == 2
