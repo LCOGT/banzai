@@ -46,7 +46,9 @@ dependencies = [
   "numcodecs>=0.16.0",
   "cosmic-conn[cpu]>=0.6.1",
   "torch>=2.3",
-  "alembic"
+  "alembic",
+  "auto-stretch>=1.1.0",
+  "pillow>=10",
 ]
 
 [project.optional-dependencies]

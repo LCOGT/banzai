@@ -1,5 +1,6 @@
 import hashlib
 import os
+import re
 from time import sleep
 
 from ocs_ingester import ingester
@@ -10,9 +11,76 @@ from banzai.logs import get_logger
 
 logger = get_logger()
 
+SMARTSTACK_FILENAME_RE = re.compile(
+    r'(?P<prefix>.*-)(?P<frame_number>\d+)-(?P<kind>[ex])(?P<rlevel>\d{2})(?P<suffix>\.fits(?:\.fz)?)$'
+)
+
 
 def get_processed_path(base_path, site, camera, epoch):
     return os.path.join(base_path, site, camera, epoch, 'processed')
+
+
+def make_smartstack_filename(first_filename, first_stack_num, last_stack_num, reduction_level=45):
+    """Build a smartstack FITS filename for a stack frame range.
+
+    Parameters
+    ----------
+    first_filename : str
+        Filename of the first reduced input frame.
+    first_stack_num : int
+        First stack frame number.
+    last_stack_num : int
+        Last stack frame number.
+    reduction_level : int, optional
+        Output reduction level.
+
+    Returns
+    -------
+    str
+        Smartstack FITS filename with the frame range.
+
+    Raises
+    ------
+    ValueError
+        If first_filename cannot be parsed as a reduced FITS filename.
+    """
+    match = SMARTSTACK_FILENAME_RE.match(first_filename)
+    if match is None:
+        raise ValueError(f'Could not parse smartstack input filename: {first_filename}')
+
+    frame_number_width = len(match.group('frame_number'))
+    first_frame = f'{first_stack_num:0{frame_number_width}d}'
+    last_frame = f'{last_stack_num:0{frame_number_width}d}'
+    rlevel = f'{reduction_level:02d}'
+
+    return (
+        f"{match.group('prefix')}{first_frame}-{last_frame}-"
+        f"{match.group('kind')}{rlevel}{match.group('suffix')}"
+    )
+
+
+def make_jpg_filenames(smartstack_filename):
+    """Build small and large JPEG filenames for a smartstack FITS filename.
+
+    Parameters
+    ----------
+    smartstack_filename : str
+        Smartstack FITS filename.
+
+    Returns
+    -------
+    tuple
+        Tuple of ``(small_thumbnail, large_thumbnail)`` JPEG filenames, matching
+        the ``small_thumbnail``/``large_thumbnail`` keys in the shipper message.
+    """
+    if smartstack_filename.endswith('.fits.fz'):
+        base = smartstack_filename[:-len('.fits.fz')]
+    elif smartstack_filename.endswith('.fits'):
+        base = smartstack_filename[:-len('.fits')]
+    else:
+        base = smartstack_filename
+
+    return f'{base}-small_thumbnail.jpg', f'{base}-large_thumbnail.jpg'
 
 
 def post_to_ingester(file_object, image, output_filename, meta=None):
