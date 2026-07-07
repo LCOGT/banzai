@@ -11,6 +11,7 @@ from banzai.lco import LCOObservationFrame, LCOCalibrationFrame
 from banzai.utils.image_utils import Section
 from banzai.data import HeaderOnly, CCDData
 from banzai.utils.date_utils import TIMESTAMP_FORMAT
+from banzai.utils import stats
 from banzai.logs import get_logger
 
 logger = get_logger()
@@ -52,6 +53,52 @@ class FakeCCDData(CCDData):
             self.meta['MAXLIN'] = 65535.0
         for keyword in kwargs:
             setattr(self, keyword, kwargs[keyword])
+
+
+def current_stack_snapshot(data_to_stack, nsigma_reject):
+    shape3d = [len(data_to_stack)] + list(data_to_stack[0].shape)
+    a = np.zeros(shape3d, dtype=data_to_stack[0].dtype)
+    uncertainties = np.zeros(shape3d, dtype=data_to_stack[0].dtype)
+    mask = np.zeros(shape3d, dtype=np.uint8)
+
+    for i, data in enumerate(data_to_stack):
+        a[i, :, :] = data.data[:, :]
+        mask[i, :, :] = data.mask[:, :]
+        uncertainties[i, :, :] = data.uncertainty[:, :]
+
+    abs_deviation = stats.absolute_deviation(a, axis=0, mask=mask)
+
+    robust_std = stats.robust_standard_deviation(a, axis=0, abs_deviation=abs_deviation, mask=mask)
+
+    robust_std = np.expand_dims(robust_std, axis=0)
+
+    # Mask values that are N sigma from the median
+    sigma_mask = abs_deviation > (nsigma_reject * robust_std)
+
+    mask3d = np.logical_or(sigma_mask, mask > 0)
+    n_good_pixels = np.logical_not(mask3d).sum(axis=0)
+
+    stacked_mask = np.zeros(n_good_pixels.shape, dtype=np.uint8)
+
+    # If a pixel is bad in all images, make sure we don't divide by zero
+    bad_pixels = n_good_pixels == 0
+
+    # If pixel is bad in all of the images, we take the logical or of all of the bits to go in the final mask
+    stacked_mask[bad_pixels] = np.bitwise_or.reduce(mask, axis=0)[bad_pixels]
+
+    # If a pixel is bad in all images, fill that pixel with the mean from the images
+    n_good_pixels[bad_pixels] = len(data_to_stack)
+    mask3d[:, bad_pixels] = False
+
+    a[mask3d] = 0.0
+    stacked_data = a.sum(axis=0) / n_good_pixels
+
+    # Again if a pixel is bad in all images, fill the uncertainties with the quadrature sum / N images
+    uncertainties[mask3d] = 0.0
+    uncertainties *= uncertainties
+    stacked_uncertainty = np.sqrt(uncertainties.sum(axis=0) / (n_good_pixels ** 2.0))
+
+    return CCDData(data=stacked_data, meta=data_to_stack[0].meta, uncertainty=stacked_uncertainty, mask=stacked_mask)
 
 
 class FakeLCOObservationFrame(LCOObservationFrame):
