@@ -1,13 +1,17 @@
 """RabbitMQ publishing helpers.
 
-Two patterns are used in banzai:
+Three patterns are used in banzai:
 
 - ``post_to_archive_queue`` publishes a kombu-serialized dict to the
   ``fits_files`` fanout exchange. Consumed by ``PipelineListener`` in
   ``banzai/main.py`` as the archive-ingestion path.
+- ``post_to_shipper_queue`` publishes a kombu-serialized dict to the fanout
+  exchange consumed by the site shipper. It declares the durable queue
+  binding before publishing so RabbitMQ does not drop fanout messages with
+  no bound queue.
 - ``publish_raw_string_to_queue`` publishes a plain-text JSON string to a
   named queue via the default exchange. Mirrors how the site software
-  publishes subframe-ready notifications: bodies arrive as bytes/str and
+  publishes stackframe-ready notifications: bodies arrive as bytes/str and
   the consumer must ``json.loads`` them rather than relying on kombu to
   deserialize a dict.
 """
@@ -35,10 +39,37 @@ def post_to_archive_queue(filename, broker_url, exchange_name='fits_files', **kw
         producer.release()
 
 
+def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, small_thumbnail, large_thumbnail,
+                          instrument_enqueue_timestamp):
+    """Publish smartstack product paths for the site shipper to upload.
+
+    Fanout exchanges drop messages when no queue is bound, so the durable
+    queue binding is declared before publishing each message.
+    """
+    exchange = Exchange(exchange_name, type='fanout', durable=True)
+    queue = Queue(queue_name, exchange=exchange, durable=True)
+    body = {
+        'fits': fits_path,
+        'small_thumbnail': small_thumbnail,
+        'large_thumbnail': large_thumbnail,
+        'instrument_enqueue_timestamp': instrument_enqueue_timestamp,
+    }
+
+    with Connection(broker_url) as conn:
+        channel = conn.channel()
+        bound_exchange = exchange(channel)
+        bound_exchange.declare()
+        bound_queue = queue(channel)
+        bound_queue.declare()
+        producer = conn.Producer(exchange=bound_exchange)
+        producer.publish(body)
+        producer.release()
+
+
 def publish_raw_string_to_queue(queue_name, body, broker_url='amqp://localhost:5672'):
     """Publish a raw string to a named RabbitMQ queue.
 
-    Mirrors how the site software publishes subframe-ready notifications:
+    Mirrors how the site software publishes stackframe-ready notifications:
     the body is sent as a plain-text JSON string to a named queue via the
     default exchange, with content_type='text/plain' (no kombu serialization).
     Consumers receive a bytes/str body and must json.loads it themselves
