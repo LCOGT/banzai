@@ -1,4 +1,5 @@
 import abc
+from io import BytesIO
 import tempfile
 from typing import Union, Type
 
@@ -6,9 +7,11 @@ import numpy as np
 from astropy.io import fits
 from astropy.table import Table
 
+from banzai import logs
 from banzai.utils.image_utils import Section
 from banzai.utils import fits_utils, stats
-from io import BytesIO
+
+logger = logs.get_logger()
 
 
 class DataProduct:
@@ -420,8 +423,26 @@ class CCDData(Data):
         self.data -= self._background
 
 
-def stack(data_to_stack, nsigma_reject) -> CCDData:
-    """
+def _apply_sigma_rejection(data_to_stack, nsigma_reject):
+    """Build masked stack arrays after applying robust sigma rejection.
+
+    Parameters
+    ----------
+    data_to_stack : list of CCDData
+        Image sections to combine. Data, mask, and uncertainty arrays must have matching shapes.
+    nsigma_reject : float
+        Robust-standard-deviation threshold for rejecting pixels from the stack.
+
+    Returns
+    -------
+    data : numpy.ndarray
+        Three-dimensional data array with rejected and masked pixels set to zero.
+    variances : numpy.ndarray
+        Three-dimensional variance array with rejected and masked pixels set to zero.
+    n_good_pixels : numpy.ndarray
+        Number of unmasked inputs for each output pixel. All-bad pixels are forced to the input count.
+    stacked_mask : numpy.ndarray
+        Output mask, including the bitwise OR of input masks for all-bad pixels.
     """
     shape3d = [len(data_to_stack)] + list(data_to_stack[0].shape)
     a = np.zeros(shape3d, dtype=data_to_stack[0].dtype)
@@ -458,11 +479,148 @@ def stack(data_to_stack, nsigma_reject) -> CCDData:
     mask3d[:, bad_pixels] = False
 
     a[mask3d] = 0.0
-    stacked_data = a.sum(axis=0) / n_good_pixels
 
     # Again if a pixel is bad in all images, fill the uncertainties with the quadrature sum / N images
     uncertainties[mask3d] = 0.0
-    uncertainties *= uncertainties
-    stacked_uncertainty = np.sqrt(uncertainties.sum(axis=0) / (n_good_pixels ** 2.0))
+    variances = uncertainties
+    variances *= variances
+
+    return a, variances, n_good_pixels, stacked_mask
+
+
+def stack(data_to_stack, nsigma_reject, method='mean') -> CCDData:
+    """Stack CCD data with robust sigma rejection.
+
+    Parameters
+    ----------
+    data_to_stack : list of CCDData
+        Image sections to combine. Data, mask, and uncertainty arrays must have matching shapes.
+    nsigma_reject : float
+        Robust-standard-deviation threshold for rejecting pixels from the stack.
+    method : {'mean', 'sum'}, optional
+        Combine mode. ``mean`` preserves the existing arithmetic mean behavior. ``sum`` scales the sum of unmasked
+        pixels and quadrature uncertainties by ``N / n_good`` for science smartstacks.
+
+    Returns
+    -------
+    CCDData
+        Combined data, uncertainty, and mask.
+
+    Raises
+    ------
+    ValueError
+        Raised when ``method`` is not ``mean`` or ``sum``.
+    """
+    a, variances, n_good_pixels, stacked_mask = _apply_sigma_rejection(data_to_stack, nsigma_reject)
+
+    if method == 'mean':
+        stacked_data = a.sum(axis=0) / n_good_pixels
+        stacked_uncertainty = np.sqrt(variances.sum(axis=0) / (n_good_pixels ** 2.0))
+    elif method == 'sum':
+        n_images = len(data_to_stack)
+        stacked_data = a.sum(axis=0) * n_images / n_good_pixels
+        stacked_uncertainty = np.sqrt(variances.sum(axis=0)) * n_images / n_good_pixels
+    else:
+        raise ValueError(f'Unknown stack method: {method}')
 
     return CCDData(data=stacked_data, meta=data_to_stack[0].meta, uncertainty=stacked_uncertainty, mask=stacked_mask)
+
+
+def science_hdu(frame):
+    """Return the science CCDData HDU for a frame or CCDData input.
+
+    Parameters
+    ----------
+    frame : CCDData or ObservationFrame
+        Input CCD data or frame containing CCD data.
+
+    Returns
+    -------
+    CCDData
+        Primary HDU when it contains CCD data, otherwise the first CCD extension.
+    """
+    if isinstance(frame, CCDData):
+        return frame
+    if isinstance(frame.primary_hdu, CCDData):
+        return frame.primary_hdu
+    return frame.ccd_hdus[0]
+
+
+def _warn_if_exposure_times_differ(images):
+    """Log a warning when input exposure times differ by more than one percent."""
+    exposure_times = []
+    for image in images:
+        exptime = science_hdu(image).meta.get('EXPTIME')
+        if exptime is None:
+            continue
+        try:
+            exposure_times.append(float(exptime))
+        except (TypeError, ValueError):
+            continue
+
+    exposure_times = np.array(exposure_times, dtype=np.float64)
+    if exposure_times.size < 2:
+        return
+
+    median_exptime = np.median(exposure_times)
+    if median_exptime == 0.0:
+        return
+
+    exptime_spread_fraction = (exposure_times.max() - exposure_times.min()) / median_exptime
+    if exptime_spread_fraction > 0.01:
+        logger.warning('Stacking images with exposure times that differ by more than 1%',
+                       extra_tags={'exptime_spread_fraction': exptime_spread_fraction})
+
+
+def combine_images(images, output_frame, nsigma=3.0, method='mean'):
+    """Combine images into an output frame in memory-bounded y sections.
+
+    Parameters
+    ----------
+    images : list of CCDData or ObservationFrame
+        Input images to combine.
+    output_frame : CCDData or ObservationFrame
+        Frame or CCD data object whose science HDU receives the combined result.
+    nsigma : float, optional
+        Robust-standard-deviation threshold for rejecting pixels from each section.
+    method : {'mean', 'sum'}, optional
+        Combine mode passed through to :func:`stack`.
+
+    Returns
+    -------
+    CCDData or ObservationFrame
+        The same output object passed in, with combined science data copied into it.
+    """
+    _warn_if_exposure_times_differ(images)
+
+    # Turn off memory mapping for each segment.
+    for image in images:
+        science_hdu(image).memmap = False
+
+    input_hdu = science_hdu(images[0])
+    output_hdu = science_hdu(output_frame)
+
+    # Split the image into order-N sections. This is just for convenience: technically N can be anything, but
+    # assuming we can read a couple of images at once makes order-N sections good for memory management.
+    # Clamp the section count so tiny images never get y_step=0.
+    n_sections = min(len(images), input_hdu.shape[0])
+
+    # Split along the y-direction to get more sequential reads off of disk.
+    # detector section (y_stop - y_start) // binning(y) // N, abs(x_stop - x_start) // binning(x)
+    y_step = input_hdu.shape[0] // n_sections
+    for i in range(n_sections + 1):
+        y_start = 1 + i * y_step
+        if i == n_sections:
+            if input_hdu.shape[0] % n_sections == 0:
+                break
+            y_stop = input_hdu.shape[0]
+        else:
+            y_stop = (i + 1) * y_step
+
+        section_to_stack = Section(x_start=1, x_stop=input_hdu.data.shape[1], y_start=y_start, y_stop=y_stop)
+        data_to_stack = [science_hdu(image)[section_to_stack] for image in images]
+        stacked_data = stack(data_to_stack, nsigma, method=method)
+
+        output_hdu.copy_in(stacked_data)
+
+    return output_frame
