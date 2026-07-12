@@ -354,6 +354,14 @@ def process_stackframe(self, body: dict, runtime_context: dict):
                                     'smartstack_filepath': reduced_path,
                                     'smartstack_status': 'timeout'})
             return
+        if stack_created:
+            logger.info('Smartstack created', extra_tags={'smartstack_event': 'created',
+                                                          'moluid': header['MOLUID'], 'camera': camera,
+                                                          'frmtotal': header['FRMTOTAL']})
+        logger.info('Reduced stackframe', extra_tags={'smartstack_event': 'frame_reduced',
+                                                      'moluid': header['MOLUID'], 'camera': camera,
+                                                      'stack_num': header['MOLFRNUM'],
+                                                      'filepath': reduced_path})
 
     except Retry:
         raise

@@ -590,6 +590,30 @@ class TestProcessStackframe:
         )
         redis_module.Redis.from_url.assert_not_called()
 
+    @pytest.mark.parametrize('stack_created, expect_created_log', [
+        (True, True),
+        (False, False),
+    ])
+    @patch('banzai.scheduling.logger')
+    @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
+    def test_process_stackframe_logs_lifecycle_events(self, mock_run_stages, mock_logger, stack_created,
+                                                      expect_created_log, db_address, monkeypatch):
+        mock_run_stages.return_value = [self._make_mock_image()]
+        mock_upsert = MagicMock(return_value=stack_created)
+        monkeypatch.setattr(scheduling, 'upsert_stack_and_stackframe', mock_upsert, raising=False)
+
+        header = self._make_fits_header()
+        body = {'fits_file': '/path/to/frame.fits', 'last_frame': False}
+        runtime_context = {'db_address': db_address, 'REDIS_URL': 'redis://localhost:6379/0'}
+
+        with patch('banzai.scheduling.fits_utils.get_primary_header', return_value=header):
+            process_stackframe(body, runtime_context)
+
+        events = [call.kwargs.get('extra_tags', {}).get('smartstack_event')
+                  for call in mock_logger.info.call_args_list]
+        assert ('created' in events) is expect_created_log
+        assert 'frame_reduced' in events
+
     @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
     def test_process_stackframe_upserts_only_after_reduction(self, mock_run_stages, db_address, monkeypatch):
         mock_upsert = MagicMock()
