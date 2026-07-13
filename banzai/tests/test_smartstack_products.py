@@ -139,14 +139,18 @@ def test_metadata(products):
 
 
 def test_output_filename_is_range_name(products, monkeypatch):
-    input_images = [make_frame('/tmp/cpt1m010-fa16-20240706-0031-e09.fits', value=1.0)]
-    stackframes = [stackframe(33), stackframe(31), stackframe(32)]
+    # The range comes from the first/last input file numbers, not stack positions,
+    # so two same-night stacks from one camera cannot collide.
+    input_images = [make_frame('/tmp/cpt1m010-fa16-20240706-0031-e09.fits', value=1.0),
+                    make_frame('/tmp/cpt1m010-fa16-20240706-0033-e09.fits', value=1.0)]
+    stackframes = [stackframe(2), stackframe(1)]
     monkeypatch.setattr(products, 'open_stackframe_images', lambda rows, context: input_images)
     monkeypatch.setattr(products, 'combine_images', fake_sum_combine(products))
 
     output_frame = products.build_stacked_frame(stackframes, FakeContext(), 'mol-1')
 
-    assert output_frame.filename == make_smartstack_filename(input_images[0].filename, 31, 33)
+    assert output_frame.filename == 'cpt1m010-fa16-20240706-0031-0033-e45.fits'
+    assert output_frame.filename == make_smartstack_filename(input_images[0].filename, input_images[-1].filename)
 
 
 def test_build_stacked_frame_rejects_empty(products):
