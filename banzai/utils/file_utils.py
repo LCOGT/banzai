@@ -20,42 +20,47 @@ def get_processed_path(base_path, site, camera, epoch):
     return os.path.join(base_path, site, camera, epoch, 'processed')
 
 
-def make_smartstack_filename(first_filename, first_stack_num, last_stack_num, reduction_level=45):
-    """Build a smartstack FITS filename for a stack frame range.
+def make_smartstack_filename(first_filename, last_filename, reduction_level=45):
+    """Build a smartstack FITS filename from the first and last input frame filenames.
+
+    The range comes from the inputs' file frame numbers (unique per camera and
+    night), not their stack positions — stack positions always start at 1, so
+    two same-night stacks from one camera would collide.
 
     Parameters
     ----------
     first_filename : str
         Filename of the first reduced input frame.
-    first_stack_num : int
-        First stack frame number.
-    last_stack_num : int
-        Last stack frame number.
+    last_filename : str
+        Filename of the last reduced input frame.
     reduction_level : int, optional
         Output reduction level.
 
     Returns
     -------
     str
-        Smartstack FITS filename with the frame range.
+        Smartstack FITS filename with the file frame-number range.
 
     Raises
     ------
     ValueError
-        If first_filename cannot be parsed as a reduced FITS filename.
+        If either filename cannot be parsed as a reduced FITS filename.
     """
-    match = SMARTSTACK_FILENAME_RE.match(first_filename)
-    if match is None:
+    first_match = SMARTSTACK_FILENAME_RE.match(first_filename)
+    if first_match is None:
         raise ValueError(f'Could not parse smartstack input filename: {first_filename}')
+    last_match = SMARTSTACK_FILENAME_RE.match(last_filename)
+    if last_match is None:
+        raise ValueError(f'Could not parse smartstack input filename: {last_filename}')
 
-    frame_number_width = len(match.group('frame_number'))
-    first_frame = f'{first_stack_num:0{frame_number_width}d}'
-    last_frame = f'{last_stack_num:0{frame_number_width}d}'
+    frame_number_width = len(first_match.group('frame_number'))
+    first_frame = f"{int(first_match.group('frame_number')):0{frame_number_width}d}"
+    last_frame = f"{int(last_match.group('frame_number')):0{frame_number_width}d}"
     rlevel = f'{reduction_level:02d}'
 
     return (
-        f"{match.group('prefix')}{first_frame}-{last_frame}-"
-        f"{match.group('kind')}{rlevel}{match.group('suffix')}"
+        f"{first_match.group('prefix')}{first_frame}-{last_frame}-"
+        f"{first_match.group('kind')}{rlevel}{first_match.group('suffix')}"
     )
 
 
