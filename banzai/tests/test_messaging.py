@@ -1,4 +1,5 @@
 import importlib
+import json
 
 import banzai.settings as settings
 from banzai.utils import messaging
@@ -106,12 +107,17 @@ def test_post_to_shipper_queue_body_final(monkeypatch):
     )
 
     publish_call = next(call for call in RecordingConnection.instances[0].calls if call[0] == 'publish')
-    assert publish_call[1] == {
+    # The shipper consumes plain-text JSON strings and json.loads them itself; a
+    # kombu-serialized dict (application/json) makes it crash on an already-decoded body.
+    assert isinstance(publish_call[1], str)
+    assert json.loads(publish_call[1]) == {
         'fits': '/data/final.fits',
         'small_thumbnail': '/data/final-small_thumbnail.jpg',
         'large_thumbnail': '/data/final-large_thumbnail.jpg',
         'instrument_enqueue_timestamp': 1783200000123,
     }
+    assert publish_call[2]['content_type'] == 'text/plain'
+    assert publish_call[2]['content_encoding'] == 'utf-8'
 
 
 def test_post_to_shipper_queue_body_preview(monkeypatch):
@@ -128,13 +134,17 @@ def test_post_to_shipper_queue_body_preview(monkeypatch):
     )
 
     publish_call = next(call for call in RecordingConnection.instances[0].calls if call[0] == 'publish')
-    assert publish_call[1]['fits'] is None
-    assert set(publish_call[1]) == {
+    assert isinstance(publish_call[1], str)
+    body = json.loads(publish_call[1])
+    assert body['fits'] is None
+    assert set(body) == {
         'fits',
         'small_thumbnail',
         'large_thumbnail',
         'instrument_enqueue_timestamp',
     }
+    assert publish_call[2]['content_type'] == 'text/plain'
+    assert publish_call[2]['content_encoding'] == 'utf-8'
 
 
 def test_settings_shipper_defaults(monkeypatch):
