@@ -89,9 +89,9 @@ def _bind_ship_probe(exchange_name, queue_name=SHIP_PROBE_QUEUE, broker_url=BROK
 def _drain_ship_probe(queue_name=SHIP_PROBE_QUEUE, broker_url=BROKER_URL):
     """Return every message currently in the probe queue as decoded dicts, acking each.
 
-    Bodies are the JSON published by ``post_to_shipper_queue`` (kombu's default
-    serializer), so decode them directly rather than routing through kombu's
-    content-type accept machinery.
+    Bodies must be plain-text JSON strings (content_type='text/plain') — the real
+    shipper json.loads the raw body itself and permanently rejects kombu-serialized
+    dicts, so the content type is asserted here to pin the wire contract.
     """
     messages = []
     with Connection(broker_url) as conn:
@@ -100,6 +100,8 @@ def _drain_ship_probe(queue_name=SHIP_PROBE_QUEUE, broker_url=BROKER_URL):
             message = bound_queue.get()
             if message is None:
                 break
+            assert message.content_type == 'text/plain', \
+                f'Shipper messages must be text/plain, got {message.content_type!r}'
             messages.append(json.loads(message.body))
             message.ack()
     return messages
