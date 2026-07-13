@@ -609,10 +609,24 @@ class TestProcessStackframe:
         with patch('banzai.scheduling.fits_utils.get_primary_header', return_value=header):
             process_stackframe(body, runtime_context)
 
-        events = [call.kwargs.get('extra_tags', {}).get('smartstack_event')
-                  for call in mock_logger.info.call_args_list]
-        assert ('created' in events) is expect_created_log
-        assert 'frame_reduced' in events
+        created_tags = {
+            'smartstack_event': 'created',
+            'smartstack_moluid': 'mol-xyz',
+            'smartstack_camera': 'cam1',
+            'smartstack_frmtotal': 5,
+        }
+        frame_tags = {
+            'smartstack_event': 'frame_reduced',
+            'smartstack_moluid': 'mol-xyz',
+            'smartstack_camera': 'cam1',
+            'smartstack_stack_num': 1,
+            'smartstack_filepath': '/data/processed/frame-e09.fits',
+        }
+        if expect_created_log:
+            mock_logger.info.assert_any_call('Smartstack created', extra_tags=created_tags)
+        else:
+            assert not any(call.args == ('Smartstack created',) for call in mock_logger.info.call_args_list)
+        mock_logger.info.assert_any_call('Reduced stackframe', extra_tags=frame_tags)
 
     @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
     def test_process_stackframe_upserts_only_after_reduction(self, mock_run_stages, db_address, monkeypatch):
@@ -717,14 +731,17 @@ def _frame(stack_num, is_last=False, filepath=None):
 
 class TestFinalizeStack:
 
-    def test_finalize_claims_before_work(self):
+    @pytest.mark.parametrize('status', ['complete', 'timeout'])
+    def test_finalize_claims_before_work_and_logs_terminal(self, status):
         """The attempt is claimed first, then run_final -> publish -> mark_terminal, in that order."""
         rc = _runtime_context()
         stack = _stack(finalize_attempts=0, next_attempt_at=None)
         stackframes = [_frame(1), _frame(2, is_last=True)]
         with patch('banzai.stacking.dbs') as mock_dbs, \
              patch('banzai.stacking.smartstack_products') as mock_products, \
-             patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
+             patch('banzai.stacking.post_to_shipper_queue') as mock_publish, \
+             patch('banzai.stacking.logger') as mock_logger:
+            mock_dbs.claim_finalize_attempt.return_value = 1
             mock_products.run_final.return_value = ('/o/e45.fits', '/o/small.jpg', '/o/large.jpg')
             manager = MagicMock()
             manager.attach_mock(mock_dbs.claim_finalize_attempt, 'claim')
@@ -732,7 +749,7 @@ class TestFinalizeStack:
             manager.attach_mock(mock_publish, 'publish')
             manager.attach_mock(mock_dbs.mark_stack_terminal, 'mark_terminal')
 
-            finalize_stack(rc, stack, stackframes, 'complete')
+            finalize_stack(rc, stack, stackframes, status)
 
         assert [call[0] for call in manager.mock_calls] == ['claim', 'run_final', 'publish', 'mark_terminal']
         mock_dbs.claim_finalize_attempt.assert_called_once_with(rc.db_address, stack.moluid, FINALIZE_BACKOFF_SECONDS)
@@ -740,7 +757,17 @@ class TestFinalizeStack:
             rc.broker_url, rc.SHIPPER_EXCHANGE, rc.SHIPPER_QUEUE_NAME,
             fits_path='/o/e45.fits', small_thumbnail='/o/small.jpg', large_thumbnail='/o/large.jpg',
         )
-        mock_dbs.mark_stack_terminal.assert_called_once_with(rc.db_address, stack.moluid, 'complete')
+        mock_dbs.mark_stack_terminal.assert_called_once_with(rc.db_address, stack.moluid, status)
+        mock_logger.info.assert_called_once_with(
+            'Finalized smartstack',
+            extra_tags={
+                'smartstack_event': 'terminal',
+                'smartstack_status': status,
+                'smartstack_moluid': stack.moluid,
+                'smartstack_camera': stack.camera,
+                'smartstack_finalize_attempt': 1,
+            },
+        )
 
     def test_finalize_failure_leaves_stack_active(self):
         """A run_final error leaves the claimed stack active for retry."""
@@ -749,7 +776,9 @@ class TestFinalizeStack:
         stackframes = [_frame(1)]
         with patch('banzai.stacking.dbs') as mock_dbs, \
              patch('banzai.stacking.smartstack_products') as mock_products, \
-             patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
+             patch('banzai.stacking.post_to_shipper_queue') as mock_publish, \
+             patch('banzai.stacking.logger') as mock_logger:
+            mock_dbs.claim_finalize_attempt.return_value = 2
             mock_products.run_final.side_effect = RuntimeError('stack blew up')
 
             finalize_stack(rc, stack, stackframes, 'complete')
@@ -757,6 +786,17 @@ class TestFinalizeStack:
         mock_dbs.claim_finalize_attempt.assert_called_once()
         mock_publish.assert_not_called()
         mock_dbs.mark_stack_terminal.assert_not_called()
+        mock_logger.error.assert_called_once_with(
+            'Failed to finalize smartstack',
+            exc_info=True,
+            extra_tags={
+                'smartstack_event': 'finalize_failed',
+                'smartstack_target_status': 'complete',
+                'smartstack_moluid': stack.moluid,
+                'smartstack_camera': stack.camera,
+                'smartstack_finalize_attempt': 2,
+            },
+        )
 
     def test_publish_failure_leaves_stack_active(self):
         """A publishing error leaves the stack active for retry."""
@@ -782,7 +822,8 @@ class TestFinalizeStack:
         stackframes = [_frame(1)]
         with patch('banzai.stacking.dbs') as mock_dbs, \
              patch('banzai.stacking.smartstack_products') as mock_products, \
-             patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
+             patch('banzai.stacking.post_to_shipper_queue') as mock_publish, \
+             patch('banzai.stacking.logger') as mock_logger:
 
             finalize_stack(rc, stack, stackframes, 'complete')
 
@@ -790,6 +831,16 @@ class TestFinalizeStack:
         mock_dbs.claim_finalize_attempt.assert_not_called()
         mock_products.run_final.assert_not_called()
         mock_publish.assert_not_called()
+        mock_logger.error.assert_called_once_with(
+            'Smartstack exhausted finalize attempts; marking error',
+            extra_tags={
+                'smartstack_event': 'terminal',
+                'smartstack_status': 'error',
+                'smartstack_moluid': stack.moluid,
+                'smartstack_camera': stack.camera,
+                'smartstack_finalize_attempt': MAX_FINALIZE_ATTEMPTS,
+            },
+        )
 
 
 class TestStackTimedOut:
