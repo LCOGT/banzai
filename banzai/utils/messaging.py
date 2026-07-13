@@ -5,7 +5,7 @@ Three patterns are used in banzai:
 - ``post_to_archive_queue`` publishes a kombu-serialized dict to the
   ``fits_files`` fanout exchange. Consumed by ``PipelineListener`` in
   ``banzai/main.py`` as the archive-ingestion path.
-- ``post_to_shipper_queue`` publishes a kombu-serialized dict to the fanout
+- ``post_to_shipper_queue`` publishes a plain-text JSON string to the fanout
   exchange consumed by the site shipper. It declares the durable queue
   binding before publishing so RabbitMQ does not drop fanout messages with
   no bound queue.
@@ -14,7 +14,14 @@ Three patterns are used in banzai:
   publishes stackframe-ready notifications: bodies arrive as bytes/str and
   the consumer must ``json.loads`` them rather than relying on kombu to
   deserialize a dict.
+
+The site convention is plain-text JSON everywhere the site software is the
+peer: consumers ``json.loads`` the raw body themselves, so publishing a
+kombu-serialized dict (``application/json``) hands them an already-decoded
+dict and crashes them.
 """
+import json
+
 from kombu import Connection, Exchange, Queue
 
 
@@ -45,6 +52,10 @@ def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, smal
 
     Fanout exchanges drop messages when no queue is bound, so the durable
     queue binding is declared before publishing each message.
+
+    The body is sent as a plain-text JSON string: the shipper json.loads the
+    raw body itself and rejects kombu-serialized dicts as non-transient
+    failures (no retry), silently dropping the product.
     """
     exchange = Exchange(exchange_name, type='fanout', durable=True)
     queue = Queue(queue_name, exchange=exchange, durable=True)
@@ -62,7 +73,7 @@ def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, smal
         bound_queue = queue(channel)
         bound_queue.declare()
         producer = conn.Producer(exchange=bound_exchange)
-        producer.publish(body)
+        producer.publish(json.dumps(body), content_type='text/plain', content_encoding='utf-8')
         producer.release()
 
 
