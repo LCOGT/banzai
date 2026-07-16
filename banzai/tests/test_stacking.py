@@ -4,7 +4,7 @@ from astropy.io import fits
 
 from banzai import data as data_module
 from banzai.data import CCDData, stack
-from banzai.tests.utils import FakeCCDData, current_stack_snapshot
+from banzai.tests.utils import FakeCCDData, pre_refactor_stack_snapshot
 
 pytestmark = pytest.mark.stacking
 
@@ -63,7 +63,7 @@ def test_stacking_with_different_pixels(set_random_seed):
     assert np.all(stacked_data.mask == 0)
 
 
-def test_stack_mean_matches_current_snapshot():
+def test_stack_mean_matches_pre_refactor_snapshot():
     rng = np.random.default_rng(318209)
     data_to_stack = []
     for i in range(7):
@@ -77,7 +77,7 @@ def test_stack_mean_matches_current_snapshot():
     data_to_stack[3].mask[4, 5] = 2
     data_to_stack[5].mask[0, 0] = 4
 
-    expected = current_stack_snapshot(data_to_stack, 3.0)
+    expected = pre_refactor_stack_snapshot(data_to_stack, 3.0)
     actual_default = stack(data_to_stack, 3.0)
 
     assert np.array_equal(actual_default.data, expected.data)

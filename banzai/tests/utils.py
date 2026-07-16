@@ -55,7 +55,7 @@ class FakeCCDData(CCDData):
             setattr(self, keyword, kwargs[keyword])
 
 
-def current_stack_snapshot(data_to_stack, nsigma_reject):
+def pre_refactor_stack_snapshot(data_to_stack, nsigma_reject):
     """Return the pre-refactor mean-stack result for regression comparisons only."""
     shape3d = [len(data_to_stack)] + list(data_to_stack[0].shape)
     a = np.zeros(shape3d, dtype=data_to_stack[0].dtype)

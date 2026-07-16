@@ -3,7 +3,7 @@ from banzai.data import CCDData
 from banzai.context import Context
 from banzai.calibrations import CalibrationStacker
 from banzai.dbs import Instrument
-from banzai.tests.utils import current_stack_snapshot
+from banzai.tests.utils import pre_refactor_stack_snapshot
 import numpy as np
 from astropy.io import fits
 import pytest
@@ -73,7 +73,7 @@ def test_stacking_with_different_pixels():
     assert np.all(stacked_data.mask == 0)
 
 
-def test_calibration_stacker_matches_current_stack_snapshot():
+def test_calibration_stacker_matches_pre_refactor_snapshot():
     rng = np.random.default_rng(920381)
     test_images = []
     for i in range(7):
@@ -91,7 +91,7 @@ def test_calibration_stacker_matches_current_stack_snapshot():
 
     stage = FakeStacker(context)
     stacked_data = stage.do_stage(test_images)
-    expected = current_stack_snapshot([image.primary_hdu for image in test_images], 3.0)
+    expected = pre_refactor_stack_snapshot([image.primary_hdu for image in test_images], 3.0)
 
     assert np.array_equal(stacked_data.data, expected.data)
     assert np.array_equal(stacked_data.primary_hdu.uncertainty, expected.uncertainty)
