@@ -12,9 +12,10 @@ def test_make_smartstack_filename_basic():
     assert filename == 'tst2m002-xx06-20260213-0031-0042-e45.fits'
 
 
-def test_make_smartstack_filename_fz():
+@pytest.mark.parametrize('last_suffix', ['.fits.fz', '.fits'])
+def test_make_smartstack_filename_fz(last_suffix):
     filename = file_utils.make_smartstack_filename('tst2m002-xx06-20260213-0031-e09.fits.fz',
-                                                   'tst2m002-xx06-20260213-0042-e09.fits.fz')
+                                                   f'tst2m002-xx06-20260213-0042-e09{last_suffix}')
 
     assert filename == 'tst2m002-xx06-20260213-0031-0042-e45.fits.fz'
 
@@ -72,6 +73,23 @@ def test_make_smartstack_filename_garbage_last_raises():
                                             'not-a-reduced-frame.txt')
 
 
+@pytest.mark.parametrize('last_filename', [
+    'ogg2m001-fs02-20260213-0042-e09.fits',
+    'tst2m002-xx06-20260214-0042-e09.fits',
+    'tst2m002-xx06-20260213-0042-x09.fits',
+    'tst2m002-xx06-20260213-0042-e91.fits',
+])
+def test_make_smartstack_filename_incompatible_input_raises(last_filename):
+    with pytest.raises(ValueError, match='Incompatible smartstack input filenames'):
+        file_utils.make_smartstack_filename('tst2m002-xx06-20260213-0031-e09.fits', last_filename)
+
+
+def test_make_smartstack_filename_reversed_range_raises():
+    with pytest.raises(ValueError, match='range is reversed'):
+        file_utils.make_smartstack_filename('tst2m002-xx06-20260213-0042-e09.fits',
+                                            'tst2m002-xx06-20260213-0031-e09.fits')
+
+
 @pytest.mark.parametrize(
     'smartstack_filename,expected',
     [
@@ -91,5 +109,3 @@ def test_make_jpg_filenames(smartstack_filename, expected):
     filenames = file_utils.make_jpg_filenames(smartstack_filename)
 
     assert filenames == expected
-    assert filenames[0].endswith('-small_thumbnail.jpg')
-    assert filenames[1].endswith('-large_thumbnail.jpg')

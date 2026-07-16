@@ -44,7 +44,8 @@ def make_smartstack_filename(first_filename, last_filename, reduction_level=45):
     Raises
     ------
     ValueError
-        If either filename cannot be parsed as a reduced FITS filename.
+        If either filename cannot be parsed, the inputs identify different
+        frame series, or the frame-number range is reversed.
     """
     first_match = SMARTSTACK_FILENAME_RE.match(first_filename)
     if first_match is None:
@@ -53,9 +54,15 @@ def make_smartstack_filename(first_filename, last_filename, reduction_level=45):
     if last_match is None:
         raise ValueError(f'Could not parse smartstack input filename: {last_filename}')
 
-    frame_number_width = len(first_match.group('frame_number'))
-    first_frame = f"{int(first_match.group('frame_number')):0{frame_number_width}d}"
-    last_frame = f"{int(last_match.group('frame_number')):0{frame_number_width}d}"
+    # Compression and frame-number width are storage/formatting details, not series identity.
+    identity_fields = ('prefix', 'kind', 'rlevel')
+    if any(first_match.group(field) != last_match.group(field) for field in identity_fields):
+        raise ValueError(f'Incompatible smartstack input filenames: {first_filename}, {last_filename}')
+
+    first_frame = first_match.group('frame_number')
+    last_frame = last_match.group('frame_number')
+    if int(first_frame) > int(last_frame):
+        raise ValueError(f'Smartstack input filename range is reversed: {first_filename}, {last_filename}')
     rlevel = f'{reduction_level:02d}'
 
     return (

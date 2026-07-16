@@ -24,7 +24,7 @@ def test_stretch_for_display_decimates():
 def test_stretch_for_display_all_nan():
     display_image = jpg_utils.stretch_for_display(np.full((5, 7), np.nan))
 
-    assert np.isfinite(display_image).all()
+    np.testing.assert_array_equal(display_image, np.zeros((5, 7), dtype=np.uint8))
 
 
 def test_stretch_for_display_nan_speckle_matches_median_fill():
@@ -39,23 +39,20 @@ def test_stretch_for_display_nan_speckle_matches_median_fill():
     np.testing.assert_array_equal(display_image, expected_image)
 
 
-def test_save_jpg_sizes(tmp_path):
-    display_image = np.arange(1200 * 1200, dtype=np.uint32).reshape(1200, 1200).astype(np.uint8)
-    rectangular_display_image = np.zeros((600, 1200), dtype=np.uint8)
-    small_path = tmp_path / 'small.jpg'
-    large_path = tmp_path / 'large.jpg'
-    rectangular_path = tmp_path / 'rectangular.jpg'
+@pytest.mark.parametrize(
+    'shape,max_size,expected_size',
+    [
+        pytest.param((1200, 1200), 300, (300, 300), id='small-square'),
+        pytest.param((1200, 1200), 900, (900, 900), id='large-square'),
+        pytest.param((600, 1200), 300, (300, 150), id='rectangular'),
+    ],
+)
+def test_save_jpg_sizes(tmp_path, shape, max_size, expected_size):
+    display_image = np.arange(np.prod(shape), dtype=np.uint32).reshape(shape).astype(np.uint8)
+    path = tmp_path / f'{shape[0]}x{shape[1]}-{max_size}.jpg'
 
-    assert jpg_utils.save_jpg(display_image, small_path, 300) == small_path
-    assert jpg_utils.save_jpg(display_image, large_path, 900) == large_path
-    jpg_utils.save_jpg(rectangular_display_image, rectangular_path, 300)
+    assert jpg_utils.save_jpg(display_image, path, max_size) == path
 
-    with Image.open(small_path) as image:
-        assert image.size == (300, 300)
-        assert image.mode == 'L'
-    with Image.open(large_path) as image:
-        assert image.size == (900, 900)
-        assert image.mode == 'L'
-    with Image.open(rectangular_path) as image:
-        assert image.size == (300, 150)
+    with Image.open(path) as image:
+        assert image.size == expected_size
         assert image.mode == 'L'

@@ -18,8 +18,9 @@ def stretch_for_display(data, max_size=1800):
     display_data = np.asarray(data[::stride, ::stride], dtype=np.float64)
 
     finite_mask = np.isfinite(display_data)
-    fill_value = np.median(display_data[finite_mask]) if finite_mask.any() else 0.0
-    display_data = np.where(finite_mask, display_data, fill_value)
+    if not finite_mask.all():
+        fill_value = np.median(display_data[finite_mask]) if finite_mask.any() else 0.0
+        display_data = np.where(finite_mask, display_data, fill_value)
 
     stretched_data = apply_stretch(display_data)
     display_image = np.clip(stretched_data * 255.0, 0.0, 255.0).astype(np.uint8)
@@ -32,7 +33,7 @@ def save_jpg(display_image, path, max_size, quality=85):
     Parameters
     ----------
     display_image : numpy.ndarray
-        Display-ready image data.
+        Two-dimensional display-ready image data.
     path : str or pathlib.Path
         Output JPEG path.
     max_size : int
@@ -46,8 +47,6 @@ def save_jpg(display_image, path, max_size, quality=85):
         The output path.
     """
     image = Image.fromarray(np.asarray(display_image, dtype=np.uint8))
-    if image.mode != 'L':
-        image = image.convert('L')
     image.thumbnail((max_size, max_size))
     image.save(path, quality=quality)
     return path
