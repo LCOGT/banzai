@@ -20,54 +20,35 @@ def get_processed_path(base_path, site, camera, epoch):
     return os.path.join(base_path, site, camera, epoch, 'processed')
 
 
-def make_smartstack_filename(first_filename, last_filename, reduction_level=45):
-    """Build a smartstack FITS filename from the first and last input frame filenames.
-
-    The range comes from the inputs' file frame numbers (unique per camera and
-    night), not their stack positions — stack positions always start at 1, so
-    two same-night stacks from one camera would collide.
+def make_smartstack_filename(first_filename, reduction_level=45):
+    """Build a smartstack FITS filename from the first input frame's basename.
 
     Parameters
     ----------
     first_filename : str
         Filename of the first reduced input frame.
-    last_filename : str
-        Filename of the last reduced input frame.
     reduction_level : int, optional
         Output reduction level.
 
     Returns
     -------
     str
-        Smartstack FITS filename with the file frame-number range.
+        First input frame's basename with the requested reduction level.
 
     Raises
     ------
     ValueError
-        If either filename cannot be parsed, the inputs identify different
-        frame series, or the frame-number range is reversed.
+        If the filename cannot be parsed as a reduced FITS filename.
     """
-    first_match = SMARTSTACK_FILENAME_RE.match(first_filename)
-    if first_match is None:
+    basename = os.path.basename(first_filename)
+    match = SMARTSTACK_FILENAME_RE.match(basename)
+    if match is None:
         raise ValueError(f'Could not parse smartstack input filename: {first_filename}')
-    last_match = SMARTSTACK_FILENAME_RE.match(last_filename)
-    if last_match is None:
-        raise ValueError(f'Could not parse smartstack input filename: {last_filename}')
-
-    # Compression and frame-number width are storage/formatting details, not series identity.
-    identity_fields = ('prefix', 'kind', 'rlevel')
-    if any(first_match.group(field) != last_match.group(field) for field in identity_fields):
-        raise ValueError(f'Incompatible smartstack input filenames: {first_filename}, {last_filename}')
-
-    first_frame = first_match.group('frame_number')
-    last_frame = last_match.group('frame_number')
-    if int(first_frame) > int(last_frame):
-        raise ValueError(f'Smartstack input filename range is reversed: {first_filename}, {last_filename}')
     rlevel = f'{reduction_level:02d}'
 
     return (
-        f"{first_match.group('prefix')}{first_frame}-{last_frame}-"
-        f"{first_match.group('kind')}{rlevel}{first_match.group('suffix')}"
+        f"{match.group('prefix')}{match.group('frame_number')}-"
+        f"{match.group('kind')}{rlevel}{match.group('suffix')}"
     )
 
 
