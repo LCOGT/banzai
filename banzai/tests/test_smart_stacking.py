@@ -48,7 +48,7 @@ class TestDBOperations:
                 filepath='/data/frame1.fits', is_last=False, dateobs=None, instrument_enqueue_timestamp=None):
         if dateobs is None:
             dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
-        dbs.upsert_stack_and_stackframe(
+        return dbs.upsert_stack_and_stackframe(
             db_address,
             moluid=moluid,
             stack_num=stack_num,
@@ -59,6 +59,10 @@ class TestDBOperations:
             dateobs=dateobs,
             instrument_enqueue_timestamp=instrument_enqueue_timestamp,
         )
+
+    def test_upsert_returns_created_flag(self, db_address):
+        assert self._upsert(db_address, moluid='mol-created', stack_num=1) is True
+        assert self._upsert(db_address, moluid='mol-created', stack_num=2) is False
 
     def test_upsert_creates_stack_and_stackframe(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
@@ -106,7 +110,7 @@ class TestDBOperations:
         assert stack.last_stackframe_at > first_last_stackframe_at
         assert stackframe_count == 2
 
-    def test_upsert_requeue_resets_terminal_stack(self, db_address):
+    def test_upsert_requeue_resets_complete_stack(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         self._upsert(
             db_address, moluid='mol-dup', stack_num=1, frmtotal=3,
@@ -143,6 +147,54 @@ class TestDBOperations:
         assert stackframes[0].filepath == '/data/dup2.fits'
         assert stackframes[0].is_last is True
         assert stackframes[0].dateobs == new_dateobs
+
+    @pytest.mark.parametrize('late_stack_num', [1, 2], ids=['replay', 'new-member'])
+    def test_upsert_ignores_stackframe_after_timeout(self, db_address, late_stack_num):
+        original_dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
+        self._upsert(
+            db_address, moluid='mol-timeout', stack_num=1, frmtotal=3,
+            camera='cam1', filepath='/data/original.fits', is_last=False, dateobs=original_dateobs,
+            instrument_enqueue_timestamp=100,
+        )
+        dbs.claim_finalize_attempt(db_address, 'mol-timeout', [60, 300])
+        dbs.set_preview_count(db_address, 'mol-timeout', 1)
+        dbs.mark_stack_terminal(db_address, 'mol-timeout', 'timeout')
+
+        with dbs.get_session(db_address, site_deploy=True) as session:
+            original_stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-timeout').one()
+            original_frame = session.query(dbs.Stackframe).filter(dbs.Stackframe.moluid == 'mol-timeout').one()
+            original_stack_state = (
+                original_stack.camera, original_stack.frmtotal, original_stack.status,
+                original_stack.last_stackframe_at, original_stack.completed_at,
+                original_stack.finalize_attempts, original_stack.next_attempt_at,
+                original_stack.last_preview_count,
+            )
+            original_frame_state = (
+                original_frame.filepath, original_frame.dateobs, original_frame.is_last,
+                original_frame.instrument_enqueue_timestamp, original_frame.created_at,
+            )
+
+        result = self._upsert(
+            db_address, moluid='mol-timeout', stack_num=late_stack_num, frmtotal=99,
+            camera='cam2', filepath='/data/late.fits', is_last=True,
+            dateobs=datetime.datetime(2024, 6, 15, 13, 0, 0), instrument_enqueue_timestamp=200,
+        )
+
+        with dbs.get_session(db_address, site_deploy=True) as session:
+            stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-timeout').one()
+            stackframes = session.query(dbs.Stackframe).filter(dbs.Stackframe.moluid == 'mol-timeout').all()
+
+        assert result is None
+        assert (
+            stack.camera, stack.frmtotal, stack.status, stack.last_stackframe_at, stack.completed_at,
+            stack.finalize_attempts, stack.next_attempt_at, stack.last_preview_count,
+        ) == original_stack_state
+        assert len(stackframes) == 1
+        assert (
+            stackframes[0].filepath, stackframes[0].dateobs, stackframes[0].is_last,
+            stackframes[0].instrument_enqueue_timestamp, stackframes[0].created_at,
+        ) == original_frame_state
+        assert dbs.get_active_stacks(db_address, 'cam1') == []
 
     def test_upsert_requires_filepath(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
@@ -280,7 +332,7 @@ class TestCheckStackComplete:
 
 class TestRetention:
 
-    def test_cleanup_old_stacks_deletes_stack_and_stackframes(self, db_address):
+    def test_cleanup_old_stacks_retains_timeout_tombstone(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         for stack_num in range(1, 4):
             TestDBOperations._upsert(
@@ -293,7 +345,14 @@ class TestRetention:
                 camera='cam1', filepath=f'/data/active{stack_num}.fits',
                 is_last=(stack_num == 3), dateobs=dateobs,
             )
+        for stack_num in range(1, 3):
+            TestDBOperations._upsert(
+                db_address, moluid='mol-timeout-old', stack_num=stack_num, frmtotal=3,
+                camera='cam1', filepath=f'/data/timeout{stack_num}.fits',
+                is_last=False, dateobs=dateobs,
+            )
         dbs.mark_stack_terminal(db_address, 'mol-old', 'complete')
+        dbs.mark_stack_terminal(db_address, 'mol-timeout-old', 'timeout')
 
         with dbs.get_session(db_address) as session:
             old_date = datetime.datetime.utcnow() - datetime.timedelta(days=30)
@@ -305,6 +364,10 @@ class TestRetention:
                 text("UPDATE stacks SET completed_at = :old_date WHERE moluid = :moluid"),
                 {'old_date': old_date, 'moluid': 'mol-active-old'},
             )
+            session.execute(
+                text("UPDATE stacks SET completed_at = :old_date WHERE moluid = :moluid"),
+                {'old_date': old_date, 'moluid': 'mol-timeout-old'},
+            )
 
         dbs.cleanup_old_stacks(db_address, retention_days=7)
 
@@ -313,11 +376,20 @@ class TestRetention:
             old_frame_count = session.query(dbs.Stackframe).filter(dbs.Stackframe.moluid == 'mol-old').count()
             active_stack_count = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-active-old').count()
             active_frame_count = session.query(dbs.Stackframe).filter(dbs.Stackframe.moluid == 'mol-active-old').count()
+            timeout_stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-timeout-old').one()
+            timeout_frame_count = session.query(dbs.Stackframe).filter(
+                dbs.Stackframe.moluid == 'mol-timeout-old').count()
 
         assert old_stack_count == 0
         assert old_frame_count == 0
         assert active_stack_count == 1
         assert active_frame_count == 3
+        assert timeout_stack.status == 'timeout'
+        assert timeout_frame_count == 0
+        assert TestDBOperations._upsert(
+            db_address, moluid='mol-timeout-old', stack_num=3, frmtotal=3,
+            camera='cam1', filepath='/data/late.fits', is_last=True, dateobs=dateobs,
+        ) is None
 
 
 # ---------------------------------------------------------------------------
@@ -464,6 +536,27 @@ class TestProcessStackframe:
         img.get_output_directory.return_value = output_dir
         img.get_output_filename.return_value = output_filename
         return img
+
+    @patch('banzai.scheduling.logger')
+    @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
+    def test_process_stackframe_logs_timeout_rejection(self, mock_run_stages, mock_logger,
+                                                       db_address, monkeypatch):
+        mock_run_stages.return_value = [self._make_mock_image()]
+        monkeypatch.setattr(scheduling, 'upsert_stack_and_stackframe', MagicMock(return_value=None))
+        header = self._make_fits_header()
+
+        with patch('banzai.scheduling.fits_utils.get_primary_header', return_value=header):
+            process_stackframe({'fits_file': '/path/to/frame.fits'}, {'db_address': db_address})
+
+        mock_logger.info.assert_called_once_with(
+            'Ignored reduced stackframe for timed-out smartstack',
+            extra_tags={'smartstack_event': 'frame_ignored',
+                        'smartstack_moluid': 'mol-xyz',
+                        'smartstack_camera': 'cam1',
+                        'smartstack_stack_num': 1,
+                        'smartstack_filepath': '/data/processed/frame-e09.fits',
+                        'smartstack_status': 'timeout'},
+        )
 
     @pytest.mark.parametrize('last_frame_val, expected_is_last', [
         (False, False),

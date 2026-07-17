@@ -648,7 +648,14 @@ def _insert_for_session(session):
 
 def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs,
                                 instrument_enqueue_timestamp=None):
-    """Upsert a stack and one stackframe in a single transaction."""
+    """Upsert a stack and one stackframe in a single transaction.
+
+    Returns
+    -------
+    bool or None
+        True if the Stack row was created, False if it already existed, or
+        None if the stack timed out and permanently rejects further members.
+    """
     if filepath is None:
         raise ValueError("Stackframe filepath is required")
 
@@ -656,7 +663,10 @@ def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera,
         try:
             with get_session(db_address, site_deploy=True) as session:
                 now = datetime.datetime.utcnow()
-                stack = session.get(Stack, moluid)
+                stack = session.query(Stack).filter(Stack.moluid == moluid).with_for_update().one_or_none()
+                stack_created = stack is None
+                if stack is not None and stack.status == 'timeout':
+                    return None
                 if stack is None:
                     stack = Stack(
                         moluid=moluid,
@@ -700,7 +710,7 @@ def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera,
                     },
                 )
                 session.execute(stmt)
-            return
+            return stack_created
         except IntegrityError:
             if attempt == 1:
                 raise
@@ -756,16 +766,17 @@ def set_preview_count(db_address, moluid, preview_count):
 
 
 def cleanup_old_stacks(db_address, retention_days):
-    """Delete terminal stacks older than retention_days and explicitly delete their stackframes."""
+    """Delete old terminal data while retaining timeout stacks as permanent tombstones."""
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=retention_days)
     with get_session(db_address, site_deploy=True) as session:
-        moluids = [
-            row[0] for row in session.query(Stack.moluid).filter(
-                Stack.status != 'active',
-                Stack.completed_at < cutoff,
-            ).all()
-        ]
-        if not moluids:
+        terminal_stacks = session.query(Stack.moluid, Stack.status).filter(
+            Stack.status != 'active',
+            Stack.completed_at < cutoff,
+        ).all()
+        if not terminal_stacks:
             return
+        moluids = [row[0] for row in terminal_stacks]
         session.query(Stackframe).filter(Stackframe.moluid.in_(moluids)).delete(synchronize_session=False)
-        session.query(Stack).filter(Stack.moluid.in_(moluids)).delete(synchronize_session=False)
+        deletable_moluids = [moluid for moluid, status in terminal_stacks if status != 'timeout']
+        if deletable_moluids:
+            session.query(Stack).filter(Stack.moluid.in_(deletable_moluids)).delete(synchronize_session=False)
