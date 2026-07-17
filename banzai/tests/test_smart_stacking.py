@@ -887,6 +887,23 @@ class TestProcessCameraTick:
         mock_products.run_preview.assert_called_once_with(frames_by_mol['grown'], rc, 'grown')
         mock_dbs.set_preview_count.assert_called_once_with(rc.db_address, 'grown', 3)
 
+    def test_preview_waits_for_stackframe_one(self):
+        """Do not publish a preview whose basename could change when stackframe 1 arrives."""
+        rc = _runtime_context(SMARTSTACK_PREVIEWS=True)
+        stack = _stack(frmtotal=3, last_preview_count=0)
+        stackframes = [_frame(2)]
+        with patch('banzai.stacking.dbs') as mock_dbs, \
+             patch('banzai.stacking.finalize_stack') as mock_finalize, \
+             patch('banzai.stacking.smartstack_products') as mock_products:
+            mock_dbs.get_active_stacks.return_value = [stack]
+            mock_dbs.get_stackframes.return_value = stackframes
+
+            process_camera_tick(rc, 'cam1')
+
+        mock_finalize.assert_not_called()
+        mock_products.run_preview.assert_not_called()
+        mock_dbs.set_preview_count.assert_not_called()
+
     def test_preview_failure_does_not_update_count(self):
         """If run_preview raises, the preview count is not advanced and the tick keeps going."""
         rc = _runtime_context(SMARTSTACK_PREVIEWS=True)

@@ -123,7 +123,11 @@ def process_camera_tick(runtime_context, camera):
             if stack.next_attempt_at is not None and now < stack.next_attempt_at:
                 continue  # Still inside the backoff window from a previous failed attempt.
             finalize_stack(runtime_context, stack, stackframes, terminal_status)
-        elif runtime_context.SMARTSTACK_PREVIEWS and len(stackframes) > stack.last_preview_count:
+        # Reductions finish concurrently; wait for frame 1 so every preview reuses its basename.
+        elif (runtime_context.SMARTSTACK_PREVIEWS
+              and stackframes
+              and stackframes[0].stack_num == 1
+              and len(stackframes) > stack.last_preview_count):
             try:
                 smartstack_products.run_preview(stackframes, runtime_context, stack.moluid)
                 dbs.set_preview_count(runtime_context.db_address, stack.moluid, len(stackframes))
