@@ -390,7 +390,7 @@ class TestSiteE2E:
 
         raw_dir = RAW_DIR
         src_path = raw_dir / RAW_FRAME_FILENAME
-        stackframe_path = raw_dir / 'stackframe_test.fits.fz'
+        stackframe_path = raw_dir / 'lsc0m476-sq34-20260121-0301-e00.fits.fz'
 
         assert src_path.exists(), f"Raw frame not found: {src_path}"
         shutil.copy2(str(src_path), str(stackframe_path))
@@ -440,8 +440,8 @@ class TestSiteE2E:
 
         Publishes three stackframe messages (MOLFRNUM 1..3, FRMTOTAL=3, STACK='T',
         last_frame only on the third) as raw JSON strings, the way an instrument
-        sends them. Copies use distinct frame numbers so the reduced e09 inputs get
-        distinct filenames and the range name resolves to ...-0001-0003-e45.fits.
+        sends them. The final FITS and every JPEG preview use the first stackframe's
+        basename with e45 as the reduction level.
         """
         shipper_exchange = os.environ.get('SHIPPER_EXCHANGE', 'ship_files')
         _bind_ship_probe(shipper_exchange)
@@ -469,21 +469,19 @@ class TestSiteE2E:
                 })
                 publish_raw_string_to_queue(stack_queue, body)
 
-            # Publish the first two (non-last) frames and wait for a preview. The stack
-            # cannot complete yet (2 < 3, no last_frame), so this guarantees at least one
-            # fits=null preview is shipped before completion.
-            publish_stackframe(1, is_last=False)
-            publish_stackframe(2, is_last=False)
-
-            def preview_rendered():
+            def preview_rendered(minimum_count):
                 with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
                     stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == moluid).one_or_none()
-                    return stack is not None and stack.last_preview_count >= 1
+                    return stack is not None and stack.last_preview_count >= minimum_count
 
-            # Generous timeout: the reduction path makes network calls (WCS/photometry over
-            # VPN) and can stall well past a single frame's typical ~20s under contention.
-            assert poll_until(preview_rendered, timeout=600, interval=5), \
-                "Smartstack never rendered a preview for the first frames"
+            # Drive two distinct previews so the test proves both publishes reuse the
+            # same paths. Reduction makes network calls, so each wait is deliberately generous.
+            publish_stackframe(1, is_last=False)
+            assert poll_until(lambda: preview_rendered(1), timeout=600, interval=5), \
+                "Smartstack never rendered a preview for the first frame"
+            publish_stackframe(2, is_last=False)
+            assert poll_until(lambda: preview_rendered(2), timeout=600, interval=5), \
+                "Smartstack never rendered a preview for the first two frames"
 
             # Publish the final frame; the stack should now complete and ship the e45.
             publish_stackframe(3, is_last=True)
@@ -496,8 +494,8 @@ class TestSiteE2E:
             assert poll_until(stack_complete, timeout=600, interval=5), \
                 "Smartstack did not reach status='complete' within timeout"
 
-            # The e45 FITS with the frame-range name and both JPEGs exist under the processed dir.
-            fits_matches = list(OUTPUT_DIR.rglob('*-0001-0003-e45.fits'))
+            # The first stackframe-based e45 FITS and both JPEGs exist under the processed dir.
+            fits_matches = list(OUTPUT_DIR.rglob('*-0001-e45.fits'))
             assert len(fits_matches) == 1, f"Expected exactly one e45 FITS, found {fits_matches}"
             e45_path = fits_matches[0]
             assert e45_path.stat().st_size > 0, f"e45 FITS is empty: {e45_path}"
@@ -513,12 +511,14 @@ class TestSiteE2E:
             messages = _drain_ship_probe()
             preview_messages = [m for m in messages if m.get('fits') is None]
             final_messages = [m for m in messages if m.get('fits') is not None]
-            assert len(preview_messages) >= 1, \
-                f"Expected >=1 preview message with fits=null, got {messages}"
+            assert len(preview_messages) >= 2, \
+                f"Expected >=2 preview messages with fits=null, got {messages}"
             assert len(final_messages) == 1, \
                 f"Expected exactly one final message with a fits path, got {final_messages}"
             assert final_messages[0]['fits'].endswith(e45_path.name), \
                 f"Final ship message fits path {final_messages[0]['fits']!r} does not end with {e45_path.name}"
+            assert {Path(message['small_thumbnail']).name for message in messages} == {small_jpg.name}
+            assert {Path(message['large_thumbnail']).name for message in messages} == {large_jpg.name}
         finally:
             # Don't leave a durable queue bound to the fanout exchange after the run.
             with Connection(BROKER_URL) as conn:
