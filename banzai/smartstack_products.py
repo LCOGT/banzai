@@ -100,10 +100,7 @@ def build_stacked_frame(stackframes, runtime_context, moluid):
     stackframes = sorted(stackframes, key=lambda stackframe: stackframe.stack_num)
     input_images = open_stackframe_images(stackframes, runtime_context)
     output_filename = make_smartstack_filename(
-        input_images[0].filename,
-        input_images[-1].filename,
-        reduction_level=SMARTSTACK_REDUCTION_LEVEL,
-    )
+        input_images[0].filename, reduction_level=SMARTSTACK_REDUCTION_LEVEL)
     output_frame = init_smartstack_frame(input_images[0], output_filename)
     combine_images(input_images, output_frame, nsigma=STACK_NSIGMA_REJECT, method='sum')
     apply_smartstack_metadata(output_frame, input_images, stackframes, moluid)

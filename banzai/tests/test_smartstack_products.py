@@ -13,7 +13,7 @@ from banzai.data import CCDData, HeaderOnly
 from banzai.lco import LCOObservationFrame
 from banzai.tests.utils import FakeCCDData, FakeContext, FakeInstrument, FakeLCOObservationFrame
 from banzai.utils import date_utils
-from banzai.utils.file_utils import make_jpg_filenames, make_smartstack_filename
+from banzai.utils.file_utils import make_jpg_filenames
 
 
 class FakeFrameFactory:
@@ -114,7 +114,7 @@ def test_build_stacked_frame_structure(products, monkeypatch):
 
 
 def test_metadata(products):
-    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-0033-e45.fits', value=0.0)
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=0.0)
     input_images = [
         make_frame('/tmp/cpt1m010-fa16-20240706-0033-e09.fits', exptime=20.0,
                    date_obs='2024-07-06T00:01:00.000'),
@@ -138,19 +138,26 @@ def test_metadata(products):
         assert 'Images combined to create smartstack image:' in header['HISTORY']
 
 
-def test_output_filename_is_range_name(products, monkeypatch):
-    # The range comes from the first/last input file numbers, not stack positions,
-    # so two same-night stacks from one camera cannot collide.
-    input_images = [make_frame('/tmp/cpt1m010-fa16-20240706-0031-e09.fits', value=1.0),
-                    make_frame('/tmp/cpt1m010-fa16-20240706-0033-e09.fits', value=1.0)]
-    stackframes = [stackframe(2), stackframe(1)]
-    monkeypatch.setattr(products, 'open_stackframe_images', lambda rows, context: input_images)
+def test_output_names_stay_fixed_as_stack_grows(products, monkeypatch):
+    images_by_stack_num = {
+        1: make_frame('/tmp/cpt1m010-fa16-20240706-0031-e09.fits', value=1.0),
+        2: make_frame('/tmp/cpt1m010-fa16-20240706-0033-e09.fits', value=1.0),
+    }
+    monkeypatch.setattr(
+        products,
+        'open_stackframe_images',
+        lambda rows, context: [images_by_stack_num[row.stack_num] for row in rows],
+    )
     monkeypatch.setattr(products, 'combine_images', fake_sum_combine(products))
 
-    output_frame = products.build_stacked_frame(stackframes, FakeContext(), 'mol-1')
+    preview_frame = products.build_stacked_frame([stackframe(1)], FakeContext(), 'mol-1')
+    final_frame = products.build_stacked_frame([stackframe(2), stackframe(1)], FakeContext(), 'mol-1')
 
-    assert output_frame.filename == 'cpt1m010-fa16-20240706-0031-0033-e45.fits'
-    assert output_frame.filename == make_smartstack_filename(input_images[0].filename, input_images[-1].filename)
+    expected_filename = 'cpt1m010-fa16-20240706-0031-e45.fits'
+    assert preview_frame.filename == final_frame.filename == expected_filename
+    expected_jpgs = ('cpt1m010-fa16-20240706-0031-e45-small_thumbnail.jpg',
+                     'cpt1m010-fa16-20240706-0031-e45-large_thumbnail.jpg')
+    assert make_jpg_filenames(preview_frame.filename) == make_jpg_filenames(final_frame.filename) == expected_jpgs
 
 
 def test_build_stacked_frame_rejects_empty(products):
@@ -159,7 +166,7 @@ def test_build_stacked_frame_rejects_empty(products):
 
 
 def test_run_final_returns_paths_and_writes(products, monkeypatch, tmp_path):
-    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-0032-e45.fits', value=1.0)
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0)
     context = FakeContext(processed_path=str(tmp_path))
     output_dir = output_frame.get_output_directory(context)
     output_frame.write = MagicMock(
@@ -182,7 +189,7 @@ def test_run_final_returns_paths_and_writes(products, monkeypatch, tmp_path):
 
 
 def test_run_final_fits_path_honors_write_output(products, monkeypatch, tmp_path):
-    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-0032-e45.fits', value=1.0)
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0)
     context = FakeContext(processed_path=str(tmp_path))
     output_dir = output_frame.get_output_directory(context)
     output_frame.write = MagicMock(
@@ -202,7 +209,7 @@ def test_run_final_fits_path_honors_write_output(products, monkeypatch, tmp_path
 
 
 def test_run_preview_publishes_null_fits(products, monkeypatch, tmp_path):
-    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-0032-e45.fits', value=1.0)
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0)
     output_frame.write = MagicMock(return_value=[])
     publish = MagicMock()
     context = FakeContext(
