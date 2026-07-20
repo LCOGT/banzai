@@ -380,8 +380,6 @@ class TestSiteE2E:
         _assert_cache_matches(PHASE1_EXPECTED_FILES, timeout=120)
 
     @pytest.mark.e2e_site_reduction
-    @pytest.mark.skip(reason='stacking worker is rewired in PR6; this test '
-                             'cannot pass until then')
     def test_12_stackframe_stack_completes(self, site_deployment):
         """Verify stackframe stacking processes a frame end-to-end.
 
