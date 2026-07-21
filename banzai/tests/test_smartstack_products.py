@@ -102,7 +102,6 @@ def test_build_stacked_frame_structure(products, monkeypatch):
 
     output_frame = products.build_stacked_frame(stackframes, FakeContext(), 'mol-1')
 
-    assert products.SMARTSTACK_REDUCTION_LEVEL == 45
     assert isinstance(output_frame.primary_hdu, HeaderOnly)
     assert len(output_frame.ccd_hdus) == 1
     assert np.all(output_frame.ccd_hdus[0].data == 5.0)
@@ -138,10 +137,11 @@ def test_metadata(products):
         assert 'Images combined to create smartstack image:' in header['HISTORY']
 
 
-def test_output_names_stay_fixed_as_stack_grows(products, monkeypatch):
+@pytest.mark.parametrize('file_extension', ['.fits', '.fits.fz'])
+def test_output_names_stay_fixed_as_stack_grows(products, monkeypatch, file_extension):
     images_by_stack_num = {
-        1: make_frame('/tmp/cpt1m010-fa16-20240706-0031-e09.fits', value=1.0),
-        2: make_frame('/tmp/cpt1m010-fa16-20240706-0033-e09.fits', value=1.0),
+        1: make_frame(f'/tmp/cpt1m010-fa16-20240706-0031-e09{file_extension}', value=1.0),
+        2: make_frame(f'/tmp/cpt1m010-fa16-20240706-0033-e09{file_extension}', value=1.0),
     }
     monkeypatch.setattr(
         products,
@@ -153,7 +153,7 @@ def test_output_names_stay_fixed_as_stack_grows(products, monkeypatch):
     preview_frame = products.build_stacked_frame([stackframe(1)], FakeContext(), 'mol-1')
     final_frame = products.build_stacked_frame([stackframe(2), stackframe(1)], FakeContext(), 'mol-1')
 
-    expected_filename = 'cpt1m010-fa16-20240706-0031-e45.fits'
+    expected_filename = f'cpt1m010-fa16-20240706-0031-e45{file_extension}'
     assert preview_frame.filename == final_frame.filename == expected_filename
     expected_jpgs = ('cpt1m010-fa16-20240706-0031-e45-small_thumbnail.jpg',
                      'cpt1m010-fa16-20240706-0031-e45-large_thumbnail.jpg')
@@ -163,6 +163,18 @@ def test_output_names_stay_fixed_as_stack_grows(products, monkeypatch):
 def test_build_stacked_frame_rejects_empty(products):
     with pytest.raises(ValueError):
         products.build_stacked_frame([], FakeContext(), 'mol-1')
+
+
+@pytest.mark.parametrize('filename', [
+    '/tmp/cpt1m010-fa16-20240706-0031-e08.fits',
+    '/tmp/cpt1m010-fa16-20240706-0031-e09.txt',
+])
+def test_build_stacked_frame_rejects_invalid_filename(products, monkeypatch, filename):
+    input_image = make_frame(filename)
+    monkeypatch.setattr(products, 'open_stackframe_images', lambda rows, context: [input_image])
+
+    with pytest.raises(ValueError, match='Could not parse smartstack input filename'):
+        products.build_stacked_frame([stackframe(1)], FakeContext(), 'mol-1')
 
 
 def test_run_final_returns_paths_and_writes(products, monkeypatch, tmp_path):

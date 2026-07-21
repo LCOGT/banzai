@@ -6,14 +6,13 @@ import numpy as np
 from banzai.data import CCDData, HeaderOnly, combine_images, science_hdu
 from banzai.logs import get_logger
 from banzai.utils import date_utils, import_utils
-from banzai.utils.file_utils import make_jpg_filenames, make_smartstack_filename
+from banzai.utils.file_utils import make_jpg_filenames
 from banzai.utils.jpg_utils import save_jpg, stretch_for_display
 from banzai.utils.messaging import post_to_shipper_queue
 
 
 logger = get_logger()
 
-SMARTSTACK_REDUCTION_LEVEL = 45
 STACK_NSIGMA_REJECT = 3.0
 
 
@@ -99,8 +98,10 @@ def build_stacked_frame(stackframes, runtime_context, moluid):
         raise ValueError('Cannot build a smartstack without stackframes')
     stackframes = sorted(stackframes, key=lambda stackframe: stackframe.stack_num)
     input_images = open_stackframe_images(stackframes, runtime_context)
-    output_filename = make_smartstack_filename(
-        input_images[0].filename, reduction_level=SMARTSTACK_REDUCTION_LEVEL)
+    base, rlevel, file_extension = input_images[0].filename.rpartition('-e09')
+    if rlevel != '-e09' or file_extension not in ('.fits', '.fits.fz'):
+        raise ValueError(f'Could not parse smartstack input filename: {input_images[0].filename}')
+    output_filename = f'{base}-e45{file_extension}'
     output_frame = init_smartstack_frame(input_images[0], output_filename)
     combine_images(input_images, output_frame, nsigma=STACK_NSIGMA_REJECT, method='sum')
     apply_smartstack_metadata(output_frame, input_images, stackframes, moluid)
