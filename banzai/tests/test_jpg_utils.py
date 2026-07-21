@@ -12,13 +12,12 @@ def test_stretch_for_display_returns_uint8_2d():
 
     assert display_image.dtype == np.uint8
     assert display_image.shape == (3, 4)
-    assert display_image.ndim == 2
 
 
 def test_stretch_for_display_decimates():
-    display_image = jpg_utils.stretch_for_display(np.zeros((4000, 6000), dtype=np.float32), max_size=3600)
+    display_image = jpg_utils.stretch_for_display(np.zeros((40, 60), dtype=np.float32), max_size=36)
 
-    assert display_image.shape == (2000, 3000)
+    assert display_image.shape == (20, 30)
 
 
 def test_stretch_for_display_all_nan():
