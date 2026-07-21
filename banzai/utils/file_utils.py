@@ -1,6 +1,5 @@
 import hashlib
 import os
-import re
 from time import sleep
 
 from ocs_ingester import ingester
@@ -11,45 +10,8 @@ from banzai.logs import get_logger
 
 logger = get_logger()
 
-SMARTSTACK_FILENAME_RE = re.compile(
-    r'(?P<prefix>.*-)(?P<frame_number>\d+)-(?P<kind>[ex])(?P<rlevel>\d{2})(?P<suffix>\.fits(?:\.fz)?)$'
-)
-
-
 def get_processed_path(base_path, site, camera, epoch):
     return os.path.join(base_path, site, camera, epoch, 'processed')
-
-
-def make_smartstack_filename(first_filename, reduction_level=45):
-    """Build a smartstack FITS filename from the first input frame's basename.
-
-    Parameters
-    ----------
-    first_filename : str
-        Filename of the first reduced input frame.
-    reduction_level : int, optional
-        Output reduction level.
-
-    Returns
-    -------
-    str
-        First input frame's basename with the requested reduction level.
-
-    Raises
-    ------
-    ValueError
-        If the filename cannot be parsed as a reduced FITS filename.
-    """
-    basename = os.path.basename(first_filename)
-    match = SMARTSTACK_FILENAME_RE.match(basename)
-    if match is None:
-        raise ValueError(f'Could not parse smartstack input filename: {first_filename}')
-    rlevel = f'{reduction_level:02d}'
-
-    return (
-        f"{match.group('prefix')}{match.group('frame_number')}-"
-        f"{match.group('kind')}{rlevel}{match.group('suffix')}"
-    )
 
 
 def make_jpg_filenames(smartstack_filename):
