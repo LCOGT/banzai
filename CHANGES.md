@@ -1,6 +1,12 @@
 Versions
 ========
 
+1.37.1 (2026-07-22)
+-------------------
+
+- Update to internal archive urls
+- Increased tmp storage using volumes instead of ephemeral storage
+
 1.37.0 (2026-06-24)
 -------------------
 
