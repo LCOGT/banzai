@@ -180,6 +180,19 @@ def test_trim():
     assert trimmed_data.uncertainty.shape == (945, 950)
 
 
+def test_trim_can_keep_views_of_existing_memory_maps():
+    meta = Header({'DATASEC': '[1:4,1:4]', 'DETSEC': '[1:4,1:4]'})
+    test_data = CCDData(data=np.arange(16, dtype=np.float64).reshape(4, 4), meta=meta,
+                        uncertainty=np.ones((4, 4), dtype=np.float64))
+
+    trimmed_data = test_data.trim(Section(x_start=1, x_stop=2, y_start=1, y_stop=2), memmap=False)
+
+    assert test_data.memmap is True
+    assert trimmed_data.memmap is False
+    assert isinstance(trimmed_data.data, np.memmap)
+    assert np.shares_memory(trimmed_data.data, test_data.data)
+
+
 def test_init_poisson_uncertainties():
     # Make sure the uncertainties add in quadrature
     nx = 101

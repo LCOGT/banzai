@@ -67,7 +67,7 @@ class CalibrationStacker(CalibrationMaker):
         master_image = master_frame_class.init_master_frame(images, master_calibration_filename,
                                                             grouping_criteria=grouping, hdu_order=hdu_order)
 
-        combine_images(images, master_image, nsigma=3.0, method='mean')
+        combine_images([image['SCI'] for image in images], master_image['SCI'], nsigma=3.0, method='mean')
 
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})
