@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 
-from banzai.data import CCDData, HeaderOnly, combine_images, science_hdu
+from banzai.data import CCDData, HeaderOnly, combine_images
 from banzai.logs import get_logger
 from banzai.utils import date_utils, import_utils
 from banzai.utils.file_utils import make_jpg_filenames
@@ -68,14 +68,14 @@ def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
 
     total_exptime = 0.0
     for _, image in sorted_inputs:
-        exptime = science_hdu(image).meta.get('EXPTIME')
+        exptime = image['SCI'].meta.get('EXPTIME')
         if exptime is None:
             exptime = image.exptime
         total_exptime += float(exptime or 0.0)
     earliest_dateobs = min(image.dateobs for _, image in sorted_inputs)
     date_created = datetime.datetime.now(datetime.timezone.utc)
     primary_header = output_frame.primary_hdu.meta
-    science_header = science_hdu(output_frame).meta
+    science_header = output_frame['SCI'].meta
     headers = [primary_header]
     if science_header is not primary_header:
         headers.append(science_header)
@@ -103,7 +103,8 @@ def build_stacked_frame(stackframes, runtime_context, moluid):
         raise ValueError(f'Could not parse smartstack input filename: {input_images[0].filename}')
     output_filename = f'{base}-e45{file_extension}'
     output_frame = init_smartstack_frame(input_images[0], output_filename)
-    combine_images(input_images, output_frame, nsigma=STACK_NSIGMA_REJECT, method='sum')
+    combine_images([image['SCI'] for image in input_images], output_frame['SCI'],
+                   nsigma=STACK_NSIGMA_REJECT, method='sum')
     apply_smartstack_metadata(output_frame, input_images, stackframes, moluid)
     return output_frame
 
@@ -114,7 +115,7 @@ def render_jpgs(output_frame, runtime_context):
     small_filename, large_filename = make_jpg_filenames(output_frame.filename)
     small_path = os.path.join(output_directory, small_filename)
     large_path = os.path.join(output_directory, large_filename)
-    display_image = stretch_for_display(science_hdu(output_frame).data)
+    display_image = stretch_for_display(output_frame['SCI'].data)
     save_jpg(display_image, large_path, 900)
     save_jpg(display_image, small_path, 300)
     return small_path, large_path

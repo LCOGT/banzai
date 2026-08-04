@@ -82,11 +82,11 @@ def make_frame(filename, value=1.0, exptime=10.0, date_obs='2024-07-06T00:00:00.
 
 
 def fake_sum_combine(products):
-    def combine_images(images, output_frame, nsigma, method):
+    def combine_images(images, output_image, nsigma, method):
         assert nsigma == products.STACK_NSIGMA_REJECT
         assert method == 'sum'
-        output_frame.ccd_hdus[0].data[:] = sum(image.ccd_hdus[0].data for image in images)
-        return output_frame
+        output_image.data[:] = sum(image.data for image in images)
+        return output_image
 
     return combine_images
 
