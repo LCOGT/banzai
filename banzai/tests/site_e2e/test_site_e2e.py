@@ -498,6 +498,22 @@ class TestSiteE2E:
             e45_path = fits_matches[0]
             assert e45_path.stat().st_size > 0, f"e45 FITS is empty: {e45_path}"
 
+            with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
+                input_basenames = [
+                    Path(stackframe.filepath).name
+                    for stackframe in session.query(dbs.Stackframe).filter(
+                        dbs.Stackframe.moluid == moluid
+                    ).order_by(dbs.Stackframe.stack_num).all()
+                ]
+            assert len(input_basenames) == 3, \
+                f"Expected three ordered stackframe paths, got {input_basenames}"
+
+            with fits.open(e45_path) as hdul:
+                for header in (hdul[0].header, hdul['SCI'].header):
+                    assert header['NCOMBINE'] == 3
+                    assert [header[f'IMCOM{index:03d}'] for index in range(1, 4)] == input_basenames
+                    assert 'IMCOM004' not in header
+
             base = e45_path.name[:-len('.fits')]
             large_jpg = e45_path.with_name(f'{base}-large_thumbnail.jpg')
             small_jpg = e45_path.with_name(f'{base}-small_thumbnail.jpg')
@@ -515,6 +531,26 @@ class TestSiteE2E:
                 f"Expected exactly one final message with a fits path, got {final_messages}"
             assert final_messages[0]['fits'].endswith(e45_path.name), \
                 f"Final ship message fits path {final_messages[0]['fits']!r} does not end with {e45_path.name}"
+            assert 'thumbnail_metadata' not in final_messages[0]
+
+            required_metadata = ('frame_basename', 'DATE-OBS', 'DAY-OBS', 'INSTRUME', 'SITEID', 'TELID')
+            preview_metadata = []
+            for message in preview_messages:
+                metadata = message.get('thumbnail_metadata')
+                assert isinstance(metadata, dict), f"Preview message lacks thumbnail_metadata: {message}"
+                missing = [
+                    key for key in required_metadata
+                    if metadata.get(key) is None
+                    or (isinstance(metadata.get(key), str) and not metadata[key].strip())
+                ]
+                assert not missing, f"Preview thumbnail_metadata has blank required fields {missing}: {metadata}"
+                assert metadata['frame_basename'] == base
+                assert metadata['MOLUID'] == moluid
+                assert metadata['RLEVEL'] == 45
+                assert metadata['FRMTOTAL'] == 3
+                preview_metadata.append(metadata)
+
+            assert {metadata['NCOMBINE'] for metadata in preview_metadata} == {1, 2}
             assert {Path(message['small_thumbnail']).name for message in messages} == {small_jpg.name}
             assert {Path(message['large_thumbnail']).name for message in messages} == {large_jpg.name}
         finally:
