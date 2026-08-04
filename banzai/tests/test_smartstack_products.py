@@ -41,7 +41,7 @@ def stackframe(stack_num, filepath=None, instrument_enqueue_timestamp=None):
 
 
 def make_frame(filename, value=1.0, exptime=10.0, date_obs='2024-07-06T00:00:00.000', molfrnum=1,
-               frame_class=FakeLCOObservationFrame):
+               frmtotal=3, frame_class=FakeLCOObservationFrame):
     primary_header = Header({
         'OBSTYPE': 'EXPOSE',
         'DAY-OBS': '20240706',
@@ -51,7 +51,11 @@ def make_frame(filename, value=1.0, exptime=10.0, date_obs='2024-07-06T00:00:00.
         'PROPID': 'standard',
         'SITEID': 'cpt',
         'INSTRUME': 'fa16',
+        'TELID': '1m0a',
+        'FILTER': 'rp',
+        'OBJECT': 'test target',
         'MOLFRNUM': molfrnum,
+        'FRMTOTAL': frmtotal,
     })
     science_header = Header({
         'EXTNAME': 'SCI',
@@ -59,10 +63,14 @@ def make_frame(filename, value=1.0, exptime=10.0, date_obs='2024-07-06T00:00:00.
         'DATE-OBS': date_obs,
         'EXPTIME': exptime,
         'PROPID': 'standard',
+        'SITEID': 'cpt',
+        'INSTRUME': 'fa16',
+        'TELID': '1m0a',
         'CCDSUM': '1 1',
         'DETSEC': '[1:3,1:2]',
         'DATASEC': '[1:3,1:2]',
         'MOLFRNUM': molfrnum,
+        'FRMTOTAL': frmtotal,
     })
     science = FakeCCDData(
         data=value * np.ones((2, 3), dtype=np.float32),
@@ -135,6 +143,53 @@ def test_metadata(products):
         assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-e09.fits'
         assert header['IMCOM002'] == 'cpt1m010-fa16-20240706-0033-e09.fits'
         assert 'Images combined to create smartstack image:' in header['HISTORY']
+
+
+@pytest.mark.parametrize('file_extension', ['.fits', '.fits.fz'])
+def test_build_thumbnail_metadata(products, file_extension):
+    output_frame = make_frame(f'/tmp/cpt1m010-fa16-20240706-0031-e45{file_extension}', exptime=30.0)
+    for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
+        header['DAY-OBS'] = '20240706'
+        header['MOLUID'] = 'mol-1'
+        header['NCOMBINE'] = 2
+        header['RLEVEL'] = 9
+        header['MOLFRNUM'] = 1
+        header['UTSTOP'] = '00:00:10.000'
+    output_frame['SCI'].meta['SITEID'] = 'ogg'
+
+    metadata = products.build_thumbnail_metadata(output_frame)
+
+    assert metadata == {
+        'frame_basename': 'cpt1m010-fa16-20240706-0031-e45',
+        'RLEVEL': 45,
+        'DATE-OBS': '2024-07-06T00:00:00.000',
+        'DAY-OBS': '20240706',
+        'INSTRUME': 'fa16',
+        'SITEID': 'cpt',
+        'TELID': '1m0a',
+        'MOLUID': 'mol-1',
+        'NCOMBINE': 2,
+        'FRMTOTAL': 3,
+        'PROPID': 'standard',
+        'OBSTYPE': 'EXPOSE',
+        'EXPTIME': 30.0,
+        'OBJECT': 'test target',
+        'FILTER': 'rp',
+    }
+    assert 'MOLFRNUM' not in metadata
+    assert 'UTSTOP' not in metadata
+    assert 'size' not in metadata
+
+
+def test_build_thumbnail_metadata_rejects_missing_required_primary_value(products):
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits')
+    for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
+        header['MOLUID'] = 'mol-1'
+        header['NCOMBINE'] = 1
+    output_frame.primary_hdu.meta['TELID'] = '  '
+
+    with pytest.raises(ValueError, match='TELID'):
+        products.build_thumbnail_metadata(output_frame)
 
 
 @pytest.mark.parametrize('file_extension', ['.fits', '.fits.fz'])
@@ -222,6 +277,9 @@ def test_run_final_fits_path_honors_write_output(products, monkeypatch, tmp_path
 
 def test_run_preview_publishes_null_fits(products, monkeypatch, tmp_path):
     output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0)
+    for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
+        header['MOLUID'] = 'mol-1'
+        header['NCOMBINE'] = 3
     output_frame.write = MagicMock(return_value=[])
     publish = MagicMock()
     context = FakeContext(
@@ -250,6 +308,7 @@ def test_run_preview_publishes_null_fits(products, monkeypatch, tmp_path):
         small_thumbnail='/tmp/small.jpg',
         large_thumbnail='/tmp/large.jpg',
         instrument_enqueue_timestamp=333,
+        thumbnail_metadata=products.build_thumbnail_metadata(output_frame),
     )
 
 
@@ -286,4 +345,11 @@ def test_write_and_reopen_smoke(products, monkeypatch, tmp_path):
         assert 'BPM' in hdul
         assert 'ERR' in hdul
         assert hdul[0].header['RLEVEL'] == 45
+        for header in (hdul[0].header, hdul['SCI'].header):
+            assert header['NCOMBINE'] == 2
+            assert header['MOLUID'] == 'mol-1'
+            assert 'MOLFRNUM' not in header
+            assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-e09.fits'
+            assert header['IMCOM002'] == 'cpt1m010-fa16-20240706-0032-e09.fits'
+            assert 'IMCOM003' not in header
         assert np.all(hdul['SCI'].data == 5.0)

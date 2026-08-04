@@ -15,6 +15,37 @@ logger = get_logger()
 
 STACK_NSIGMA_REJECT = 3.0
 
+THUMBNAIL_HEADER_KEYS = (
+    'DATE-OBS',
+    'DAY-OBS',
+    'INSTRUME',
+    'SITEID',
+    'TELID',
+    'MOLUID',
+    'NCOMBINE',
+    'FRMTOTAL',
+    'PROPID',
+    'OBSTYPE',
+    'BLKUID',
+    'REQNUM',
+    'TRACKNUM',
+    'EXPTIME',
+    'OBJECT',
+    'FILTER',
+    'L1PUBDAT',
+)
+REQUIRED_THUMBNAIL_METADATA = (
+    'frame_basename',
+    'DATE-OBS',
+    'DAY-OBS',
+    'INSTRUME',
+    'SITEID',
+    'TELID',
+    'MOLUID',
+    'NCOMBINE',
+    'FRMTOTAL',
+)
+
 
 def open_stackframe_images(stackframes, runtime_context):
     frame_factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)()
@@ -109,6 +140,33 @@ def build_stacked_frame(stackframes, runtime_context, moluid):
     return output_frame
 
 
+def build_thumbnail_metadata(output_frame):
+    """Build the aggregate metadata submitted with a JPEG-only preview."""
+    frame_basename = output_frame.filename
+    for extension in ('.fits.fz', '.fits'):
+        if frame_basename.endswith(extension):
+            frame_basename = frame_basename[:-len(extension)]
+            break
+    else:
+        raise ValueError(f'Could not parse smartstack output filename: {output_frame.filename}')
+
+    header = output_frame.primary_hdu.meta
+    metadata = {'frame_basename': frame_basename, 'RLEVEL': 45}
+    for key in THUMBNAIL_HEADER_KEYS:
+        value = header.get(key)
+        if value is not None and not (isinstance(value, str) and not value.strip()):
+            metadata[key] = value
+
+    missing_keys = [
+        key for key in REQUIRED_THUMBNAIL_METADATA
+        if key not in metadata or metadata[key] is None
+        or (isinstance(metadata[key], str) and not metadata[key].strip())
+    ]
+    if missing_keys:
+        raise ValueError(f'Missing required smartstack thumbnail metadata: {", ".join(missing_keys)}')
+    return metadata
+
+
 def render_jpgs(output_frame, runtime_context):
     output_directory = output_frame.get_output_directory(runtime_context)
     os.makedirs(output_directory, exist_ok=True)
@@ -123,6 +181,7 @@ def render_jpgs(output_frame, runtime_context):
 
 def run_preview(stackframes, runtime_context, moluid):
     output_frame = build_stacked_frame(stackframes, runtime_context, moluid)
+    thumbnail_metadata = build_thumbnail_metadata(output_frame)
     small_path, large_path = render_jpgs(output_frame, runtime_context)
     newest_stackframe = max(stackframes, key=lambda stackframe: stackframe.stack_num)
     post_to_shipper_queue(
@@ -133,6 +192,7 @@ def run_preview(stackframes, runtime_context, moluid):
         small_thumbnail=small_path,
         large_thumbnail=large_path,
         instrument_enqueue_timestamp=newest_stackframe.instrument_enqueue_timestamp,
+        thumbnail_metadata=thumbnail_metadata,
     )
     logger.debug('Published smartstack preview', image=output_frame, extra_tags={'moluid': moluid})
 
