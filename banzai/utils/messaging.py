@@ -47,7 +47,7 @@ def post_to_archive_queue(filename, broker_url, exchange_name='fits_files', **kw
 
 
 def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, small_thumbnail, large_thumbnail,
-                          instrument_enqueue_timestamp):
+                          instrument_enqueue_timestamp, thumbnail_metadata=None):
     """Publish smartstack product paths for the site shipper to upload.
 
     Fanout exchanges drop messages when no queue is bound, so the durable
@@ -55,7 +55,8 @@ def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, smal
 
     The body is sent as a plain-text JSON string: the shipper json.loads the
     raw body itself and rejects kombu-serialized dicts as non-transient
-    failures (no retry), silently dropping the product.
+    failures (no retry), silently dropping the product. Preview callers may
+    submit thumbnail_metadata when no FITS path is available.
     """
     exchange = Exchange(exchange_name, type='fanout', durable=True)
     queue = Queue(queue_name, exchange=exchange, durable=True)
@@ -65,6 +66,8 @@ def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, smal
         'large_thumbnail': large_thumbnail,
         'instrument_enqueue_timestamp': instrument_enqueue_timestamp,
     }
+    if thumbnail_metadata is not None:
+        body['thumbnail_metadata'] = thumbnail_metadata
 
     with Connection(broker_url) as conn:
         channel = conn.channel()

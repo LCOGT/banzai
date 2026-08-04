@@ -122,6 +122,15 @@ def test_post_to_shipper_queue_body_final(monkeypatch):
 
 def test_post_to_shipper_queue_body_preview(monkeypatch):
     patch_connection(monkeypatch)
+    thumbnail_metadata = {
+        'frame_basename': 'preview-e45',
+        'DATE-OBS': '2026-07-04T12:00:00.000',
+        'DAY-OBS': '20260704',
+        'INSTRUME': 'fa16',
+        'SITEID': 'cpt',
+        'TELID': '1m0a',
+        'NCOMBINE': 2,
+    }
 
     messaging.post_to_shipper_queue(
         'amqp://broker',
@@ -131,6 +140,7 @@ def test_post_to_shipper_queue_body_preview(monkeypatch):
         '/data/preview-small_thumbnail.jpg',
         '/data/preview-large_thumbnail.jpg',
         1783200000123,
+        thumbnail_metadata=thumbnail_metadata,
     )
 
     publish_call = next(call for call in RecordingConnection.instances[0].calls if call[0] == 'publish')
@@ -142,7 +152,9 @@ def test_post_to_shipper_queue_body_preview(monkeypatch):
         'small_thumbnail',
         'large_thumbnail',
         'instrument_enqueue_timestamp',
+        'thumbnail_metadata',
     }
+    assert body['thumbnail_metadata'] == thumbnail_metadata
     assert publish_call[2]['content_type'] == 'text/plain'
     assert publish_call[2]['content_encoding'] == 'utf-8'
 
