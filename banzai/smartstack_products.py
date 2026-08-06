@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 
+from banzai.context import Context
 from banzai.data import CCDData, HeaderOnly, combine_images
 from banzai.logs import get_logger
 from banzai.utils import date_utils, import_utils
@@ -14,6 +15,9 @@ from banzai.utils.messaging import post_to_shipper_queue
 logger = get_logger()
 
 STACK_NSIGMA_REJECT = 3.0
+# Smartstack products are RLEVEL 45 by definition: the filename, the thumbnail metadata, and the
+# written FITS header all derive from this constant rather than the caller's reduction_level.
+SMARTSTACK_REDUCTION_LEVEL = 45
 
 THUMBNAIL_HEADER_KEYS = (
     'DATE-OBS',
@@ -132,7 +136,7 @@ def build_stacked_frame(stackframes, runtime_context, moluid):
     base, rlevel, file_extension = input_images[0].filename.rpartition('-e09')
     if rlevel != '-e09' or file_extension not in ('.fits', '.fits.fz'):
         raise ValueError(f'Could not parse smartstack input filename: {input_images[0].filename}')
-    output_filename = f'{base}-e45{file_extension}'
+    output_filename = f'{base}-e{SMARTSTACK_REDUCTION_LEVEL}{file_extension}'
     output_frame = init_smartstack_frame(input_images[0], output_filename)
     combine_images([image['SCI'] for image in input_images], output_frame['SCI'],
                    nsigma=STACK_NSIGMA_REJECT, method='sum')
@@ -151,7 +155,7 @@ def build_thumbnail_metadata(output_frame):
         raise ValueError(f'Could not parse smartstack output filename: {output_frame.filename}')
 
     header = output_frame.primary_hdu.meta
-    metadata = {'frame_basename': frame_basename, 'RLEVEL': 45}
+    metadata = {'frame_basename': frame_basename, 'RLEVEL': SMARTSTACK_REDUCTION_LEVEL}
     for key in THUMBNAIL_HEADER_KEYS:
         value = header.get(key)
         if value is not None and not (isinstance(value, str) and not value.strip()):
@@ -199,7 +203,8 @@ def run_preview(stackframes, runtime_context, moluid):
 
 def run_final(stackframes, runtime_context, moluid):
     output_frame = build_stacked_frame(stackframes, runtime_context, moluid)
-    output_products = output_frame.write(runtime_context)
+    write_context = Context({**vars(runtime_context), 'reduction_level': SMARTSTACK_REDUCTION_LEVEL})
+    output_products = output_frame.write(write_context)
     small_path, large_path = render_jpgs(output_frame, runtime_context)
     fits_path = os.path.join(output_products[0].filepath, output_products[0].filename)
     logger.info('Created final smartstack', image=output_frame, extra_tags={'moluid': moluid})

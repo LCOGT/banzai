@@ -250,7 +250,10 @@ def test_run_final_returns_paths_and_writes(products, monkeypatch, tmp_path):
     assert fits_path == os.path.join(output_dir, output_frame.filename)
     assert small_path == os.path.join(output_dir, small_name)
     assert large_path == os.path.join(output_dir, large_name)
-    output_frame.write.assert_called_once_with(context)
+    output_frame.write.assert_called_once()
+    (write_context,) = output_frame.write.call_args.args
+    assert write_context.reduction_level == products.SMARTSTACK_REDUCTION_LEVEL
+    assert write_context.processed_path == context.processed_path
     assert os.path.exists(small_path)
     assert os.path.exists(large_path)
 
@@ -270,7 +273,9 @@ def test_run_final_fits_path_honors_write_output(products, monkeypatch, tmp_path
 
     assert fits_path == os.path.join(output_dir, output_frame.filename + '.fz')
     assert fits_path.endswith('.fits.fz')
-    output_frame.write.assert_called_once_with(context)
+    output_frame.write.assert_called_once()
+    (write_context,) = output_frame.write.call_args.args
+    assert write_context.reduction_level == products.SMARTSTACK_REDUCTION_LEVEL
     assert os.path.exists(small_path)
     assert os.path.exists(large_path)
 
@@ -326,19 +331,20 @@ def test_write_and_reopen_smoke(products, monkeypatch, tmp_path):
         make_frame('/tmp/cpt1m010-fa16-20240706-0032-e09.fits', value=3.0, frame_class=LCOObservationFrame),
     ]
     stackframes = [stackframe(31, '/tmp/31.fits'), stackframe(32, '/tmp/32.fits')]
+    # Deliberately wrong reduction_level: run_final must stamp RLEVEL 45 regardless of the caller's context.
     context = Context(vars(FakeContext(
         processed_path=str(tmp_path),
-        reduction_level=45,
+        reduction_level=91,
         fpack=False,
         post_to_archive=False,
         no_file_cache=False,
     )))
     monkeypatch.setattr(products, 'open_stackframe_images', lambda rows, runtime_context: input_images)
+    monkeypatch.setattr(products, 'stretch_for_display', lambda data: np.zeros((2, 3), dtype=np.uint8))
+    monkeypatch.setattr(products, 'save_jpg', lambda display, path, max_size: open(path, 'wb').close())
     monkeypatch.setattr('banzai.lco.dbs.save_processed_image', lambda filename, md5, db_address: None)
 
-    output_frame = products.build_stacked_frame(stackframes, context, 'mol-1')
-    output_frame.write(context)
-    fits_path = os.path.join(output_frame.get_output_directory(context), output_frame.filename)
+    fits_path, _, _ = products.run_final(stackframes, context, 'mol-1')
 
     with fits.open(fits_path) as hdul:
         assert 'SCI' in hdul
