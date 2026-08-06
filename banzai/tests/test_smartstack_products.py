@@ -16,6 +16,10 @@ from banzai.utils import date_utils
 from banzai.utils.file_utils import make_jpg_filenames
 
 
+# Large enough for the (32, 32) background mesh that apply_smartstack_metadata measures L1 stats on.
+FRAME_SHAPE = (64, 64)
+
+
 class FakeFrameFactory:
     images_by_path = {}
 
@@ -41,7 +45,9 @@ def stackframe(stack_num, filepath=None, instrument_enqueue_timestamp=None):
 
 
 def make_frame(filename, value=1.0, exptime=10.0, date_obs='2024-07-06T00:00:00.000', molfrnum=1,
-               frmtotal=3, frame_class=FakeLCOObservationFrame):
+               frmtotal=3, frame_class=FakeLCOObservationFrame, saturate=65535.0, maxlin=60000.0,
+               rdnoise=8.0):
+    utstop = date_obs.split('T')[1]
     primary_header = Header({
         'OBSTYPE': 'EXPOSE',
         'DAY-OBS': '20240706',
@@ -56,6 +62,10 @@ def make_frame(filename, value=1.0, exptime=10.0, date_obs='2024-07-06T00:00:00.
         'OBJECT': 'test target',
         'MOLFRNUM': molfrnum,
         'FRMTOTAL': frmtotal,
+        'UTSTOP': utstop,
+        'SATURATE': saturate,
+        'MAXLIN': maxlin,
+        'RDNOISE': rdnoise,
     })
     science_header = Header({
         'EXTNAME': 'SCI',
@@ -67,15 +77,19 @@ def make_frame(filename, value=1.0, exptime=10.0, date_obs='2024-07-06T00:00:00.
         'INSTRUME': 'fa16',
         'TELID': '1m0a',
         'CCDSUM': '1 1',
-        'DETSEC': '[1:3,1:2]',
-        'DATASEC': '[1:3,1:2]',
+        'DETSEC': f'[1:{FRAME_SHAPE[1]},1:{FRAME_SHAPE[0]}]',
+        'DATASEC': f'[1:{FRAME_SHAPE[1]},1:{FRAME_SHAPE[0]}]',
         'MOLFRNUM': molfrnum,
         'FRMTOTAL': frmtotal,
+        'UTSTOP': utstop,
+        'SATURATE': saturate,
+        'MAXLIN': maxlin,
+        'RDNOISE': rdnoise,
     })
     science = FakeCCDData(
-        data=value * np.ones((2, 3), dtype=np.float32),
-        mask=np.zeros((2, 3), dtype=np.uint8),
-        uncertainty=np.ones((2, 3), dtype=np.float32),
+        data=value * np.ones(FRAME_SHAPE, dtype=np.float32),
+        mask=np.zeros(FRAME_SHAPE, dtype=np.uint8),
+        uncertainty=np.ones(FRAME_SHAPE, dtype=np.float32),
         meta=science_header,
         name='SCI',
         memmap=False,
@@ -121,7 +135,7 @@ def test_build_stacked_frame_structure(products, monkeypatch):
 
 
 def test_metadata(products):
-    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=0.0)
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=7.0)
     input_images = [
         make_frame('/tmp/cpt1m010-fa16-20240706-0033-e09.fits', exptime=20.0,
                    date_obs='2024-07-06T00:01:00.000'),
@@ -133,6 +147,13 @@ def test_metadata(products):
     products.apply_smartstack_metadata(output_frame, input_images, stackframes, 'mol-1')
 
     for header in (output_frame.primary_hdu.meta, output_frame.ccd_hdus[0].meta):
+        assert header['SATURATE'] == pytest.approx(2.0 * 65535.0)
+        assert header['MAXLIN'] == pytest.approx(2.0 * 60000.0)
+        assert header['RDNOISE'] == pytest.approx(8.0 * np.sqrt(2.0))
+        assert header['UTSTOP'] == '00:01:00.000'
+        assert header['L1MEAN'] == pytest.approx(7.0)
+        assert header['L1MEDIAN'] == pytest.approx(7.0)
+        assert header['L1SIGMA'] == pytest.approx(0.0)
         assert header['EXPTIME'] == 30.0
         assert header.comments['EXPTIME'] == '[s] Total exposure time'
         assert header['DATE-OBS'] == date_utils.date_obs_to_string(input_images[1].dateobs)
@@ -241,7 +262,7 @@ def test_run_final_returns_paths_and_writes(products, monkeypatch, tmp_path):
     )
     small_name, large_name = make_jpg_filenames(output_frame.filename)
     monkeypatch.setattr(products, 'build_stacked_frame', lambda rows, runtime_context, moluid: output_frame)
-    monkeypatch.setattr(products, 'stretch_for_display', lambda data: np.zeros((2, 3), dtype=np.uint8))
+    monkeypatch.setattr(products, 'stretch_for_display', lambda data: np.zeros(FRAME_SHAPE, dtype=np.uint8))
     monkeypatch.setattr(products, 'save_jpg', lambda display, path, max_size: open(path, 'wb').close())
 
     fits_path, small_path, large_path = products.run_final([stackframe(31), stackframe(32)], context, 'mol-1')
@@ -266,7 +287,7 @@ def test_run_final_fits_path_honors_write_output(products, monkeypatch, tmp_path
         return_value=[SimpleNamespace(filepath=str(output_dir), filename=output_frame.filename + '.fz')]
     )
     monkeypatch.setattr(products, 'build_stacked_frame', lambda rows, runtime_context, moluid: output_frame)
-    monkeypatch.setattr(products, 'stretch_for_display', lambda data: np.zeros((2, 3), dtype=np.uint8))
+    monkeypatch.setattr(products, 'stretch_for_display', lambda data: np.zeros(FRAME_SHAPE, dtype=np.uint8))
     monkeypatch.setattr(products, 'save_jpg', lambda display, path, max_size: open(path, 'wb').close())
 
     fits_path, small_path, large_path = products.run_final([stackframe(31), stackframe(32)], context, 'mol-1')
@@ -340,7 +361,7 @@ def test_write_and_reopen_smoke(products, monkeypatch, tmp_path):
         no_file_cache=False,
     )))
     monkeypatch.setattr(products, 'open_stackframe_images', lambda rows, runtime_context: input_images)
-    monkeypatch.setattr(products, 'stretch_for_display', lambda data: np.zeros((2, 3), dtype=np.uint8))
+    monkeypatch.setattr(products, 'stretch_for_display', lambda data: np.zeros(FRAME_SHAPE, dtype=np.uint8))
     monkeypatch.setattr(products, 'save_jpg', lambda display, path, max_size: open(path, 'wb').close())
     monkeypatch.setattr('banzai.lco.dbs.save_processed_image', lambda filename, md5, db_address: None)
 
@@ -358,4 +379,10 @@ def test_write_and_reopen_smoke(products, monkeypatch, tmp_path):
             assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-e09.fits'
             assert header['IMCOM002'] == 'cpt1m010-fa16-20240706-0032-e09.fits'
             assert 'IMCOM003' not in header
+            assert header['SATURATE'] == pytest.approx(2.0 * 65535.0)
+            assert header['MAXLIN'] == pytest.approx(2.0 * 60000.0)
+            assert header['RDNOISE'] == pytest.approx(8.0 * np.sqrt(2.0))
+            assert header['L1MEAN'] == pytest.approx(5.0)
+            assert header['L1MEDIAN'] == pytest.approx(5.0)
+            assert header['L1SIGMA'] == pytest.approx(0.0)
         assert np.all(hdul['SCI'].data == 5.0)

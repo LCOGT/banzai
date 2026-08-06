@@ -2,11 +2,12 @@ import datetime
 import os
 
 import numpy as np
+from photutils.background import Background2D
 
 from banzai.context import Context
 from banzai.data import CCDData, HeaderOnly, combine_images
 from banzai.logs import get_logger
-from banzai.utils import date_utils, import_utils
+from banzai.utils import date_utils, import_utils, stats
 from banzai.utils.file_utils import make_jpg_filenames
 from banzai.utils.jpg_utils import save_jpg, stretch_for_display
 from banzai.utils.messaging import post_to_shipper_queue
@@ -15,6 +16,9 @@ from banzai.utils.messaging import post_to_shipper_queue
 logger = get_logger()
 
 STACK_NSIGMA_REJECT = 3.0
+BACKGROUND_NSIGMA_CLIP = 5.0
+BACKGROUND_BOX_SIZE = (32, 32)
+BACKGROUND_FILTER_SIZE = (3, 3)
 # Smartstack products are RLEVEL 45 by definition: the filename, the thumbnail metadata, and the
 # written FITS header all derive from this constant rather than the caller's reduction_level.
 SMARTSTACK_REDUCTION_LEVEL = 45
@@ -115,14 +119,36 @@ def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
     if science_header is not primary_header:
         headers.append(science_header)
 
+    n_stacked = len(sorted_inputs)
+    keyword_scale_factors = {'SATURATE': n_stacked, 'MAXLIN': n_stacked, 'RDNOISE': np.sqrt(n_stacked)}
+    newest_image = sorted_inputs[-1][1]
+    utstop = newest_image['SCI'].meta.get('UTSTOP')
+    if utstop is None:
+        utstop = newest_image.primary_hdu.meta.get('UTSTOP')
+
+    background = Background2D(output_frame['SCI'].data, BACKGROUND_BOX_SIZE,
+                              filter_size=BACKGROUND_FILTER_SIZE).background
+    mean_background = stats.sigma_clipped_mean(background, BACKGROUND_NSIGMA_CLIP)
+    median_background = np.median(background)
+    std_background = stats.robust_standard_deviation(background)
+
     for header in headers:
         header['EXPTIME'] = (total_exptime, '[s] Total exposure time')
         header['DATE-OBS'] = (date_utils.date_obs_to_string(earliest_dateobs), '[UTC] Earliest observation time')
-        header['NCOMBINE'] = (len(sorted_inputs), 'Number of images combined')
+        header['NCOMBINE'] = (n_stacked, 'Number of images combined')
         header['MOLUID'] = (moluid, 'Observation request UID')
         header['DATE'] = (date_utils.date_obs_to_string(date_created), '[UTC] Date this FITS file was written')
         if 'MOLFRNUM' in header:
             del header['MOLFRNUM']
+        for keyword, scale_factor in keyword_scale_factors.items():
+            inherited_value = header.get(keyword)
+            if inherited_value is not None:
+                header[keyword] = inherited_value * scale_factor
+        if utstop is not None:
+            header['UTSTOP'] = utstop
+        header['L1MEAN'] = (mean_background, '[counts] Sigma clipped mean of frame background')
+        header['L1MEDIAN'] = (median_background, '[counts] Median of frame background')
+        header['L1SIGMA'] = (std_background, '[counts] Robust std dev of frame background')
         header.add_history('Images combined to create smartstack image:')
         for index, (_, image) in enumerate(sorted_inputs, start=1):
             header[f'IMCOM{index:03d}'] = (image.filename, 'Image combined to create smartstack')
