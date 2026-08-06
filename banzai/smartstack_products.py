@@ -119,13 +119,20 @@ def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
     if science_header is not primary_header:
         headers.append(science_header)
 
+    # The stack is a sum renormalized per-pixel by N/n_good (see data.stack), so every pixel is on an
+    # N-frame-equivalent flux scale: N * SATURATE/MAXLIN are exact upper bounds for trustworthy values,
+    # and summed read-noise variances give sqrt(N) * RDNOISE.
     n_stacked = len(sorted_inputs)
     keyword_scale_factors = {'SATURATE': n_stacked, 'MAXLIN': n_stacked, 'RDNOISE': np.sqrt(n_stacked)}
+    # UTSTOP from the newest input so DATE-OBS (earliest) and UTSTOP bracket the full time span.
     newest_image = sorted_inputs[-1][1]
     utstop = newest_image['SCI'].meta.get('UTSTOP')
     if utstop is None:
         utstop = newest_image.primary_hdu.meta.get('UTSTOP')
 
+    # The inherited L1MEAN/L1MEDIAN/L1SIGMA describe the first input, not the stack. Remeasure with the
+    # same background-map method as photometry.SourceDetector so e45 values are comparable to e09 ones
+    # (raw-pixel stats would inflate L1SIGMA with pixel noise; the map measures background variation).
     background = Background2D(output_frame['SCI'].data, BACKGROUND_BOX_SIZE,
                               filter_size=BACKGROUND_FILTER_SIZE).background
     mean_background = stats.sigma_clipped_mean(background, BACKGROUND_NSIGMA_CLIP)
@@ -138,6 +145,7 @@ def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
         header['NCOMBINE'] = (n_stacked, 'Number of images combined')
         header['MOLUID'] = (moluid, 'Observation request UID')
         header['DATE'] = (date_utils.date_obs_to_string(date_created), '[UTC] Date this FITS file was written')
+        # MOLFRNUM is a per-exposure sequence number; the combined product has no single position.
         if 'MOLFRNUM' in header:
             del header['MOLFRNUM']
         for keyword, scale_factor in keyword_scale_factors.items():
