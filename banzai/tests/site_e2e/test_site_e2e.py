@@ -21,7 +21,7 @@ from banzai.tests.site_e2e.conftest import (
     wait_for_subscription_active, wait_for_service_exit, poll_until,
     run_site_compose, drop_subscription_keep_slot,
 )
-from banzai.utils.messaging import post_to_archive_queue, publish_raw_string_to_queue
+from banzai.utils.messaging import publish_raw_string_to_queue
 
 
 # Expected calibration filenames for phase 1 (7 files - top 2 per config + BPM)
@@ -193,8 +193,8 @@ class TestSiteE2E:
         _assert_cache_matches(PHASE1_EXPECTED_FILES, timeout=180)
 
     @pytest.mark.e2e_site_reduction
-    def test_06_queue_raw_frame(self, site_deployment, auth_token):
-        """Download raw science frame and queue it for processing."""
+    def test_06_download_raw_frame(self, site_deployment, auth_token):
+        """Download the raw science frame the Smartstack tests feed to the stack queue."""
         raw_dir = RAW_DIR
         raw_dir.mkdir(parents=True, exist_ok=True)
         raw_frame_path = raw_dir / RAW_FRAME_FILENAME
@@ -213,108 +213,6 @@ class TestSiteE2E:
 
         raw_frame_path.write_bytes(fits_response.content)
         assert raw_frame_path.stat().st_size > 0, "Downloaded raw frame is empty"
-
-        fits_exchange = os.environ.get('FITS_EXCHANGE', 'fits_files')
-
-        with fits.open(raw_frame_path) as hdul:
-            header = hdul['SCI'].header
-            site_id = header['SITEID'].strip()
-            instrument = header['INSTRUME'].strip()
-
-        post_to_archive_queue(
-            filename=raw_frame_path.name,
-            broker_url='amqp://localhost:5672',
-            exchange_name=fits_exchange,
-            path=str(raw_frame_path),
-            SITEID=site_id,
-            INSTRUME=instrument,
-        )
-
-    @pytest.mark.e2e_site_reduction
-    def test_07_reduction_completes(self, site_deployment):
-        """Verify reduction completed by checking for processed output file."""
-
-        raw_dir = RAW_DIR
-        assert raw_dir.exists(), f"Raw directory not found: {raw_dir}"
-
-        raw_files = list(raw_dir.glob('*.fits.fz'))
-        assert len(raw_files) > 0, f"No raw FITS files found in {raw_dir}"
-
-        timeout = 300
-        failures = []
-
-        for raw_path in raw_files:
-            with fits.open(str(raw_path)) as hdul:
-                header = hdul['SCI'].header
-                site = header['SITEID'].strip().lower()
-                instrument = header['INSTRUME'].strip().lower()
-                day_obs = header['DAY-OBS'].replace('-', '')
-
-            output_dir = OUTPUT_DIR / site / instrument / day_obs / 'processed'
-            expected_name = raw_path.name.replace('-e00.fits.fz', '-e91.fits.fz')
-            expected_path = output_dir / expected_name
-
-            found = poll_until(
-                lambda p=expected_path: p.exists() and p.stat().st_size > 0,
-                timeout, interval=5
-            )
-
-            if not found:
-                with dbs.get_session(LOCAL_DB_ADDRESS) as session:
-                    pattern = raw_path.name.replace('-e00.fits.fz', '%')
-                    rows = session.execute(text(
-                        "SELECT filename, success FROM processedimages WHERE filename LIKE :pattern"
-                    ), {'pattern': pattern}).fetchall()
-
-                if rows:
-                    db_info = ", ".join(f"{r.filename} (success={r.success})" for r in rows)
-                    failures.append(f"  {raw_path.name}: DB records: {db_info}, expected: {expected_path}")
-                else:
-                    failures.append(f"  {raw_path.name}: No output or DB record, expected: {expected_path}")
-
-        if failures:
-            pytest.fail(f"Reduction failed for {len(failures)}/{len(raw_files)} files:\n" + "\n".join(failures))
-
-    @pytest.mark.e2e_site_reduction
-    def test_08_reduction_used_cached_calibrations(self, site_deployment):
-        """Verify reduced frames used calibrations that exist in the local cache and DB."""
-
-        output_dir = OUTPUT_DIR
-        reduced_files = list(output_dir.rglob('*-e91.fits.fz'))
-        assert reduced_files, f"No reduced files found under {output_dir}"
-
-        cal_header_keys = {'L1IDBIAS': 'bias', 'L1IDDARK': 'dark', 'L1IDFLAT': 'flat'}
-        cached_files = {p.name for p in CACHE_DIR.rglob('*.fits.fz')}
-        errors = []
-
-        for reduced_path in reduced_files:
-            with fits.open(str(reduced_path)) as hdul:
-                ext = 'SCI' if 'SCI' in hdul else 0
-                header = hdul[ext].header
-
-            for key, cal_type in cal_header_keys.items():
-                val = header.get(key, '')
-                if not val or val == 'N/A':
-                    continue
-                basename = os.path.basename(val)
-
-                if basename not in cached_files:
-                    errors.append(
-                        f"{reduced_path.name}: {cal_type} file '{basename}' not found in cache"
-                    )
-
-                with dbs.get_session(LOCAL_DB_ADDRESS) as session:
-                    cal = session.query(dbs.CalibrationImage).filter(
-                        dbs.CalibrationImage.filename == basename
-                    ).first()
-                cache_root = str(CACHE_DIR)
-                if not cal or not cal.filepath or not cal.filepath.startswith(cache_root):
-                    errors.append(
-                        f"{reduced_path.name}: {cal_type} file '{basename}' filepath="
-                        f"{cal.filepath if cal else None!r}, expected under {cache_root}"
-                    )
-
-        assert not errors, "Cached calibration verification failed:\n" + "\n".join(errors)
 
     @pytest.mark.e2e_site_cache
     @pytest.mark.parametrize("drifted_value", [None, "/archive/engineering/fake/path"])
@@ -431,6 +329,46 @@ class TestSiteE2E:
             timeout=60, interval=5
         )
         assert found, f"Reduced stackframe output not found: {expected_path}"
+
+    @pytest.mark.e2e_site_reduction
+    def test_12b_reduction_used_cached_calibrations(self, site_deployment):
+        """Verify reduced e09 stackframes used calibrations from the local cache and DB."""
+        reduced_files = [path for pattern in ('*-e09.fits', '*-e09.fits.fz')
+                         for path in OUTPUT_DIR.rglob(pattern)]
+        assert reduced_files, f"No reduced e09 files found under {OUTPUT_DIR}"
+
+        cal_header_keys = {'L1IDBIAS': 'bias', 'L1IDDARK': 'dark', 'L1IDFLAT': 'flat'}
+        cached_files = {p.name for p in CACHE_DIR.rglob('*.fits.fz')}
+        errors = []
+
+        for reduced_path in reduced_files:
+            with fits.open(str(reduced_path)) as hdul:
+                ext = 'SCI' if 'SCI' in hdul else 0
+                header = hdul[ext].header
+
+            for key, cal_type in cal_header_keys.items():
+                val = header.get(key, '')
+                if not val or val == 'N/A':
+                    continue
+                basename = os.path.basename(val)
+
+                if basename not in cached_files:
+                    errors.append(
+                        f"{reduced_path.name}: {cal_type} file '{basename}' not found in cache"
+                    )
+
+                with dbs.get_session(LOCAL_DB_ADDRESS) as session:
+                    cal = session.query(dbs.CalibrationImage).filter(
+                        dbs.CalibrationImage.filename == basename
+                    ).first()
+                cache_root = str(CACHE_DIR)
+                if not cal or not cal.filepath or not cal.filepath.startswith(cache_root):
+                    errors.append(
+                        f"{reduced_path.name}: {cal_type} file '{basename}' filepath="
+                        f"{cal.filepath if cal else None!r}, expected under {cache_root}"
+                    )
+
+        assert not errors, "Cached calibration verification failed:\n" + "\n".join(errors)
 
     @pytest.mark.e2e_site_reduction
     def test_13_smartstack_completes(self, site_deployment):

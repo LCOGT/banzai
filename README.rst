@@ -197,8 +197,10 @@ After all of the containers are up, run
 Site Deployment E2E Tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 The site E2E tests validate the full site deployment caching system, including PostgreSQL
-logical replication, calibration file caching, and frame reduction. These tests are
-opt-in and are excluded from default pytest runs by the ``e2e_site`` marker.
+logical replication, calibration file caching, and Smartstack reduction and stacking. The
+site deployment is Smartstack-only: it does not run the realtime (``fits_files`` → ``e91``)
+pipeline. These tests are opt-in and are excluded from default pytest runs by the
+``e2e_site`` marker.
 
 They require Docker, Docker Compose, ``uv``, and an LCO archive API token. The
 recommended entrypoint starts the shared Redis/RabbitMQ dependencies, then runs pytest.
@@ -229,7 +231,7 @@ The following markers can be used to run subsets of the site E2E tests:
 * e2e_site: All site deployment tests
 * e2e_site_startup: Publication DB and site deployment startup tests
 * e2e_site_cache: Cache synchronization tests
-* e2e_site_reduction: Frame reduction tests
+* e2e_site_reduction: Smartstack reduction and stacking tests
 
 License
 -------
