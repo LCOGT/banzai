@@ -25,6 +25,10 @@ import json
 from kombu import Connection, Exchange, Queue
 
 
+SHIPPER_CONNECT_TIMEOUT = 5
+SHIPPER_CONFIRM_TIMEOUT = 5
+
+
 def post_to_archive_queue(filename, broker_url, exchange_name='fits_files', **kwargs):
     """Post file to RabbitMQ listener queue for processing.
 
@@ -56,7 +60,9 @@ def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, smal
     The body is sent as a plain-text JSON string: the shipper json.loads the
     raw body itself and rejects kombu-serialized dicts as non-transient
     failures (no retry), silently dropping the product. Preview callers may
-    submit thumbnail_metadata when no FITS path is available.
+    submit thumbnail_metadata when no FITS path is available. Publisher
+    confirms make broker rejection or acknowledgement timeout visible to the
+    caller so the stack finalizer can retry.
     """
     exchange = Exchange(exchange_name, type='fanout', durable=True)
     queue = Queue(queue_name, exchange=exchange, durable=True)
@@ -69,15 +75,14 @@ def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, smal
     if thumbnail_metadata is not None:
         body['thumbnail_metadata'] = thumbnail_metadata
 
-    with Connection(broker_url) as conn:
+    with Connection(broker_url, connect_timeout=SHIPPER_CONNECT_TIMEOUT,
+                    transport_options={'confirm_publish': True}) as conn:
         channel = conn.channel()
-        bound_exchange = exchange(channel)
-        bound_exchange.declare()
         bound_queue = queue(channel)
         bound_queue.declare()
-        producer = conn.Producer(exchange=bound_exchange)
-        producer.publish(json.dumps(body), content_type='text/plain', content_encoding='utf-8')
-        producer.release()
+        with conn.Producer(channel=channel, exchange=bound_queue.exchange, auto_declare=False) as producer:
+            producer.publish(json.dumps(body), content_type='text/plain', content_encoding='utf-8',
+                             confirm_timeout=SHIPPER_CONFIRM_TIMEOUT)
 
 
 def publish_raw_string_to_queue(queue_name, body, broker_url='amqp://localhost:5672'):
