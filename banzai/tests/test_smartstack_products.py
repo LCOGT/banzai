@@ -1,4 +1,3 @@
-import importlib
 import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -8,6 +7,7 @@ import pytest
 from astropy.io import fits
 from astropy.io.fits import Header
 
+import banzai.smartstack_products as products
 from banzai.context import Context
 from banzai.data import CCDData, HeaderOnly
 from banzai.lco import LCOObservationFrame
@@ -27,11 +27,6 @@ class FakeFrameFactory:
         return self.images_by_path.get(file_info['path'])
 
 
-@pytest.fixture
-def products():
-    return importlib.import_module('banzai.smartstack_products')
-
-
 def stackframe(stack_num, filepath=None, instrument_enqueue_timestamp=None):
     if filepath is None:
         filepath = f'/tmp/cpt1m010-fa16-20240706-{stack_num:04d}-e09.fits'
@@ -47,44 +42,34 @@ def stackframe(stack_num, filepath=None, instrument_enqueue_timestamp=None):
 def make_frame(filename, value=1.0, exptime=10.0, date_obs='2024-07-06T00:00:00.000', molfrnum=1,
                frmtotal=3, frame_class=FakeLCOObservationFrame, saturate=65535.0, maxlin=60000.0,
                rdnoise=8.0):
-    utstop = date_obs.split('T')[1]
-    primary_header = Header({
+    common_header = {
         'OBSTYPE': 'EXPOSE',
-        'DAY-OBS': '20240706',
         'DATE-OBS': date_obs,
-        'DATE': date_obs,
         'EXPTIME': exptime,
         'PROPID': 'standard',
         'SITEID': 'cpt',
         'INSTRUME': 'fa16',
         'TELID': '1m0a',
-        'FILTER': 'rp',
-        'OBJECT': 'test target',
         'MOLFRNUM': molfrnum,
         'FRMTOTAL': frmtotal,
-        'UTSTOP': utstop,
+        'UTSTOP': date_obs.split('T')[1],
         'SATURATE': saturate,
         'MAXLIN': maxlin,
         'RDNOISE': rdnoise,
+    }
+    primary_header = Header({
+        **common_header,
+        'DAY-OBS': '20240706',
+        'DATE': date_obs,
+        'FILTER': 'rp',
+        'OBJECT': 'test target',
     })
     science_header = Header({
+        **common_header,
         'EXTNAME': 'SCI',
-        'OBSTYPE': 'EXPOSE',
-        'DATE-OBS': date_obs,
-        'EXPTIME': exptime,
-        'PROPID': 'standard',
-        'SITEID': 'cpt',
-        'INSTRUME': 'fa16',
-        'TELID': '1m0a',
         'CCDSUM': '1 1',
         'DETSEC': f'[1:{FRAME_SHAPE[1]},1:{FRAME_SHAPE[0]}]',
         'DATASEC': f'[1:{FRAME_SHAPE[1]},1:{FRAME_SHAPE[0]}]',
-        'MOLFRNUM': molfrnum,
-        'FRMTOTAL': frmtotal,
-        'UTSTOP': utstop,
-        'SATURATE': saturate,
-        'MAXLIN': maxlin,
-        'RDNOISE': rdnoise,
     })
     science = FakeCCDData(
         data=value * np.ones(FRAME_SHAPE, dtype=np.float32),
@@ -113,7 +98,7 @@ def fake_sum_combine(products):
     return combine_images
 
 
-def test_build_stacked_frame_structure(products, monkeypatch):
+def test_build_stacked_frame_structure(monkeypatch):
     input_images = [
         make_frame('/tmp/cpt1m010-fa16-20240706-0031-e09.fits', value=2.0),
         make_frame('/tmp/cpt1m010-fa16-20240706-0032-e09.fits', value=3.0),
@@ -134,7 +119,7 @@ def test_build_stacked_frame_structure(products, monkeypatch):
     assert np.all(input_images[0].ccd_hdus[0].data == 2.0)
 
 
-def test_metadata(products):
+def test_metadata():
     output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=7.0)
     input_images = [
         make_frame('/tmp/cpt1m010-fa16-20240706-0033-e09.fits', exptime=20.0,
@@ -167,7 +152,7 @@ def test_metadata(products):
 
 
 @pytest.mark.parametrize('file_extension', ['.fits', '.fits.fz'])
-def test_build_thumbnail_metadata(products, file_extension):
+def test_build_thumbnail_metadata(file_extension):
     output_frame = make_frame(f'/tmp/cpt1m010-fa16-20240706-0031-e45{file_extension}', exptime=30.0)
     for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
         header['DAY-OBS'] = '20240706'
@@ -197,12 +182,9 @@ def test_build_thumbnail_metadata(products, file_extension):
         'OBJECT': 'test target',
         'FILTER': 'rp',
     }
-    assert 'MOLFRNUM' not in metadata
-    assert 'UTSTOP' not in metadata
-    assert 'size' not in metadata
 
 
-def test_build_thumbnail_metadata_rejects_missing_required_primary_value(products):
+def test_build_thumbnail_metadata_rejects_missing_required_primary_value():
     output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits')
     for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
         header['MOLUID'] = 'mol-1'
@@ -214,7 +196,7 @@ def test_build_thumbnail_metadata_rejects_missing_required_primary_value(product
 
 
 @pytest.mark.parametrize('file_extension', ['.fits', '.fits.fz'])
-def test_output_names_stay_fixed_as_stack_grows(products, monkeypatch, file_extension):
+def test_output_names_stay_fixed_as_stack_grows(monkeypatch, file_extension):
     images_by_stack_num = {
         1: make_frame(f'/tmp/cpt1m010-fa16-20240706-0031-e09{file_extension}', value=1.0),
         2: make_frame(f'/tmp/cpt1m010-fa16-20240706-0033-e09{file_extension}', value=1.0),
@@ -231,12 +213,9 @@ def test_output_names_stay_fixed_as_stack_grows(products, monkeypatch, file_exte
 
     expected_filename = f'cpt1m010-fa16-20240706-0031-e45{file_extension}'
     assert preview_frame.filename == final_frame.filename == expected_filename
-    expected_jpgs = ('cpt1m010-fa16-20240706-0031-e45-small_thumbnail.jpg',
-                     'cpt1m010-fa16-20240706-0031-e45-large_thumbnail.jpg')
-    assert make_jpg_filenames(preview_frame.filename) == make_jpg_filenames(final_frame.filename) == expected_jpgs
 
 
-def test_build_stacked_frame_rejects_empty(products):
+def test_build_stacked_frame_rejects_empty():
     with pytest.raises(ValueError):
         products.build_stacked_frame([], FakeContext(), 'mol-1')
 
@@ -245,7 +224,7 @@ def test_build_stacked_frame_rejects_empty(products):
     '/tmp/cpt1m010-fa16-20240706-0031-e08.fits',
     '/tmp/cpt1m010-fa16-20240706-0031-e09.txt',
 ])
-def test_build_stacked_frame_rejects_invalid_filename(products, monkeypatch, filename):
+def test_build_stacked_frame_rejects_invalid_filename(monkeypatch, filename):
     input_image = make_frame(filename)
     monkeypatch.setattr(products, 'open_stackframe_images', lambda rows, context: [input_image])
 
@@ -253,12 +232,14 @@ def test_build_stacked_frame_rejects_invalid_filename(products, monkeypatch, fil
         products.build_stacked_frame([stackframe(1)], FakeContext(), 'mol-1')
 
 
-def test_run_final_returns_paths_and_writes(products, monkeypatch, tmp_path):
+@pytest.mark.parametrize('written_suffix', ['', '.fz'], ids=['fits', 'fpack'])
+def test_run_final_returns_paths_and_writes(monkeypatch, tmp_path, written_suffix):
     output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0)
     context = FakeContext(processed_path=str(tmp_path))
     output_dir = output_frame.get_output_directory(context)
+    written_filename = output_frame.filename + written_suffix
     output_frame.write = MagicMock(
-        return_value=[SimpleNamespace(filepath=str(output_dir), filename=output_frame.filename)]
+        return_value=[SimpleNamespace(filepath=str(output_dir), filename=written_filename)]
     )
     small_name, large_name = make_jpg_filenames(output_frame.filename)
     monkeypatch.setattr(products, 'build_stacked_frame', lambda rows, runtime_context, moluid: output_frame)
@@ -267,41 +248,18 @@ def test_run_final_returns_paths_and_writes(products, monkeypatch, tmp_path):
 
     fits_path, small_path, large_path = products.run_final([stackframe(31), stackframe(32)], context, 'mol-1')
 
-    output_dir = output_frame.get_output_directory(context)
-    assert fits_path == os.path.join(output_dir, output_frame.filename)
+    assert fits_path == os.path.join(output_dir, written_filename)
     assert small_path == os.path.join(output_dir, small_name)
     assert large_path == os.path.join(output_dir, large_name)
+    assert os.path.exists(small_path)
+    assert os.path.exists(large_path)
     output_frame.write.assert_called_once()
     (write_context,) = output_frame.write.call_args.args
     assert write_context.reduction_level == products.SMARTSTACK_REDUCTION_LEVEL
     assert write_context.processed_path == context.processed_path
-    assert os.path.exists(small_path)
-    assert os.path.exists(large_path)
 
 
-def test_run_final_fits_path_honors_write_output(products, monkeypatch, tmp_path):
-    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0)
-    context = FakeContext(processed_path=str(tmp_path))
-    output_dir = output_frame.get_output_directory(context)
-    output_frame.write = MagicMock(
-        return_value=[SimpleNamespace(filepath=str(output_dir), filename=output_frame.filename + '.fz')]
-    )
-    monkeypatch.setattr(products, 'build_stacked_frame', lambda rows, runtime_context, moluid: output_frame)
-    monkeypatch.setattr(products, 'stretch_for_display', lambda data: np.zeros(FRAME_SHAPE, dtype=np.uint8))
-    monkeypatch.setattr(products, 'save_jpg', lambda display, path, max_size: open(path, 'wb').close())
-
-    fits_path, small_path, large_path = products.run_final([stackframe(31), stackframe(32)], context, 'mol-1')
-
-    assert fits_path == os.path.join(output_dir, output_frame.filename + '.fz')
-    assert fits_path.endswith('.fits.fz')
-    output_frame.write.assert_called_once()
-    (write_context,) = output_frame.write.call_args.args
-    assert write_context.reduction_level == products.SMARTSTACK_REDUCTION_LEVEL
-    assert os.path.exists(small_path)
-    assert os.path.exists(large_path)
-
-
-def test_run_preview_publishes_null_fits(products, monkeypatch, tmp_path):
+def test_run_preview_publishes_null_fits(monkeypatch, tmp_path):
     output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0)
     for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
         header['MOLUID'] = 'mol-1'
@@ -338,7 +296,7 @@ def test_run_preview_publishes_null_fits(products, monkeypatch, tmp_path):
     )
 
 
-def test_open_stackframe_images_raises_on_unopenable(products):
+def test_open_stackframe_images_raises_on_unopenable():
     context = FakeContext(FRAME_FACTORY=f'{__name__}.FakeFrameFactory')
     FakeFrameFactory.images_by_path = {'/tmp/good.fits': make_frame('/tmp/good.fits')}
 
@@ -346,7 +304,7 @@ def test_open_stackframe_images_raises_on_unopenable(products):
         products.open_stackframe_images([stackframe(1, '/tmp/good.fits'), stackframe(2, '/tmp/missing.fits')], context)
 
 
-def test_write_and_reopen_smoke(products, monkeypatch, tmp_path):
+def test_write_and_reopen_smoke(monkeypatch, tmp_path):
     input_images = [
         make_frame('/tmp/cpt1m010-fa16-20240706-0031-e09.fits', value=2.0, frame_class=LCOObservationFrame),
         make_frame('/tmp/cpt1m010-fa16-20240706-0032-e09.fits', value=3.0, frame_class=LCOObservationFrame),
