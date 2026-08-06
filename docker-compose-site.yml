@@ -218,7 +218,6 @@ services:
       "--db-address=${DB_ADDRESS}",
       "--broker-url=${RABBITMQ_URL}",
       "--processed-path=${HOST_REDUCED_DIR}",
-      "--rlevel=45",
       "--stack-retention-days=${STACK_RETENTION_DAYS:-30}",
       "--stack-timeout-minutes=${STACK_TIMEOUT_MINUTES:-20}"
     ]
