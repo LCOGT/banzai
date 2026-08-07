@@ -145,7 +145,7 @@ def run_worker_loop(camera, runtime_context_dict, poll_interval=5):
     """
     runtime_context = Context(runtime_context_dict)
     logger.info('Starting stacking worker', extra_tags={'camera': camera})
-    last_cleanup = 0.0
+    last_cleanup = time.monotonic() - CLEANUP_INTERVAL_SECONDS
     while True:
         try:
             process_camera_tick(runtime_context, camera)
