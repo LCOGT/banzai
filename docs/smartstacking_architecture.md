@@ -1,6 +1,6 @@
 # Smartstack Architecture Design
 
-Smartstacks are are exposures made from combining a series of shorter exposures. The benefits of this procedure is reduced tracking error, and the ability to provide previews of the stacking progress for realtime users as the stack is being processed. Since smartstacks require lots of files, creating the stacks in AWS risks saturating the bandwidth available to observatories. Therefore, smartstacks are designed to be processed with a banzai instance running direclty at site, and only the final smartstack products need to be sent to the archive.
+Smartstacks are exposures made from combining a series of shorter exposures. The benefits of this procedure are reduced tracking error and the ability to provide previews of the stacking progress for realtime users as the stack is being processed. Since smartstacks require lots of files, creating the stacks in AWS risks saturating the bandwidth available to observatories. Therefore, smartstacks are designed to be processed with a banzai instance running directly at site, and only the final smartstack products need to be sent to the archive.
 
 This page describes the Smartstack path in `docker-compose-site.yml`. The program that sends raw frames, the shipper, and the archive are outside this repository. The site deployment does not run the normal realtime `e91` path.
 
@@ -119,7 +119,7 @@ Products are written under:
 <processed_path>/<site>/<camera>/<DAY-OBS>/processed/
 ```
 
-The shipper message is plain-text JSON. It contains absolute paths, not file data. The reduction worker, stacking service, and external shipper must see the reduced-data directory at the same absolute path.
+The shipper message is plain-text JSON. It contains absolute paths, not file data. When BANZAI publishes each preview or final product, it creates a fresh `instrument_enqueue_timestamp` for that Shipper handoff. The reduction worker, stacking service, and external shipper must see the reduced-data directory at the same absolute path.
 
 Preview paths are not snapshots. A later preview can replace a JPEG before the shipper opens the path.
 

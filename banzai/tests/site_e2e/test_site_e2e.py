@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import json
+import time
 from pathlib import Path
 
 import pytest
@@ -401,7 +402,6 @@ class TestSiteE2E:
                 body = json.dumps({
                     'fits_file': str(frame_path),
                     'last_frame': is_last,
-                    'instrument_enqueue_timestamp': int(time.time() * 1000),
                 })
                 publish_raw_string_to_queue(stack_queue, body)
 
@@ -526,7 +526,6 @@ class TestSiteE2E:
             body = json.dumps({
                 'fits_file': str(frame_path),
                 'last_frame': is_last,
-                'instrument_enqueue_timestamp': int(time.time() * 1000),
             })
             publish_raw_string_to_queue(stack_queue, body)
 
@@ -626,7 +625,6 @@ class TestSiteE2E:
             body = json.dumps({
                 'fits_file': str(frame_path),
                 'last_frame': is_last,
-                'instrument_enqueue_timestamp': int(time.time() * 1000),
             })
             publish_raw_string_to_queue(stack_queue, body)
 
