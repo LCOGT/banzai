@@ -144,6 +144,18 @@ wheels = [
 ]
 
 [[package]]
+name = "auto-stretch"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/57/7a/7a44e43ef7e76cc186ae8cc7792978eeac31e272386c7bc617c231999a20/auto_stretch-1.1.0.tar.gz", hash = "sha256:c8c91dbb1c32914d64f9ec065df5abe274f9b5f707f4497deba8fcb05acc4ab9", size = 1060848, upload-time = "2026-07-03T16:08:12.828Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4d/16/af03a65d260bd3d8634d8e3bb6423cbae5b9c52f4b9709611d2592177da4/auto_stretch-1.1.0-py3-none-any.whl", hash = "sha256:5029de2771f5de667a6663c4f21ac7d1fc8c6d23e4293789892955651dbca4e4", size = 5308, upload-time = "2026-07-03T16:08:11.686Z" },
+]
+
+[[package]]
 name = "babel"
 version = "2.18.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1170,6 +1182,7 @@ dependencies = [
     { name = "alembic" },
     { name = "apscheduler" },
     { name = "astropy" },
+    { name = "auto-stretch" },
     { name = "bottleneck" },
     { name = "celery", extra = ["redis"] },
     { name = "cosmic-conn", extra = ["cpu"] },
@@ -1183,6 +1196,7 @@ dependencies = [
     { name = "ocs-ingester" },
     { name = "opensearch-py" },
     { name = "photutils" },
+    { name = "pillow" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pytest" },
     { name = "python-dateutil" },
@@ -1227,6 +1241,7 @@ requires-dist = [
     { name = "alembic" },
     { name = "apscheduler" },
     { name = "astropy", git = "https://github.com/cmccully/astropy.git?rev=fix%2Ffunpack" },
+    { name = "auto-stretch", specifier = ">=1.1.0" },
     { name = "bottleneck" },
     { name = "celery", extras = ["redis"], specifier = ">=5.5.0rc5" },
     { name = "cosmic-conn", extras = ["cpu"], specifier = ">=0.6.1" },
@@ -1243,6 +1258,7 @@ requires-dist = [
     { name = "ocs-ingester", specifier = ">=3.2.0,<4.0.0" },
     { name = "opensearch-py" },
     { name = "photutils" },
+    { name = "pillow", specifier = ">=10" },
     { name = "psycopg", extras = ["binary"] },
     { name = "pycodestyle", marker = "extra == 'style'" },
     { name = "pytest", specifier = ">=4.0" },

@@ -10,9 +10,32 @@ from banzai.logs import get_logger
 
 logger = get_logger()
 
-
 def get_processed_path(base_path, site, camera, epoch):
     return os.path.join(base_path, site, camera, epoch, 'processed')
+
+
+def make_jpg_filenames(smartstack_filename):
+    """Build small and large JPEG filenames for a smartstack FITS filename.
+
+    Parameters
+    ----------
+    smartstack_filename : str
+        Smartstack FITS filename.
+
+    Returns
+    -------
+    tuple
+        Tuple of ``(small_thumbnail, large_thumbnail)`` JPEG filenames, matching
+        the ``small_thumbnail``/``large_thumbnail`` keys in the shipper message.
+    """
+    if smartstack_filename.endswith('.fits.fz'):
+        base = smartstack_filename[:-len('.fits.fz')]
+    elif smartstack_filename.endswith('.fits'):
+        base = smartstack_filename[:-len('.fits')]
+    else:
+        base = smartstack_filename
+
+    return f'{base}-small_thumbnail.jpg', f'{base}-large_thumbnail.jpg'
 
 
 def post_to_ingester(file_object, image, output_filename, meta=None):
