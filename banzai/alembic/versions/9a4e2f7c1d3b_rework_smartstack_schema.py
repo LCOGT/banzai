@@ -46,8 +46,8 @@ def upgrade() -> None:
         op.create_table(
             'stackframes',
             sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-            sa.Column('moluid', sa.String(length=100), nullable=True),
-            sa.Column('stack_num', sa.Integer(), nullable=True),
+            sa.Column('moluid', sa.String(length=100), nullable=False),
+            sa.Column('stack_num', sa.Integer(), nullable=False),
             sa.Column('filepath', sa.String(length=255), nullable=False),
             sa.Column('dateobs', sa.DateTime(), nullable=True),
             sa.Column('is_last', sa.Boolean(), nullable=True),

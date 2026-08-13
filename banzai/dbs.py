@@ -147,8 +147,8 @@ class Stack(SiteBase):
 class Stackframe(SiteBase):
     __tablename__ = 'stackframes'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    moluid = Column(String(100), ForeignKey('stacks.moluid', ondelete='CASCADE'), index=True)
-    stack_num = Column(Integer)
+    moluid = Column(String(100), ForeignKey('stacks.moluid', ondelete='CASCADE'), nullable=False, index=True)
+    stack_num = Column(Integer, nullable=False)
     filepath = Column(String(255), nullable=False)
     dateobs = Column(DateTime, nullable=True)
     is_last = Column(Boolean, default=False)
@@ -659,7 +659,9 @@ def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera,
     if filepath is None:
         raise ValueError("Stackframe filepath is required")
 
-    for attempt in range(2):  # Workers can race on Stack primary key; IntegrityError loser retries via session.get.
+    # Concurrent workers can both observe a missing Stack. The primary-key loser retries once
+    # in a new transaction, where it reads the winner's row.
+    for attempt in range(2):
         try:
             with get_session(db_address, site_deploy=True) as session:
                 now = datetime.datetime.utcnow()
@@ -681,6 +683,8 @@ def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera,
                     session.add(stack)
                     session.flush()
                 else:
+                    if stack.status in ('complete', 'error'):
+                        stack.last_preview_count = 0
                     stack.camera = camera
                     stack.frmtotal = frmtotal
                     stack.status = 'active'

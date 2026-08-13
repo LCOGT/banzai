@@ -98,6 +98,7 @@ class TestDBOperations:
             first_stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-update').one()
             first_last_stackframe_at = first_stack.last_stackframe_at
 
+        dbs.set_preview_count(db_address, 'mol-update', 1)
         self._upsert(db_address, moluid='mol-update', stack_num=2, frmtotal=5, filepath='/data/frame2.fits')
 
         with dbs.get_session(db_address, site_deploy=True) as session:
@@ -107,22 +108,24 @@ class TestDBOperations:
         assert stack.frmtotal == 5
         assert stack.camera == 'cam1'
         assert stack.status == 'active'
+        assert stack.last_preview_count == 1
         assert stack.last_stackframe_at > first_last_stackframe_at
         assert stackframe_count == 2
 
-    def test_upsert_requeue_resets_complete_stack(self, db_address):
+    @pytest.mark.parametrize('terminal_status', ['complete', 'error'])
+    def test_upsert_requeue_resets_terminal_stack(self, db_address, terminal_status):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         self._upsert(
             db_address, moluid='mol-dup', stack_num=1, frmtotal=3,
             camera='cam1', filepath='/data/dup1.fits', is_last=False, dateobs=dateobs,
         )
-        dbs.mark_stack_terminal(db_address, 'mol-dup', 'complete')
+        dbs.mark_stack_terminal(db_address, 'mol-dup', terminal_status)
         dbs.claim_finalize_attempt(db_address, 'mol-dup', [60, 300])
         dbs.set_preview_count(db_address, 'mol-dup', 2)
         with dbs.get_session(db_address, site_deploy=True) as session:
             original_stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-dup').one()
             original_stack_id = original_stack.moluid
-            assert original_stack.status == 'complete'
+            assert original_stack.status == terminal_status
             assert original_stack.completed_at is not None
             assert original_stack.finalize_attempts == 1
             assert original_stack.next_attempt_at is not None
@@ -143,6 +146,7 @@ class TestDBOperations:
         assert stacks[0].completed_at is None
         assert stacks[0].finalize_attempts == 0
         assert stacks[0].next_attempt_at is None
+        assert stacks[0].last_preview_count == 0
         assert len(stackframes) == 1
         assert stackframes[0].filepath == '/data/dup2.fits'
         assert stackframes[0].is_last is True
