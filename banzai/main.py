@@ -305,6 +305,29 @@ def run_stackframe_worker():
     )
 
 
+def run_stacking_supervisor():
+    """Entry point for the smart-stacking supervisor."""
+    runtime_context = parse_args(
+        settings,
+        extra_console_arguments=[
+            {'args': ['--site-id'],
+             'kwargs': {'dest': 'site_id', 'required': True, 'help': 'Site identifier (e.g. lsc, ogg)'}},
+            {'args': ['--stack-retention-days'],
+             'kwargs': {'dest': 'stack_retention_days', 'type': int,
+                        'default': int(os.getenv('STACK_RETENTION_DAYS', 30)),
+                        'help': 'Days to retain terminal stacks before cleanup (default: 30)'}},
+            {'args': ['--stack-timeout-minutes'],
+             'kwargs': {'dest': 'stack_timeout_minutes', 'type': int,
+                        'default': int(os.getenv('STACK_TIMEOUT_MINUTES', 20)),
+                        'help': 'Minutes without a new stackframe before a partial stack is finalized (default: 20)'}},
+            {'args': ['--instrument-types'],
+             'kwargs': {'dest': 'instrument_types', 'default': os.getenv('INSTRUMENT_TYPES', '*'),
+                        'help': 'Comma-separated instrument types to stack, or * for all (default: *)'}},
+        ],
+    )
+    stacking.run_supervisor(runtime_context)
+
+
 def mark_frame(mark_as):
     parser = argparse.ArgumentParser(description="Set the is_bad flag to mark the frame as {mark_as}"
                                                  "for a calibration frame in the database ".format(mark_as=mark_as))

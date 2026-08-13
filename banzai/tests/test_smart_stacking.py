@@ -15,7 +15,7 @@ from banzai.stacking import (check_stack_complete, stack_has_timed_out, finalize
                              process_camera_tick, run_worker_loop, run_supervisor,
                              FINALIZE_BACKOFF_SECONDS, MAX_FINALIZE_ATTEMPTS)
 from banzai.scheduling import process_stackframe
-from banzai.main import StackframeListener
+from banzai.main import StackframeListener, run_stacking_supervisor
 
 pytestmark = pytest.mark.smart_stacking
 
@@ -983,6 +983,27 @@ class TestWorkerLoopResilience:
 # Supervisor
 # ---------------------------------------------------------------------------
 
+class TestSupervisorEntrypoint:
+
+    @patch('banzai.main.stacking.run_supervisor')
+    @patch('banzai.main.parse_args')
+    def test_run_stacking_supervisor_parses_and_forwards_context(self, mock_parse_args,
+                                                                 mock_run_supervisor):
+        runtime_context = SimpleNamespace(marker='complete context')
+        mock_parse_args.return_value = runtime_context
+
+        run_stacking_supervisor()
+
+        mock_run_supervisor.assert_called_once_with(runtime_context)
+        extra_arguments = mock_parse_args.call_args.kwargs['extra_console_arguments']
+        assert [argument['args'][0] for argument in extra_arguments] == [
+            '--site-id',
+            '--stack-retention-days',
+            '--stack-timeout-minutes',
+            '--instrument-types',
+        ]
+
+
 class TestSupervisor:
 
     @patch('banzai.stacking.sys.exit', side_effect=SystemExit(1))
@@ -991,15 +1012,14 @@ class TestSupervisor:
     @patch('banzai.stacking.dbs.get_instruments_at_site',
            return_value=[SimpleNamespace(camera='cam1'), SimpleNamespace(camera='cam2'),
                          SimpleNamespace(camera='cam3')])
-    @patch('banzai.stacking.main.parse_args')
-    def test_run_supervisor_spawns_process_per_camera(self, mock_parse, mock_instruments,
-                                                      mock_process_cls, mock_wait, mock_exit):
-        mock_parse.return_value = SimpleNamespace(
+    def test_run_supervisor_spawns_process_per_camera(self, mock_instruments, mock_process_cls,
+                                                      mock_wait, mock_exit):
+        runtime_context = SimpleNamespace(
             site_id='tst', db_address='sqlite:///fake.db',
             stack_retention_days=30, stack_timeout_minutes=20, instrument_types='*',
         )
         with pytest.raises(SystemExit):
-            run_supervisor()
+            run_supervisor(runtime_context)
 
         assert mock_process_cls.call_count == 3
         assert mock_process_cls.return_value.start.call_count == 3
@@ -1009,15 +1029,14 @@ class TestSupervisor:
     @patch('banzai.stacking.sys.exit', side_effect=SystemExit(1))
     @patch('banzai.stacking.multiprocessing.Process')
     @patch('banzai.stacking.dbs.get_instruments_at_site', return_value=[])
-    @patch('banzai.stacking.main.parse_args')
-    def test_run_supervisor_exits_when_no_cameras(self, mock_parse, mock_instruments,
-                                                  mock_process_cls, mock_exit):
-        mock_parse.return_value = SimpleNamespace(
+    def test_run_supervisor_exits_when_no_cameras(self, mock_instruments, mock_process_cls,
+                                                  mock_exit):
+        runtime_context = SimpleNamespace(
             site_id='tst', db_address='sqlite:///fake.db',
             stack_retention_days=30, stack_timeout_minutes=20, instrument_types='*',
         )
         with pytest.raises(SystemExit):
-            run_supervisor()
+            run_supervisor(runtime_context)
 
         mock_process_cls.assert_not_called()
         mock_exit.assert_called_once_with(1)
@@ -1029,15 +1048,14 @@ class TestSupervisor:
            return_value=[SimpleNamespace(camera='cam1', type='1m0-SciCam-Sinistro'),
                          SimpleNamespace(camera='cam2', type='1m0-SciCam-Sinistro'),
                          SimpleNamespace(camera='cam3', type='NRES')])
-    @patch('banzai.stacking.main.parse_args')
-    def test_run_supervisor_filters_by_instrument_type(self, mock_parse, mock_instruments,
-                                                       mock_process_cls, mock_wait, mock_exit):
-        mock_parse.return_value = SimpleNamespace(
+    def test_run_supervisor_filters_by_instrument_type(self, mock_instruments, mock_process_cls,
+                                                       mock_wait, mock_exit):
+        runtime_context = SimpleNamespace(
             site_id='tst', db_address='sqlite:///fake.db',
             stack_retention_days=30, stack_timeout_minutes=20,
             instrument_types='1m0-SciCam-Sinistro',
         )
         with pytest.raises(SystemExit):
-            run_supervisor()
+            run_supervisor(runtime_context)
 
         assert mock_process_cls.call_count == 2

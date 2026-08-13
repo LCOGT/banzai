@@ -8,11 +8,10 @@ progress — lives in the ``stacks`` row, never in process memory.
 import datetime
 import multiprocessing
 import multiprocessing.connection
-import os
 import sys
 import time
 
-from banzai import dbs, main, settings, smartstack_products
+from banzai import dbs, smartstack_products
 from banzai.context import Context
 from banzai.logs import get_logger
 from banzai.utils.messaging import post_to_shipper_queue
@@ -156,7 +155,7 @@ def run_worker_loop(camera, runtime_context_dict, poll_interval=5):
         time.sleep(poll_interval)
 
 
-def run_supervisor():
+def run_supervisor(runtime_context):
     """Spawn one worker process per camera and let Docker handle every death — crash-only by design.
 
     Why this is a ~15-line supervisor and not a monitor-and-restart loop:
@@ -181,25 +180,6 @@ def run_supervisor():
     This function exits non-zero on any child death (and on an empty camera list) so ``restart:
     always`` brings the container back.
     """
-    runtime_context = main.parse_args(
-        settings,
-        extra_console_arguments=[
-            {'args': ['--site-id'],
-             'kwargs': {'dest': 'site_id', 'required': True, 'help': 'Site identifier (e.g. lsc, ogg)'}},
-            {'args': ['--stack-retention-days'],
-             'kwargs': {'dest': 'stack_retention_days', 'type': int,
-                        'default': int(os.getenv('STACK_RETENTION_DAYS', 30)),
-                        'help': 'Days to retain terminal stacks before cleanup (default: 30)'}},
-            {'args': ['--stack-timeout-minutes'],
-             'kwargs': {'dest': 'stack_timeout_minutes', 'type': int,
-                        'default': int(os.getenv('STACK_TIMEOUT_MINUTES', 20)),
-                        'help': 'Minutes without a new stackframe before a partial stack is finalized (default: 20)'}},
-            {'args': ['--instrument-types'],
-             'kwargs': {'dest': 'instrument_types', 'default': os.getenv('INSTRUMENT_TYPES', '*'),
-                        'help': 'Comma-separated instrument types to stack, or * for all (default: *)'}},
-        ],
-    )
-
     instrument_types = ([t.strip() for t in runtime_context.instrument_types.split(',')]
                         if runtime_context.instrument_types != '*' else ['*'])
     instruments = dbs.get_instruments_at_site(runtime_context.site_id, runtime_context.db_address)
