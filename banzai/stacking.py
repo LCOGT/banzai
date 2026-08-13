@@ -16,11 +16,11 @@ logger = get_logger()
 # Helpers
 # ---------------------------------------------------------------------------
 
-REQUIRED_MESSAGE_FIELDS = ('fits_file', 'last_frame', 'instrument_enqueue_timestamp')
+REQUIRED_MESSAGE_FIELDS = ('fits_file', 'last_frame')
 
 
 def validate_message(body):
-    """Check that body contains fits_file, last_frame, instrument_enqueue_timestamp."""
+    """Check that body contains fits_file and last_frame."""
     return all(field in body for field in REQUIRED_MESSAGE_FIELDS)
 
 

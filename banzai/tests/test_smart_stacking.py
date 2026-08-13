@@ -10,7 +10,7 @@ from celery.exceptions import Retry
 from sqlalchemy import text
 
 from banzai import dbs, scheduling
-from banzai.stacking import validate_message, check_stack_complete, run_worker_loop, StackingSupervisor
+from banzai.stacking import check_stack_complete, run_worker_loop, StackingSupervisor
 from banzai.scheduling import process_stackframe
 from banzai.main import StackframeListener
 
@@ -45,7 +45,7 @@ class TestDBOperations:
 
     @staticmethod
     def _upsert(db_address, moluid='mol-001', stack_num=1, frmtotal=5, camera='cam1',
-                filepath='/data/frame1.fits', is_last=False, dateobs=None, instrument_enqueue_timestamp=None):
+                filepath='/data/frame1.fits', is_last=False, dateobs=None):
         if dateobs is None:
             dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         return dbs.upsert_stack_and_stackframe(
@@ -57,7 +57,6 @@ class TestDBOperations:
             filepath=filepath,
             is_last=is_last,
             dateobs=dateobs,
-            instrument_enqueue_timestamp=instrument_enqueue_timestamp,
         )
 
     def test_upsert_returns_created_flag(self, db_address):
@@ -69,7 +68,6 @@ class TestDBOperations:
         self._upsert(
             db_address, moluid='mol-001', stack_num=1, frmtotal=5,
             camera='cam1', filepath='/data/frame1.fits', is_last=False, dateobs=dateobs,
-            instrument_enqueue_timestamp=1771023918500,
         )
         with dbs.get_session(db_address, site_deploy=True) as session:
             stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-001').one()
@@ -90,7 +88,6 @@ class TestDBOperations:
         assert stackframe.filepath == '/data/frame1.fits'
         assert stackframe.dateobs == dateobs
         assert stackframe.is_last is False
-        assert stackframe.instrument_enqueue_timestamp == 1771023918500
 
     def test_upsert_second_stackframe_updates_stack(self, db_address):
         self._upsert(db_address, moluid='mol-update', stack_num=1, frmtotal=5, filepath='/data/frame1.fits')
@@ -158,7 +155,6 @@ class TestDBOperations:
         self._upsert(
             db_address, moluid='mol-timeout', stack_num=1, frmtotal=3,
             camera='cam1', filepath='/data/original.fits', is_last=False, dateobs=original_dateobs,
-            instrument_enqueue_timestamp=100,
         )
         dbs.claim_finalize_attempt(db_address, 'mol-timeout', [60, 300])
         dbs.set_preview_count(db_address, 'mol-timeout', 1)
@@ -175,13 +171,13 @@ class TestDBOperations:
             )
             original_frame_state = (
                 original_frame.filepath, original_frame.dateobs, original_frame.is_last,
-                original_frame.instrument_enqueue_timestamp, original_frame.created_at,
+                original_frame.created_at,
             )
 
         result = self._upsert(
             db_address, moluid='mol-timeout', stack_num=late_stack_num, frmtotal=99,
             camera='cam2', filepath='/data/late.fits', is_last=True,
-            dateobs=datetime.datetime(2024, 6, 15, 13, 0, 0), instrument_enqueue_timestamp=200,
+            dateobs=datetime.datetime(2024, 6, 15, 13, 0, 0),
         )
 
         with dbs.get_session(db_address, site_deploy=True) as session:
@@ -196,7 +192,7 @@ class TestDBOperations:
         assert len(stackframes) == 1
         assert (
             stackframes[0].filepath, stackframes[0].dateobs, stackframes[0].is_last,
-            stackframes[0].instrument_enqueue_timestamp, stackframes[0].created_at,
+            stackframes[0].created_at,
         ) == original_frame_state
         assert dbs.get_active_stacks(db_address, 'cam1') == []
 
@@ -411,6 +407,7 @@ class TestStackframeListenerOnMessage:
         body = {
             'fits_file': '/path/to/frame.fits',
             'last_frame': False,
+            # Deployed producers may continue sending this ignored extra field.
             'instrument_enqueue_timestamp': 1771023918500,
         }
         mock_message = MagicMock()
@@ -431,7 +428,6 @@ class TestStackframeListenerOnMessage:
         body = {
             'fits_file': '/path/to/frame.fits',
             'last_frame': False,
-            'instrument_enqueue_timestamp': 1771023918500,
         }
         mock_message = MagicMock()
 
@@ -451,7 +447,6 @@ class TestStackframeListenerOnMessage:
         body = {
             'fits_file': '/path/to/frame.fits',
             'last_frame': False,
-            'instrument_enqueue_timestamp': 1771023918500,
         }
         mock_message = MagicMock()
 
@@ -469,7 +464,7 @@ class TestStackframeListenerOnMessage:
 
         body = {
             'last_frame': True,
-            # missing fits_file and instrument_enqueue_timestamp
+            # missing fits_file
         }
         mock_message = MagicMock()
 
@@ -580,7 +575,6 @@ class TestProcessStackframe:
         body = {
             'fits_file': '/path/to/frame.fits',
             'last_frame': last_frame_val,
-            'instrument_enqueue_timestamp': 1771023918500,
         }
         runtime_context = {'db_address': db_address, 'REDIS_URL': 'redis://localhost:6379/0'}
 
@@ -597,7 +591,6 @@ class TestProcessStackframe:
             filepath='/data/processed/frame-e09.fits',
             is_last=expected_is_last,
             dateobs=datetime.datetime(2024, 1, 1, 0, 0, 0),
-            instrument_enqueue_timestamp=1771023918500,
         )
         redis_module.Redis.from_url.assert_not_called()
 
@@ -618,7 +611,6 @@ class TestProcessStackframe:
         body = {
             'fits_file': '/path/to/frame.fits',
             'last_frame': False,
-            'instrument_enqueue_timestamp': 1771023918500,
         }
         runtime_context = {'db_address': db_address, 'REDIS_URL': 'redis://localhost:6379/0'}
 
@@ -641,7 +633,6 @@ class TestProcessStackframe:
         body = {
             'fits_file': '/path/to/frame.fits',
             'last_frame': False,
-            'instrument_enqueue_timestamp': 1771023918500,
         }
         runtime_context = {'db_address': db_address, 'REDIS_URL': 'redis://localhost:6379/0'}
 
@@ -656,7 +647,6 @@ class TestProcessStackframe:
         body = {
             'fits_file': '/path/to/corrupt.fits',
             'last_frame': True,
-            'instrument_enqueue_timestamp': 1771023918500,
         }
         runtime_context = {'db_address': db_address, 'REDIS_URL': 'redis://localhost:6379/0'}
 

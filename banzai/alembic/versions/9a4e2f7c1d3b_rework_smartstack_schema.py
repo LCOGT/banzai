@@ -51,7 +51,6 @@ def upgrade() -> None:
             sa.Column('filepath', sa.String(length=255), nullable=False),
             sa.Column('dateobs', sa.DateTime(), nullable=True),
             sa.Column('is_last', sa.Boolean(), nullable=True),
-            sa.Column('instrument_enqueue_timestamp', sa.BigInteger(), nullable=True),
             sa.Column('created_at', sa.DateTime(), nullable=True),
             sa.ForeignKeyConstraint(['moluid'], ['stacks.moluid'], ondelete='CASCADE'),
             sa.PrimaryKeyConstraint('id'),

@@ -3,7 +3,6 @@
 import os
 import shutil
 import subprocess
-import time
 import json
 from pathlib import Path
 
@@ -340,7 +339,6 @@ class TestSiteE2E:
         body = json.dumps({
             'fits_file': str(stackframe_path),
             'last_frame': True,
-            'instrument_enqueue_timestamp': int(time.time() * 1000),
         })
         stack_queue = os.environ.get('STACK_QUEUE_NAME', 'banzai_stack_queue')
         publish_raw_string_to_queue(stack_queue, body)

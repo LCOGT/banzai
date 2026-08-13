@@ -344,7 +344,6 @@ def process_stackframe(self, body: dict, runtime_context: dict):
             filepath=reduced_path,
             is_last=body.get('last_frame', False),
             dateobs=dateobs,
-            instrument_enqueue_timestamp=body.get('instrument_enqueue_timestamp'),
         )
         if stack_created is None:
             logger.info('Ignored reduced stackframe for timed-out smartstack',

@@ -13,7 +13,7 @@ from dateutil.parser import parse
 import requests
 from sqlalchemy import create_engine, pool, func, make_url, inspect
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import BigInteger, Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CHAR, JSON, UniqueConstraint
 from sqlalchemy import Float, Text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import true
@@ -152,7 +152,6 @@ class Stackframe(SiteBase):
     filepath = Column(String(255), nullable=False)
     dateobs = Column(DateTime, nullable=True)
     is_last = Column(Boolean, default=False)
-    instrument_enqueue_timestamp = Column(BigInteger, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     __table_args__ = (
         UniqueConstraint('moluid', 'stack_num', name='uq_stackframe_moluid_num'),
@@ -646,8 +645,7 @@ def _insert_for_session(session):
     raise NotImplementedError("Only postgres and sqlite are supported")
 
 
-def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs,
-                                instrument_enqueue_timestamp=None):
+def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs):
     """Upsert a stack and one stackframe in a single transaction.
 
     Returns
@@ -700,7 +698,6 @@ def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera,
                     filepath=filepath,
                     dateobs=dateobs,
                     is_last=is_last,
-                    instrument_enqueue_timestamp=instrument_enqueue_timestamp,
                     created_at=now,
                 )
                 stmt = stmt.on_conflict_do_update(
@@ -709,7 +706,6 @@ def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera,
                         'filepath': stmt.excluded.filepath,
                         'dateobs': stmt.excluded.dateobs,
                         'is_last': stmt.excluded.is_last,
-                        'instrument_enqueue_timestamp': stmt.excluded.instrument_enqueue_timestamp,
                         'created_at': stmt.excluded.created_at,
                     },
                 )

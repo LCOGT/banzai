@@ -19,7 +19,6 @@ import argparse
 import glob
 import json
 import os
-import time
 
 from astropy.io import fits
 
@@ -61,7 +60,6 @@ def main():
         body = json.dumps({
             'fits_file': abs_path,
             'last_frame': last_frame,
-            'instrument_enqueue_timestamp': int(time.time() * 1000),
         })
 
         publish_raw_string_to_queue(args.queue_name, body, args.broker_url)

@@ -84,8 +84,8 @@ workflow:
 
 The queue message and FITS file provide different information:
 
-- The JSON message contains `fits_file`, `last_frame`, and
-  `instrument_enqueue_timestamp`.
+- The JSON message contains `fits_file` and `last_frame`. Producers may include
+  extra metadata such as their enqueue timestamp; BANZAI ignores it.
 - The FITS header supplies `MOLUID`, `MOLFRNUM`, `FRMTOTAL`, `INSTRUME`, and
   `DATE-OBS`.
 - `fits_file` is a path, not file contents. The reduction worker must be able to
