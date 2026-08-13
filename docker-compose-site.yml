@@ -141,9 +141,9 @@ services:
               "--poll-interval=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}"]
     restart: unless-stopped
 
-  banzai-subframe-listener:
+  banzai-stackframe-listener:
     build: .
-    container_name: ${CONTAINER_PREFIX:-banzai-}subframe-listener
+    container_name: ${CONTAINER_PREFIX:-banzai-}stackframe-listener
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -152,20 +152,20 @@ services:
     environment:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - SUBFRAME_TASK_QUEUE_NAME=${SUBFRAME_TASK_QUEUE_NAME:-subframe_reduction_task_queue}
+      - STACKFRAME_TASK_QUEUE_NAME=${STACKFRAME_TASK_QUEUE_NAME:-stackframe_reduction_task_queue}
       - STACK_QUEUE_NAME=${STACK_QUEUE_NAME:-banzai_stack_queue}
       - TASK_HOST=${REDIS_URL}
       - REDIS_URL=${REDIS_URL}
       - API_ROOT=${API_ROOT}
       - AUTH_TOKEN=${AUTH_TOKEN}
-    command: ["banzai_subframe_worker", "--broker-url=${RABBITMQ_URL}",
+    command: ["banzai_stackframe_worker", "--broker-url=${RABBITMQ_URL}",
               "--db-address=${DB_ADDRESS}", "--rlevel=9",
               "--processed-path=${HOST_REDUCED_DIR}"]
     restart: unless-stopped
 
-  banzai-subframe-worker:
+  banzai-stackframe-worker:
     build: .
-    container_name: ${CONTAINER_PREFIX:-banzai-}subframe-worker
+    container_name: ${CONTAINER_PREFIX:-banzai-}stackframe-worker
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -179,7 +179,7 @@ services:
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - TASK_HOST=${REDIS_URL}
-      - SUBFRAME_TASK_QUEUE_NAME=${SUBFRAME_TASK_QUEUE_NAME:-subframe_reduction_task_queue}
+      - STACKFRAME_TASK_QUEUE_NAME=${STACKFRAME_TASK_QUEUE_NAME:-stackframe_reduction_task_queue}
       - STACK_QUEUE_NAME=${STACK_QUEUE_NAME:-banzai_stack_queue}
       - REDIS_URL=${REDIS_URL}
       - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
@@ -188,10 +188,10 @@ services:
       - AUTH_TOKEN=${AUTH_TOKEN}
       - DATA_ROOT=${HOST_REDUCED_DIR}
     command: ["celery", "-A", "banzai.scheduling", "worker",
-              "--hostname", "banzai-subframe-worker-${CELERY_HOSTNAME_SUFFIX:-local}",
+              "--hostname", "banzai-stackframe-worker-${CELERY_HOSTNAME_SUFFIX:-local}",
               "-l", "${BANZAI_WORKER_LOGLEVEL}",
               "-c", "4",
-              "-Q", "${SUBFRAME_TASK_QUEUE_NAME:-subframe_reduction_task_queue}"]
+              "-Q", "${STACKFRAME_TASK_QUEUE_NAME:-stackframe_reduction_task_queue}"]
     restart: unless-stopped
 
   banzai-stacking-supervisor:

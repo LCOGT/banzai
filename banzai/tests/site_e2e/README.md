@@ -24,8 +24,8 @@ These tests validate the full system by:
 6. **Cache Drift Reconciliation** - The download worker restores local cache
    filepaths when replicated database state drifts.
 
-7. **Subframe Stacking** - The site subframe queue and stacking supervisor can
-   process a subframe message end to end.
+7. **Stackframe Stacking** - The site stackframe queue and stacking supervisor can
+   process a stackframe message end to end.
 
 8. **Replication Slot Reuse** - Cache initialization succeeds when a publisher
    replication slot already exists.
@@ -49,7 +49,7 @@ They also clean the configured host data directories and purge only guarded
 
 Run these tests when changing cache replication, cache initialization, download
 worker behavior, site deployment environment wiring, `docker-compose-site.yml`,
-end-to-end reduction queue wiring, or subframe processing. They are usually not
+end-to-end reduction queue wiring, or stackframe processing. They are usually not
 needed for ordinary unit-level stage changes.
 
 ## Prerequisites
@@ -96,7 +96,7 @@ During pytest, the fixtures will:
 - Start the publication database container.
 - Populate it with test calibration metadata.
 - Start the site deployment stack: site PostgreSQL, cache init, workers,
-  listener, download worker, subframe worker, and stacking supervisor.
+  listener, download worker, stackframe worker, and stacking supervisor.
 - Clean up the pytest-managed containers, volumes, queues, and host data dirs
   when finished.
 

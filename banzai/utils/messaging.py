@@ -7,7 +7,7 @@ Two patterns are used in banzai:
   ``banzai/main.py`` as the archive-ingestion path.
 - ``publish_raw_string_to_queue`` publishes a plain-text JSON string to a
   named queue via the default exchange. Mirrors how the site software
-  publishes subframe-ready notifications: bodies arrive as bytes/str and
+  publishes stackframe-ready notifications: bodies arrive as bytes/str and
   the consumer must ``json.loads`` them rather than relying on kombu to
   deserialize a dict.
 """
@@ -38,7 +38,7 @@ def post_to_archive_queue(filename, broker_url, exchange_name='fits_files', **kw
 def publish_raw_string_to_queue(queue_name, body, broker_url='amqp://localhost:5672'):
     """Publish a raw string to a named RabbitMQ queue.
 
-    Mirrors how the site software publishes subframe-ready notifications:
+    Mirrors how the site software publishes stackframe-ready notifications:
     the body is sent as a plain-text JSON string to a named queue via the
     default exchange, with content_type='text/plain' (no kombu serialization).
     Consumers receive a bytes/str body and must json.loads it themselves
