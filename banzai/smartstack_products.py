@@ -221,7 +221,6 @@ def run_preview(stackframes, runtime_context, moluid):
     output_frame = build_stacked_frame(stackframes, runtime_context, moluid)
     thumbnail_metadata = build_thumbnail_metadata(output_frame)
     small_path, large_path = render_jpgs(output_frame, runtime_context)
-    newest_stackframe = max(stackframes, key=lambda stackframe: stackframe.stack_num)
     post_to_shipper_queue(
         runtime_context.broker_url,
         runtime_context.SHIPPER_EXCHANGE,
@@ -229,7 +228,6 @@ def run_preview(stackframes, runtime_context, moluid):
         fits_path=None,
         small_thumbnail=small_path,
         large_thumbnail=large_path,
-        instrument_enqueue_timestamp=newest_stackframe.instrument_enqueue_timestamp,
         thumbnail_metadata=thumbnail_metadata,
     )
     logger.debug('Published smartstack preview', image=output_frame, extra_tags={'moluid': moluid})

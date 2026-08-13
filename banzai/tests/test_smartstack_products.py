@@ -27,15 +27,12 @@ class FakeFrameFactory:
         return self.images_by_path.get(file_info['path'])
 
 
-def stackframe(stack_num, filepath=None, instrument_enqueue_timestamp=None):
+def stackframe(stack_num, filepath=None):
     if filepath is None:
         filepath = f'/tmp/cpt1m010-fa16-20240706-{stack_num:04d}-e09.fits'
-    if instrument_enqueue_timestamp is None:
-        instrument_enqueue_timestamp = stack_num * 1000
     return SimpleNamespace(
         filepath=filepath,
         stack_num=stack_num,
-        instrument_enqueue_timestamp=instrument_enqueue_timestamp,
     )
 
 
@@ -272,11 +269,7 @@ def test_run_preview_publishes_null_fits(monkeypatch, tmp_path):
         SHIPPER_EXCHANGE='ship_files',
         SHIPPER_QUEUE_NAME='ship',
     )
-    rows = [
-        stackframe(31, instrument_enqueue_timestamp=111),
-        stackframe(33, instrument_enqueue_timestamp=333),
-        stackframe(32, instrument_enqueue_timestamp=222),
-    ]
+    rows = [stackframe(31), stackframe(32), stackframe(33)]
     monkeypatch.setattr(products, 'build_stacked_frame', lambda stackframes, runtime_context, moluid: output_frame)
     monkeypatch.setattr(products, 'render_jpgs', lambda frame, runtime_context: ('/tmp/small.jpg', '/tmp/large.jpg'))
     monkeypatch.setattr(products, 'post_to_shipper_queue', publish)
@@ -291,7 +284,6 @@ def test_run_preview_publishes_null_fits(monkeypatch, tmp_path):
         fits_path=None,
         small_thumbnail='/tmp/small.jpg',
         large_thumbnail='/tmp/large.jpg',
-        instrument_enqueue_timestamp=333,
         thumbnail_metadata=products.build_thumbnail_metadata(output_frame),
     )
 
