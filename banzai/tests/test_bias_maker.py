@@ -35,6 +35,7 @@ def test_header_cal_type_bias(mock_namer):
 
     image = maker.do_stage([FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.zeros((ny, nx)),
                                                                            meta=image_header,
+                                                                           name='SCI',
                                                                            bias_level=0.0)])
                              for x in range(6)])
 
@@ -48,7 +49,8 @@ def test_bias_level_is_average_of_inputs(mock_namer):
     bias_levels = np.arange(nimages, dtype=float)
 
     images = [FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(i, size=(99,99)),
-                                                            bias_level=i, meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
+                                                            bias_level=i, name='SCI',
+                                                            meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
                                                                                        'DETSEC': '[1:100,1:100]',
                                                                                        'DATASEC': '[1:100,1:100]',
                                                                                        'OBSTYPE': 'BIAS',
@@ -69,14 +71,19 @@ def test_makes_a_sensible_master_bias(mock_namer):
     nimages = 20
     expected_readnoise = 15.0
 
-    images = [FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.random.normal(0.0, size=(99, 99), scale=expected_readnoise),
-                                                            bias_level=0.0,
-                                                            read_noise=expected_readnoise,
-                                                            meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
-                                                                         'DETSEC': '[1:100,1:100]',
-                                                                         'DATASEC': '[1:100,1:100]',
-                                                                         'OBSTYPE': 'BIAS', 'RA': 0.0, 'DEC': 0.0}))])
-              for i in range(nimages)]
+    images = [
+        FakeLCOObservationFrame(hdu_list=[FakeCCDData(
+            data=np.random.normal(0.0, size=(99, 99), scale=expected_readnoise),
+            bias_level=0.0,
+            read_noise=expected_readnoise,
+            name='SCI',
+            meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
+                         'DETSEC': '[1:100,1:100]',
+                         'DATASEC': '[1:100,1:100]',
+                         'OBSTYPE': 'BIAS', 'RA': 0.0, 'DEC': 0.0}),
+        )])
+        for _ in range(nimages)
+    ]
 
     maker = BiasMaker(FakeContext())
     stacked_image = maker.do_stage(images)
@@ -98,6 +105,7 @@ def test_multiread_bias_maker():
     for i in range(nimages):
         data = nreads * bias_pattern
         image = FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=data, bias_level=bias_level,
+                                                              name='SCI',
                                                               meta=Header({'DATE-OBS': '2019-12-04T14:34:00',
                                                                            'DETSEC': f'[1:{nx},1:{ny}]',
                                                                            'DATASEC': f'[1:{nx},1:{ny}]',

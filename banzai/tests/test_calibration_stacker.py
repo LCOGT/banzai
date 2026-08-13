@@ -10,7 +10,7 @@ import pytest
 nx, ny = 102, 105
 header = {'DATASEC': f'[1:{nx},1:{ny}]', 'DETSEC': f'[1:{nx},1:{ny}]', 'CCDSUM': '1 1',
           'OBSTYPE': 'TEST', 'RDNOISE': 3.0, 'TELESCOP': '1m0-02', 'DAY-OBS': '20191209',
-          'DATE-OBS': '2019-12-09T00:00:00', 'RA': 0.0, 'DEC': 0.0}
+          'DATE-OBS': '2019-12-09T00:00:00', 'RA': 0.0, 'DEC': 0.0, 'EXTNAME': 'SCI'}
 context = {'CALIBRATION_MIN_FRAMES': {'TEST': 1},
            'CALIBRATION_FILENAME_FUNCTIONS': {'TEST': ['banzai.utils.file_utils.ccdsum_to_filename']},
            'CALIBRATION_SET_CRITERIA': {'TEST': ['binning']},
@@ -35,19 +35,21 @@ class FakeStacker(CalibrationStacker):
 
 
 def test_stacking():
-    test_images = [LCOCalibrationFrame([CCDData(np.ones((ny, nx)) * i, meta=fits.Header(header))], '')
+    test_images = [LCOCalibrationFrame([CCDData(np.ones((ny, nx)) * i, meta=fits.Header(header), name='SCI')], '')
                    for i in range(9)]
     for image in test_images:
         image.instrument = instrument
     stage = FakeStacker(context)
     stacked_data = stage.do_stage(test_images)
+    assert stacked_data['SCI'] is stacked_data.primary_hdu
     np.testing.assert_allclose(stacked_data.data, np.ones((ny, nx)) * np.mean(np.arange(9)))
     np.testing.assert_allclose(stacked_data.primary_hdu.uncertainty, np.ones((ny, nx)))
     assert np.all(stacked_data.mask == 0)
 
 
 def test_stacking_with_noise():
-    test_images = [LCOCalibrationFrame([CCDData(np.random.normal(0.0, 3.0, size=(ny, nx)), meta=fits.Header(header))], '')
+    test_images = [LCOCalibrationFrame([CCDData(np.random.normal(0.0, 3.0, size=(ny, nx)),
+                                                meta=fits.Header(header), name='SCI')], '')
                    for i in range(81)]
     for image in test_images:
         image.instrument = instrument
@@ -60,7 +62,7 @@ def test_stacking_with_noise():
 
 def test_stacking_with_different_pixels():
     d = np.arange(nx*ny, dtype=np.float64).reshape(ny, nx)
-    test_images = [LCOCalibrationFrame([CCDData(d * i, meta=fits.Header(header))], '')
+    test_images = [LCOCalibrationFrame([CCDData(d * i, meta=fits.Header(header), name='SCI')], '')
                    for i in range(9)]
     for image in test_images:
         image.instrument = instrument

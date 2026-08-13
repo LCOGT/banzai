@@ -294,9 +294,10 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
     @classmethod
     def init_master_frame(cls, images: list, file_path: str, frame_id: int = None,
                           grouping_criteria: list = None, hdu_order: list = None):
-        data_class = type(images[0].primary_hdu)
-        hdu_list = [data_class(data=np.zeros(images[0].data.shape, dtype=images[0].data.dtype),
-                               meta=cls.init_master_header(images[0].meta, images))]
+        input_science = images[0]['SCI']
+        data_class = type(input_science)
+        hdu_list = [data_class(data=np.zeros(input_science.shape, dtype=input_science.dtype),
+                               meta=cls.init_master_header(images[0].meta, images), name='SCI')]
         frame = cls(hdu_list=hdu_list, file_path=file_path, frame_id=frame_id,
                     grouping_criteria=grouping_criteria, hdu_order=hdu_order)
         frame.is_master = True

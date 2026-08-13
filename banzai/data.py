@@ -1,4 +1,5 @@
 import abc
+from io import BytesIO
 import tempfile
 from typing import Union, Type
 
@@ -6,9 +7,11 @@ import numpy as np
 from astropy.io import fits
 from astropy.table import Table
 
+from banzai import logs
 from banzai.utils.image_utils import Section
 from banzai.utils import fits_utils, stats
-from io import BytesIO
+
+logger = logs.get_logger()
 
 
 class DataProduct:
@@ -237,17 +240,21 @@ class CCDData(Data):
         inner_ny = round(self.data.shape[0] * inner_edge_width)
         return self.data[inner_ny: -inner_ny, inner_nx: -inner_nx]
 
-    def trim(self, trim_section=None):
+    def trim(self, trim_section=None, memmap=None):
         """
         :param trim_section: Always in data coords
+        :param memmap: Override whether to copy the trimmed arrays into new memory maps.
+                       Defaults to the source object's memory-map preference.
         :return:
         """
         if trim_section is None:
             trim_section = Section.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
+        if memmap is None:
+            memmap = self.memmap
 
         trimmed_image = type(self)(data=self.data[trim_section.to_slice()], meta=self.meta,
                                    mask=self.mask[trim_section.to_slice()], name=self.name,
-                                   uncertainty=self.uncertainty[trim_section.to_slice()], memmap=self.memmap)
+                                   uncertainty=self.uncertainty[trim_section.to_slice()], memmap=memmap)
         trimmed_image.detector_section = self.data_to_detector_section(trim_section)
         trimmed_image.data_section = Section(x_start=1, y_start=1,
                                              x_stop=trimmed_image.data.shape[1],
@@ -420,8 +427,26 @@ class CCDData(Data):
         self.data -= self._background
 
 
-def stack(data_to_stack, nsigma_reject) -> CCDData:
-    """
+def _apply_sigma_rejection(data_to_stack, nsigma_reject):
+    """Build masked stack arrays after applying robust sigma rejection.
+
+    Parameters
+    ----------
+    data_to_stack : list of CCDData
+        Image sections to combine. Data, mask, and uncertainty arrays must have matching shapes.
+    nsigma_reject : float
+        Robust-standard-deviation threshold for rejecting pixels from the stack.
+
+    Returns
+    -------
+    data : numpy.ndarray
+        Three-dimensional data array with rejected and masked pixels set to zero.
+    variances : numpy.ndarray
+        Three-dimensional variance array with rejected and masked pixels set to zero.
+    n_good_pixels : numpy.ndarray
+        Number of unmasked inputs for each output pixel. All-bad pixels are forced to the input count.
+    stacked_mask : numpy.ndarray
+        Output mask, including the bitwise OR of input masks for all-bad pixels.
     """
     shape3d = [len(data_to_stack)] + list(data_to_stack[0].shape)
     a = np.zeros(shape3d, dtype=data_to_stack[0].dtype)
@@ -458,11 +483,129 @@ def stack(data_to_stack, nsigma_reject) -> CCDData:
     mask3d[:, bad_pixels] = False
 
     a[mask3d] = 0.0
-    stacked_data = a.sum(axis=0) / n_good_pixels
 
     # Again if a pixel is bad in all images, fill the uncertainties with the quadrature sum / N images
     uncertainties[mask3d] = 0.0
-    uncertainties *= uncertainties
-    stacked_uncertainty = np.sqrt(uncertainties.sum(axis=0) / (n_good_pixels ** 2.0))
+    variances = uncertainties
+    variances *= variances
+
+    return a, variances, n_good_pixels, stacked_mask
+
+
+def stack(data_to_stack, nsigma_reject, method='mean') -> CCDData:
+    """Stack CCD data with robust sigma rejection.
+
+    Parameters
+    ----------
+    data_to_stack : list of CCDData
+        Image sections to combine. Data, mask, and uncertainty arrays must have matching shapes.
+    nsigma_reject : float
+        Robust-standard-deviation threshold for rejecting pixels from the stack.
+    method : {'mean', 'sum'}, optional
+        Combine mode. ``mean`` preserves the existing arithmetic mean behavior. ``sum`` scales the sum of unmasked
+        pixels and quadrature uncertainties by ``N / n_good`` for science smartstacks.
+
+    Returns
+    -------
+    CCDData
+        Combined data, uncertainty, and mask.
+
+    Raises
+    ------
+    ValueError
+        Raised when ``method`` is not ``mean`` or ``sum``.
+    """
+    a, variances, n_good_pixels, stacked_mask = _apply_sigma_rejection(data_to_stack, nsigma_reject)
+
+    if method == 'mean':
+        stacked_data = a.sum(axis=0) / n_good_pixels
+        stacked_uncertainty = np.sqrt(variances.sum(axis=0) / (n_good_pixels ** 2.0))
+    elif method == 'sum':
+        n_images = len(data_to_stack)
+        stacked_data = a.sum(axis=0) * n_images / n_good_pixels
+        stacked_uncertainty = np.sqrt(variances.sum(axis=0)) * n_images / n_good_pixels
+    else:
+        raise ValueError(f"Unknown stack method: {method!r}; expected 'mean' or 'sum'")
 
     return CCDData(data=stacked_data, meta=data_to_stack[0].meta, uncertainty=stacked_uncertainty, mask=stacked_mask)
+
+
+def _warn_if_exposure_times_differ(images):
+    """Log a warning when input exposure times differ by more than one percent."""
+    exposure_times = []
+    for image in images:
+        exptime = image.meta.get('EXPTIME')
+        if exptime is None:
+            continue
+        try:
+            exposure_times.append(float(exptime))
+        except (TypeError, ValueError):
+            continue
+
+    exposure_times = np.array(exposure_times, dtype=np.float64)
+    if exposure_times.size < 2:
+        return
+
+    median_exptime = np.median(exposure_times)
+    if median_exptime == 0.0:
+        return
+
+    exptime_spread_fraction = (exposure_times.max() - exposure_times.min()) / median_exptime
+    if exptime_spread_fraction > 0.01:
+        logger.warning('Stacking images with exposure times that differ by more than 1%',
+                       extra_tags={'exptime_spread_fraction': exptime_spread_fraction})
+
+
+def combine_images(images, output_image, nsigma=3.0, method='mean'):
+    """Combine CCD data into an output image in memory-bounded y sections.
+
+    Parameters
+    ----------
+    images : list of CCDData
+        Input CCD data to combine.
+    output_image : CCDData
+        CCD data object that receives the combined result.
+    nsigma : float, optional
+        Robust-standard-deviation threshold for rejecting pixels from each section.
+    method : {'mean', 'sum'}, optional
+        Combine mode passed through to :func:`stack`.
+
+    Returns
+    -------
+    CCDData
+        The same output object passed in, with combined data copied into it.
+    """
+    if method == 'sum':
+        _warn_if_exposure_times_differ(images)
+
+    input_image = images[0]
+
+    # Split the image into order-N sections. This is just for convenience: technically N can be anything, but
+    # assuming we can read a couple of images at once makes order-N sections good for memory management.
+    # Clamp the section count so tiny images never get y_step=0.
+    n_sections = min(len(images), input_image.shape[0])
+
+    # Split along the y-direction to get more sequential reads off of disk.
+    # detector section (y_stop - y_start) // binning(y) // N, abs(x_stop - x_start) // binning(x)
+    y_step = input_image.shape[0] // n_sections
+    for i in range(n_sections + 1):
+        y_start = 1 + i * y_step
+        if i == n_sections:
+            if input_image.shape[0] % n_sections == 0:
+                break
+            y_stop = input_image.shape[0]
+        else:
+            y_stop = (i + 1) * y_step
+
+        section_to_stack = Section(x_start=1, x_stop=input_image.data.shape[1], y_start=y_start, y_stop=y_stop)
+        # Source arrays are already memory mapped. Keep each section as a view of its source instead of copying it
+        # into another temporary memory map.
+        data_to_stack = [image.trim(trim_section=section_to_stack, memmap=False) for image in images]
+        stacked_data = stack(data_to_stack, nsigma, method=method)
+
+        output_slice = section_to_stack.to_slice()
+        output_image.data[output_slice] = stacked_data.data
+        output_image.mask[output_slice] = stacked_data.mask
+        output_image.uncertainty[output_slice] = stacked_data.uncertainty
+
+    return output_image

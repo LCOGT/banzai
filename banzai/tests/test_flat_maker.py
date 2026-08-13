@@ -31,7 +31,7 @@ def test_header_cal_type_flat(mock_namer):
                            'OBSTYPE': 'SKYFLAT',
                            'RA': 0.0,
                            'DEC': 0.0})
-    master_flat = maker.do_stage([FakeLCOObservationFrame(hdu_list=[FakeCCDData(meta=image_header)])
+    master_flat = maker.do_stage([FakeLCOObservationFrame(hdu_list=[FakeCCDData(meta=image_header, name='SCI')])
                                   for x in range(6)])
 
     assert master_flat.meta['OBSTYPE'].upper() == 'SKYFLAT'
@@ -55,9 +55,14 @@ def test_makes_a_sensible_master_flat(mock_namer):
                            'DEC': 0.0})
 
     flat_pattern = np.random.normal(1.0, master_flat_variation, size=(ny, nx))
-    images = [FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=flat_pattern + np.random.normal(0.0, 0.02, size=(ny, nx)),
-                                                            meta=image_header)])
-              for _ in range(nimages)]
+    images = [
+        FakeLCOObservationFrame(hdu_list=[FakeCCDData(
+            data=flat_pattern + np.random.normal(0.0, 0.02, size=(ny, nx)),
+            meta=image_header,
+            name='SCI',
+        )])
+        for _ in range(nimages)
+    ]
 
     maker = FlatMaker(FakeContext())
     stacked_image = maker.do_stage(images)

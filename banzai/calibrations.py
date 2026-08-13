@@ -4,8 +4,7 @@ from datetime import datetime
 from banzai.stages import Stage
 from banzai import dbs, logs
 from banzai.utils import qc, import_utils, stage_utils, file_utils
-from banzai.data import stack
-from banzai.utils.image_utils import Section
+from banzai.data import combine_images
 
 logger = logs.get_logger()
 
@@ -57,7 +56,9 @@ class CalibrationStacker(CalibrationMaker):
                                                                               self.runtime_context)
 
         # use the most recent image in the stack to create the master filename
-        master_calibration_filename = make_calibration_name(max(images, key=lambda x: datetime.strptime(x.epoch, '%Y%m%d') ))
+        master_calibration_filename = make_calibration_name(
+            max(images, key=lambda x: datetime.strptime(x.epoch, '%Y%m%d'))
+        )
 
         grouping = self.runtime_context.CALIBRATION_SET_CRITERIA.get(images[0].obstype, [])
         master_frame_class = import_utils.import_attribute(self.runtime_context.CALIBRATION_FRAME_CLASS)
@@ -66,34 +67,7 @@ class CalibrationStacker(CalibrationMaker):
         master_image = master_frame_class.init_master_frame(images, master_calibration_filename,
                                                             grouping_criteria=grouping, hdu_order=hdu_order)
 
-        # turn off memory mapping for each segment
-        for image in images:
-            image.primary_hdu.memmap = False
-        # Split the image into N sections where N is the number of images
-        # This is just for convenience. Technically N can be anything you want.
-        # I assume that you can read a couple of images into memory so order N sections is good for memory management.
-        N = len(images)
-        # Split along the y-direction to get more sequential reads off of disk
-        # detector section (y_stop - y_start) // binning(y) // N, abs(x_stop - x_start) // binning(x)
-        y_step = images[0].shape[0] // N
-        for i in range(N + 1):
-            y_start = 1 + i * y_step
-            if i == N:
-                # If the image divided evenly just move on.
-                if images[0].shape[0] % N == 0:
-                    break
-                # Otherwise, don't forget to do the last %mod sized section
-                y_stop = images[0].shape[0]
-            else:
-                y_stop = (i + 1) * y_step
-
-            section_to_stack = Section(x_start=1, x_stop=images[0].data.shape[1],
-                                       y_start=y_start, y_stop=y_stop)
-
-            data_to_stack = [image.primary_hdu[section_to_stack] for image in images]
-            stacked_data = stack(data_to_stack, 3.0)
-
-            master_image.primary_hdu.copy_in(stacked_data)
+        combine_images([image['SCI'] for image in images], master_image['SCI'], nsigma=3.0, method='mean')
 
         logger.info('Created master calibration stack', image=master_image,
                     extra_tags={'calibration_type': self.calibration_type})

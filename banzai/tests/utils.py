@@ -61,6 +61,7 @@ class FakeLCOObservationFrame(LCOObservationFrame):
             self._hdus = [FakeCCDData()]
         else:
             self._hdus = hdu_list
+        self._hdu_mapping = {hdu.name: i for i, hdu in enumerate(self._hdus)}
         if instrument is None:
             self.instrument = FakeInstrument(0, 'cpt', 'fa16', 'doma', '1m0a', '1M-SCICAM-SINISTRO', schedulable=True)
         else:

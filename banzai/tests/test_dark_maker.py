@@ -29,7 +29,7 @@ def test_header_cal_type_dark(mock_namer):
                            'OBSTYPE': 'DARK'})
 
     image = maker.do_stage([FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.zeros((ny,nx)),
-                                                                           meta=image_header)])
+                                                                           meta=image_header, name='SCI')])
                              for x in range(6)])
 
     assert image.meta['OBSTYPE'].upper() == 'DARK'
@@ -46,7 +46,7 @@ def test_makes_a_sensible_master_dark(mock_namer):
                            'DATASEC': '[1:100,1:100]',
                            'OBSTYPE': 'DARK'})
     images = [FakeLCOObservationFrame(hdu_list=[FakeCCDData(data=np.ones((ny, nx)) * x,
-                                                            meta=image_header)])
+                                                            meta=image_header, name='SCI')])
               for x in range(nimages)]
 
     expected_master_dark = stats.sigma_clipped_mean(np.arange(nimages), 3.0)
