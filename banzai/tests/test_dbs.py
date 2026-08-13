@@ -64,20 +64,26 @@ def test_create_db_default_does_not_create_site_tables(tmp_path):
     addr = f'sqlite:///{tmp_path}/aws_only.db'
     dbs.create_db(addr)
     engine = create_engine(addr)
-    assert not inspect(engine).has_table('subframes')
+    assert not inspect(engine).has_table('stacks')
+    assert not inspect(engine).has_table('stackframes')
 
 
 def test_create_db_site_deploy_true_creates_site_tables(tmp_path):
     addr = f'sqlite:///{tmp_path}/site.db'
     dbs.create_db(addr, site_deploy=True)
     engine = create_engine(addr)
-    assert inspect(engine).has_table('subframes')
+    inspector = inspect(engine)
+    assert inspector.has_table('stacks')
+    assert inspector.has_table('stackframes')
+    stackframe_columns = {column['name']: column for column in inspector.get_columns('stackframes')}
+    assert stackframe_columns['moluid']['nullable'] is False
+    assert stackframe_columns['stack_num']['nullable'] is False
 
 
 def test_get_session_site_deploy_true_raises_when_site_tables_missing(tmp_path):
     addr = f'sqlite:///{tmp_path}/aws_only.db'
     dbs.create_db(addr)
-    with pytest.raises(RuntimeError, match='subframes'):
+    with pytest.raises(RuntimeError, match='stacks'):
         with dbs.get_session(addr, site_deploy=True):
             pass
 

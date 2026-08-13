@@ -24,7 +24,7 @@ from banzai import settings, dbs, logs, calibrations
 from banzai.context import Context
 from banzai.query import archive_get
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
-from banzai.scheduling import (app, process_image, process_subframe, requeue_missing_frames,
+from banzai.scheduling import (app, process_image, process_stackframe, requeue_missing_frames,
                                schedule_calibration_stacking)
 from banzai.stacking import validate_message
 from banzai.data import DataProduct
@@ -38,14 +38,14 @@ from banzai.utils.instrument_utils import get_processing_queue
 logger = logs.get_logger()
 
 
-def decode_subframe_message(body):
-    """Normalize a subframe queue body into a dictionary."""
+def decode_stackframe_message(body):
+    """Normalize a stackframe queue body into a dictionary."""
     if isinstance(body, bytes):
         body = body.decode('utf-8')
     if isinstance(body, str):
         body = json.loads(body)
     if not isinstance(body, dict):
-        raise ValueError('Subframe message must decode to a JSON object')
+        raise ValueError('Stackframe message must decode to a JSON object')
     return body
 
 
@@ -264,7 +264,7 @@ def run_realtime_pipeline():
     start_listener(runtime_context)
 
 
-class SubframeListener(BanzaiQueueListener):
+class StackframeListener(BanzaiQueueListener):
     def get_queue(self):
         """Bind to banzai_stack_queue."""
         return Queue(self.runtime_context.STACK_QUEUE_NAME)
@@ -272,11 +272,11 @@ class SubframeListener(BanzaiQueueListener):
     def on_message(self, body, message):
         """Validate and dispatch to Celery for processing."""
         try:
-            body = decode_subframe_message(body)
+            body = decode_stackframe_message(body)
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as e:
             # Producers are internal - a malformed payload is a producer bug.
             # Ack to drain the poison message; the body is logged for forensics.
-            logger.error('Malformed subframe payload, discarding message',
+            logger.error('Malformed stackframe payload, discarding message',
                          extra_tags={'error': str(e), 'body': repr(body)[:1000]})
             message.ack()
             return
@@ -286,22 +286,22 @@ class SubframeListener(BanzaiQueueListener):
             message.ack()
             return
 
-        process_subframe.apply_async(
+        process_stackframe.apply_async(
             args=(body, vars(self.runtime_context)),
-            queue=self.runtime_context.SUBFRAME_TASK_QUEUE_NAME,
+            queue=self.runtime_context.STACKFRAME_TASK_QUEUE_NAME,
         )
         message.ack()
 
 
-def run_subframe_worker():
-    """Entry point for the subframe listener."""
+def run_stackframe_worker():
+    """Entry point for the stackframe listener."""
     runtime_context = parse_args(settings)
 
     run_listener(
         runtime_context,
-        SubframeListener(runtime_context),
-        'Starting subframe listener',
-        'Shutting down subframe listener.',
+        StackframeListener(runtime_context),
+        'Starting stackframe listener',
+        'Shutting down stackframe listener.',
     )
 
 

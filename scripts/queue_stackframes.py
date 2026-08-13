@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Send raw FITS subframes to banzai_stack_queue for site-deployment stacking.
+Send raw FITS stackframes to banzai_stack_queue for site-deployment stacking.
 
-Used with docker-compose-site.yml. The banzai-subframe-listener consumes from
-this queue, reduces each subframe, and the stacking supervisor produces a
-stacked frame once all subframes in a MOLUID group arrive.
+Used with docker-compose-site.yml. The banzai-stackframe-listener consumes from
+this queue, reduces each stackframe, and the stacking supervisor produces a
+stacked frame once all stackframes in a MOLUID group arrive.
 
 Each FITS file's SCI header must contain:
     MOLUID   - observation group identifier
@@ -19,7 +19,6 @@ import argparse
 import glob
 import json
 import os
-import time
 
 from astropy.io import fits
 
@@ -28,9 +27,9 @@ from banzai.utils.messaging import publish_raw_string_to_queue
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Send raw FITS subframes to banzai_stack_queue'
+        description='Send raw FITS stackframes to banzai_stack_queue'
     )
-    parser.add_argument('directory', help='Directory containing FITS subframes')
+    parser.add_argument('directory', help='Directory containing FITS stackframes')
     parser.add_argument('--site', default=None,
                         help='Only queue files whose SITEID header matches (e.g. tfn)')
     parser.add_argument('--broker-url', default='amqp://localhost:5672',
@@ -61,7 +60,6 @@ def main():
         body = json.dumps({
             'fits_file': abs_path,
             'last_frame': last_frame,
-            'instrument_enqueue_timestamp': int(time.time() * 1000),
         })
 
         publish_raw_string_to_queue(args.queue_name, body, args.broker_url)
