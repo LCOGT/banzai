@@ -21,6 +21,7 @@ kombu-serialized dict (``application/json``) hands them an already-decoded
 dict and crashes them.
 """
 import json
+import time
 
 from kombu import Connection, Exchange, Queue
 
@@ -51,7 +52,7 @@ def post_to_archive_queue(filename, broker_url, exchange_name='fits_files', **kw
 
 
 def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, small_thumbnail, large_thumbnail,
-                          instrument_enqueue_timestamp, thumbnail_metadata=None):
+                          thumbnail_metadata=None):
     """Publish smartstack product paths for the site shipper to upload.
 
     Fanout exchanges drop messages when no queue is bound, so the durable
@@ -62,7 +63,8 @@ def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, smal
     failures (no retry), silently dropping the product. Preview callers may
     submit thumbnail_metadata when no FITS path is available. Publisher
     confirms make broker rejection or acknowledgement timeout visible to the
-    caller so the stack finalizer can retry.
+    caller so the stack finalizer can retry. Each publish gets a fresh epoch-ms
+    timestamp marking when this product is submitted to the shipper.
     """
     exchange = Exchange(exchange_name, type='fanout', durable=True)
     queue = Queue(queue_name, exchange=exchange, durable=True)
@@ -70,7 +72,6 @@ def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, smal
         'fits': fits_path,
         'small_thumbnail': small_thumbnail,
         'large_thumbnail': large_thumbnail,
-        'instrument_enqueue_timestamp': instrument_enqueue_timestamp,
     }
     if thumbnail_metadata is not None:
         body['thumbnail_metadata'] = thumbnail_metadata
@@ -81,6 +82,7 @@ def post_to_shipper_queue(broker_url, exchange_name, queue_name, fits_path, smal
         bound_queue = queue(channel)
         bound_queue.declare()
         with conn.Producer(channel=channel, exchange=bound_queue.exchange, auto_declare=False) as producer:
+            body['instrument_enqueue_timestamp'] = int(time.time() * 1000)
             producer.publish(json.dumps(body), content_type='text/plain', content_encoding='utf-8',
                              confirm_timeout=SHIPPER_CONFIRM_TIMEOUT)
 

@@ -7,7 +7,7 @@ from banzai.utils import messaging
 
 def publish_and_fetch(fits_path, small_thumbnail, large_thumbnail, **kwargs):
     messaging.post_to_shipper_queue('memory://', 'ship_files', 'ship', fits_path, small_thumbnail,
-                                    large_thumbnail, 1783200000123, **kwargs)
+                                    large_thumbnail, **kwargs)
     with Connection('memory://') as connection:
         queue = Queue('ship')(connection.channel())
         message = queue.get(no_ack=True)
@@ -58,7 +58,8 @@ def test_post_to_shipper_queue_confirms_on_declared_channel(monkeypatch):
     assert publish_calls[0]['confirm_timeout'] == 5
 
 
-def test_post_to_shipper_queue_body_final():
+def test_post_to_shipper_queue_body_final(monkeypatch):
+    monkeypatch.setattr(messaging.time, 'time', lambda: 1783200000.123)
     message = publish_and_fetch('/data/final.fits', '/data/final-small_thumbnail.jpg',
                                 '/data/final-large_thumbnail.jpg')
     # Receiving the message at all proves the durable queue was bound before
