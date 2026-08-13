@@ -691,10 +691,9 @@ def _stack(moluid='mol-w', frmtotal=3, finalize_attempts=0, next_attempt_at=None
     )
 
 
-def _frame(stack_num, is_last=False, instrument_enqueue_timestamp=None, filepath=None):
+def _frame(stack_num, is_last=False, filepath=None):
     return SimpleNamespace(
         stack_num=stack_num, is_last=is_last,
-        instrument_enqueue_timestamp=instrument_enqueue_timestamp,
         filepath=filepath or f'/data/f{stack_num}.fits',
     )
 
@@ -705,8 +704,7 @@ class TestFinalizeStack:
         """The attempt is claimed first, then run_final -> publish -> mark_terminal, in that order."""
         rc = _runtime_context()
         stack = _stack(finalize_attempts=0, next_attempt_at=None)
-        stackframes = [_frame(1, instrument_enqueue_timestamp=111),
-                       _frame(2, is_last=True, instrument_enqueue_timestamp=222)]
+        stackframes = [_frame(1), _frame(2, is_last=True)]
         with patch('banzai.stacking.dbs') as mock_dbs, \
              patch('banzai.stacking.smartstack_products') as mock_products, \
              patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
@@ -724,7 +722,6 @@ class TestFinalizeStack:
         mock_publish.assert_called_once_with(
             rc.broker_url, rc.SHIPPER_EXCHANGE, rc.SHIPPER_QUEUE_NAME,
             fits_path='/o/e45.fits', small_thumbnail='/o/small.jpg', large_thumbnail='/o/large.jpg',
-            instrument_enqueue_timestamp=222,
         )
         mock_dbs.mark_stack_terminal.assert_called_once_with(rc.db_address, stack.moluid, 'complete')
 
@@ -732,7 +729,7 @@ class TestFinalizeStack:
         """run_final raising: attempt already burned by claim, but no mark_terminal and no exception escapes."""
         rc = _runtime_context()
         stack = _stack()
-        stackframes = [_frame(1, instrument_enqueue_timestamp=111)]
+        stackframes = [_frame(1)]
         with patch('banzai.stacking.dbs') as mock_dbs, \
              patch('banzai.stacking.smartstack_products') as mock_products, \
              patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
@@ -748,7 +745,7 @@ class TestFinalizeStack:
         """post_to_shipper_queue raising: the stack is not marked terminal (publish-before-mark)."""
         rc = _runtime_context()
         stack = _stack()
-        stackframes = [_frame(1, instrument_enqueue_timestamp=111)]
+        stackframes = [_frame(1)]
         with patch('banzai.stacking.dbs') as mock_dbs, \
              patch('banzai.stacking.smartstack_products') as mock_products, \
              patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
@@ -765,7 +762,7 @@ class TestFinalizeStack:
         """At/over MAX attempts, the stack is marked 'error' without claiming or doing any work."""
         rc = _runtime_context()
         stack = _stack(finalize_attempts=MAX_FINALIZE_ATTEMPTS, next_attempt_at=None)
-        stackframes = [_frame(1, instrument_enqueue_timestamp=111)]
+        stackframes = [_frame(1)]
         with patch('banzai.stacking.dbs') as mock_dbs, \
              patch('banzai.stacking.smartstack_products') as mock_products, \
              patch('banzai.stacking.post_to_shipper_queue') as mock_publish:

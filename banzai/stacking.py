@@ -88,7 +88,6 @@ def finalize_stack(runtime_context, stack_row, stackframes, status):
     try:
         fits_path, small_thumbnail, large_thumbnail = smartstack_products.run_final(
             stackframes, runtime_context, moluid)
-        newest_stackframe = max(stackframes, key=lambda stackframe: stackframe.stack_num)
         post_to_shipper_queue(
             runtime_context.broker_url,
             runtime_context.SHIPPER_EXCHANGE,
@@ -96,7 +95,6 @@ def finalize_stack(runtime_context, stack_row, stackframes, status):
             fits_path=fits_path,
             small_thumbnail=small_thumbnail,
             large_thumbnail=large_thumbnail,
-            instrument_enqueue_timestamp=newest_stackframe.instrument_enqueue_timestamp,
         )
         dbs.mark_stack_terminal(runtime_context.db_address, moluid, status)
         logger.info('Finalized smartstack', extra_tags={'moluid': moluid, 'status': status})
