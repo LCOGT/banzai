@@ -26,8 +26,8 @@ import time
 from kombu import Connection, Exchange, Queue
 
 
-SHIPPER_CONNECT_TIMEOUT = 5
-SHIPPER_CONFIRM_TIMEOUT = 5
+SHIPPER_CONNECT_TIMEOUT = 5  # seconds
+SHIPPER_CONFIRM_TIMEOUT = 5  # seconds
 
 
 def post_to_archive_queue(filename, broker_url, exchange_name='fits_files', **kwargs):
