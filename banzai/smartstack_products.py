@@ -2,12 +2,12 @@ import datetime
 import os
 
 import numpy as np
-from photutils.background import Background2D
 
 from banzai.context import Context
 from banzai.data import CCDData, HeaderOnly, combine_images
 from banzai.logs import get_logger
-from banzai.utils import date_utils, import_utils, stats
+from banzai.utils import date_utils, import_utils
+from banzai.utils.background_utils import background_header_cards, estimate_background
 from banzai.utils.file_utils import make_jpg_filenames
 from banzai.utils.jpg_utils import save_jpg, stretch_for_display
 from banzai.utils.messaging import post_to_shipper_queue
@@ -16,11 +16,6 @@ from banzai.utils.messaging import post_to_shipper_queue
 logger = get_logger()
 
 STACK_NSIGMA_REJECT = 3.0
-BACKGROUND_NSIGMA_CLIP = 5.0
-BACKGROUND_BOX_SIZE = (32, 32)
-BACKGROUND_FILTER_SIZE = (3, 3)
-# Smartstack products are RLEVEL 45 by definition: the filename, the thumbnail metadata, and the
-# written FITS header all derive from this constant rather than the caller's reduction_level.
 SMARTSTACK_REDUCTION_LEVEL = 45
 
 THUMBNAIL_HEADER_KEYS = (
@@ -66,29 +61,29 @@ def open_stackframe_images(stackframes, runtime_context):
     return images
 
 
-def _zeroed_ccd_hdu(ccd_hdu):
-    return type(ccd_hdu)(
-        data=np.zeros_like(ccd_hdu.data),
-        meta=ccd_hdu.meta.copy(),
-        name=ccd_hdu.name,
-        mask=np.zeros_like(ccd_hdu.mask),
-        uncertainty=np.zeros_like(ccd_hdu.uncertainty),
-        memmap=ccd_hdu.memmap,
+def _new_stack_output_hdu(science_hdu):
+    """Create a blank SCI destination whose data, mask, and uncertainty combine_images will fill."""
+    return type(science_hdu)(
+        data=np.zeros_like(science_hdu.data),
+        meta=science_hdu.meta.copy(),
+        name=science_hdu.name,
+        mask=np.zeros_like(science_hdu.mask),
+        uncertainty=np.zeros_like(science_hdu.uncertainty),
+        memmap=science_hdu.memmap,
     )
 
 
 def init_smartstack_frame(first_image, output_filename):
+    science_hdu = first_image['SCI']
+    if not isinstance(science_hdu, CCDData):
+        raise ValueError('Smartstack inputs must contain a SCI CCDData HDU')
+
     hdu_list = []
-    copied_science_hdu = False
     for hdu in first_image._hdus:
         if isinstance(hdu, HeaderOnly):
             hdu_list.append(HeaderOnly(meta=hdu.meta.copy(), name=hdu.name))
-        elif isinstance(hdu, CCDData) and not copied_science_hdu:
-            hdu_list.append(_zeroed_ccd_hdu(hdu))
-            copied_science_hdu = True
-
-    if not copied_science_hdu:
-        raise ValueError('Smartstack inputs must contain at least one CCDData HDU')
+        elif hdu is science_hdu:
+            hdu_list.append(_new_stack_output_hdu(science_hdu))
 
     hdu_order = first_image.hdu_order
     if hdu_list and isinstance(hdu_list[0], HeaderOnly):
@@ -133,11 +128,7 @@ def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
     # The inherited L1MEAN/L1MEDIAN/L1SIGMA describe the first input, not the stack. Remeasure with the
     # same background-map method as photometry.SourceDetector so e45 values are comparable to e09 ones
     # (raw-pixel stats would inflate L1SIGMA with pixel noise; the map measures background variation).
-    background = Background2D(output_frame['SCI'].data, BACKGROUND_BOX_SIZE,
-                              filter_size=BACKGROUND_FILTER_SIZE).background
-    mean_background = stats.sigma_clipped_mean(background, BACKGROUND_NSIGMA_CLIP)
-    median_background = np.median(background)
-    std_background = stats.robust_standard_deviation(background)
+    background_cards = background_header_cards(estimate_background(output_frame['SCI'].data))
 
     for header in headers:
         header['EXPTIME'] = (total_exptime, '[s] Total exposure time')
@@ -154,9 +145,8 @@ def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
                 header[keyword] = inherited_value * scale_factor
         if utstop is not None:
             header['UTSTOP'] = utstop
-        header['L1MEAN'] = (mean_background, '[counts] Sigma clipped mean of frame background')
-        header['L1MEDIAN'] = (median_background, '[counts] Median of frame background')
-        header['L1SIGMA'] = (std_background, '[counts] Robust std dev of frame background')
+        for keyword, card in background_cards.items():
+            header[keyword] = card
         header.add_history('Images combined to create smartstack image:')
         for index, (_, image) in enumerate(sorted_inputs, start=1):
             header[f'IMCOM{index:03d}'] = (image.filename, 'Image combined to create smartstack')
