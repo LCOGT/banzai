@@ -5,12 +5,12 @@ from astropy.table import Table
 from requests.exceptions import RequestException
 
 from banzai.utils import stats, array_utils
+from banzai.utils.background_utils import background_header_cards, estimate_background
 from banzai.utils.photometry_utils import get_reference_sources, match_catalogs, to_magnitude, fit_photometry
 from banzai.stages import Stage
 from banzai.data import DataTable
 from banzai import logs
 
-from photutils.background import Background2D
 from skimage import measure
 from photutils.segmentation import make_2dgaussian_kernel, detect_sources, deblend_sources, SourceCatalog
 from astropy.convolution import convolve
@@ -79,12 +79,8 @@ class SourceDetector(Stage):
             data = image.data.copy()
             error = image.uncertainty
 
-            # From what I can piece together, the background estimator makes a low resolution mesh set by box size
-            # (32, 32) here and then applies a filter to the low resolution image. The filter size is 3x3 here.
-            # The defaults we use here are a mesh creator is from source extractor which is a mode estimator.
-            # The default filter that works on the mesh image is a median filter.
-            bkg = Background2D(data, (32, 32), filter_size=(3, 3))
-            data -= bkg.background
+            background = estimate_background(data)
+            data -= background
 
             # Convolve the image with a 2D Guassian, but with the normalization SEP uses as
             # that is correct.
@@ -115,7 +111,7 @@ class SourceDetector(Stage):
             logger.info('Finished deblending. Saving catalog', image=image)
             # Convert the segmentation map to a source catalog
             catalog = SourceCatalog(data, deblended_seg_map, convolved_data=convolved_data, error=error,
-                                    background=bkg.background)
+                                    background=background)
 
             sources = Table({'x': catalog.xcentroid + 1.0, 'y': catalog.ycentroid + 1.0,
                              'xwin': catalog.xcentroid_win + 1.0, 'ywin': catalog.ycentroid_win + 1.0,
@@ -237,17 +233,8 @@ class SourceDetector(Stage):
             sources.reverse()
 
             # Save some background statistics in the header
-            mean_background = stats.sigma_clipped_mean(bkg.background, 5.0)
-            image.meta['L1MEAN'] = (mean_background,
-                                    '[counts] Sigma clipped mean of frame background')
-
-            median_background = np.median(bkg.background)
-            image.meta['L1MEDIAN'] = (median_background,
-                                      '[counts] Median of frame background')
-
-            std_background = stats.robust_standard_deviation(bkg.background)
-            image.meta['L1SIGMA'] = (std_background,
-                                     '[counts] Robust std dev of frame background')
+            for keyword, card in background_header_cards(background).items():
+                image.meta[keyword] = card
 
             # Save some image statistics to the header
             good_objects = sources['flag'] == 0

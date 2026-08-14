@@ -12,7 +12,7 @@ from astropy.coordinates import Angle
 import hashlib
 
 from banzai import dbs
-from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData, DataProduct
+from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData, DataProduct, create_combination_output_hdu
 from banzai.frames import ObservationFrame, CalibrationFrame, logger, FrameFactory
 from banzai.utils import date_utils, fits_utils, image_utils, file_utils
 from banzai.utils.image_utils import Section
@@ -295,9 +295,8 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
     def init_master_frame(cls, images: list, file_path: str, frame_id: int = None,
                           grouping_criteria: list = None, hdu_order: list = None):
         input_science = images[0]['SCI']
-        data_class = type(input_science)
-        hdu_list = [data_class(data=np.zeros(input_science.shape, dtype=input_science.dtype),
-                               meta=cls.init_master_header(images[0].meta, images), name='SCI')]
+        master_header = cls.init_master_header(images[0].meta, images)
+        hdu_list = [create_combination_output_hdu(input_science, master_header, memmap=True)]
         frame = cls(hdu_list=hdu_list, file_path=file_path, frame_id=frame_id,
                     grouping_criteria=grouping_criteria, hdu_order=hdu_order)
         frame.is_master = True
