@@ -556,6 +556,18 @@ def _warn_if_exposure_times_differ(images):
                        extra_tags={'exptime_spread_fraction': exptime_spread_fraction})
 
 
+def create_combination_output_hdu(source, meta, *, memmap):
+    """Create the blank SCI HDU populated in place by combine_images."""
+    return type(source)(
+        data=np.zeros_like(source.data),
+        meta=meta.copy(),
+        name=source.name,
+        mask=np.zeros_like(source.mask),
+        uncertainty=np.zeros_like(source.uncertainty),
+        memmap=memmap,
+    )
+
+
 def combine_images(images, output_image, nsigma=3.0, method='mean'):
     """Combine CCD data into an output image in memory-bounded y sections.
 

@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 from banzai.context import Context
-from banzai.data import CCDData, HeaderOnly, combine_images
+from banzai.data import CCDData, HeaderOnly, combine_images, create_combination_output_hdu
 from banzai.logs import get_logger
 from banzai.utils import date_utils, import_utils
 from banzai.utils.background_utils import background_header_cards, estimate_background
@@ -61,18 +61,6 @@ def open_stackframe_images(stackframes, runtime_context):
     return images
 
 
-def _new_stack_output_hdu(science_hdu):
-    """Create a blank SCI destination whose data, mask, and uncertainty combine_images will fill."""
-    return type(science_hdu)(
-        data=np.zeros_like(science_hdu.data),
-        meta=science_hdu.meta.copy(),
-        name=science_hdu.name,
-        mask=np.zeros_like(science_hdu.mask),
-        uncertainty=np.zeros_like(science_hdu.uncertainty),
-        memmap=science_hdu.memmap,
-    )
-
-
 def init_smartstack_frame(first_image, output_filename):
     science_hdu = first_image['SCI']
     if not isinstance(science_hdu, CCDData):
@@ -83,7 +71,8 @@ def init_smartstack_frame(first_image, output_filename):
         if isinstance(hdu, HeaderOnly):
             hdu_list.append(HeaderOnly(meta=hdu.meta.copy(), name=hdu.name))
         elif hdu is science_hdu:
-            hdu_list.append(_new_stack_output_hdu(science_hdu))
+            hdu_list.append(create_combination_output_hdu(science_hdu, science_hdu.meta,
+                                                          memmap=science_hdu.memmap))
 
     hdu_order = first_image.hdu_order
     if hdu_list and isinstance(hdu_list[0], HeaderOnly):
