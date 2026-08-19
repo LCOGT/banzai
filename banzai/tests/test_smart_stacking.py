@@ -726,7 +726,7 @@ class TestFinalizeStack:
         mock_dbs.mark_stack_terminal.assert_called_once_with(rc.db_address, stack.moluid, 'complete')
 
     def test_finalize_failure_leaves_stack_active(self):
-        """run_final raising: attempt already burned by claim, but no mark_terminal and no exception escapes."""
+        """A run_final error leaves the claimed stack active for retry."""
         rc = _runtime_context()
         stack = _stack()
         stackframes = [_frame(1)]
@@ -742,7 +742,7 @@ class TestFinalizeStack:
         mock_dbs.mark_stack_terminal.assert_not_called()
 
     def test_publish_failure_leaves_stack_active(self):
-        """post_to_shipper_queue raising: the stack is not marked terminal (publish-before-mark)."""
+        """A publishing error leaves the stack active for retry."""
         rc = _runtime_context()
         stack = _stack()
         stackframes = [_frame(1)]
@@ -759,7 +759,7 @@ class TestFinalizeStack:
         mock_dbs.mark_stack_terminal.assert_not_called()
 
     def test_exhausted_attempts_marks_error(self):
-        """At/over MAX attempts, the stack is marked 'error' without claiming or doing any work."""
+        """An exhausted attempt budget marks the stack as error without generating products."""
         rc = _runtime_context()
         stack = _stack(finalize_attempts=MAX_FINALIZE_ATTEMPTS, next_attempt_at=None)
         stackframes = [_frame(1)]
@@ -947,14 +947,13 @@ class TestWorkerLoopResilience:
     @patch('banzai.stacking.time.sleep')
     @patch('banzai.stacking.process_camera_tick')
     def test_run_worker_loop_continues_after_exception(self, mock_tick, mock_sleep, mock_cleanup):
-        """run_worker_loop must not die when process_camera_tick raises; it logs and keeps polling."""
+        """A tick error does not stop the polling loop."""
         # First tick raises a normal Exception (caught); second raises KeyboardInterrupt to escape the loop.
         mock_tick.side_effect = [Exception('boom'), KeyboardInterrupt]
         runtime_context_dict = {'db_address': 'sqlite:///fake.db', 'stack_retention_days': 30}
         with pytest.raises(KeyboardInterrupt):
             run_worker_loop('cam1', runtime_context_dict, poll_interval=0)
         assert mock_tick.call_count == 2
-        # sleep runs once: after the caught Exception. The KeyboardInterrupt escapes before the second sleep.
         mock_sleep.assert_called_once_with(0)
 
     @patch('banzai.stacking.time.monotonic')
@@ -964,10 +963,8 @@ class TestWorkerLoopResilience:
     def test_run_worker_loop_throttles_cleanup(self, mock_tick, mock_sleep, mock_cleanup,
                                                mock_monotonic):
         """cleanup_old_stacks runs on the first tick, then is throttled within the hour window."""
-        # Two clean ticks, then KeyboardInterrupt to escape. Scripted clock: the first tick sees an
-        # interval past the hour window (cleanup fires), the second tick lands inside it (throttled).
-        # A function-based side_effect keeps returning the final value so extra monotonic calls
-        # (comparison + reassignment) can never exhaust it.
+        # The first tick is past the cleanup interval; later clock reads remain within it.
+        # The fallback prevents additional monotonic calls from exhausting the mock clock.
         clock = [0.0, 3601.0, 3601.0]
         mock_monotonic.side_effect = lambda: clock.pop(0) if clock else 3602.0
         mock_tick.side_effect = [None, None, KeyboardInterrupt]
@@ -975,7 +972,6 @@ class TestWorkerLoopResilience:
         with pytest.raises(KeyboardInterrupt):
             run_worker_loop('cam1', runtime_context_dict, poll_interval=0)
         assert mock_tick.call_count == 3
-        # First tick triggers cleanup; the second is inside the hour window, so it does not.
         mock_cleanup.assert_called_once()
 
 

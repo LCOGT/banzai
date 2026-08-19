@@ -1,9 +1,8 @@
-"""Smart stacking: per-camera polling worker + crash-only supervisor.
+"""Smartstack polling workers and their supervisor.
 
-The worker is stateless: every few seconds it polls the ``stacks`` table for one camera and
-does the obvious thing for each active stack (finalize when complete/timed out, otherwise
-render an incremental preview). All lifecycle state — backoff timers, attempt counts, preview
-progress — lives in the ``stacks`` row, never in process memory.
+Each camera has a worker that polls active stacks, renders previews as frames arrive, and
+finalizes stacks when they complete or time out. Progress and retry state are stored in the
+database so a restarted worker can continue where the previous process stopped.
 """
 import datetime
 import multiprocessing
@@ -48,10 +47,9 @@ def check_stack_complete(stackframes, frmtotal):
 
 
 def stack_has_timed_out(stack_row, timeout_minutes, now=None):
-    """Return True if no stackframe has arrived for longer than timeout_minutes.
+    """Return True when the time since the most recent stackframe exceeds timeout_minutes.
 
-    The clock is cadence-based: it resets on every arrival (``last_stackframe_at``), so a long
-    total exposure never times out mid-stream — only a genuine gap in arrivals does.
+    ``last_stackframe_at`` is updated whenever a reduced stackframe arrives.
     """
     if now is None:
         now = datetime.datetime.utcnow()
@@ -59,22 +57,12 @@ def stack_has_timed_out(stack_row, timeout_minutes, now=None):
 
 
 def finalize_stack(runtime_context, stack_row, stackframes, status):
-    """Produce and ship the final e45 product for a terminal stack.
+    """Create and publish final products for a complete or timed-out stack.
 
-    The order is **claim -> write -> publish -> mark**, and each step is ordered deliberately:
-
-    - **Claim first.** ``claim_finalize_attempt`` bumps the attempt counter and arms the backoff
-      timer *before* any work runs, so a violent crash mid-finalize (OOM-kill, segfault) has
-      already burned an attempt. That is what bounds a poison stack: after the backoff ladder it
-      is marked ``error`` instead of crash-looping forever.
-    - **Publish before mark.** The shipper is told about the products before the stack is recorded
-      terminal, so a stack can never look complete without the shipper having been notified. A
-      crash between publish and mark just leaves the stack active; the poll retries and re-ships.
-      The shipper is idempotent on identical file paths, so at-least-once duplicates are harmless
-      — a lost final product would not be.
-
-    On any exception we only log. The claim already recorded the attempt, so there is nothing else
-    to record; the poll retries once ``next_attempt_at`` has passed.
+    Claim the attempt before generating products so later failures count toward the retry limit.
+    Publish the products before marking the stack terminal so terminal state is recorded only
+    after the shipper has been notified. If generation or publishing fails, leave the stack active
+    and retry after ``next_attempt_at``. Mark the stack as error when its attempt budget is exhausted.
     """
     moluid = stack_row.moluid
     if stack_row.finalize_attempts >= MAX_FINALIZE_ATTEMPTS:
@@ -135,10 +123,11 @@ def process_camera_tick(runtime_context, camera):
 
 
 def run_worker_loop(camera, runtime_context_dict, poll_interval=5):
-    """Poll one camera forever. Any exception is caught and logged so this loop cannot die from it.
+    """Continuously process active stacks for one camera.
 
-    Only a violent death (OOM-kill, segfault) can end this process, and the supervisor relies on
-    that: those are exactly the cases where a from-scratch restart is the right response.
+    Each pass finalizes or previews eligible stacks and periodically removes expired stack records.
+    Errors during a pass are logged, then the worker waits ``poll_interval`` seconds before trying
+    again.
     """
     runtime_context = Context(runtime_context_dict)
     logger.info('Starting stacking worker', extra_tags={'camera': camera})
@@ -146,7 +135,7 @@ def run_worker_loop(camera, runtime_context_dict, poll_interval=5):
     while True:
         try:
             process_camera_tick(runtime_context, camera)
-            # Retention is measured in days; scanning for expired stacks once an hour is plenty.
+            # Retention is configured in days, so run cleanup hourly instead of on every poll.
             if time.monotonic() - last_cleanup > CLEANUP_INTERVAL_SECONDS:
                 dbs.cleanup_old_stacks(runtime_context.db_address, runtime_context.stack_retention_days)
                 last_cleanup = time.monotonic()
@@ -156,29 +145,21 @@ def run_worker_loop(camera, runtime_context_dict, poll_interval=5):
 
 
 def run_supervisor(runtime_context):
-    """Spawn one worker process per camera and let Docker handle every death — crash-only by design.
+    """Start one polling worker for each selected camera.
 
-    Why this is a ~15-line supervisor and not a monitor-and-restart loop:
+    This design keeps supervision simple by relying on the container restart policy for worker
+    lifecycle management. The supervisor starts all workers and waits for one to exit. It then
+    exits with status 1 so the container can restart, rediscover cameras, and start a new set of
+    workers. The same restart path is used when no cameras match the configured filters.
 
-    - **Workers only die violently.** ``run_worker_loop`` catches every exception, so a child can
-      only exit via OOM-kill or segfault. Those are precisely the failures where restarting from
-      scratch is correct — and because workers are **stateless** (all lifecycle state lives in the
-      ``stacks`` table), a restart loses nothing.
-    - **Docker replaces the monitor.** ``restart: always`` on the compose service replaces ~80
-      lines of health-check/restart machinery. A side benefit: every restart re-runs camera
-      discovery, so a camera added after startup is picked up on the next restart.
-    - **Claim-first attempts are what make this safe.** A poison stack (deterministic OOM on one
-      stack's data) has already burned a finalize attempt when it kills the worker (see
-      ``finalize_stack``). After the backoff ladder — a handful of container restarts over bounded
-      minutes — the poll marks that stack ``error`` and all cameras resume permanently, with no
-      operator intervention. Without claim-first, a poison stack would crash-loop forever under
-      *any* process model.
-    - **Accepted trade-off.** When one camera's worker dies violently, this process exits and Docker
-      restarts the whole container, so every camera's worker briefly restarts too. That costs a few
-      seconds of polling downtime and, because workers are stateless, nothing else.
+    Restarting the container also restarts workers that were still healthy. This is the trade-off
+    for avoiding a separate per-worker restart loop. Stack progress is stored in the database, so
+    replacement workers continue from the persisted state.
 
-    This function exits non-zero on any child death (and on an empty camera list) so ``restart:
-    always`` brings the container back.
+    Before generating final products, ``finalize_stack`` records the attempt and its backoff. If a
+    worker exits after that claim, the replacement process retains the attempt count and waits
+    until ``next_attempt_at`` before retrying. Once the attempt limit is reached, the stack is
+    marked ``error`` instead of being finalized again.
     """
     instrument_types = ([t.strip() for t in runtime_context.instrument_types.split(',')]
                         if runtime_context.instrument_types != '*' else ['*'])
