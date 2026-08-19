@@ -293,8 +293,8 @@ class TestConcurrentStacks:
         stackframes_b = dbs.get_stackframes(db_address, 'mol-B')
         assert len(stackframes_a) == 3
         assert len(stackframes_b) == 2
-        assert check_stack_complete(stackframes_a, frmtotal=3) is True
-        assert check_stack_complete(stackframes_b, frmtotal=5) is False
+        assert check_stack_complete(stackframes_a) is True
+        assert check_stack_complete(stackframes_b) is False
 
 
 # ---------------------------------------------------------------------------
@@ -310,23 +310,16 @@ class TestCheckStackComplete:
         f.is_last = is_last
         return f
 
-    def test_check_stack_complete_all_stackframes_arrived(self):
+    def test_check_stack_complete_without_is_last(self):
         stackframes = [self._stackframe() for _ in range(3)]
-        assert check_stack_complete(stackframes, frmtotal=3) is True
+        assert check_stack_complete(stackframes) is False
 
-    def test_check_stack_complete_partial_without_is_last(self):
-        stackframes = [self._stackframe() for _ in range(3)]
-        assert check_stack_complete(stackframes, frmtotal=5) is False
-
-    def test_check_stack_complete_partial_with_is_last(self):
+    def test_check_stack_complete_with_is_last(self):
         stackframes = [self._stackframe() for _ in range(2)] + [self._stackframe(is_last=True)]
-        assert check_stack_complete(stackframes, frmtotal=5) is True
+        assert check_stack_complete(stackframes) is True
 
     def test_check_stack_complete_empty_stackframes(self):
-        assert check_stack_complete([], frmtotal=5) is False
-
-    def test_check_stack_complete_empty_stackframes_with_zero_total(self):
-        assert check_stack_complete([], frmtotal=0) is False
+        assert check_stack_complete([]) is False
 
 
 # ---------------------------------------------------------------------------

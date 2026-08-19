@@ -173,15 +173,11 @@ flowchart TD
 
 ### 4. Decide whether the group is complete
 
-`check_stack_complete` returns true when the group is non-empty and either:
-
-- `len(subframes) == FRMTOTAL`, or
-- any row has `is_last == true`.
-
-This is an exact count check, not an "at least" check. The database uniqueness
-constraint prevents duplicate `(MOLUID, MOLFRNUM)` rows, but the predicate does
-not independently verify that frame numbers are contiguous or that all rows
-agree on `FRMTOTAL`.
+`check_stack_complete` returns true when any row has `is_last == true`. This is
+the producer's authoritative end-of-sequence signal. `FRMTOTAL` remains the
+expected group size for metadata and progress; it does not decide completion.
+The predicate trusts the producer and does not independently verify that prior
+frame numbers are contiguous.
 
 ### 5. "Finalize" the group
 

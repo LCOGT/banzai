@@ -35,15 +35,9 @@ def validate_message(body):
     return all(field in body for field in REQUIRED_MESSAGE_FIELDS)
 
 
-def check_stack_complete(stackframes, frmtotal):
-    """Return True if the stack is ready to finalize.
-
-    Stackframe rows are written only after reduction succeeds, so a stack is complete when all
-    expected rows are present or the instrument signalled is_last.
-    """
-    all_arrived = len(stackframes) == frmtotal
-    has_last = any(stackframe.is_last for stackframe in stackframes)
-    return bool(stackframes) and (all_arrived or has_last)
+def check_stack_complete(stackframes):
+    """Return True when the instrument signalled the final stackframe."""
+    return any(stackframe.is_last for stackframe in stackframes)
 
 
 def stack_has_timed_out(stack_row, timeout_minutes, now=None):
@@ -95,9 +89,9 @@ def process_camera_tick(runtime_context, camera):
     for stack in dbs.get_active_stacks(runtime_context.db_address, camera):
         stackframes = dbs.get_stackframes(runtime_context.db_address, stack.moluid)
 
-        # Complete wins over timeout: a stack that has all its frames finalizes as 'complete'
-        # even if it also happens to be past the cadence timeout.
-        if check_stack_complete(stackframes, stack.frmtotal):
+        # Complete wins over timeout: a stack with the final-frame signal finalizes as
+        # 'complete' even if it also happens to be past the cadence timeout.
+        if check_stack_complete(stackframes):
             terminal_status = 'complete'
         elif stack_has_timed_out(stack, runtime_context.stack_timeout_minutes, now=now):
             terminal_status = 'timeout'
