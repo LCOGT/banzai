@@ -1,13 +1,27 @@
 # Smartstack Architecture Design
 
-Smartstacks are exposures made from combining a series of shorter exposures. The benefits of this procedure are reduced tracking error and the ability to provide previews of the stacking progress for realtime users as the stack is being processed. Since smartstacks require lots of files, creating the stacks in AWS risks saturating the bandwidth available to observatories. Therefore, smartstacks are designed to be processed with a banzai instance running directly at site, and only the final smartstack products need to be sent to the archive.
+## About smartstacks
+
+Smartstacks are exposures made from combining a series of shorter exposures. The benefits of this procedure are reduced tracking error and the ability to provide previews of the stacking progress (currently only jpgs) for realtime users as the stack is being processed. Since smartstacks require lots of files, creating the stacks in AWS risks saturating the bandwidth available to observatories. Therefore, smartstacks are designed to be processed with a banzai instance running directly at site, and only the final smartstack products will be sent to the archive.
+
+### Smartstack limitations
+
+Some important caveats, to help understand when smartstacks might not be a useful alternative to regular exposures.
+
+- BANZAI does not align or resample stack members, so sources that move between frames will smear.
+- Reproducability is limited. Final e45 products include the frames that were stacked, but these are not sent to the archive and are regularly cleaned from disks at site (after approx. 2 weeks). If the time since e45 creation is less than the site's file retention policy *and* the `STACK_RETENTION_DAYS` param that controls the local db cleanup, stacks can be recreated; otherwise not.
+- The combined product's RDNOISE is scaled by sqrt(N) for a stack of N farmes, compared to a single frame with the same total exposure.
+
+Also worth noting: the preview frames are visually stretched, lower-resolution jpg previews that overwrite each other as the stack is updated. They are intended as quick feedback for realtime observers, and not for any sort of data analysis.
+
+_____
 
 This page describes the Smartstack path in `docker-compose-site.yml`. The program that sends raw frames, the shipper, and the archive are outside this repository. The site deployment does not run the normal realtime `e91` path.
 
 The reduction level suffixes used:
 
 - `e00` is a raw exposure.
-- `e09` is one normally reduced stackframe exposure.
+- `e09` is an exposure reduced using BANZAI's default ordered reduction steps.
 - `e45` is the combined Smartstack product.
 
 ## The whole path
@@ -36,10 +50,18 @@ flowchart LR
 
 1. Site software writes a raw `e00` FITS file and sends its absolute path to RabbitMQ `banzai_stack_queue`.
 2. The listener checks the message and publishes a Celery reduction task to Redis.
-3. A Celery worker runs the normal BANZAI reduction and writes an `e09` file.
+3. A Celery worker runs the default BANZAI ordered reduction steps for the raw `e00`, and writes an `e09` file as output. By default the reductions use super calibration frames from the central AWS BANZAI instance that have been cached locally.
 4. After that succeeds, the worker saves the `e09` path and group information in PostgreSQL.
 5. A stacking process checks PostgreSQL about every five seconds. It opens the recorded `e09` files and makes a preview or final product when needed.
 6. BANZAI sends the product paths through RabbitMQ to the shipper.
+
+### Local calibration cache
+
+Calibration metadata and calibration FITS files reach the site through separate paths. When `AWS_DB_ADDRESS` is configured, the `banzai-cache-init` container creates the local PostgreSQL schema and configures a logical-replication subscription to the AWS BANZAI database's `banzai_calibrations` publication. PostgreSQL copies and continues to replicate the published calibration records and their related site and instrument metadata into the local database.
+
+Next, `banzai-download-worker` polls the replicated rows. For the configured site and instrument types, it keeps the two newest non-bad masters with archive frame IDs for each instrument and calibration-specific configuration. It downloads missing FITS files through the Archive API into `HOST_CALS_DIR`, records or reconciles their local directories in `calimages.filepath`, and prunes previously tracked files that leave the retained set.
+
+By default, stackframe reduction selects an applicable master from the local database and reads its FITS file from the cache. If the cached path is unavailable, frame opening can fall back to the archive. This cache lifecycle is independent of `STACK_RETENTION_DAYS` and Smartstack database cleanup.
 
 ## Inputs and grouping
 
@@ -82,7 +104,7 @@ The finished states behave differently:
 
 After `STACK_RETENTION_DAYS`, cleanup removes the `stackframes` rows for old finished stacks. It also removes old `complete` and `error` stack rows. It keeps `timeout` stack rows so late frames continue to be rejected.
 
-Cleanup does not delete FITS or JPEG files.
+Cleanup does not delete FITS or JPEG files; these are regularly cleaned as part of the host's data retention policy.
 
 ## Products
 
