@@ -22,9 +22,9 @@ These tests validate the full system by:
 5. **Cache Drift Reconciliation** - The download worker restores local cache
    filepaths when replicated database state drifts.
 
-6. **Smartstack Reduction and Stacking** - Raw stackframes published to the stack
-   queue are reduced to `e09` using the cached calibrations, then stacked into
-   `e45` products with JPEG previews and shipper messages.
+6. **Smartstack Reduction and Stacking** - The tests cover `n00` -> `n09` ->
+   `e45`: raw stackframes are reduced using the cached calibrations, then
+   stacked into final products with JPEG previews and shipper messages.
 
 7. **Replication Slot Reuse** - Cache initialization succeeds when a publisher
    replication slot already exists.
