@@ -525,7 +525,7 @@ class TestProcessStackframe:
         return h
 
     @staticmethod
-    def _make_mock_image(output_dir='/data/processed', output_filename='frame-e09.fits'):
+    def _make_mock_image(output_dir='/data/processed', output_filename='frame-n09.fits'):
         """Build a mock image returned by run_pipeline_stages."""
         img = MagicMock()
         img.get_output_directory.return_value = output_dir
@@ -549,7 +549,7 @@ class TestProcessStackframe:
                         'smartstack_moluid': 'mol-xyz',
                         'smartstack_camera': 'cam1',
                         'smartstack_stack_num': 1,
-                        'smartstack_filepath': '/data/processed/frame-e09.fits',
+                        'smartstack_filepath': '/data/processed/frame-n09.fits',
                         'smartstack_status': 'timeout'},
         )
 
@@ -584,7 +584,7 @@ class TestProcessStackframe:
             stack_num=1,
             frmtotal=5,
             camera='cam1',
-            filepath='/data/processed/frame-e09.fits',
+            filepath='/data/processed/frame-n09.fits',
             is_last=expected_is_last,
             dateobs=datetime.datetime(2024, 1, 1, 0, 0, 0),
         )
@@ -614,7 +614,7 @@ class TestProcessStackframe:
             process_stackframe(body, runtime_context)
 
         mock_upsert.assert_called_once()
-        assert mock_upsert.call_args.kwargs['filepath'] == '/data/processed/frame-e09.fits'
+        assert mock_upsert.call_args.kwargs['filepath'] == '/data/processed/frame-n09.fits'
         redis_module.Redis.from_url.assert_not_called()
 
     @patch('banzai.scheduling.stage_utils.run_pipeline_stages')

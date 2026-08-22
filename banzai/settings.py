@@ -50,7 +50,8 @@ CALIBRATION_SET_CRITERIA = {'BIAS': ['configuration_mode', 'binning'],
 
 LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
               'DARK': 'banzai.uncertainty.PoissonInitializer', 'SKYFLAT': 'banzai.dark.DarkSubtractor',
-              'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None, 'EXPERIMENTAL': None}
+              'SINISTRO': 'banzai.mosaic.MosaicCreator', 'STANDARD': None, 'EXPOSE': None, 'SUB_EXP': None,
+              'EXPERIMENTAL': None}
 
 EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
                 'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkTemperatureChecker',
@@ -59,6 +60,7 @@ EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.B
                             'banzai.qc.PatternNoiseDetector', 'banzai.flats.FlatComparer'],
                 'STANDARD': None,
                 'EXPOSE': None,
+                'SUB_EXP': None,
                 'EXPERIMENTAL': None}
 
 CALIBRATION_STACKER_STAGES = {'BIAS': ['banzai.bias.BiasMaker'],
@@ -137,12 +139,14 @@ DATA_RELEASE_DELAY = 365
 # Proposal ids for data that should be public instantly. Should all be lowercase
 PUBLIC_PROPOSALS = ['calibrate', 'standard', '*standards', '*epo*', 'pointing', 'tso*']
 
-SUPPORTED_FRAME_TYPES = ['BPM', 'READNOISE', 'BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'STANDARD', 'EXPERIMENTAL']
+SUPPORTED_FRAME_TYPES = ['BPM', 'READNOISE', 'BIAS', 'DARK', 'SKYFLAT', 'EXPOSE', 'SUB_EXP', 'STANDARD',
+                         'EXPERIMENTAL']
 
 REDUCED_DATA_EXTENSION_ORDERING = {'BIAS': ['SCI', 'BPM', 'ERR'],
                                    'DARK': ['SCI', 'BPM', 'ERR'],
                                    'SKYFLAT': ['SCI', 'BPM', 'ERR'],
                                    'EXPOSE': ['SCI', 'CAT', 'BPM', 'ERR'],
+                                   'SUB_EXP': ['SCI', 'CAT', 'BPM', 'ERR'],
                                    'STANDARD': ['SCI', 'CAT', 'BPM', 'ERR'],
                                    'EXPERIMENTAL': ['SCI', 'CAT', 'BPM', 'ERR']}
 

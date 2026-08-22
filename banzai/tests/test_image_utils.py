@@ -6,10 +6,13 @@ from banzai.utils import image_utils
 pytestmark = pytest.mark.image_utils
 
 
-def test_image_can_be_processed_known_obstype():
-    image = FakeLCOObservationFrame([FakeCCDData(meta={'OBSTYPE': 'BIAS'})])
+def test_sub_exp_image_can_be_processed_with_full_pipeline_settings():
+    image = FakeLCOObservationFrame([FakeCCDData(meta={'OBSTYPE': 'SUB_EXP'})])
+    context = FakeContext()
 
-    assert image_utils.image_can_be_processed(image, FakeContext())
+    assert image_utils.image_can_be_processed(image, context)
+    assert (context.LAST_STAGE['SUB_EXP'], context.EXTRA_STAGES['SUB_EXP']) == (None, None)
+    assert context.REDUCED_DATA_EXTENSION_ORDERING['SUB_EXP'] == context.REDUCED_DATA_EXTENSION_ORDERING['EXPOSE']
 
 
 def test_image_cannot_be_processed_unknown_obstype():

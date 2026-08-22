@@ -115,11 +115,12 @@ def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
         utstop = newest_image.primary_hdu.meta.get('UTSTOP')
 
     # The inherited L1MEAN/L1MEDIAN/L1SIGMA describe the first input, not the stack. Remeasure with the
-    # same background-map method as photometry.SourceDetector so e45 values are comparable to e09 ones
+    # same background-map method as photometry.SourceDetector so e45 values are comparable to n09 ones
     # (raw-pixel stats would inflate L1SIGMA with pixel noise; the map measures background variation).
     background_cards = background_header_cards(estimate_background(output_frame['SCI'].data))
 
     for header in headers:
+        header['OBSTYPE'] = ('EXPOSE', 'Observation type')
         header['EXPTIME'] = (total_exptime, '[s] Total exposure time')
         header['DATE-OBS'] = (date_utils.date_obs_to_string(earliest_dateobs), '[UTC] Earliest observation time')
         header['NCOMBINE'] = (n_stacked, 'Number of images combined')
@@ -146,8 +147,8 @@ def build_stacked_frame(stackframes, runtime_context, moluid):
         raise ValueError('Cannot build a smartstack without stackframes')
     stackframes = sorted(stackframes, key=lambda stackframe: stackframe.stack_num)
     input_images = open_stackframe_images(stackframes, runtime_context)
-    base, rlevel, file_extension = input_images[0].filename.rpartition('-e09')
-    if rlevel != '-e09' or file_extension not in ('.fits', '.fits.fz'):
+    base, rlevel, file_extension = input_images[0].filename.rpartition('-n09')
+    if rlevel != '-n09' or file_extension not in ('.fits', '.fits.fz'):
         raise ValueError(f'Could not parse smartstack input filename: {input_images[0].filename}')
     output_filename = f'{base}-e{SMARTSTACK_REDUCTION_LEVEL}{file_extension}'
     output_frame = init_smartstack_frame(input_images[0], output_filename)
