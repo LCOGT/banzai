@@ -60,6 +60,22 @@ def _assert_cache_matches(expected_files, timeout=180):
         assert p.stat().st_size > 0, f"Cached file is empty: {p}"
 
 
+def _prepare_stackframe(source_path, destination_filename, moluid, stack_num, frmtotal):
+    """Copy the archive seed to an n00 member and add Smartstack metadata."""
+    frame_path = RAW_DIR / destination_filename
+    shutil.copy2(str(source_path), str(frame_path))
+    with fits.open(str(frame_path), mode='update') as hdul:
+        for hdu in hdul:
+            if 'OBSTYPE' not in hdu.header:
+                continue
+            hdu.header['OBSTYPE'] = 'SUB_EXP'
+            hdu.header['MOLUID'] = moluid
+            hdu.header['MOLFRNUM'] = stack_num
+            hdu.header['FRMTOTAL'] = frmtotal
+            hdu.header['STACK'] = 'T'
+    return frame_path
+
+
 # Broker the host-side test process publishes to; the shared banzai-rabbitmq
 # container is exposed on localhost:5672 (containers reach it via host.docker.internal).
 BROKER_URL = 'amqp://localhost:5672'
@@ -111,7 +127,7 @@ def _drain_ship_probe(queue_name=SHIP_PROBE_QUEUE, broker_url=BROKER_URL):
 def _corrupt_file(path):
     """Overwrite an on-disk file that may be owned by a container UID with garbage.
 
-    The reduced e09 files are written from inside the site containers, so the host
+    The reduced n09 files are written from inside the site containers, so the host
     test user may not own them. Overwrite through a throwaway container that mounts
     the reduced-output tree at the same absolute path (mirrors
     ``conftest._clean_data_dir``), which runs as root and always succeeds.
@@ -287,16 +303,12 @@ class TestSiteE2E:
 
         raw_dir = RAW_DIR
         src_path = raw_dir / RAW_FRAME_FILENAME
-        stackframe_path = raw_dir / 'lsc0m476-sq34-20260121-0301-e00.fits.fz'
 
         assert src_path.exists(), f"Raw frame not found: {src_path}"
-        shutil.copy2(str(src_path), str(stackframe_path))
-
-        with fits.open(str(stackframe_path), mode='update') as hdul:
-            hdul['SCI'].header['MOLUID'] = 'mol-e2e-test'
-            hdul['SCI'].header['MOLFRNUM'] = 1
-            hdul['SCI'].header['FRMTOTAL'] = 1
-            hdul['SCI'].header['STACK'] = 'T'
+        stackframe_path = _prepare_stackframe(
+            src_path, 'lsc0m476-sq34-20260121-0301-n00.fits.fz',
+            'mol-e2e-test', stack_num=1, frmtotal=1,
+        )
 
         body = json.dumps({
             'fits_file': str(stackframe_path),
@@ -333,10 +345,10 @@ class TestSiteE2E:
 
     @pytest.mark.e2e_site_reduction
     def test_12b_reduction_used_cached_calibrations(self, site_deployment):
-        """Verify reduced e09 stackframes used calibrations from the local cache and DB."""
-        reduced_files = [path for pattern in ('*-e09.fits', '*-e09.fits.fz')
+        """Verify reduced n09 stackframes used calibrations from the local cache and DB."""
+        reduced_files = [path for pattern in ('*-n09.fits', '*-n09.fits.fz')
                          for path in OUTPUT_DIR.rglob(pattern)]
-        assert reduced_files, f"No reduced e09 files found under {OUTPUT_DIR}"
+        assert reduced_files, f"No reduced n09 files found under {OUTPUT_DIR}"
 
         cal_header_keys = {'L1IDBIAS': 'bias', 'L1IDDARK': 'dark', 'L1IDFLAT': 'flat'}
         cached_files = {p.name for p in CACHE_DIR.rglob('*.fits.fz')}
@@ -392,13 +404,10 @@ class TestSiteE2E:
             stack_queue = os.environ.get('STACK_QUEUE_NAME', 'banzai_stack_queue')
 
             def publish_stackframe(stack_num, is_last):
-                frame_path = raw_dir / f'lsc0m476-sq34-20260121-{stack_num:04d}-e00.fits.fz'
-                shutil.copy2(str(src_path), str(frame_path))
-                with fits.open(str(frame_path), mode='update') as hdul:
-                    hdul['SCI'].header['MOLUID'] = moluid
-                    hdul['SCI'].header['MOLFRNUM'] = stack_num
-                    hdul['SCI'].header['FRMTOTAL'] = 3
-                    hdul['SCI'].header['STACK'] = 'T'
+                frame_path = _prepare_stackframe(
+                    src_path, f'lsc0m476-sq34-20260121-{stack_num:04d}-n00.fits.fz',
+                    moluid, stack_num=stack_num, frmtotal=3,
+                )
                 body = json.dumps({
                     'fits_file': str(frame_path),
                     'last_frame': is_last,
@@ -448,6 +457,7 @@ class TestSiteE2E:
 
             with fits.open(e45_path) as hdul:
                 for header in (hdul[0].header, hdul['SCI'].header):
+                    assert header['OBSTYPE'] == 'EXPOSE'
                     assert header['NCOMBINE'] == 3
                     assert [header[f'IMCOM{index:03d}'] for index in range(1, 4)] == input_basenames
                     assert 'IMCOM004' not in header
@@ -500,7 +510,7 @@ class TestSiteE2E:
     def test_14_poison_stack_self_heals(self, site_deployment):
         """A stack with a corrupted reduced input self-heals to 'error'; a sibling completes.
 
-        After the poison stack's first frame reduces, its e09 file is corrupted so
+        After the poison stack's first frame reduces, its n09 file is corrupted so
         finalize cannot open it. Finalize failure is a *caught* exception (not a
         violent crash), so the worker keeps running: it burns one claimed attempt per
         tick and, after the FINALIZE_BACKOFF_SECONDS ladder (set short in site_e2e.env),
@@ -516,13 +526,10 @@ class TestSiteE2E:
         sibling_moluid = 'mol-e2e-poison-sibling'
 
         def publish_stackframe(moluid, stack_num, frmtotal, is_last, filename):
-            frame_path = raw_dir / filename
-            shutil.copy2(str(src_path), str(frame_path))
-            with fits.open(str(frame_path), mode='update') as hdul:
-                hdul['SCI'].header['MOLUID'] = moluid
-                hdul['SCI'].header['MOLFRNUM'] = stack_num
-                hdul['SCI'].header['FRMTOTAL'] = frmtotal
-                hdul['SCI'].header['STACK'] = 'T'
+            frame_path = _prepare_stackframe(
+                src_path, filename, moluid, stack_num=stack_num,
+                frmtotal=frmtotal,
+            )
             body = json.dumps({
                 'fits_file': str(frame_path),
                 'last_frame': is_last,
@@ -530,7 +537,7 @@ class TestSiteE2E:
             publish_raw_string_to_queue(stack_queue, body)
 
         # 1. Publish the poison stack's first frame and wait for it to reduce.
-        publish_stackframe(poison_moluid, 1, 2, False, 'lsc0m476-sq34-20260121-0101-e00.fits.fz')
+        publish_stackframe(poison_moluid, 1, 2, False, 'lsc0m476-sq34-20260121-0101-n00.fits.fz')
 
         def poison_frame_reduced():
             with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
@@ -542,16 +549,16 @@ class TestSiteE2E:
 
         # Generous timeout: the reduction path makes network calls (WCS/photometry over
         # VPN) and can stall well past a single frame's typical ~20s under contention.
-        e09_path = poll_until(poison_frame_reduced, timeout=600, interval=5)
-        assert e09_path, "Poison stack's first frame never reduced"
+        n09_path = poll_until(poison_frame_reduced, timeout=600, interval=5)
+        assert n09_path, "Poison stack's first frame never reduced"
 
-        # 2. Corrupt the reduced e09 so finalize cannot open it.
-        _corrupt_file(e09_path)
+        # 2. Corrupt the reduced n09 so finalize cannot open it.
+        _corrupt_file(n09_path)
 
         # 3. Complete the poison stack, and publish a healthy sibling in the same window.
-        publish_stackframe(poison_moluid, 2, 2, True, 'lsc0m476-sq34-20260121-0102-e00.fits.fz')
-        publish_stackframe(sibling_moluid, 1, 2, False, 'lsc0m476-sq34-20260121-0201-e00.fits.fz')
-        publish_stackframe(sibling_moluid, 2, 2, True, 'lsc0m476-sq34-20260121-0202-e00.fits.fz')
+        publish_stackframe(poison_moluid, 2, 2, True, 'lsc0m476-sq34-20260121-0102-n00.fits.fz')
+        publish_stackframe(sibling_moluid, 1, 2, False, 'lsc0m476-sq34-20260121-0201-n00.fits.fz')
+        publish_stackframe(sibling_moluid, 2, 2, True, 'lsc0m476-sq34-20260121-0202-n00.fits.fz')
 
         # 4. The poison stack exhausts the attempt ladder and lands in 'error'.
         def poison_errored():
@@ -615,21 +622,18 @@ class TestSiteE2E:
         stack_queue = os.environ.get('STACK_QUEUE_NAME', 'banzai_stack_queue')
 
         def publish_stackframe(stack_num, is_last, filename):
-            frame_path = raw_dir / filename
-            shutil.copy2(str(src_path), str(frame_path))
-            with fits.open(str(frame_path), mode='update') as hdul:
-                hdul['SCI'].header['MOLUID'] = moluid
-                hdul['SCI'].header['MOLFRNUM'] = stack_num
-                hdul['SCI'].header['FRMTOTAL'] = 2
-                hdul['SCI'].header['STACK'] = 'T'
+            frame_path = _prepare_stackframe(
+                src_path, filename, moluid, stack_num=stack_num,
+                frmtotal=2,
+            )
             body = json.dumps({
                 'fits_file': str(frame_path),
                 'last_frame': is_last,
             })
             publish_raw_string_to_queue(stack_queue, body)
 
-        publish_stackframe(1, False, 'lsc0m476-sq34-20260121-0401-e00.fits.fz')
-        publish_stackframe(2, True, 'lsc0m476-sq34-20260121-0402-e00.fits.fz')
+        publish_stackframe(1, False, 'lsc0m476-sq34-20260121-0401-n00.fits.fz')
+        publish_stackframe(2, True, 'lsc0m476-sq34-20260121-0402-n00.fits.fz')
 
         def stack_complete():
             with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
