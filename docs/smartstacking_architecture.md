@@ -11,6 +11,7 @@ Some important caveats, to help understand when smartstacks might not be a usefu
 - BANZAI does not align or resample stack members, so sources that move between frames will smear.
 - Reproducability is limited. Final e45 products include the frames that were stacked, but these are not sent to the archive and are regularly cleaned from disks at site (after approx. 2 weeks). If the time since e45 creation is less than the site's file retention policy *and* the `STACK_RETENTION_DAYS` param that controls the local db cleanup, stacks can be recreated; otherwise not.
 - The combined product's RDNOISE is scaled by sqrt(N) for a stack of N farmes, compared to a single frame with the same total exposure.
+- No auto or manual frame rejection capabilities.
 
 Also worth noting: the preview frames are visually stretched, lower-resolution jpg previews that overwrite each other as the stack is updated. They are intended as quick feedback for realtime observers, and not for any sort of data analysis.
 
