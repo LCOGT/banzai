@@ -173,15 +173,11 @@ flowchart TD
 
 ### 4. Decide whether the group is complete
 
-`check_stack_complete` returns true when the group is non-empty and either:
-
-- `len(subframes) == FRMTOTAL`, or
-- any row has `is_last == true`.
-
-This is an exact count check, not an "at least" check. The database uniqueness
-constraint prevents duplicate `(MOLUID, MOLFRNUM)` rows, but the predicate does
-not independently verify that frame numbers are contiguous or that all rows
-agree on `FRMTOTAL`.
+`check_stack_complete` returns true when any row has `is_last == true`. This is
+the producer's authoritative end-of-sequence signal. `FRMTOTAL` remains the
+expected group size for metadata and progress; it does not decide completion.
+The predicate trusts the producer and does not independently verify that prior
+frame numbers are contiguous.
 
 ### 5. "Finalize" the group
 
@@ -207,7 +203,7 @@ one or more raw e00 subframes
 |-------------------|-------------|----------------|
 | `banzai-subframe-listener` | `banzai.main:run_subframe_worker` | Consume and validate RabbitMQ messages; dispatch Celery tasks. Despite the CLI name, this is the listener process. |
 | `banzai-subframe-worker` | Celery worker consuming `SUBFRAME_TASK_QUEUE_NAME` | Reduce the FITS file, upsert the reduced row, and send a notification. |
-| `banzai-stacking-supervisor` | `banzai.stacking:run_supervisor` | Discover cameras at startup, start one child per camera, and restart children that exit. |
+| `banzai-stacking-supervisor` | `banzai.main:run_stacking_supervisor` | Discover cameras at startup, start one child per camera, and restart children that exit. |
 | `stacking-worker-{camera}` | `banzai.stacking:run_worker_loop` | Process unique notifications in FIFO order, query stack state, mark complete groups, and run retention cleanup. |
 
 Camera discovery uses `dbs.get_instruments_at_site(site_id, db_address)` once

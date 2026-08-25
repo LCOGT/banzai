@@ -1,13 +1,19 @@
-"""Smart stacking: worker, supervisor, and helper functions."""
-import argparse
+"""Smartstack polling workers and their supervisor.
+
+Each camera has a worker that polls active stacks, renders previews as frames arrive, and
+finalizes stacks when they complete or time out. Progress and retry state are stored in the
+database so a restarted worker can continue where the previous process stopped.
+"""
+import datetime
 import multiprocessing
-import signal
+import multiprocessing.connection
+import sys
 import time
 
-import redis as redis_lib
-
-from banzai import dbs
+from banzai import dbs, smartstack_products
+from banzai.context import Context
 from banzai.logs import get_logger
+from banzai.utils.messaging import post_to_shipper_queue
 
 logger = get_logger()
 
@@ -18,188 +24,156 @@ logger = get_logger()
 
 REQUIRED_MESSAGE_FIELDS = ('fits_file', 'last_frame')
 
+# Backoff between finalize attempts; after the ladder is exhausted the stack is marked 'error'.
+FINALIZE_BACKOFF_SECONDS = [60, 300, 900, 3600]
+MAX_FINALIZE_ATTEMPTS = len(FINALIZE_BACKOFF_SECONDS) + 1
+CLEANUP_INTERVAL_SECONDS = 3600
+
 
 def validate_message(body):
     """Check that body contains fits_file and last_frame."""
     return all(field in body for field in REQUIRED_MESSAGE_FIELDS)
 
 
-def check_stack_complete(subframes, frmtotal):
-    """Return True if the stack is ready to finalize.
+def check_stack_complete(stackframes):
+    """Return True when the instrument signalled the final stackframe."""
+    return any(stackframe.is_last for stackframe in stackframes)
 
-    Subframe rows are written only after reduction succeeds, so a stack is
-    complete when all expected rows are present or the instrument signalled
-    is_last.
+
+def stack_has_timed_out(stack_row, timeout_minutes, now=None):
+    """Return True when the time since the most recent stackframe exceeds timeout_minutes.
+
+    ``last_stackframe_at`` is updated whenever a reduced stackframe arrives.
     """
-    all_arrived = len(subframes) == frmtotal
-    has_last = any(s.is_last for s in subframes)
-    return bool(subframes) and (all_arrived or has_last)
+    if now is None:
+        now = datetime.datetime.utcnow()
+    return (now - stack_row.last_stackframe_at) > datetime.timedelta(minutes=timeout_minutes)
 
 
-# ---------------------------------------------------------------------------
-# Notifications
-# ---------------------------------------------------------------------------
+def finalize_stack(runtime_context, stack_row, stackframes, status):
+    """Create and publish final products for a complete or timed-out stack.
 
-REDIS_KEY_PREFIX = 'stack:notify:'
-ENQUEUE_NOTIFICATION_SCRIPT = """
-local existing_score = redis.call('ZSCORE', KEYS[1], ARGV[1])
-if existing_score then
-    return 0
-end
+    Claim the attempt before generating products so later failures count toward the retry limit.
+    Publish the products before marking the stack terminal so terminal state is recorded only
+    after the shipper has been notified. If generation or publishing fails, leave the stack active
+    and retry after ``next_attempt_at``. Mark the stack as error when its attempt budget is exhausted.
+    """
+    moluid = stack_row.moluid
+    if stack_row.finalize_attempts >= MAX_FINALIZE_ATTEMPTS:
+        dbs.mark_stack_terminal(runtime_context.db_address, moluid, 'error')
+        logger.error('Smartstack exhausted finalize attempts; marking error',
+                     extra_tags={'moluid': moluid, 'finalize_attempts': stack_row.finalize_attempts})
+        return
 
-local sequence = redis.call('INCR', KEYS[2])
-redis.call('ZADD', KEYS[1], sequence, ARGV[1])
-return 1
-"""
-
-
-def _notification_key(camera):
-    return f'{REDIS_KEY_PREFIX}{camera}'
-
-
-def _notification_sequence_key(camera):
-    return f'{_notification_key(camera)}:sequence'
-
-
-def push_notification(redis_client, camera, moluid):
-    """Add a moluid to a camera's FIFO notification set unless it is already pending."""
-    return redis_client.eval(
-        ENQUEUE_NOTIFICATION_SCRIPT,
-        2,
-        _notification_key(camera),
-        _notification_sequence_key(camera),
-        moluid,
-    )
+    dbs.claim_finalize_attempt(runtime_context.db_address, moluid, FINALIZE_BACKOFF_SECONDS)
+    try:
+        fits_path, small_thumbnail, large_thumbnail = smartstack_products.run_final(
+            stackframes, runtime_context, moluid)
+        post_to_shipper_queue(
+            runtime_context.broker_url,
+            runtime_context.SHIPPER_EXCHANGE,
+            runtime_context.SHIPPER_QUEUE_NAME,
+            fits_path=fits_path,
+            small_thumbnail=small_thumbnail,
+            large_thumbnail=large_thumbnail,
+        )
+        dbs.mark_stack_terminal(runtime_context.db_address, moluid, status)
+        logger.info('Finalized smartstack', extra_tags={'moluid': moluid, 'status': status})
+    except Exception:
+        logger.error('Failed to finalize smartstack', exc_info=True, extra_tags={'moluid': moluid})
 
 
-def pop_notification(redis_client, camera):
-    """Pop and return the oldest pending moluid for a camera."""
-    pending = redis_client.zpopmin(_notification_key(camera), count=1)
-    if not pending:
-        return None
-    moluid = pending[0][0]
-    return moluid.decode() if isinstance(moluid, bytes) else moluid
+def process_camera_tick(runtime_context, camera):
+    """Do one poll pass for a camera: finalize terminal stacks, otherwise preview growing ones."""
+    now = datetime.datetime.utcnow()
+    for stack in dbs.get_active_stacks(runtime_context.db_address, camera):
+        stackframes = dbs.get_stackframes(runtime_context.db_address, stack.moluid)
+
+        # Complete wins over timeout: a stack with the final-frame signal finalizes as
+        # 'complete' even if it also happens to be past the cadence timeout.
+        if check_stack_complete(stackframes):
+            terminal_status = 'complete'
+        elif stack_has_timed_out(stack, runtime_context.stack_timeout_minutes, now=now):
+            terminal_status = 'timeout'
+        else:
+            terminal_status = None
+
+        if terminal_status is not None:
+            if stack.next_attempt_at is not None and now < stack.next_attempt_at:
+                continue  # Still inside the backoff window from a previous failed attempt.
+            finalize_stack(runtime_context, stack, stackframes, terminal_status)
+        # Reductions finish concurrently; wait for frame 1 so every preview reuses its basename.
+        elif (runtime_context.SMARTSTACK_PREVIEWS
+              and stackframes
+              and stackframes[0].stack_num == 1
+              and len(stackframes) > stack.last_preview_count):
+            try:
+                smartstack_products.run_preview(stackframes, runtime_context, stack.moluid)
+                dbs.set_preview_count(runtime_context.db_address, stack.moluid, len(stackframes))
+            except Exception:
+                # Do not advance the preview count on failure so the next tick retries it.
+                logger.warning('Failed to render smartstack preview', exc_info=True,
+                               extra_tags={'moluid': stack.moluid})
 
 
-# ---------------------------------------------------------------------------
-# Worker
-# ---------------------------------------------------------------------------
+def run_worker_loop(camera, runtime_context_dict, poll_interval=5):
+    """Continuously process active stacks for one camera.
 
-def run_worker_loop(camera, db_address, redis_url, retention_days=30, poll_interval=5):
-    """Main loop: process notifications, query DB, check completion, finalize."""
-    redis_client = redis_lib.Redis.from_url(redis_url)
+    Each pass finalizes or previews eligible stacks and periodically removes expired stack records.
+    Errors during a pass are logged, then the worker waits ``poll_interval`` seconds before trying
+    again.
+    """
+    runtime_context = Context(runtime_context_dict)
+    logger.info('Starting stacking worker', extra_tags={'camera': camera})
+    last_cleanup = time.monotonic() - CLEANUP_INTERVAL_SECONDS
     while True:
         try:
-            process_notifications(db_address, redis_client, camera)
-            dbs.cleanup_old_subframes(db_address, retention_days)
-            time.sleep(poll_interval)
-        except Exception as e:
-            logger.error(f'Error in stacking worker loop: {e}', extra_tags={'camera': camera})
-            time.sleep(poll_interval)
+            process_camera_tick(runtime_context, camera)
+            # Retention is configured in days, so run cleanup hourly instead of on every poll.
+            if time.monotonic() - last_cleanup > CLEANUP_INTERVAL_SECONDS:
+                dbs.cleanup_old_stacks(runtime_context.db_address, runtime_context.stack_retention_days)
+                last_cleanup = time.monotonic()
+        except Exception:
+            logger.error('Error in stacking worker loop', exc_info=True, extra_tags={'camera': camera})
+        time.sleep(poll_interval)
 
 
-def process_notifications(db_address, redis_client, camera):
-    """Process pending moluids one at a time in notification order."""
-    while True:
-        moluid = pop_notification(redis_client, camera)
-        if moluid is None:
-            return
-        subframes = dbs.get_subframes(db_address, moluid)
-        if not subframes:
-            continue
-        if not any(subframe.status == 'active' for subframe in subframes):
-            continue
-        frmtotal = subframes[0].frmtotal
-        if check_stack_complete(subframes, frmtotal):
-            finalize_stack(db_address, moluid, status='complete')
+def run_supervisor(runtime_context):
+    """Start one polling worker for each selected camera.
 
+    This design keeps supervision simple by relying on the container restart policy for worker
+    lifecycle management. The supervisor starts all workers and waits for one to exit. It then
+    exits with status 1 so the container can restart, rediscover cameras, and start a new set of
+    workers. The same restart path is used when no cameras match the configured filters.
 
-def finalize_stack(db_address, moluid, status='complete'):
-    """Mark stack complete and log mock stacking/JPEG/ingester operations."""
-    dbs.mark_stack_complete(db_address, moluid, status=status)
-    logger.debug(f'Mock stacking complete for {moluid}', extra_tags={'moluid': moluid})
-    logger.debug(f'Mock JPEG generation for {moluid}', extra_tags={'moluid': moluid})
-    logger.debug(f'Mock ingester upload for {moluid}', extra_tags={'moluid': moluid})
+    Restarting the container also restarts workers that were still healthy. This is the trade-off
+    for avoiding a separate per-worker restart loop. Stack progress is stored in the database, so
+    replacement workers continue from the persisted state.
 
+    Before generating final products, ``finalize_stack`` records the attempt and its backoff. If a
+    worker exits after that claim, the replacement process retains the attempt count and waits
+    until ``next_attempt_at`` before retrying. Once the attempt limit is reached, the stack is
+    marked ``error`` instead of being finalized again.
+    """
+    instrument_types = ([t.strip() for t in runtime_context.instrument_types.split(',')]
+                        if runtime_context.instrument_types != '*' else ['*'])
+    instruments = dbs.get_instruments_at_site(runtime_context.site_id, runtime_context.db_address)
+    if instrument_types != ['*']:
+        instruments = [instrument for instrument in instruments if instrument.type in instrument_types]
+    cameras = [instrument.camera for instrument in instruments]
+    if not cameras:
+        logger.error('No cameras found at site; exiting so Docker restarts the container',
+                     extra_tags={'site_id': runtime_context.site_id})
+        sys.exit(1)
 
-# ---------------------------------------------------------------------------
-# Supervisor
-# ---------------------------------------------------------------------------
+    runtime_context_dict = vars(runtime_context)
+    processes = [multiprocessing.Process(target=run_worker_loop, args=(camera, runtime_context_dict), daemon=True)
+                 for camera in cameras]
+    for process in processes:
+        process.start()
+    logger.info('Started stacking workers',
+                extra_tags={'site_id': runtime_context.site_id, 'camera_count': len(processes)})
 
-class StackingSupervisor:
-    def __init__(self, site_id, db_address, redis_url, retention_days=30):
-        self.site_id = site_id
-        self.db_address = db_address
-        self.redis_url = redis_url
-        self.retention_days = retention_days
-        self.workers = {}
-
-    def _worker_args(self, camera):
-        return (camera, self.db_address, self.redis_url, self.retention_days)
-
-    def start(self):
-        """Discover cameras and spawn one worker process per camera."""
-        cameras = [inst.camera for inst in dbs.get_instruments_at_site(self.site_id, self.db_address)]
-        for camera in cameras:
-            proc = multiprocessing.Process(
-                target=run_worker_loop,
-                args=self._worker_args(camera),
-                name=f'stacking-worker-{camera}',
-            )
-            proc.start()
-            self.workers[camera] = proc
-            logger.info(f'Started stacking worker for camera {camera}')
-
-    def monitor(self, check_interval=10):
-        """Check worker health and restart crashed workers."""
-        while True:
-            for camera, proc in list(self.workers.items()):
-                if not proc.is_alive():
-                    logger.warning(f'Worker for {camera} died, restarting')
-                    new_proc = multiprocessing.Process(
-                        target=run_worker_loop,
-                        args=self._worker_args(camera),
-                        name=f'stacking-worker-{camera}',
-                    )
-                    new_proc.start()
-                    self.workers[camera] = new_proc
-            time.sleep(check_interval)
-
-    def shutdown(self):
-        """Graceful shutdown of all workers."""
-        for camera, proc in self.workers.items():
-            proc.terminate()
-            proc.join(timeout=10)
-            logger.info(f'Stopped stacking worker for camera {camera}')
-        self.workers.clear()
-
-
-def _stacking_worker_arg_parser():
-    parser = argparse.ArgumentParser(description='Run the smart stacking supervisor.')
-    parser.add_argument('--site-id', dest='site_id', required=True,
-                        help='Site identifier (e.g. lsc, ogg)')
-    parser.add_argument('--db-address', dest='db_address', required=True,
-                        help='Database connection string')
-    parser.add_argument('--redis-url', dest='redis_url', required=True,
-                        help='Redis URL')
-    parser.add_argument('--stack-retention-days', dest='stack_retention_days', type=int, default=30,
-                        help='Days to retain completed stacks (default: 30)')
-    return parser
-
-
-def run_supervisor():
-    """Entry point for the stacking supervisor."""
-    args = _stacking_worker_arg_parser().parse_args()
-
-    supervisor = StackingSupervisor(args.site_id, args.db_address, args.redis_url,
-                                    retention_days=args.stack_retention_days)
-
-    def handle_signal(signum, frame):
-        supervisor.shutdown()
-        raise SystemExit(0)
-
-    signal.signal(signal.SIGTERM, handle_signal)
-    signal.signal(signal.SIGINT, handle_signal)
-
-    supervisor.start()
-    supervisor.monitor()
+    multiprocessing.connection.wait([process.sentinel for process in processes])
+    logger.error('A stacking worker exited; exiting so Docker restarts the container')
+    sys.exit(1)

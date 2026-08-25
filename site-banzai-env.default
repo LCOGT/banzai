@@ -10,7 +10,7 @@ HOST_CALS_DIR=/mnt/data/calibrations         # Cached calibration files
 HOST_REDUCED_DIR=/mnt/data/reduced           # Pipeline output (reduced frames)
 
 # Message brokers (override to point at existing site infrastructure)
-REDIS_URL=redis://host.docker.internal:6379/0
+REDIS_URL=redis://host.docker.internal:6379/0   # used for Celery task broker
 RABBITMQ_URL=amqp://host.docker.internal:5672
 FITS_EXCHANGE=fits_files
 PIPELINE_QUEUE_NAME=banzai_pipeline
@@ -24,10 +24,13 @@ OMP_NUM_THREADS=2
 DOWNLOAD_WORKER_POLL_INTERVAL=10
 
 # Smart stacking
-STACK_TIMEOUT_MINUTES=20                # Minutes since the first raw frame is received before creating the final stack (even if not all frames are present)
-                                        # TODO: what if total stack exposure is >20min? Need to fix this.
+STACK_TIMEOUT_MINUTES=20                # Minutes without a reduced stackframe before finalizing a partial stack.
+                                        # The timer resets whenever another reduced frame arrives.
 STACK_RETENTION_DAYS=30                 # Number of days to retain stack frame data after stacking has completed
 STACK_QUEUE_NAME=banzai_stack_queue     # RabbitMQ queue that contains incoming raw images to stack
+SHIPPER_EXCHANGE=ship_files             # Fanout exchange used to notify the site shipper of new Smartstack products
+SHIPPER_QUEUE_NAME=ship                 # Durable queue bound to SHIPPER_EXCHANGE for smartstack product messages
+SMARTSTACK_PREVIEWS=true                # Render an incremental JPEG preview on each arrival (false = final products only)
 
 # Database
 DB_ADDRESS=postgresql+psycopg://banzai@postgresql:5432/banzai_local

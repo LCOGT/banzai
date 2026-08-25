@@ -26,7 +26,7 @@ from banzai.query import archive_get
 from banzai.utils import date_utils, stage_utils, import_utils, image_utils, fits_utils, file_utils
 from banzai.scheduling import (app, process_image, process_stackframe, requeue_missing_frames,
                                schedule_calibration_stacking)
-from banzai.stacking import validate_message
+from banzai import stacking
 from banzai.data import DataProduct
 from celery.schedules import crontab
 import celery
@@ -280,7 +280,7 @@ class StackframeListener(BanzaiQueueListener):
                          extra_tags={'error': str(e), 'body': repr(body)[:1000]})
             message.ack()
             return
-        if not validate_message(body):
+        if not stacking.validate_message(body):
             logger.error('Invalid message received, missing required fields',
                          extra_tags={'body': body})
             message.ack()
@@ -303,6 +303,29 @@ def run_stackframe_worker():
         'Starting stackframe listener',
         'Shutting down stackframe listener.',
     )
+
+
+def run_stacking_supervisor():
+    """Entry point for the smart-stacking supervisor."""
+    runtime_context = parse_args(
+        settings,
+        extra_console_arguments=[
+            {'args': ['--site-id'],
+             'kwargs': {'dest': 'site_id', 'required': True, 'help': 'Site identifier (e.g. lsc, ogg)'}},
+            {'args': ['--stack-retention-days'],
+             'kwargs': {'dest': 'stack_retention_days', 'type': int,
+                        'default': int(os.getenv('STACK_RETENTION_DAYS', 30)),
+                        'help': 'Days to retain terminal stacks before cleanup (default: 30)'}},
+            {'args': ['--stack-timeout-minutes'],
+             'kwargs': {'dest': 'stack_timeout_minutes', 'type': int,
+                        'default': int(os.getenv('STACK_TIMEOUT_MINUTES', 20)),
+                        'help': 'Minutes without a new stackframe before a partial stack is finalized (default: 20)'}},
+            {'args': ['--instrument-types'],
+             'kwargs': {'dest': 'instrument_types', 'default': os.getenv('INSTRUMENT_TYPES', '*'),
+                        'help': 'Comma-separated instrument types to stack, or * for all (default: *)'}},
+        ],
+    )
+    stacking.run_supervisor(runtime_context)
 
 
 def mark_frame(mark_as):
