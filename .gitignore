@@ -70,6 +70,7 @@ distribute-*.tar.gz
 .settings
 .envrc
 justfile
+scratch
 
 # Local Banzai Setup
 site-banzai-env

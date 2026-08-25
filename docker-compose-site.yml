@@ -62,12 +62,15 @@ services:
   banzai-stackframe-listener:
     build: .
     container_name: ${CONTAINER_PREFIX:-banzai-}stackframe-listener
+    labels:
+      gtn.lco.logstash: "yes"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       banzai-cache-init:
         condition: service_completed_successfully
     environment:
+      - TZ=UTC
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - STACKFRAME_TASK_QUEUE_NAME=${STACKFRAME_TASK_QUEUE_NAME:-stackframe_reduction_task_queue}
@@ -84,6 +87,8 @@ services:
   banzai-stackframe-worker:
     build: .
     container_name: ${CONTAINER_PREFIX:-banzai-}stackframe-worker
+    labels:
+      gtn.lco.logstash: "yes"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -94,6 +99,7 @@ services:
       - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
       - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
+      - TZ=UTC
       - DB_ADDRESS=${DB_ADDRESS}
       - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
       - TASK_HOST=${REDIS_URL}
@@ -115,6 +121,8 @@ services:
   banzai-stacking-supervisor:
     build: .
     container_name: ${CONTAINER_PREFIX:-banzai-}stacking-supervisor
+    labels:
+      gtn.lco.logstash: "yes"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -123,6 +131,7 @@ services:
     volumes:
       - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
     environment:
+      - TZ=UTC
       - DB_ADDRESS=${DB_ADDRESS}
       - STACK_QUEUE_NAME=${STACK_QUEUE_NAME:-banzai_stack_queue}
       - SHIPPER_EXCHANGE=${SHIPPER_EXCHANGE:-ship_files}

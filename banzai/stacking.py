@@ -68,10 +68,14 @@ def finalize_stack(runtime_context, stack_row, stackframes, status):
     if stack_row.finalize_attempts >= MAX_FINALIZE_ATTEMPTS:
         dbs.mark_stack_terminal(runtime_context.db_address, moluid, 'error')
         logger.error('Smartstack exhausted finalize attempts; marking error',
-                     extra_tags={'moluid': moluid, 'finalize_attempts': stack_row.finalize_attempts})
+                     extra_tags={'smartstack_event': 'terminal',
+                                 'smartstack_status': 'error',
+                                 'smartstack_moluid': moluid,
+                                 'smartstack_camera': stack_row.camera,
+                                 'smartstack_finalize_attempt': stack_row.finalize_attempts})
         return
 
-    dbs.claim_finalize_attempt(runtime_context.db_address, moluid, FINALIZE_BACKOFF_SECONDS)
+    finalize_attempt = dbs.claim_finalize_attempt(runtime_context.db_address, moluid, FINALIZE_BACKOFF_SECONDS)
     try:
         fits_path, small_thumbnail, large_thumbnail = smartstack_products.run_final(
             stackframes, runtime_context, moluid)
@@ -84,9 +88,18 @@ def finalize_stack(runtime_context, stack_row, stackframes, status):
             large_thumbnail=large_thumbnail,
         )
         dbs.mark_stack_terminal(runtime_context.db_address, moluid, status)
-        logger.info('Finalized smartstack', extra_tags={'moluid': moluid, 'status': status})
+        logger.info('Finalized smartstack', extra_tags={'smartstack_event': 'terminal',
+                                                        'smartstack_status': status,
+                                                        'smartstack_moluid': moluid,
+                                                        'smartstack_camera': stack_row.camera,
+                                                        'smartstack_finalize_attempt': finalize_attempt})
     except Exception:
-        logger.error('Failed to finalize smartstack', exc_info=True, extra_tags={'moluid': moluid})
+        logger.error('Failed to finalize smartstack', exc_info=True,
+                     extra_tags={'smartstack_event': 'finalize_failed',
+                                 'smartstack_target_status': status,
+                                 'smartstack_moluid': moluid,
+                                 'smartstack_camera': stack_row.camera,
+                                 'smartstack_finalize_attempt': finalize_attempt})
 
 
 def process_camera_tick(runtime_context, camera):
