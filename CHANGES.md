@@ -1,6 +1,12 @@
 Versions
 ========
 
+1.38.1 (2026-08-25)
+-------------------
+
+- Expect smartstack stackframes to have obstype=SUB_EXP
+  (filenames use n00 for raw, n09 for reduced)
+
 1.38.0 (2026-08-25)
 -------------------
 
