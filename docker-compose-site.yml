@@ -36,91 +36,9 @@ services:
   # NOTE: HOST_*_DIR paths must be absolute. Volumes are mounted at the same
   # path inside the container so that host-absolute file paths resolve as-is.
 
-  banzai-worker:
-    build: .
-    container_name: ${CONTAINER_PREFIX:-banzai-}worker
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      banzai-cache-init:
-        condition: service_completed_successfully
-    volumes:
-      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
-      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
-      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
-    environment:
-      - DB_ADDRESS=${DB_ADDRESS}
-      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - TASK_HOST=${REDIS_URL}
-      - FITS_BROKER=${RABBITMQ_URL}
-      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
-      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}
-      - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
-      - OMP_NUM_THREADS=${OMP_NUM_THREADS}
-      - API_ROOT=${API_ROOT}
-      - AUTH_TOKEN=${AUTH_TOKEN}
-      - DATA_ROOT=${HOST_REDUCED_DIR}
-    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-worker-${CELERY_HOSTNAME_SUFFIX:-local}", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}"]
-    restart: unless-stopped
-
-  banzai-large-worker:
-    build: .
-    container_name: ${CONTAINER_PREFIX:-banzai-}large-worker
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      banzai-cache-init:
-        condition: service_completed_successfully
-    volumes:
-      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
-      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
-      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
-    environment:
-      - DB_ADDRESS=${DB_ADDRESS}
-      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - TASK_HOST=${REDIS_URL}
-      - FITS_BROKER=${RABBITMQ_URL}
-      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
-      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}
-      - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
-      - OMP_NUM_THREADS=${OMP_NUM_THREADS}
-      - API_ROOT=${API_ROOT}
-      - AUTH_TOKEN=${AUTH_TOKEN}
-      - DATA_ROOT=${HOST_REDUCED_DIR}
-    command: ["celery", "-A", "banzai.scheduling", "worker", "--hostname", "banzai-large-worker-${CELERY_HOSTNAME_SUFFIX:-local}", "-l", "${BANZAI_WORKER_LOGLEVEL}", "-c", "4", "-Q", "${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}"]
-    restart: unless-stopped
-
-  banzai-listener:
-    build: .
-    container_name: ${CONTAINER_PREFIX:-banzai-}listener
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      banzai-cache-init:
-        condition: service_completed_successfully
-      banzai-worker:
-        condition: service_started
-    volumes:
-      - ${HOST_RAW_DIR}:${HOST_RAW_DIR}
-      - ${HOST_CALS_DIR}:${HOST_CALS_DIR}
-      - ${HOST_REDUCED_DIR}:${HOST_REDUCED_DIR}
-    environment:
-      - DB_ADDRESS=${DB_ADDRESS}
-      - CAL_DB_ADDRESS=${CAL_DB_ADDRESS:-${DB_ADDRESS}}
-      - API_ROOT=${API_ROOT}
-      - AUTH_TOKEN=${AUTH_TOKEN}
-      - BANZAI_WORKER_LOGLEVEL=${BANZAI_WORKER_LOGLEVEL}
-      - CELERY_LARGE_TASK_QUEUE_NAME=${CELERY_LARGE_TASK_QUEUE_NAME:-large_reduction_task_queue}
-      - CELERY_TASK_QUEUE_NAME=${CELERY_TASK_QUEUE_NAME:-reduction_task_queue}
-      - TASK_HOST=${REDIS_URL}
-      - FITS_EXCHANGE=${FITS_EXCHANGE:-fits_files}
-    entrypoint: ["banzai_run_realtime_pipeline", "--fpack", "--no-bpm",
-                 "--broker-url=${RABBITMQ_URL}",
-                 "--db-address=${DB_ADDRESS}",
-                 "--calibration-db-address=${CAL_DB_ADDRESS:-${DB_ADDRESS}}",
-                 "--processed-path=${HOST_REDUCED_DIR}",
-                 "--queue-name=${PIPELINE_QUEUE_NAME:-banzai_pipeline}"]
-    restart: unless-stopped
+  # The site deployment is Smartstack-only: frames arrive via STACK_QUEUE_NAME
+  # and are reduced by the stackframe worker. There is no realtime
+  # (fits_files -> e91) pipeline at the site.
 
   banzai-download-worker:
     build: .
@@ -210,6 +128,7 @@ services:
       - SHIPPER_EXCHANGE=${SHIPPER_EXCHANGE:-ship_files}
       - SHIPPER_QUEUE_NAME=${SHIPPER_QUEUE_NAME:-ship}
       - SMARTSTACK_PREVIEWS=${SMARTSTACK_PREVIEWS:-true}
+      - FINALIZE_BACKOFF_SECONDS=${FINALIZE_BACKOFF_SECONDS:-60,300,900,3600}
       - DATA_ROOT=${HOST_REDUCED_DIR}
     command: [
       "banzai_stacking_supervisor",

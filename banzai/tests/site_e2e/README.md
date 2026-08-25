@@ -19,15 +19,14 @@ These tests validate the full system by:
 
 4. **Version Management** - When older calibrations are added, the download worker correctly keeps only the top 2 most recent per configuration (instrument, type, mode, binning, filter).
 
-5. **Frame Reduction** - A raw science frame is processed using the cached calibrations.
-
-6. **Cache Drift Reconciliation** - The download worker restores local cache
+5. **Cache Drift Reconciliation** - The download worker restores local cache
    filepaths when replicated database state drifts.
 
-7. **Stackframe Stacking** - The site stackframe queue and stacking supervisor can
-   process a stackframe message end to end.
+6. **Smartstack Reduction and Stacking** - Raw stackframes published to the stack
+   queue are reduced to `e09` using the cached calibrations, then stacked into
+   `e45` products with JPEG previews and shipper messages.
 
-8. **Replication Slot Reuse** - Cache initialization succeeds when a publisher
+7. **Replication Slot Reuse** - Cache initialization succeeds when a publisher
    replication slot already exists.
 
 ## What These Tests Touch
@@ -49,8 +48,8 @@ They also clean the configured host data directories and purge only guarded
 
 Run these tests when changing cache replication, cache initialization, download
 worker behavior, site deployment environment wiring, `docker-compose-site.yml`,
-end-to-end reduction queue wiring, or stackframe processing. They are usually not
-needed for ordinary unit-level stage changes.
+or Smartstack ingestion/reduction/stacking. They are usually not needed for
+ordinary unit-level stage changes.
 
 ## Prerequisites
 
@@ -95,8 +94,8 @@ The wrapper will:
 During pytest, the fixtures will:
 - Start the publication database container.
 - Populate it with test calibration metadata.
-- Start the site deployment stack: site PostgreSQL, cache init, workers,
-  listener, download worker, stackframe worker, and stacking supervisor.
+- Start the site deployment stack: site PostgreSQL, cache init, download worker,
+  stackframe listener, stackframe worker, and stacking supervisor.
 - Clean up the pytest-managed containers, volumes, queues, and host data dirs
   when finished.
 
@@ -136,7 +135,7 @@ container prefix `e2e-banzai-`:
 ```bash
 docker logs -f e2e-banzai-download-worker  # Watch file downloads
 docker logs -f e2e-banzai-cache-init       # Watch replication setup
-docker logs -f e2e-banzai-worker           # Watch frame processing
+docker logs -f e2e-banzai-stackframe-worker  # Watch stackframe reduction
 ```
 
 ## Running Alongside the local or site compose files
@@ -146,9 +145,11 @@ The e2e stack is namespaced (compose project `banzai-e2e`, container prefix
 5443) so it can run concurrently with a developer site/local stack on the same
 machine:
 
-- Container names don't collide (`e2e-banzai-worker` vs `banzai-worker`).
-- Queues don't collide (`e2e_reduction_task_queue` vs `reduction_task_queue`),
-  even though both stacks share the same `banzai-redis` / `banzai-rabbitmq`.
+- Container names don't collide (`e2e-banzai-stackframe-worker` vs
+  `banzai-stackframe-worker`).
+- Queues don't collide (`e2e_stackframe_reduction_task_queue` vs
+  `stackframe_reduction_task_queue`), even though both stacks share the same
+  `banzai-redis` / `banzai-rabbitmq`.
 - At setup and teardown, the e2e fixture purges only the configured `e2e_*`
   RabbitMQ queues. It refuses to purge anything if any configured queue name is
   missing or does not start with `e2e_`.

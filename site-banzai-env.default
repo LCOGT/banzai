@@ -12,10 +12,6 @@ HOST_REDUCED_DIR=/mnt/data/reduced           # Pipeline output (reduced frames)
 # Message brokers (override to point at existing site infrastructure)
 REDIS_URL=redis://host.docker.internal:6379/0   # used for Celery task broker
 RABBITMQ_URL=amqp://host.docker.internal:5672
-FITS_EXCHANGE=fits_files
-PIPELINE_QUEUE_NAME=banzai_pipeline
-CELERY_TASK_QUEUE_NAME=reduction_task_queue
-CELERY_LARGE_TASK_QUEUE_NAME=large_reduction_task_queue
 STACKFRAME_TASK_QUEUE_NAME=stackframe_reduction_task_queue
 
 # Worker
@@ -31,6 +27,7 @@ STACK_QUEUE_NAME=banzai_stack_queue     # RabbitMQ queue that contains incoming 
 SHIPPER_EXCHANGE=ship_files             # Fanout exchange used to notify the site shipper of new Smartstack products
 SHIPPER_QUEUE_NAME=ship                 # Durable queue bound to SHIPPER_EXCHANGE for smartstack product messages
 SMARTSTACK_PREVIEWS=true                # Render an incremental JPEG preview on each arrival (false = final products only)
+FINALIZE_BACKOFF_SECONDS=60,300,900,3600   # Backoff ladder between finalize attempts; after it is exhausted the stack is marked 'error'
 
 # Database
 DB_ADDRESS=postgresql+psycopg://banzai@postgresql:5432/banzai_local

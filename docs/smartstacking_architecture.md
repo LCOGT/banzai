@@ -1,354 +1,188 @@
-# Smart Stacking Architecture
+# Smartstack Architecture Design
 
-**Implementation status:** orchestration scaffolding is in place. BANZAI reduces
-subframes, records them, detects complete groups, and marks those groups
-complete. It does **not yet create a stacked FITS file, JPEG preview, or archive
-upload**.
+## About smartstacks
 
-This document describes the smart-stacking code as it exists today. It is
-intended to answer four questions for a new developer:
+Smartstacks are exposures made from combining a series of shorter exposures. The benefits of this procedure are reduced tracking error and the ability to provide previews of the stacking progress (currently only jpgs) for realtime users as the stack is being processed. Since smartstacks require lots of files, creating the stacks in AWS risks saturating the bandwidth available to observatories. Therefore, smartstacks are designed to be processed with a banzai instance running directly at site, and only the final smartstack products will be sent to the archive.
 
-1. What problem does this subsystem solve?
-2. Which process owns each part of the work?
-3. Where is state stored, and what triggers a completion check?
-4. Which parts are still placeholders?
+### Smartstack limitations
 
-## The short version
+Some important caveats, to help understand when smartstacks might not be a useful alternative to regular exposures.
 
-A smart stack is a set of reduced `e09` subframes with the same FITS `MOLUID`.
-Those subframes begin as raw `e00` files. The eventual combined stack is
-expected to be an `e45` product, but that output does not exist yet.
+- BANZAI does not align or resample stack members, so sources that move between frames will smear.
+- Reproducability is limited. Final e45 products include the frames that were stacked, but these are not sent to the archive and are regularly cleaned from disks at site (after approx. 2 weeks). If the time since e45 creation is less than the site's file retention policy *and* the `STACK_RETENTION_DAYS` param that controls the local db cleanup, stacks can be recreated; otherwise not.
+- The combined product's RDNOISE is scaled by sqrt(N) for a stack of N farmes, compared to a single frame with the same total exposure.
+- No auto or manual frame rejection capabilities.
 
-The system uses two asynchronous steps:
+Also worth noting: the preview frames are visually stretched, lower-resolution jpg previews that overwrite each other as the stack is updated. They are intended as quick feedback for realtime observers, and not for any sort of data analysis.
 
-1. A listener receives a path to a raw subframe and sends reduction work to
-   Celery.
-2. After reduction succeeds, a per-camera stacking worker is notified. It
-   reloads the group from PostgreSQL and checks whether the stack is complete.
+_____
 
-PostgreSQL is the source of truth. Redis notifications only mean:
+This page describes the Smartstack path in `docker-compose-site.yml`. The program that sends raw frames, the shipper, and the archive are outside this repository. The site deployment does not run the normal realtime `e91` path.
 
-> Something changed for this `MOLUID`; query the database again.
+The reduction level suffixes used:
 
-When a group is complete, the current implementation changes its database
-status to `complete`. The function is named `finalize_stack`, but product
-creation is still represented by mock log messages.
+- `e00` is a raw exposure.
+- `e09` is an exposure reduced using BANZAI's default ordered reduction steps.
+- `e45` is the combined Smartstack product.
+
+## The whole path
 
 ```mermaid
 flowchart LR
-    producer["Instrument or test producer<br/>raw e00 FITS"]
-    rabbit["RabbitMQ<br/>incoming subframe queue"]
-    listener["SubframeListener"]
-    celery_broker["Redis<br/>Celery broker"]
-    reduction["Celery process_subframe task"]
-    files["Reduced e09 FITS files"]
-    db[("PostgreSQL<br/>subframes")]
-    notify["Redis<br/>per-camera notifications"]
-    stack_worker["Per-camera stacking worker"]
+    Site["Site software<br/>(outside this repository)"]
+    Listener["Listener"]
+    Reducer["Reduction worker"]
+    DB[("PostgreSQL<br/>e09 paths and stack progress")]
+    Stacker["Stack worker<br/>rebuild preview or final"]
+    Shipper["Shipper<br/>(outside this repository)"]
+    Files[("Shared files<br/>e00, e09, e45, and JPEGs")]
 
-    producer -->|"JSON containing a file path"| rabbit
-    rabbit --> listener
-    listener -->|"enqueue reduction"| celery_broker
-    celery_broker --> reduction
-    reduction --> files
-    reduction -->|"upsert reduced subframe"| db
-    reduction -->|"notify after DB write"| notify
-    notify --> stack_worker
-    stack_worker -->|"reload group and update status"| db
+    Site -->|"raw path over RabbitMQ"| Listener
+    Listener -->|"Celery task through Redis"| Reducer
+    Reducer -->|"record successful e09"| DB
+    DB <-->|"read and update"| Stacker
+    Stacker -->|"product paths over RabbitMQ"| Shipper
+
+    Site -->|"write e00"| Files
+    Reducer <-->|"read e00 and write e09"| Files
+    Stacker <-->|"read e09 and write products"| Files
+    Shipper -->|"open products"| Files
 ```
 
-## Terminology
+1. Site software writes a raw `e00` FITS file and sends its absolute path to RabbitMQ `banzai_stack_queue`.
+2. The listener checks the message and publishes a Celery reduction task to Redis.
+3. A Celery worker runs the default BANZAI ordered reduction steps for the raw `e00`, and writes an `e09` file as output. By default the reductions use super calibration frames from the central AWS BANZAI instance that have been cached locally.
+4. After that succeeds, the worker saves the `e09` path and group information in PostgreSQL.
+5. A stacking process checks PostgreSQL about every five seconds. It opens the recorded `e09` files and makes a preview or final product when needed.
+6. BANZAI sends the product paths through RabbitMQ to the shipper.
 
-| Term | Meaning |
-|------|---------|
-| **Subframe** | One exposure that belongs to a multi-frame observing group. |
-| **Stack** | All `subframes` rows sharing a `MOLUID`. |
-| **`MOLUID`** | Identifier used to group subframes into one stack. |
-| **`MOLFRNUM`** | A subframe's position within the stack. |
-| **`FRMTOTAL`** | Expected number of subframes in the stack. |
-| **`last_frame`** | Queue-message flag saying the producer considers this the final subframe. It is stored as `is_last`. |
-| **Notification** | A member of a per-camera Redis sorted set containing a `MOLUID`; it is a prompt to query PostgreSQL. |
-| **Finalization** | Currently, marking all rows for a `MOLUID` terminal in the database. It does not yet produce a stacked image. |
+### Local calibration cache
 
-### File types and reduction levels
+Calibration metadata and calibration FITS files reach the site through separate paths. When `AWS_DB_ADDRESS` is configured, the `banzai-cache-init` container creates the local PostgreSQL schema and configures a logical-replication subscription to the AWS BANZAI database's `banzai_calibrations` publication. PostgreSQL copies and continues to replicate the published calibration records and their related site and instrument metadata into the local database.
 
-The shorthand `e00`, `e09`, and `e45` refers to the exposure file's
-reduction-level suffix, not to different FITS container formats. For this
-workflow:
+Next, `banzai-download-worker` polls the replicated rows. For the configured site and instrument types, it keeps the two newest non-bad masters with archive frame IDs for each instrument and calibration-specific configuration. It downloads missing FITS files through the Archive API into `HOST_CALS_DIR`, records or reconciles their local directories in `calimages.filepath`, and prunes previously tracked files that leave the retained set.
 
-| Suffix | Reduction level | Meaning in smart stacking |
-|--------|-----------------|---------------------------|
-| `e00` | Raw / `RLEVEL=0` | Raw subframe received from the instrument, for example `...-e00.fits.fz`. Raw files may omit `RLEVEL`; BANZAI treats them as level 0. |
-| `e09` | `RLEVEL=9` | Individually reduced subframe written by `process_subframe` and stored in `subframes.filepath`. The site listener selects this level with `--rlevel=9`. |
-| `e45` | `RLEVEL=45` | Planned final image produced by combining the reduced `e09` subframes. No `e45` product is currently generated. |
+By default, stackframe reduction selects an applicable master from the local database and reads its FITS file from the cache. If the cached path is unavailable, frame opening can fall back to the archive. This cache lifecycle is independent of `STACK_RETENTION_DAYS` and Smartstack database cleanup.
 
-The queue message and FITS file provide different information:
+## Inputs and grouping
 
-- The JSON message contains `fits_file` and `last_frame`. Producers may include
-  extra metadata such as their enqueue timestamp; BANZAI ignores it.
-- The FITS header supplies `MOLUID`, `MOLFRNUM`, `FRMTOTAL`, `INSTRUME`, and
-  `DATE-OBS`.
-- `fits_file` is a path, not file contents. The reduction worker must be able to
-  read that path through the site's shared filesystem mounts.
+The RabbitMQ `banzai_stack_queue` message must contain `fits_file` and `last_frame`. Producers may include extra metadata such as their enqueue timestamp; BANZAI ignores it. `last_frame` is stored in PostgreSQL as `is_last`.
 
-## Happy path
+The reduction task reads `MOLUID`, `MOLFRNUM`, `FRMTOTAL`, and `INSTRUME` from the FITS header. `DATE-OBS` is optional.
 
-### 1. Receive and dispatch
+The listener checks that the two required message keys exist. It does not check their types or whether the values agree with the FITS header. Sending the message is what puts a frame into Smartstack; BANZAI does not inspect a FITS `STACK` flag.
 
-`SubframeListener` consumes `STACK_QUEUE_NAME` from RabbitMQ.
+PostgreSQL has two Smartstack tables:
 
-It decodes the body as a JSON object and checks that the three required message
-fields are present. A valid message is submitted to the Celery queue named by
-`SUBFRAME_TASK_QUEUE_NAME`, then acknowledged on RabbitMQ.
+- `stacks` has one row for each `MOLUID`. It stores the camera, expected frame count, status, preview count, timeout clock, and final retry information.
+- `stackframes` has one row for each `(MOLUID, MOLFRNUM)`. It stores the reduced `e09` path and the information needed to build and send products.
 
-Malformed JSON and messages missing required fields are logged, acknowledged,
-and discarded. Validation checks field presence only; FITS metadata is read
-later by the Celery task.
+A frame is added only after its reduction succeeds. Failed reductions do not appear in these tables, so a timeout product may contain fewer frames than the producer sent.
 
-### 2. Reduce and record
+Frames may reduce out of order. Products are always sorted by `MOLFRNUM`. While a stack still accepts frames, reprocessing the same `(MOLUID, MOLFRNUM)` updates its row instead of adding a duplicate. It also restarts the timeout clock.
 
-The Celery `process_subframe` task:
+Every frame with the same `MOLUID` is treated as part of the same group. The producer must not reuse a `MOLUID`, change its camera, or change its `FRMTOTAL`. The database does not enforce those rules.
 
-1. Opens the raw `e00` FITS header from `fits_file`.
-2. Runs the normal BANZAI reduction pipeline.
-3. Computes the reduced `e09` output path.
-4. Upserts a `subframes` row.
-5. Adds the row's `MOLUID` to the Redis notification sorted set for its camera.
+## What the stacking process decides
 
-The database write happens only after reduction returns an output image, and
-the notification happens only after the database write. A stacking worker
-therefore treats every notified group as having reduced `e09` input ready to
-inspect.
+Each stacking process handles the active groups for its camera one at a time.
 
-Notification insertion uses an atomic Redis script. If the `MOLUID` is not
-already pending, the script increments `stack:notify:{camera}:sequence` and
-uses that sequence as the member's score. If the `MOLUID` is already pending,
-the script leaves its original score unchanged. Duplicate notifications are
-therefore coalesced without moving an older group behind newer work.
+| Situation | Action |
+| --- | --- |
+| More reduced frames are recorded, frame 1 is present, and previews are enabled | Rebuild and send the two preview JPEGs. |
+| Any row has `is_last=true` | Build and send a final product, then mark the stack `complete`. |
+| The stack is not complete and no reduced frame has been recorded for `STACK_TIMEOUT_MINUTES` | Build and send a partial final product, then mark the stack `timeout`. |
+| All final-product attempts have been used | Mark the stack `error`. |
 
-The unique key is `(moluid, stack_num)`. Reprocessing the same subframe updates
-that row and resets it to `active`, which makes queue retries idempotent at the
-database level.
+The final-frame signal is authoritative. `FRMTOTAL` is retained for metadata and progress; it does not decide completion, and BANZAI does not verify that preceding frame numbers are contiguous. Without an `is_last=true` row, the stack follows the timeout path after the configured interval.
 
-### 3. Recheck the stack
+The complete check runs before the timeout check. The timeout clock uses the time a reduced frame was inserted or updated in PostgreSQL, not `DATE-OBS` or the queue timestamp.
 
-`StackingSupervisor` starts one OS process per camera. Each process repeatedly:
+The finished states behave differently:
 
-1. Removes the oldest pending `MOLUID` with `ZPOPMIN`.
-2. Loads all rows for that `MOLUID` from PostgreSQL.
-3. Skips the notification if every row is already terminal.
-4. Checks the completion rule when at least one row is active.
-5. Marks a complete group as `complete`.
-6. Repeats from step 1 until the sorted set is empty.
-7. Deletes old terminal rows according to the retention setting.
-8. Sleeps for the polling interval.
+- A later successful reduction reopens a `complete` or `error` stack.
+- A `timeout` stack never reopens. Later reductions still write their `e09` files, but their database rows are rejected and they are not combined.
 
-The worker does not build stack state from Redis messages. Ten notifications
-for the same pending `MOLUID` become one sorted-set member and one database
-query. Multiple `MOLUID`s may be active for one camera. None exclusively owns
-the worker: an incomplete group waits for another notification while older
-pending work for other groups continues in FIFO order.
+After `STACK_RETENTION_DAYS`, cleanup removes the `stackframes` rows for old finished stacks. It also removes old `complete` and `error` stack rows. It keeps `timeout` stack rows so late frames continue to be rejected.
 
-```mermaid
-flowchart TD
-    tick["Worker tick"]
-    pop["ZPOPMIN oldest<br/>camera notification"]
-    notified{"MOLUID returned?"}
-    load["Load all subframes<br/>for one MOLUID"]
-    active{"Any active rows?"}
-    complete{"Completion rule true?"}
-    mark["Mark every row complete"]
-    cleanup["Delete old terminal rows"]
-    sleep["Sleep"]
+Cleanup does not delete FITS or JPEG files; these are regularly cleaned as part of the host's data retention policy.
 
-    tick --> pop --> notified
-    notified -->|"yes"| load --> active
-    active -->|"yes"| complete
-    active -->|"no"| pop
-    complete -->|"yes"| mark --> pop
-    complete -->|"no"| pop
-    notified -->|"no"| cleanup
-    cleanup --> sleep --> tick
-```
+## Products
 
-### 4. Decide whether the group is complete
+Every preview and final product is rebuilt from the recorded `e09` files. BANZAI does not keep a partly combined image between checks.
 
-`check_stack_complete` returns true when any row has `is_last == true`. This is
-the producer's authoritative end-of-sequence signal. `FRMTOTAL` remains the
-expected group size for metadata and progress; it does not decide completion.
-The predicate trusts the producer and does not independently verify that prior
-frame numbers are contiguous.
+For each build, BANZAI:
 
-### 5. "Finalize" the group
+1. Sorts the rows by frame number and opens the `e09` files.
+2. Uses the lowest-numbered file as the header and filename template.
+3. Combines matching `SCI` pixels in row sections to limit memory use, using a sum with 3-sigma rejection.
+4. Updates the FITS information that describes the whole stack and writes an ordered `IMCOMnnn` list of input files.
 
-`finalize_stack` currently:
+Masks and uncertainties are combined along with the image data.
 
-- sets every row for the `MOLUID` to `status='complete'`;
-- sets `completed_at`; and
-- emits debug logs standing in for stacking, JPEG generation, and upload.
+Smartstack does not align or resample images. The input arrays must already line up and have compatible shapes. Counts are not adjusted for different exposure times; BANZAI only logs a warning when exposure times differ by more than one percent.
 
-There is no combined `e45` FITS product yet. Code that needs a real smart-stack
-product must not treat `status='complete'` as proof that one exists. The
-intended product flow is:
+Product creation also expects input filenames ending in `-e09.fits` or `-e09.fits.fz`.
+
+- **Preview:** waits for logical frame 1 so the filename does not change. It writes a small JPEG of up to 300 pixels and a large JPEG of up to 900 pixels. Each preview replaces the same files. The shipper message has `fits: null` and includes `thumbnail_metadata`.
+- **Final:** writes an `e45` FITS and replaces the same two JPEGs. A timed-out stack that never received frame 1 uses its lowest-numbered frame instead.
+
+For example:
 
 ```text
-one or more raw e00 subframes
-    -> individually reduced e09 subframes
-    -> one combined e45 smart-stack image (planned)
+input:  cpt1m010-fa16-20240706-0031-e09.fits
+final:  cpt1m010-fa16-20240706-0031-e45.fits
+JPEGs: cpt1m010-fa16-20240706-0031-e45-small_thumbnail.jpg
+       cpt1m010-fa16-20240706-0031-e45-large_thumbnail.jpg
 ```
 
-## Processes and ownership
+Products are written under:
 
-| Runtime component | Entry point | Responsibility |
-|-------------------|-------------|----------------|
-| `banzai-subframe-listener` | `banzai.main:run_subframe_worker` | Consume and validate RabbitMQ messages; dispatch Celery tasks. Despite the CLI name, this is the listener process. |
-| `banzai-subframe-worker` | Celery worker consuming `SUBFRAME_TASK_QUEUE_NAME` | Reduce the FITS file, upsert the reduced row, and send a notification. |
-| `banzai-stacking-supervisor` | `banzai.main:run_stacking_supervisor` | Discover cameras at startup, start one child per camera, and restart children that exit. |
-| `stacking-worker-{camera}` | `banzai.stacking:run_worker_loop` | Process unique notifications in FIFO order, query stack state, mark complete groups, and run retention cleanup. |
-
-Camera discovery uses `dbs.get_instruments_at_site(site_id, db_address)` once
-when the supervisor starts. Adding a camera to the database does not create a
-worker until the supervisor restarts.
-
-Each camera loop is a separate process, so an unhandled process failure is
-isolated and the supervisor can restart that worker. Exceptions raised inside
-a normal worker tick are logged by the loop, followed by another attempt after
-the polling interval.
-
-## State and messaging
-
-The subsystem uses four storage or transport roles:
-
-| System | Role | Authoritative? |
-|--------|------|----------------|
-| RabbitMQ | Carries incoming subframe messages to the listener. | No |
-| Redis as the Celery broker (`TASK_HOST`) | Carries `process_subframe` tasks to Celery workers. | No |
-| Redis notification sorted sets (`REDIS_URL`) | Orders unique prompts for a camera worker to re-query a `MOLUID`. | No |
-| PostgreSQL `subframes` table | Stores reduced inputs and stack status. | **Yes** |
-
-The two Redis roles normally point at the same Redis deployment, but they are
-logically separate: Celery owns its task data, while smart stacking owns keys
-named `stack:notify:{camera}` and sequence counters named
-`stack:notify:{camera}:sequence`.
-
-### Why notifications instead of stack state in Redis?
-
-Reduction tasks may finish concurrently and in a different order from the raw
-frames. Keeping the durable state in PostgreSQL gives every completion check a
-single current view. Redis can then carry only a lightweight change signal
-rather than a second copy of stack state.
-
-The per-camera process also serializes completion decisions for that camera in
-the normal case, without requiring a lock per `MOLUID`. Redis sequence scores
-preserve notification arrival order across concurrent reduction workers. Once
-`ZPOPMIN` removes a member, a later notification may add the same `MOLUID`
-again with a new score; the next database query will see the latest group
-state.
-
-## Database model
-
-`Subframe` is a site-only SQLAlchemy model in
-[`banzai/dbs.py`](../banzai/dbs.py).
-
-| Column | Meaning |
-|--------|---------|
-| `moluid` | Stack group identifier from `MOLUID`. |
-| `stack_num` | Position in the stack from `MOLFRNUM`. |
-| `frmtotal` | Expected group size from `FRMTOTAL`. |
-| `camera` | Camera identifier from `INSTRUME`. |
-| `filepath` | Path to the reduced `e09` subframe; it is non-nullable. |
-| `is_last` | Copy of the queue message's `last_frame` flag. |
-| `status` | Expected values are `active`, `complete`, and `timeout`. |
-| `dateobs` | Observation time from `DATE-OBS`, when available. |
-| `created_at` | Time the row was inserted or reset by an upsert. |
-| `completed_at` | Time the group was marked terminal. |
-
-Current transitions are:
-
-```mermaid
-stateDiagram-v2
-    [*] --> active: reduced row upserted
-    active --> complete: completion rule passes
-    complete --> active: same subframe is reprocessed
-    timeout --> active: same subframe is reprocessed
+```text
+<processed_path>/<site>/<camera>/<DAY-OBS>/processed/
 ```
 
-The model and database helper support `timeout`, but no production worker path
-currently sets it.
+The shipper message is plain-text JSON. It contains absolute paths, not file data. When BANZAI publishes each preview or final product, it creates a fresh `instrument_enqueue_timestamp` for that Shipper handoff. The reduction worker, stacking service, and external shipper must see the reduced-data directory at the same absolute path.
 
-Retention cleanup deletes rows whose status is not `active` and whose
-`completed_at` is older than `STACK_RETENTION_DAYS` (30 days by default).
-Active rows are retained indefinitely.
+Preview paths are not snapshots. A later preview can replace a JPEG before the shipper opens the path.
 
-## Current limitations and failure behavior
+This repository proves the BANZAI message format, not the deployed shipper or archive behavior. A `complete` or `timeout` status means RabbitMQ confirmed the final product message. It does not mean the files were uploaded or accepted by the archive.
 
-These details are important when debugging or extending the subsystem:
+## Failure Modes
 
-- **No `e45` stack product is generated.** Completion currently means a
-  database transition only; only the individual `e09` inputs exist.
-- **No timeout finalization runs.** `STACK_TIMEOUT_MINUTES` remains in
-  `site-banzai-env.default`, but the current Python code does not read it.
-- **There is no fallback database sweep.** An active stack is reconsidered only
-  after a Redis notification for its `MOLUID`. If notification is disabled,
-  lost, or missed, the stack remains active until another notification arrives.
-- **The in-flight notification has a crash window.** `ZPOPMIN` removes one
-  `MOLUID` before its database work begins. A worker crash can lose that one
-  notification, but all other members remain ordered in the sorted set.
-  PostgreSQL remains correct, but there is currently no sweep to rediscover an
-  active stack whose final notification was lost.
-- **Cleanup is repeated per camera.** Every camera worker calls the same
-  database-wide terminal-row cleanup each tick. This is correct but redundant.
-- **Camera discovery is startup-only.** Restart the supervisor after adding or
-  removing site instruments.
-- **Terminal states are not protected from repeat work.** The normal upsert
-  path intentionally resets a duplicate subframe to `active`.
+Malformed input and messages with missing keys are logged, acknowledged, and discarded.
 
-These are descriptions of current behavior, not guarantees the eventual
-product-generating design should preserve.
+A valid RabbitMQ message is acknowledged only after Celery's `apply_async` call successfully publishes the reduction task to Redis.
 
-## Deployment configuration
+An unreadable FITS header is retried. A hard Celery worker loss is requeued. Most other reduction errors are logged and then the task ends; no Smartstack row is written.
 
-The site deployment is defined in
-[`docker-compose-site.yml`](../docker-compose-site.yml). The most relevant
-settings are:
+Before each final-product build, BANZAI records an attempt and the next retry time. It then writes the files, sends their paths, and marks the stack finished, in that order.
 
-| Setting | Used for |
-|---------|----------|
-| `RABBITMQ_URL` | Passed to the listener as `--broker-url`. |
-| `STACK_QUEUE_NAME` | RabbitMQ queue consumed by `SubframeListener`. |
-| `TASK_HOST` | Celery broker URL; the compose file sets it from `REDIS_URL`. |
-| `SUBFRAME_TASK_QUEUE_NAME` | Celery queue consumed by the subframe worker. |
-| `REDIS_URL` | Smart-stacking notification Redis URL. |
-| `DB_ADDRESS` | Site database containing `subframes` and instruments. |
-| `SITE_ID` | Site whose cameras the supervisor discovers. |
-| `STACK_RETENTION_DAYS` | Age after which terminal rows are deleted. |
+The default `FINALIZE_BACKOFF_SECONDS=60,300,900,3600` setting gives five product-build attempts. After those attempts are used, the stack becomes `error`.
 
-See [`site-banzai-env.default`](../site-banzai-env.default) for the annotated
-site environment template.
+If BANZAI sends a message but stops before saving the finished status, it will send the same paths again later. Preview messages can be repeated for the same reason. The shipper must handle duplicates. BANZAI can also give up after five final attempts, so archive delivery is not guaranteed here.
 
-Changing `stack:notify:{camera}` from a Redis list to a sorted set requires a
-coordinated deployment of notification producers and stacking workers. Stop
-both sides and delete only the `stack:notify:*` keys, including any legacy
-`:draining` keys, before restarting them. Do not flush the shared Redis
-database: it also carries Celery broker state. Pending smart-stacking
-notifications removed during this rollout are not reseeded.
+Preview and outer-loop errors are tried again on later checks. Final-product errors wait for their configured retry time.
 
-## Code map
+If a stacking child process dies, the supervisor exits and Docker restarts the service. PostgreSQL keeps the frame list, preview count, and retry count across the restart.
 
-Start with these files:
+Three current limits matter:
 
-| File | What to read |
-|------|--------------|
-| [`banzai/main.py`](../banzai/main.py) | `decode_subframe_message`, `SubframeListener`, and `run_subframe_worker`. |
-| [`banzai/scheduling.py`](../banzai/scheduling.py) | The Celery `process_subframe` reduction task. |
-| [`banzai/stacking.py`](../banzai/stacking.py) | Notification helpers, completion predicate, worker loop, placeholder finalization, and supervisor. |
-| [`banzai/dbs.py`](../banzai/dbs.py) | `Subframe` plus its insert, query, status, and cleanup helpers. |
-| [`banzai/tests/test_smart_stacking.py`](../banzai/tests/test_smart_stacking.py) | Executable examples of the current unit-level behavior. |
-| [`banzai/tests/site_e2e/test_site_e2e.py`](../banzai/tests/site_e2e/test_site_e2e.py) | Site test proving message -> reduction -> DB completion. It does not assert a combined stack product. |
+- Run one stacking supervisor. The database lock covers the attempt counter, not the whole product build. Two supervisors can build and send the same stack at the same time.
+- The supervisor starts one child for every matching instrument row. If two rows contain the same camera name, it starts duplicate children for that camera.
+- If a reduction updates a stack after the stacking process reads its frame list but before it saves `complete` or `timeout`, the older build can omit that frame and still mark the stack finished.
 
-Useful commands:
+## Running and debugging
 
-```bash
-uv run pytest banzai/tests/test_smart_stacking.py -v
-uv run pytest -m smart_stacking
-```
+The main behavior settings are:
+
+- `SMARTSTACK_PREVIEWS` defaults to `true`. It disables previews only, not final products.
+- `STACK_TIMEOUT_MINUTES` defaults to `20`.
+- `STACK_RETENTION_DAYS` defaults to `30` and controls database cleanup, not file cleanup.
+- `FINALIZE_BACKOFF_SECONDS` controls both the retry delays and the number of final-product attempts.
+
+`SITE_ID` and `INSTRUMENT_TYPES` choose the stacking children when the supervisor starts. They do not filter the listener. A message for another camera can create an active stack that no process checks.
+
+Restart the supervisor after changing the site instrument rows.
+
+To follow one group in the logs, search for `smartstack_moluid`. The main `smartstack_event` values are `created`, `frame_reduced`, `finalize_failed`, `terminal`, and `frame_ignored`.
