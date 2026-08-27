@@ -1,6 +1,16 @@
 Versions
 ========
 
+1.38.0 (2026-08-25)
+-------------------
+
+- Initial complete site-side smartstacking capabilities to build and ship e45
+  preview jpgs, and final jpg/fits data products
+- Reworked smartstack database state and workers to support timeout
+  finalization, bounded retries, and restart recovery
+- Made the site deployment smartstack-only and added structured lifecycle
+  logging
+
 1.37.1 (2026-07-22)
 -------------------
 
