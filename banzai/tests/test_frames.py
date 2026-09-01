@@ -203,11 +203,11 @@ def test_init_poisson_uncertainties():
 
 
 def test_get_output_filename():
-    test_frame = FakeLCOObservationFrame(file_path='test_image_00.fits')
-    test_context = FakeContext(frame_class=FakeLCOObservationFrame)
+    test_frame = FakeLCOObservationFrame(file_path='test_image_n00.fits')
+    test_context = FakeContext(frame_class=FakeLCOObservationFrame, reduction_level='9')
     filename = test_frame.get_output_filename(test_context)
 
-    assert filename == 'test_image_91.fits.fz'
+    assert filename == 'test_image_n09.fits.fz'
 
 
 def test_section_transformation():

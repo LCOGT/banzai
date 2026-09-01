@@ -4,13 +4,15 @@
 
 Smartstacks are exposures made from combining a series of shorter exposures. The benefits of this procedure are reduced tracking error and the ability to provide previews of the stacking progress (currently only jpgs) for realtime users as the stack is being processed. Since smartstacks require lots of files, creating the stacks in AWS risks saturating the bandwidth available to observatories. Therefore, smartstacks are designed to be processed with a banzai instance running directly at site, and only the final smartstack products will be sent to the archive.
 
+With the development of smartstacks, we also introduce a new obstype `SUB_EXP`, which is used for the raw and reduced individual stackframes. Raw `SUB_EXP` frames use the suffix `-n00.fits`, and reduced frames use `-n09.fits`. These are only stored temporarily at site, and never sent to the archive.
+
 ### Smartstack limitations
 
 Some important caveats, to help understand when smartstacks might not be a useful alternative to regular exposures.
 
 - BANZAI does not align or resample stack members, so sources that move between frames will smear.
-- Reproducability is limited. Final e45 products include the frames that were stacked, but these are not sent to the archive and are regularly cleaned from disks at site (after approx. 2 weeks). If the time since e45 creation is less than the site's file retention policy *and* the `STACK_RETENTION_DAYS` param that controls the local db cleanup, stacks can be recreated; otherwise not.
-- The combined product's RDNOISE is scaled by sqrt(N) for a stack of N farmes, compared to a single frame with the same total exposure.
+- Reproducibility is limited. Only final `e45` products are sent to the archive, while the raw `n00` and reduced `n09` stackframes remain at site and are regularly cleaned from site disks. If the time since e45 creation is less than the site's file retention policy *and* the `STACK_RETENTION_DAYS` param that controls the local banzai db cleanup, stacks can be recreated; otherwise not.
+- The combined product's RDNOISE is scaled by sqrt(N) for a stack of N frames, compared to a single frame with the same total exposure.
 - No auto or manual frame rejection capabilities.
 
 Also worth noting: the preview frames are visually stretched, lower-resolution jpg previews that overwrite each other as the stack is updated. They are intended as quick feedback for realtime observers, and not for any sort of data analysis.
@@ -21,39 +23,39 @@ This page describes the Smartstack path in `docker-compose-site.yml`. The progra
 
 The reduction level suffixes used:
 
-- `e00` is a raw exposure.
-- `e09` is an exposure reduced using BANZAI's default ordered reduction steps.
-- `e45` is the combined Smartstack product.
+- `n00` is a raw stackframe with obstype=SUB_EXP.
+- `n09` is a reduced stackframe, following BANZAI's default ordered reduction steps.
+- `e45` is the combined Smartstack product, with obstype=EXPOSE.
 
-## The whole path
+## Full smartstack process:
 
 ```mermaid
 flowchart LR
     Site["Site software<br/>(outside this repository)"]
     Listener["Listener"]
     Reducer["Reduction worker"]
-    DB[("PostgreSQL<br/>e09 paths and stack progress")]
+    DB[("PostgreSQL<br/>n09 paths and stack progress")]
     Stacker["Stack worker<br/>rebuild preview or final"]
     Shipper["Shipper<br/>(outside this repository)"]
-    Files[("Shared files<br/>e00, e09, e45, and JPEGs")]
+    Files[("Shared files<br/>n00, n09, e45, and JPEGs")]
 
     Site -->|"raw path over RabbitMQ"| Listener
     Listener -->|"Celery task through Redis"| Reducer
-    Reducer -->|"record successful e09"| DB
+    Reducer -->|"record successful n09"| DB
     DB <-->|"read and update"| Stacker
     Stacker -->|"product paths over RabbitMQ"| Shipper
 
-    Site -->|"write e00"| Files
-    Reducer <-->|"read e00 and write e09"| Files
-    Stacker <-->|"read e09 and write products"| Files
+    Site -->|"write n00"| Files
+    Reducer <-->|"read n00 and write n09"| Files
+    Stacker <-->|"read n09 and write products"| Files
     Shipper -->|"open products"| Files
 ```
 
-1. Site software writes a raw `e00` FITS file and sends its absolute path to RabbitMQ `banzai_stack_queue`.
+1. Site software writes a raw `n00` FITS file and sends its absolute path to RabbitMQ `banzai_stack_queue`.
 2. The listener checks the message and publishes a Celery reduction task to Redis.
-3. A Celery worker runs the default BANZAI ordered reduction steps for the raw `e00`, and writes an `e09` file as output. By default the reductions use super calibration frames from the central AWS BANZAI instance that have been cached locally.
-4. After that succeeds, the worker saves the `e09` path and group information in PostgreSQL.
-5. A stacking process checks PostgreSQL about every five seconds. It opens the recorded `e09` files and makes a preview or final product when needed.
+3. A Celery worker runs the default BANZAI ordered reduction steps for the raw `n00`, and writes the `n09` file as output. By default the reductions use super calibration frames from the central AWS BANZAI instance that have been cached locally.
+4. After that succeeds, the worker saves the `n09` path and stack information in PostgreSQL.
+5. A stacking process checks PostgreSQL about every five seconds. It opens the `n09` files and makes a preview or final product when needed.
 6. BANZAI sends the product paths through RabbitMQ to the shipper.
 
 ### Local calibration cache
@@ -75,7 +77,7 @@ The listener checks that the two required message keys exist. It does not check 
 PostgreSQL has two Smartstack tables:
 
 - `stacks` has one row for each `MOLUID`. It stores the camera, expected frame count, status, preview count, timeout clock, and final retry information.
-- `stackframes` has one row for each `(MOLUID, MOLFRNUM)`. It stores the reduced `e09` path and the information needed to build and send products.
+- `stackframes` has one row for each `(MOLUID, MOLFRNUM)`. It stores the reduced `n09` path and the information needed to build and send products.
 
 A frame is added only after its reduction succeeds. Failed reductions do not appear in these tables, so a timeout product may contain fewer frames than the producer sent.
 
@@ -101,7 +103,7 @@ The complete check runs before the timeout check. The timeout clock uses the tim
 The finished states behave differently:
 
 - A later successful reduction reopens a `complete` or `error` stack.
-- A `timeout` stack never reopens. Later reductions still write their `e09` files, but their database rows are rejected and they are not combined.
+- A `timeout` stack never reopens. Later reductions still write their `n09` files, but their database rows are rejected and they are not combined.
 
 After `STACK_RETENTION_DAYS`, cleanup removes the `stackframes` rows for old finished stacks. It also removes old `complete` and `error` stack rows. It keeps `timeout` stack rows so late frames continue to be rejected.
 
@@ -109,11 +111,11 @@ Cleanup does not delete FITS or JPEG files; these are regularly cleaned as part 
 
 ## Products
 
-Every preview and final product is rebuilt from the recorded `e09` files. BANZAI does not keep a partly combined image between checks.
+Every preview and final product is rebuilt from the recorded `n09` files. BANZAI does not keep a partly combined image between checks.
 
 For each build, BANZAI:
 
-1. Sorts the rows by frame number and opens the `e09` files.
+1. Sorts the rows by frame number and opens the `n09` files.
 2. Uses the lowest-numbered file as the header and filename template.
 3. Combines matching `SCI` pixels in row sections to limit memory use, using a sum with 3-sigma rejection.
 4. Updates the FITS information that describes the whole stack and writes an ordered `IMCOMnnn` list of input files.
@@ -122,7 +124,7 @@ Masks and uncertainties are combined along with the image data.
 
 Smartstack does not align or resample images. The input arrays must already line up and have compatible shapes. Counts are not adjusted for different exposure times; BANZAI only logs a warning when exposure times differ by more than one percent.
 
-Product creation also expects input filenames ending in `-e09.fits` or `-e09.fits.fz`.
+Input filenames are expected to end in `-n09.fits` or `-n09.fits.fz`.
 
 - **Preview:** waits for logical frame 1 so the filename does not change. It writes a small JPEG of up to 300 pixels and a large JPEG of up to 900 pixels. Each preview replaces the same files. The shipper message has `fits: null` and includes `thumbnail_metadata`.
 - **Final:** writes an `e45` FITS and replaces the same two JPEGs. A timed-out stack that never received frame 1 uses its lowest-numbered frame instead.
@@ -130,7 +132,7 @@ Product creation also expects input filenames ending in `-e09.fits` or `-e09.fit
 For example:
 
 ```text
-input:  cpt1m010-fa16-20240706-0031-e09.fits
+input:  cpt1m010-fa16-20240706-0031-n09.fits
 final:  cpt1m010-fa16-20240706-0031-e45.fits
 JPEGs: cpt1m010-fa16-20240706-0031-e45-small_thumbnail.jpg
        cpt1m010-fa16-20240706-0031-e45-large_thumbnail.jpg
@@ -142,11 +144,9 @@ Products are written under:
 <processed_path>/<site>/<camera>/<DAY-OBS>/processed/
 ```
 
-The shipper message is plain-text JSON. It contains absolute paths, not file data. When BANZAI publishes each preview or final product, it creates a fresh `instrument_enqueue_timestamp` for that Shipper handoff. The reduction worker, stacking service, and external shipper must see the reduced-data directory at the same absolute path.
+The shipper message is plain-text JSON. It contains absolute paths, not file data. When BANZAI publishes each preview or final product, it creates a fresh `instrument_enqueue_timestamp` for that shipper handoff. The reduction worker, stacking service, and external shipper must see the reduced-data directory at the same absolute path.
 
 Preview paths are not snapshots. A later preview can replace a JPEG before the shipper opens the path.
-
-This repository proves the BANZAI message format, not the deployed shipper or archive behavior. A `complete` or `timeout` status means RabbitMQ confirmed the final product message. It does not mean the files were uploaded or accepted by the archive.
 
 ## Failure Modes
 

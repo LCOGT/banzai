@@ -29,7 +29,7 @@ class FakeFrameFactory:
 
 def stackframe(stack_num, filepath=None):
     if filepath is None:
-        filepath = f'/tmp/cpt1m010-fa16-20240706-{stack_num:04d}-e09.fits'
+        filepath = f'/tmp/cpt1m010-fa16-20240706-{stack_num:04d}-n09.fits'
     return SimpleNamespace(
         filepath=filepath,
         stack_num=stack_num,
@@ -37,10 +37,10 @@ def stackframe(stack_num, filepath=None):
 
 
 def make_frame(filename, value=1.0, exptime=10.0, date_obs='2024-07-06T00:00:00.000', molfrnum=1,
-               frmtotal=3, frame_class=FakeLCOObservationFrame, saturate=65535.0, maxlin=60000.0,
+               frmtotal=3, obstype='SUB_EXP', frame_class=FakeLCOObservationFrame, saturate=65535.0, maxlin=60000.0,
                rdnoise=8.0):
     common_header = {
-        'OBSTYPE': 'EXPOSE',
+        'OBSTYPE': obstype,
         'DATE-OBS': date_obs,
         'EXPTIME': exptime,
         'PROPID': 'standard',
@@ -97,8 +97,8 @@ def fake_sum_combine(products):
 
 def test_build_stacked_frame_structure(monkeypatch):
     input_images = [
-        make_frame('/tmp/cpt1m010-fa16-20240706-0031-e09.fits', value=2.0),
-        make_frame('/tmp/cpt1m010-fa16-20240706-0032-e09.fits', value=3.0),
+        make_frame('/tmp/cpt1m010-fa16-20240706-0031-n09.fits', value=2.0),
+        make_frame('/tmp/cpt1m010-fa16-20240706-0032-n09.fits', value=3.0),
     ]
     stackframes = [stackframe(31, '/tmp/31.fits'), stackframe(32, '/tmp/32.fits')]
     monkeypatch.setattr(products, 'open_stackframe_images', lambda rows, context: input_images)
@@ -119,9 +119,9 @@ def test_build_stacked_frame_structure(monkeypatch):
 def test_metadata():
     output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=7.0)
     input_images = [
-        make_frame('/tmp/cpt1m010-fa16-20240706-0033-e09.fits', exptime=20.0,
+        make_frame('/tmp/cpt1m010-fa16-20240706-0033-n09.fits', exptime=20.0,
                    date_obs='2024-07-06T00:01:00.000'),
-        make_frame('/tmp/cpt1m010-fa16-20240706-0031-e09.fits', exptime=10.0,
+        make_frame('/tmp/cpt1m010-fa16-20240706-0031-n09.fits', exptime=10.0,
                    date_obs='2024-07-06T00:00:00.000'),
     ]
     stackframes = [stackframe(33), stackframe(31)]
@@ -141,16 +141,19 @@ def test_metadata():
         assert header['DATE-OBS'] == date_utils.date_obs_to_string(input_images[1].dateobs)
         assert header['NCOMBINE'] == 2
         assert header['MOLUID'] == 'mol-1'
+        assert header['OBSTYPE'] == 'EXPOSE'
         assert 'DATE' in header
         assert 'MOLFRNUM' not in header
-        assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-e09.fits'
-        assert header['IMCOM002'] == 'cpt1m010-fa16-20240706-0033-e09.fits'
+        assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-n09.fits'
+        assert header['IMCOM002'] == 'cpt1m010-fa16-20240706-0033-n09.fits'
         assert 'Images combined to create smartstack image:' in header['HISTORY']
 
 
 @pytest.mark.parametrize('file_extension', ['.fits', '.fits.fz'])
 def test_build_thumbnail_metadata(file_extension):
-    output_frame = make_frame(f'/tmp/cpt1m010-fa16-20240706-0031-e45{file_extension}', exptime=30.0)
+    output_frame = make_frame(
+        f'/tmp/cpt1m010-fa16-20240706-0031-e45{file_extension}', exptime=30.0, obstype='EXPOSE'
+    )
     for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
         header['DAY-OBS'] = '20240706'
         header['MOLUID'] = 'mol-1'
@@ -182,7 +185,7 @@ def test_build_thumbnail_metadata(file_extension):
 
 
 def test_build_thumbnail_metadata_rejects_missing_required_primary_value():
-    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits')
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', obstype='EXPOSE')
     for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
         header['MOLUID'] = 'mol-1'
         header['NCOMBINE'] = 1
@@ -195,8 +198,8 @@ def test_build_thumbnail_metadata_rejects_missing_required_primary_value():
 @pytest.mark.parametrize('file_extension', ['.fits', '.fits.fz'])
 def test_output_names_stay_fixed_as_stack_grows(monkeypatch, file_extension):
     images_by_stack_num = {
-        1: make_frame(f'/tmp/cpt1m010-fa16-20240706-0031-e09{file_extension}', value=1.0),
-        2: make_frame(f'/tmp/cpt1m010-fa16-20240706-0033-e09{file_extension}', value=1.0),
+        1: make_frame(f'/tmp/cpt1m010-fa16-20240706-0031-n09{file_extension}', value=1.0),
+        2: make_frame(f'/tmp/cpt1m010-fa16-20240706-0033-n09{file_extension}', value=1.0),
     }
     monkeypatch.setattr(
         products,
@@ -218,8 +221,8 @@ def test_build_stacked_frame_rejects_empty():
 
 
 @pytest.mark.parametrize('filename', [
-    '/tmp/cpt1m010-fa16-20240706-0031-e08.fits',
-    '/tmp/cpt1m010-fa16-20240706-0031-e09.txt',
+    '/tmp/cpt1m010-fa16-20240706-0031-n08.fits',
+    '/tmp/cpt1m010-fa16-20240706-0031-n09.txt',
 ])
 def test_build_stacked_frame_rejects_invalid_filename(monkeypatch, filename):
     input_image = make_frame(filename)
@@ -231,7 +234,7 @@ def test_build_stacked_frame_rejects_invalid_filename(monkeypatch, filename):
 
 @pytest.mark.parametrize('written_suffix', ['', '.fz'], ids=['fits', 'fpack'])
 def test_run_final_returns_paths_and_writes(monkeypatch, tmp_path, written_suffix):
-    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0)
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0, obstype='EXPOSE')
     context = FakeContext(processed_path=str(tmp_path))
     output_dir = output_frame.get_output_directory(context)
     written_filename = output_frame.filename + written_suffix
@@ -257,7 +260,7 @@ def test_run_final_returns_paths_and_writes(monkeypatch, tmp_path, written_suffi
 
 
 def test_run_preview_publishes_null_fits(monkeypatch, tmp_path):
-    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0)
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0, obstype='EXPOSE')
     for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
         header['MOLUID'] = 'mol-1'
         header['NCOMBINE'] = 3
@@ -298,8 +301,8 @@ def test_open_stackframe_images_raises_on_unopenable():
 
 def test_write_and_reopen_smoke(monkeypatch, tmp_path):
     input_images = [
-        make_frame('/tmp/cpt1m010-fa16-20240706-0031-e09.fits', value=2.0, frame_class=LCOObservationFrame),
-        make_frame('/tmp/cpt1m010-fa16-20240706-0032-e09.fits', value=3.0, frame_class=LCOObservationFrame),
+        make_frame('/tmp/cpt1m010-fa16-20240706-0031-n09.fits', value=2.0, frame_class=LCOObservationFrame),
+        make_frame('/tmp/cpt1m010-fa16-20240706-0032-n09.fits', value=3.0, frame_class=LCOObservationFrame),
     ]
     stackframes = [stackframe(31, '/tmp/31.fits'), stackframe(32, '/tmp/32.fits')]
     # Deliberately wrong reduction_level: run_final must stamp RLEVEL 45 regardless of the caller's context.
@@ -326,8 +329,8 @@ def test_write_and_reopen_smoke(monkeypatch, tmp_path):
             assert header['NCOMBINE'] == 2
             assert header['MOLUID'] == 'mol-1'
             assert 'MOLFRNUM' not in header
-            assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-e09.fits'
-            assert header['IMCOM002'] == 'cpt1m010-fa16-20240706-0032-e09.fits'
+            assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-n09.fits'
+            assert header['IMCOM002'] == 'cpt1m010-fa16-20240706-0032-n09.fits'
             assert 'IMCOM003' not in header
             assert header['SATURATE'] == pytest.approx(2.0 * 65535.0)
             assert header['MAXLIN'] == pytest.approx(2.0 * 60000.0)
