@@ -202,12 +202,18 @@ def test_init_poisson_uncertainties():
     assert (test_data.uncertainty == 5 * np.ones(test_data.data.shape)).all()
 
 
-def test_get_output_filename():
-    test_frame = FakeLCOObservationFrame(file_path='test_image_n00.fits')
-    test_context = FakeContext(frame_class=FakeLCOObservationFrame, reduction_level='9')
+@pytest.mark.parametrize(('input_filename', 'fpack', 'reduction_level', 'expected_filename'), [
+    ('test_image_n00.fits', True, '9', 'test_image_n09.fits.fz'),
+    ('test_image_00.fits', True, '91', 'test_image_91.fits.fz'),
+    ('test_image-e45.fits', True, '91', 'test_image-e91.fits.fz'),
+    ('test_image-e45.fits.fz', False, '91', 'test_image-e91.fits'),
+])
+def test_get_output_filename(input_filename, fpack, reduction_level, expected_filename):
+    test_frame = FakeLCOObservationFrame(file_path=input_filename)
+    test_context = FakeContext(frame_class=FakeLCOObservationFrame, fpack=fpack, reduction_level=reduction_level)
     filename = test_frame.get_output_filename(test_context)
 
-    assert filename == 'test_image_n09.fits.fz'
+    assert filename == expected_filename
 
 
 def test_section_transformation():

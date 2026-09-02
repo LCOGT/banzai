@@ -18,6 +18,46 @@ class FakeRealtimeImage(object):
         self.tries = tries
 
 
+@pytest.mark.parametrize('reduction_level, success, expected', [
+    pytest.param(0, False, True, id='raw'),
+    pytest.param(45, False, True, id='configured-nonzero'),
+    pytest.param(45, True, False, id='configured-successful-duplicate'),
+    pytest.param(91, False, False, id='unsupported-nonzero'),
+])
+@mock.patch('banzai.utils.realtime_utils.logger')
+@mock.patch('banzai.utils.image_utils.image_can_be_processed', return_value=True)
+@mock.patch('banzai.utils.realtime_utils.import_utils.import_attribute')
+@mock.patch('banzai.dbs.commit_processed_image')
+@mock.patch('banzai.dbs.get_processed_image')
+def test_archive_reduction_level_routing(mock_processed, mock_commit, mock_import, mock_can_process, mock_logger,
+                                         reduction_level, success, expected):
+    image = FakeRealtimeImage(success=success, checksum=md5_hash1)
+    mock_processed.return_value = image
+    test_image = mock.MagicMock(meta={'RLEVEL': reduction_level}, obstype='EXPOSE')
+    factory = mock.MagicMock()
+    factory.observation_frame_class.return_value = test_image
+    factory.get_instrument_from_header.return_value = mock.sentinel.instrument
+    mock_import.return_value.return_value = factory
+    context = FakeContext(
+        START_STAGE_BY_REDUCTION_LEVEL={'45': 'banzai.photometry.SourceDetector'},
+        delay_to_block_end=False,
+    )
+    file_info = {
+        'frameid': 42,
+        'filename': 'test.fits',
+        'version_set': [{'md5': md5_hash1}],
+        'RLEVEL': reduction_level,
+        'OBSTYPE': 'EXPOSE',
+    }
+
+    assert need_to_process_image(file_info, context, mock.MagicMock()) is expected
+    if reduction_level == 91:
+        mock_logger.error.assert_called_once_with(
+            'Image has unsupported reduction level. Aborting.',
+            extra_tags={'filename': 'test.fits', 'reduction_level': '91'},
+        )
+
+
 @mock.patch('banzai.utils.file_utils.get_md5')
 @mock.patch('banzai.dbs.get_processed_image')
 @mock.patch('banzai.utils.fits_utils.get_primary_header')

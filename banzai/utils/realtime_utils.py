@@ -99,8 +99,14 @@ def need_to_process_image(file_info, context, task):
             except Exception:
                 logger.error(f'Issue getting instrument from header. {logs.format_exception()}', extra_tags={'filename': filename})
                 need_to_process = False
-            if image_utils.get_reduction_level(test_image.meta) != '00':
-                logger.error('Image has nonzero reduction level. Aborting.', extra_tags={'filename': filename})
+            reduction_level = image_utils.get_reduction_level(test_image.meta)
+            is_supported_reduction_level = (
+                reduction_level == '00'
+                or reduction_level in context.START_STAGE_BY_REDUCTION_LEVEL
+            )
+            if not is_supported_reduction_level:
+                logger.error('Image has unsupported reduction level. Aborting.',
+                             extra_tags={'filename': filename, 'reduction_level': reduction_level})
                 need_to_process = False
             elif test_image.instrument is None:
                 logger.error('This queue message has an instrument that is not currently in the DB. Aborting:',

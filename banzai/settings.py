@@ -38,6 +38,8 @@ ORDERED_STAGES = ['banzai.bpm.BadPixelMaskLoader',
                   'banzai.qc.pointing.PointingTest',
                   'banzai.photometry.PhotometricCalibrator']
 
+START_STAGE_BY_REDUCTION_LEVEL = {'45': 'banzai.photometry.SourceDetector'}
+
 CALIBRATION_MIN_FRAMES = {'BIAS': 5,
                           'DARK': 5,
                           'SKYFLAT': 5}
