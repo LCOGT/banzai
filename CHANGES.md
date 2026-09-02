@@ -1,6 +1,11 @@
 Versions
 ========
 
+1.38.2 (2026-09-02)
+-------------------
+
+- Support reduction of smartstacks (e45 -> e91) in AWS banzai
+
 1.38.1 (2026-08-25)
 -------------------
 
