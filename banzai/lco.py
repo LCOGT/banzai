@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 from fnmatch import fnmatch
 from typing import Optional
 
@@ -215,7 +216,9 @@ class LCOObservationFrame(ObservationFrame):
                 self.public_date = next_year
 
     def get_output_filename(self, runtime_context):
-        output_filename = self.filename.replace('00.fits', '{:02d}.fits'.format(int(runtime_context.reduction_level)))
+        reduction_level = f'{int(runtime_context.reduction_level):02d}'
+        # Regex: replace two digits only when they appear immediately before .fits or .fits.fz.
+        output_filename = re.sub(r'\d{2}(?=\.fits(?:\.fz)?$)', reduction_level, self.filename)
         if runtime_context.fpack and not output_filename.endswith('.fz'):
             output_filename += '.fz'
         if not runtime_context.fpack and output_filename.endswith('.fz'):
