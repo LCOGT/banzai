@@ -113,7 +113,7 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
 
             instruments = dbs.get_instruments_at_site(site=site, db_address=runtime_context.db_address)
             for instrument in instruments:
-                # bypass all other instruments at the site if an instrument id is supplied for scheduling.
+                # bypass other instruments at the site if an instrument id is supplied for scheduling.
                 if instrument_ids and instrument.id not in instrument_ids:
                     print(instrument.id)
                     continue
@@ -187,6 +187,7 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
         logger.info('Checking if we are ready to stack',
                     extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
                                 'instrument': instrument.name, 'frame_type': frame_type})
+        print("===========================stacking=====================================")
 
         completed_image_count = len(dbs.get_individual_cal_frames(instrument, frame_type,
                                                                   min_date, max_date, include_bad_frames=True,
