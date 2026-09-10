@@ -155,6 +155,8 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
                     else:
                         queue_name = runtime_context.CELERY_TASK_QUEUE_NAME
 
+                    print(queue_name)
+                    print("=================")
                     stack_calibrations.apply_async(args=(stacking_min_date, stacking_max_date, instrument.id,
                                                          frame_type, vars(runtime_context), blocks_for_calibration),
                                                    countdown=message_delay_in_seconds, queue=queue_name)
@@ -187,7 +189,6 @@ def stack_calibrations(self, min_date: str, max_date: str, instrument_id: int, f
         logger.info('Checking if we are ready to stack',
                     extra_tags={'site': instrument.site, 'min_date': min_date, 'max_date': max_date,
                                 'instrument': instrument.name, 'frame_type': frame_type})
-        print("===========================stacking=====================================")
 
         completed_image_count = len(dbs.get_individual_cal_frames(instrument, frame_type,
                                                                   min_date, max_date, include_bad_frames=True,
