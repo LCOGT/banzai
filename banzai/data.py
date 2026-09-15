@@ -137,7 +137,7 @@ class CCDData(Data):
         if uncertainty is None:
             uncertainty = self.read_noise * np.sqrt(self.n_sub_exposures) * np.ones(data.shape, dtype=data.dtype)
             uncertainty /= self.gain
-        self.uncertainty = self._init_array(uncertainty)
+        self.uncertainty = uncertainty
         self._detector_section = Section.parse_region_keyword(self.meta.get('DETSEC'))
         self._data_section = Section.parse_region_keyword(self.meta.get('DATASEC'))
         self._background = None
