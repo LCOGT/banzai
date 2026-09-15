@@ -95,12 +95,25 @@ class CalibrationUser(Stage):
             return None
 
     def do_stage(self, image):
-        master_calibration_file_info = self.get_calibration_file_info(image)
+        calibration_tags = {'stage': self.stage_name, 'calibration_type': self.calibration_type}
+        with logs.time_operation('calibration_selection', image=image, **calibration_tags) as timing:
+            master_calibration_file_info = self.get_calibration_file_info(image)
+            if master_calibration_file_info is None:
+                timing['outcome'] = 'missing'
+            else:
+                calibration_tags['calibration_filename'] = master_calibration_file_info.get('filename')
+                timing.update(calibration_tags)
         if master_calibration_file_info is None:
             return self.on_missing_master_calibration(image)
 
         frame_factory = import_utils.import_attribute(self.runtime_context.FRAME_FACTORY)()
-        master_calibration_image = frame_factory.open(master_calibration_file_info, self.runtime_context)
+        with logs.time_operation('calibration_open', image=image, **calibration_tags) as timing:
+            master_calibration_image = frame_factory.open(master_calibration_file_info, self.runtime_context)
+            if master_calibration_image is None:
+                timing['outcome'] = 'rejected'
+            else:
+                calibration_tags['calibration_filename'] = master_calibration_image.filename
+                timing.update(calibration_tags)
         master_calibration_image.is_master = True
         # If the frame id was not included originally but we were able to pull it from the archive,
         # we store it for future use
@@ -109,7 +122,11 @@ class CalibrationUser(Stage):
             dbs.update_calibration_frameid(master_calibration_file_info, self.runtime_context.cal_db_address)
         logger.info('Applying master calibration', image=image,
                     extra_tags={'master_calibration':  master_calibration_image.filename})
-        return self.apply_master_calibration(image, master_calibration_image)
+        with logs.time_operation('calibration_apply', image=image, **calibration_tags) as timing:
+            result = self.apply_master_calibration(image, master_calibration_image)
+            if result is None:
+                timing['outcome'] = 'rejected'
+            return result
 
     @abc.abstractmethod
     def apply_master_calibration(self, image, master_calibration_image):
