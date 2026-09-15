@@ -1,6 +1,12 @@
+import tempfile
+from unittest.mock import patch
+
 import pytest
 import numpy as np
+from astropy.io.fits import Header
 
+from banzai.data import CCDData, HeaderOnly
+from banzai.lco import LCOObservationFrame
 from banzai.utils.image_utils import Section
 from banzai.mosaic import MosaicCreator
 from banzai.tests.utils import FakeLCOObservationFrame, FakeCCDData
@@ -43,6 +49,110 @@ def test_get_mosaic_detector_region():
     data = [FakeCCDData(meta=extension_header) for extension_header in extension_headers]
     image = FakeLCOObservationFrame(hdu_list=data)
     assert MosaicCreator.get_mosaic_detector_region(image).shape == (2048, 2048)
+
+
+def make_single_component_frame(detsec='[1:6,1:4]', datasec='[1:6,1:4]', binning='1 1',
+                                separate_primary=False, uncertainty_dtype=np.float64, science_dtype=np.float64):
+    meta = Header({'OBSTYPE': 'SUB_EXP', 'DAY-OBS': '20260915', 'MOLUID': 123, 'MOLFRNUM': 2,
+                   'FRMTOTAL': 10, 'GAIN': 1.0, 'SATURATE': 40000.0, 'MAXLIN': 30000.0,
+                   'RDNOISE': 3.0, 'CCDSUM': binning, 'DATASEC': datasec, 'DETSEC': detsec,
+                   'TRIMSEC': '[1:6,1:4]', 'OVERSCAN': 3.25, 'L1STATOV': '1'})
+    pixels = np.arange(24, dtype=science_dtype).reshape(4, 6)
+    component = CCDData(data=pixels, meta=meta, mask=pixels.astype(np.uint8) % 16,
+                        uncertainty=(pixels / 10 + 1).astype(uncertainty_dtype), name='RAW')
+    hdus = [component]
+    if separate_primary:
+        primary_meta = meta.copy()
+        primary_meta.update({'GAIN': 2.0, 'SATURATE': 50000.0, 'MAXLIN': 45000.0,
+                             'L1STATOV': '0', 'OVERSCAN': 0.0, 'PRIMARY': 'preserve'})
+        component.meta['AMPONLY'] = 'omit'
+        hdus.insert(0, HeaderOnly(meta=primary_meta, name='PRIMARY'))
+    return LCOObservationFrame(hdu_list=hdus, file_path='/tmp/single-component.fits')
+
+
+@pytest.mark.parametrize(('separate_primary', 'detsec', 'binning', 'uncertainty_dtype'), [
+    (False, '[1:6,1:4]', '1 1', np.float64),
+    (True, '[1:6,1:4]', '1 1', np.float64),
+    (True, '[101:112,201:208]', '2 2', np.float64),
+    (True, '[1:6,1:4]', '1 1', np.float32),
+])
+def test_single_component_reuses_arrays_and_matches_general_mosaic(
+        monkeypatch, separate_primary, detsec, binning, uncertainty_dtype):
+    kwargs = dict(separate_primary=separate_primary, detsec=detsec, binning=binning,
+                  uncertainty_dtype=uncertainty_dtype)
+    with monkeypatch.context() as general_path:
+        general_path.setattr(MosaicCreator, '_can_reuse_component', staticmethod(lambda *args: False))
+        expected = MosaicCreator(None).do_stage(make_single_component_frame(**kwargs))
+
+    image = make_single_component_frame(**kwargs)
+    component = image.ccd_hdus[0]
+    original_meta = component.meta.copy()
+    with patch('banzai.data.tempfile.NamedTemporaryFile', wraps=tempfile.NamedTemporaryFile) as new_file:
+        actual = MosaicCreator(None).do_stage(image)
+
+    assert actual is image
+    assert len(actual.ccd_hdus) == 1
+    assert actual.primary_hdu.name == 'SCI'
+    assert actual.meta == expected.meta
+    assert component.meta == original_meta
+    assert component.memmap is True
+    assert actual.primary_hdu.memmap is True
+    assert actual.data is component.data
+    assert actual.mask is component.mask
+    if uncertainty_dtype == np.float64:
+        assert actual.uncertainty is component.uncertainty
+        assert new_file.call_count == 0
+    else:
+        assert actual.uncertainty is not component.uncertainty
+        assert new_file.call_count == 1
+    for name in ('data', 'mask', 'uncertainty'):
+        result_array = getattr(actual.primary_hdu, name)
+        expected_array = getattr(expected.primary_hdu, name)
+        assert result_array.dtype == expected_array.dtype
+        np.testing.assert_array_equal(result_array, expected_array)
+
+
+@pytest.mark.parametrize(('detsec', 'datasec', 'expected_slice'), [
+    ('[6:1,1:4]', '[1:6,1:4]', (slice(None), slice(None, None, -1))),
+    ('[1:6,1:4]', '[6:1,1:4]', (slice(None), slice(None, None, -1))),
+    ('[1:4,1:4]', '[2:5,1:4]', (slice(None), slice(1, 5))),
+])
+def test_single_component_still_crops_and_flips(detsec, datasec, expected_slice):
+    image = make_single_component_frame(detsec=detsec, datasec=datasec)
+    component = image.ccd_hdus[0]
+    actual = MosaicCreator(None).do_stage(image)
+
+    assert actual.data is not component.data
+    for name in ('data', 'mask', 'uncertainty'):
+        np.testing.assert_array_equal(getattr(actual.primary_hdu, name), getattr(component, name)[expected_slice])
+
+
+@pytest.mark.parametrize('science_dtype', [np.float32, np.int32])
+def test_single_component_preserves_promoted_uncertainty_dtype(science_dtype):
+    image = make_single_component_frame(science_dtype=science_dtype)
+    component = image.ccd_hdus[0]
+    actual = MosaicCreator(None).do_stage(image)
+
+    assert actual.uncertainty.dtype == np.float64
+    np.testing.assert_array_equal(actual.data, component.data)
+    np.testing.assert_array_equal(actual.uncertainty, component.uncertainty)
+
+
+@pytest.mark.parametrize('storage', ['read_only', 'strided'])
+def test_single_component_preserves_writable_contiguous_output(storage):
+    image = make_single_component_frame()
+    component = image.ccd_hdus[0]
+    if storage == 'read_only':
+        component.data.flags.writeable = False
+    else:
+        component.data = component.data[:, ::-1]
+    actual = MosaicCreator(None).do_stage(image)
+
+    for name in ('data', 'mask', 'uncertainty'):
+        array = getattr(actual.primary_hdu, name)
+        assert array.flags.writeable
+        assert array.flags.c_contiguous
+        np.testing.assert_array_equal(array, getattr(component, name))
 
 
 def test_mosaic_maker(set_random_seed):
