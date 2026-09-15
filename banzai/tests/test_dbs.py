@@ -8,7 +8,8 @@ from sqlalchemy import create_engine, inspect
 
 import banzai.main
 from banzai import dbs
-from banzai.tests.utils import FakeResponse
+from banzai.lco import LCOCalibrationFrame
+from banzai.tests.utils import FakeCCDData, FakeInstrument, FakeResponse
 from astropy.utils.data import get_pkg_data_filename
 
 pytestmark = pytest.mark.dbs
@@ -58,6 +59,49 @@ def test_add_or_update():
         # Clean up for other methods
         db_session.delete(instrument)
         db_session.commit()
+
+
+@mock.patch('banzai.main.archive_get')
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+def test_add_bpms_from_archive_persists_frameid(mock_open, mock_archive_get, monkeypatch):
+    bpm = LCOCalibrationFrame([FakeCCDData(meta={'OBSTYPE': 'BPM',
+                                                'DATE-OBS': '2021-04-20T00:00:00.000',
+                                                'DATE': '2021-04-20T00:00:00.000'})], 'bpm.fits')
+    bpm.instrument = FakeInstrument()
+    mock_open.return_value = bpm
+    mock_archive_get.return_value.json.return_value = {'results': [{'id': 1234, 'filename': bpm.filename}]}
+    monkeypatch.setattr('sys.argv', ['banzai_populate_bpms', '--db-address', 'sqlite:///test.db'])
+
+    banzai.main.add_bpms_from_archive()
+
+    with dbs.get_session('sqlite:///test.db') as session:
+        saved = session.query(dbs.CalibrationImage).filter_by(filename=bpm.filename).one()
+        assert saved.frameid == 1234
+
+
+@pytest.mark.parametrize('upload_to_archive, frame_id', [(True, 5678), (False, None)])
+@mock.patch('banzai.utils.file_utils.post_to_ingester', return_value={'frameid': 5678})
+@mock.patch('banzai.lco.LCOFrameFactory.open')
+def test_add_super_calibration_persists_frameid(mock_open, mock_ingester, upload_to_archive, frame_id,
+                                               tmp_path, monkeypatch):
+    filepath = tmp_path / f'super-bias-{upload_to_archive}.fits'
+    filepath.touch()
+    calibration = LCOCalibrationFrame([FakeCCDData(meta={'OBSTYPE': 'BIAS',
+                                                        'DATE-OBS': '2021-04-20T00:00:00.000',
+                                                        'DATE': '2021-04-20T00:00:00.000'})], str(filepath))
+    calibration.instrument = FakeInstrument()
+    mock_open.return_value = calibration
+    argv = ['banzai_add_super_calibration', str(filepath), '--db-address', 'sqlite:///test.db']
+    if upload_to_archive:
+        argv.append('--upload-to-archive')
+    monkeypatch.setattr('sys.argv', argv)
+
+    banzai.main.add_super_calibration()
+
+    with dbs.get_session('sqlite:///test.db') as session:
+        saved = session.query(dbs.CalibrationImage).filter_by(filename=filepath.name).one()
+        assert saved.frameid == frame_id
+    assert mock_ingester.call_count == int(upload_to_archive)
 
 
 def test_create_db_default_does_not_create_site_tables(tmp_path):
