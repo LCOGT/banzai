@@ -21,6 +21,7 @@ class MosaicCreator(Stage):
         data_type = image.data_type
         reuse_component = len(ccd_hdus) == 1 and self._can_reuse_component(
             ccd_hdus[0], mosaiced_detector_region, mosaiced_data_section, data_type)
+        # Save time by reusing compatible arrays when a single component already matches the output mosaic layout.
         if reuse_component:
             # Borrow the existing arrays while keeping the same primary-header normalization below.
             component = ccd_hdus[0]
