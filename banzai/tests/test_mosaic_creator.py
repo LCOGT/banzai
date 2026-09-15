@@ -52,12 +52,12 @@ def test_get_mosaic_detector_region():
 
 
 def make_single_component_frame(detsec='[1:6,1:4]', datasec='[1:6,1:4]', binning='1 1',
-                                separate_primary=False, uncertainty_dtype=np.float64):
+                                separate_primary=False, uncertainty_dtype=np.float64, science_dtype=np.float64):
     meta = Header({'OBSTYPE': 'SUB_EXP', 'DAY-OBS': '20260915', 'MOLUID': 123, 'MOLFRNUM': 2,
                    'FRMTOTAL': 10, 'GAIN': 1.0, 'SATURATE': 40000.0, 'MAXLIN': 30000.0,
                    'RDNOISE': 3.0, 'CCDSUM': binning, 'DATASEC': datasec, 'DETSEC': detsec,
                    'TRIMSEC': '[1:6,1:4]', 'OVERSCAN': 3.25, 'L1STATOV': '1'})
-    pixels = np.arange(24, dtype=np.float64).reshape(4, 6)
+    pixels = np.arange(24, dtype=science_dtype).reshape(4, 6)
     component = CCDData(data=pixels, meta=meta, mask=pixels.astype(np.uint8) % 16,
                         uncertainty=(pixels / 10 + 1).astype(uncertainty_dtype), name='RAW')
     hdus = [component]
@@ -125,6 +125,34 @@ def test_single_component_still_crops_and_flips(detsec, datasec, expected_slice)
     assert actual.data is not component.data
     for name in ('data', 'mask', 'uncertainty'):
         np.testing.assert_array_equal(getattr(actual.primary_hdu, name), getattr(component, name)[expected_slice])
+
+
+@pytest.mark.parametrize('science_dtype', [np.float32, np.int32])
+def test_single_component_preserves_promoted_uncertainty_dtype(science_dtype):
+    image = make_single_component_frame(science_dtype=science_dtype)
+    component = image.ccd_hdus[0]
+    actual = MosaicCreator(None).do_stage(image)
+
+    assert actual.uncertainty.dtype == np.float64
+    np.testing.assert_array_equal(actual.data, component.data)
+    np.testing.assert_array_equal(actual.uncertainty, component.uncertainty)
+
+
+@pytest.mark.parametrize('storage', ['read_only', 'strided'])
+def test_single_component_preserves_writable_contiguous_output(storage):
+    image = make_single_component_frame()
+    component = image.ccd_hdus[0]
+    if storage == 'read_only':
+        component.data.flags.writeable = False
+    else:
+        component.data = component.data[:, ::-1]
+    actual = MosaicCreator(None).do_stage(image)
+
+    for name in ('data', 'mask', 'uncertainty'):
+        array = getattr(actual.primary_hdu, name)
+        assert array.flags.writeable
+        assert array.flags.c_contiguous
+        np.testing.assert_array_equal(array, getattr(component, name))
 
 
 def test_mosaic_maker(set_random_seed):

@@ -59,12 +59,16 @@ class MosaicCreator(Stage):
     @staticmethod
     def _can_reuse_component(data, detector_section, data_section, data_type):
         # A single component can still need cropping, flipping, or science/mask dtype conversion.
-        return (data.shape == data_section.shape
+        # Other science dtypes can be promoted when the normal constructor initializes uncertainties.
+        return (data_type == np.float64
+                and data.shape == data_section.shape
                 and data.data_section is not None
                 and data.data_section.to_region_keyword() == data_section.to_region_keyword()
                 and data.detector_section.to_region_keyword() == detector_section.to_region_keyword()
                 and data.dtype == data_type
-                and data.mask.dtype == np.uint8)
+                and data.mask.dtype == np.uint8
+                and all(array.flags.c_contiguous and array.flags.writeable
+                        for array in (data.data, data.mask, data.uncertainty)))
 
     @staticmethod
     def get_mosaic_detector_region(image):
