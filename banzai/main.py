@@ -437,12 +437,12 @@ def add_super_calibration():
         return
 
     # Upload calibration file via ingester if requested
+    frame_id = None
     if args.upload_to_archive:
         with open(args.filepath, 'rb') as f:
             logger.info("Posting calibration file to s3 archive and saving to database")
             ingester_response = file_utils.post_to_ingester(f, cal_image, args.filepath)
         frame_id = ingester_response['frameid']
-        cal_image.frameid = frame_id
     else:
         logger.info("Skipping archive upload. Saving to database only.")
 
@@ -453,7 +453,8 @@ def add_super_calibration():
             DataProduct(
                 None,
                 filename=os.path.basename(args.filepath),
-                filepath=os.path.dirname(args.filepath)
+                filepath=os.path.dirname(args.filepath),
+                frame_id=frame_id
             )
         ),
         args.db_address
@@ -484,7 +485,7 @@ def add_bpms_from_archive():
             if bpm_image is not None:
                 bpm_image.is_master = True
                 dbs.save_calibration_info(bpm_image.to_db_record(DataProduct(None, filename=bpm_image.filename,
-                                                                             filepath=None)),
+                                                                             filepath=None, frame_id=frame['id'])),
                                           args.db_address)
         except Exception:
             logger.error(f"BPM not added to database: {logs.format_exception()}",
