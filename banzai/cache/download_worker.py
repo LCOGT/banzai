@@ -15,13 +15,15 @@ from banzai.utils import date_utils, file_utils, fits_utils
 logger = logs.get_logger()
 HEARTBEAT_INTERVAL = 600                # 10 min (in seconds)
 FAILURE_RETRY_SECONDS = 60 * 60 * 2     # 2 hours (in seconds)
+MAX_ID_LOOKUPS_PER_PASS = 10
 
 
-def get_calibrations_to_cache(db_address, site_id, instrument_types):
+def get_calibrations_to_cache(db_address, site_id, instrument_types, include_missing_frameids=False):
     """Return top 2 calibrations per config via SQL window function.
 
     Runs one query per calibration type so each type partitions by its own
-    criteria from settings.CALIBRATION_SET_CRITERIA.
+    criteria from settings.CALIBRATION_SET_CRITERIA. Include missing IDs only
+    when selecting candidates for archive lookup, not for cache retention.
     """
     results = []
     with dbs.get_session(db_address) as session:
@@ -45,29 +47,16 @@ def get_calibrations_to_cache(db_address, site_id, instrument_types):
                 dbs.CalibrationImage.type == cal_type,
                 dbs.CalibrationImage.is_master == True,
                 dbs.CalibrationImage.is_bad == False,
-                dbs.CalibrationImage.frameid.isnot(None),
                 dbs.Instrument.site == site_id,
             )
+            if not include_missing_frameids:
+                query = query.filter(dbs.CalibrationImage.frameid.isnot(None))
             if instrument_types != ['*']:
                 query = query.filter(dbs.Instrument.type.in_(instrument_types))
 
             subq = query.subquery()
             results.extend(session.query(subq).filter(subq.c.rank <= 2).all())
     return results
-
-
-def get_null_frameid_filenames(db_address, site_id, instrument_types):
-    """Return filenames of master calibrations with NULL frameid (cannot be downloaded)."""
-    with dbs.get_session(db_address) as session:
-        query = session.query(dbs.CalibrationImage.filename).join(dbs.Instrument).filter(
-            dbs.CalibrationImage.is_master == True,
-            dbs.CalibrationImage.is_bad == False,
-            dbs.CalibrationImage.frameid.is_(None),
-            dbs.Instrument.site == site_id,
-        )
-        if instrument_types != ['*']:
-            query = query.filter(dbs.Instrument.type.in_(instrument_types))
-        return [r.filename for r in query.all()]
 
 
 def get_cache_path(processed_path, cal):
@@ -157,13 +146,7 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
             f"chmod/chown so uid {os.getuid()} can write. No restart needed after fixing."
         )
 
-    null_frameid_filenames = get_null_frameid_filenames(db_address, site_id, instrument_types)
-    if null_frameid_filenames:
-        sample = ', '.join(null_frameid_filenames[:10])
-        suffix = f' (+{len(null_frameid_filenames) - 10} more)' if len(null_frameid_filenames) > 10 else ''
-        logger.info(f"Ignoring {len(null_frameid_filenames)} calibrations with NULL frameid: {sample}{suffix}")
-
-    failed_frameids: dict[int, float] = {}
+    failed_calibrations: dict[int, float] = {}
     # Start at 0.0 so the first poll always logs a status line on worker startup.
     last_status_log = 0.0
     last_logged_state: tuple | None = None
@@ -179,6 +162,9 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                 time.sleep(poll_interval)
                 continue
 
+            now = time.monotonic()
+            failed_calibrations = {cal_id: t for cal_id, t in failed_calibrations.items()
+                                   if now - t < FAILURE_RETRY_SECONDS}
             needed = get_calibrations_to_cache(db_address, site_id, instrument_types)
             needed_filenames = {cal.filename for cal in needed}
 
@@ -196,20 +182,18 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
             to_delete = [c for c in cached_in_db if c.filename not in needed_filenames]
 
             now = time.monotonic()
-            failed_frameids = {fid: t for fid, t in failed_frameids.items()
-                               if now - t < FAILURE_RETRY_SECONDS}
-            fresh_to_download = [c for c in to_download if c.frameid not in failed_frameids]
+            fresh_to_download = [c for c in to_download if c.id not in failed_calibrations]
 
             cached_count = len(needed) - len(to_download)
             state = (len(needed), cached_count, len(fresh_to_download),
-                     len(to_reconcile), len(failed_frameids), len(to_delete))
+                     len(to_reconcile), len(failed_calibrations), len(to_delete))
             state_changed = state != last_logged_state
             heartbeat_due = now - last_status_log >= HEARTBEAT_INTERVAL
             if state_changed or heartbeat_due:
                 logger.info(
                     f"Cache status: {len(needed)} needed, {cached_count} cached, "
                     f"{len(fresh_to_download)} to download, {len(to_reconcile)} to reconcile, "
-                    f"{len(failed_frameids)} failing, {len(to_delete)} to delete"
+                    f"{len(failed_calibrations)} failing, {len(to_delete)} to delete"
                 )
                 last_logged_state = state
                 last_status_log = now
@@ -219,7 +203,7 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                 try:
                     download_calibration(db_address, processed_path, runtime_context, cal)
                 except Exception as e:
-                    failed_frameids[cal.frameid] = time.monotonic()
+                    failed_calibrations[cal.id] = time.monotonic()
                     failed_count += 1
                     logger.error(f"Failed to download {cal.filename}: {e}", exc_info=True)
             downloaded_count = len(fresh_to_download) - failed_count
@@ -231,6 +215,10 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                     reconciled_count += 1
                 except Exception as e:
                     logger.error(f"Failed to reconcile filepath for {cal.filename}: {e}", exc_info=True)
+
+            # Keep old files while replacements are missing, including downloads on cooldown.
+            if downloaded_count < len(to_download):
+                to_delete = []
 
             deleted_count = 0
             for cal in to_delete:
@@ -246,6 +234,27 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                     f"{failed_count} failed, {reconciled_count} reconciled, "
                     f"{deleted_count} deleted"
                 )
+
+            # Do archive lookups after normal cache work; recovered IDs are downloaded next pass.
+            candidates = get_calibrations_to_cache(db_address, site_id, instrument_types,
+                                                   include_missing_frameids=True)
+            unresolved = [cal for cal in candidates if cal.frameid is None and cal.id not in failed_calibrations]
+            for cal in unresolved[:MAX_ID_LOOKUPS_PER_PASS]:
+                failed_calibrations[cal.id] = time.monotonic()
+                try:
+                    frame_id = fits_utils.basename_search_in_archive(cal.filename, cal.dateobs, runtime_context)
+                    if frame_id is None:
+                        logger.info(f"No archive match for {cal.filename}; deferring lookup")
+                        continue
+                    with dbs.get_session(db_address) as session:
+                        session.query(dbs.CalibrationImage).filter(
+                            dbs.CalibrationImage.id == cal.id,
+                            dbs.CalibrationImage.frameid.is_(None),
+                        ).update({'frameid': frame_id})
+                    del failed_calibrations[cal.id]
+                    logger.info(f"Found archive frame {frame_id} for {cal.filename}")
+                except Exception as e:
+                    logger.warning(f"Failed to resolve archive ID for {cal.filename}: {e}", exc_info=True)
 
             time.sleep(poll_interval)
         except Exception as e:

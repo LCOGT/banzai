@@ -10,7 +10,7 @@ from astropy.io import fits
 from banzai import dbs, settings
 from banzai.cache.download_worker import (
     get_calibrations_to_cache, get_cache_path, download_calibration,
-    delete_calibration, run_download_worker_daemon,
+    delete_calibration, run_download_worker, run_download_worker_daemon,
 )
 from banzai.tests.utils import FakeContext
 
@@ -259,6 +259,59 @@ def test_download_happy_path_with_real_db(db_address, tmp_path):
     assert os.path.exists(os.path.join(expected_path, 'bias.fits'))
     with dbs.get_session(db_address) as session:
         assert session.query(dbs.CalibrationImage).get(cal_id).filepath == expected_path
+
+
+# --- worker loop tests ---
+
+@pytest.mark.parametrize('lookup_failure, download_failure', [
+    (None, None),
+    (RuntimeError('Archive unavailable'), OSError('Download failed')),
+])
+def test_worker_recovers_ids_after_cache_work(db_address, tmp_path, lookup_failure, download_failure):
+    inst_id = _seed_db(db_address)
+    contents = _make_fits_buffer().getvalue()
+    older_path = tmp_path / 'tst/fa01/20240102/processed/older.fits'
+    older_path.parent.mkdir(parents=True)
+    older_path.write_bytes(contents)
+    known_path = tmp_path / 'tst/fa01/20240103/processed/known.fits'
+    with dbs.get_session(db_address) as session:
+        for day, filename, frameid in [(1, 'historical.fits', None), (2, 'older.fits', 1),
+                                       (3, 'known.fits', 2), (4, 'missing.fits', None),
+                                       (5, 'unavailable.fits', None)]:
+            _add_cal(session, inst_id, 'BIAS', filename, frameid, datetime(2024, 1, day), _attrs_for_type('BIAS'))
+        session.flush()
+        session.query(dbs.CalibrationImage).filter_by(filename='older.fits').update(
+            {'filepath': str(older_path.parent)})
+
+    def find_frame(filename, *args):
+        assert known_path.exists()  # Normal downloads must finish before any archive lookups.
+        if filename == 'missing.fits':
+            return 42
+        if lookup_failure:
+            raise lookup_failure
+        return None
+
+    download_results = [io.BytesIO(contents), download_failure or io.BytesIO(contents)]
+    with mock.patch('banzai.utils.fits_utils.basename_search_in_archive', side_effect=find_frame) as lookup, \
+         mock.patch('banzai.utils.fits_utils.download_from_s3', side_effect=download_results) as download, \
+         mock.patch('banzai.cache.download_worker.time.monotonic', return_value=0), \
+         mock.patch('banzai.cache.download_worker.time.sleep', side_effect=[None, None, KeyboardInterrupt]):
+        with pytest.raises(KeyboardInterrupt):
+            run_download_worker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
+
+    assert [call.args[0] for call in lookup.call_args_list] == ['unavailable.fits', 'missing.fits']
+    assert [call.args[0] for call in download.call_args_list] == [
+        {'frameid': 2, 'filename': 'known.fits'}, {'frameid': 42, 'filename': 'missing.fits'}]
+    # A failed replacement must not evict the older file, even on the following cooldown pass.
+    assert older_path.exists() == (download_failure is not None)
+    assert known_path.exists()
+    recovered_path = tmp_path / 'tst/fa01/20240104/processed/missing.fits'
+    assert recovered_path.exists() == (download_failure is None)
+    with dbs.get_session(db_address) as session:
+        recovered = session.query(dbs.CalibrationImage).filter_by(filename='missing.fits').one()
+        assert recovered.frameid == 42
+        assert recovered.filepath == (None if download_failure else str(recovered_path.parent))
+        assert session.query(dbs.CalibrationImage).filter_by(filename='unavailable.fits').one().frameid is None
 
 
 # --- run_download_worker_daemon tests ---
