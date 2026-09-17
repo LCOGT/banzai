@@ -3,6 +3,8 @@ import os
 import traceback
 import sys
 import multiprocessing
+import time
+from contextlib import contextmanager
 from lcogt_logging import LCOGTFormatter
 
 from banzai.utils import date_utils
@@ -63,3 +65,49 @@ def format_exception():
 
 def get_logger():
     return BanzaiLogger(logging.getLogger('banzai'), extra=None)
+
+
+def image_timing_tags(image):
+    """Snapshot identity and CCD shapes without reading or copying pixel arrays."""
+    if image is None:
+        return {}
+    tags = {}
+    try:
+        tags.update(_image_to_tags(image))
+        tags['input_filename'] = tags['filename']
+        tags['camera'] = getattr(getattr(image, 'instrument', None), 'camera', None)
+        tags['image_shapes'] = [list(hdu.data.shape) for hdu in getattr(image, 'ccd_hdus', [])]
+        meta = getattr(image, 'meta', {})
+        for keyword, name in [('CONFMODE', 'configuration_mode'), ('OBSMODE', 'observing_mode'),
+                              ('MOLUID', 'smartstack_moluid'), ('MOLFRNUM', 'smartstack_stack_num'),
+                              ('FRMTOTAL', 'smartstack_frmtotal'), ('RLEVEL', 'reduction_level')]:
+            if meta.get(keyword) is not None:
+                tags[name] = meta[keyword]
+        if not tags['camera']:
+            tags['camera'] = meta.get('INSTRUME')
+    except Exception:
+        # Like the existing logger adapter, do not let malformed metadata stop reduction.
+        tags['timing_metadata_error'] = True
+    return tags
+
+
+@contextmanager
+def time_operation(operation, image=None, **extra_tags):
+    """Emit an inclusive wall duration; callers can annotate the yielded tags.
+
+    Nested operations overlap. Exceptions are logged as errors and re-raised;
+    callers must label non-exception rejection/early-return outcomes explicitly.
+    """
+    tags = image_timing_tags(image)
+    tags.update(extra_tags)
+    start = time.perf_counter()
+    try:
+        yield tags
+    except BaseException:
+        tags['outcome'] = 'error'
+        raise
+    finally:
+        duration = time.perf_counter() - start
+        tags.setdefault('outcome', 'success')
+        tags.update(event='reduction_timing', operation=operation, duration_s=duration, process_id=os.getpid())
+        get_logger().info('Reduction timing', extra_tags=tags)
