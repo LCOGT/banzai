@@ -6,7 +6,9 @@ import sys
 import time
 
 from astropy.io import fits
+from psycopg.errors import UndefinedTable
 from sqlalchemy import cast, func, String
+from sqlalchemy.exc import ProgrammingError
 
 from banzai import dbs, logs, settings
 from banzai.context import Context
@@ -157,7 +159,20 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
             f"chmod/chown so uid {os.getuid()} can write. No restart needed after fixing."
         )
 
-    null_frameid_filenames = get_null_frameid_filenames(db_address, site_id, instrument_types)
+    last_wait_log = None
+    while True:
+        try:
+            null_frameid_filenames = get_null_frameid_filenames(db_address, site_id, instrument_types)
+            break
+        except ProgrammingError as exc:
+            if not isinstance(exc.orig, UndefinedTable):
+                raise
+            now = time.monotonic()
+            if last_wait_log is None or now - last_wait_log >= HEARTBEAT_INTERVAL:
+                logger.info("Waiting for database tables to be initialized")
+                last_wait_log = now
+            time.sleep(poll_interval)
+
     if null_frameid_filenames:
         sample = ', '.join(null_frameid_filenames[:10])
         suffix = f' (+{len(null_frameid_filenames) - 10} more)' if len(null_frameid_filenames) > 10 else ''
@@ -172,10 +187,10 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
         try:
             if not _site_has_calibrations(db_address, site_id):
                 now = time.monotonic()
-                if now - last_status_log >= HEARTBEAT_INTERVAL or last_logged_state is None:
+                if now - last_status_log >= HEARTBEAT_INTERVAL or last_logged_state != ():
                     logger.info(f"Waiting for replication: no calibrations yet for site {site_id}")
                     last_status_log = now
-                    last_logged_state = None
+                    last_logged_state = ()  # Mark this wait as logged, distinct from the initial None.
                 time.sleep(poll_interval)
                 continue
 

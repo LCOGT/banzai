@@ -1016,10 +1016,13 @@ class TestSupervisor:
         mock_exit.assert_called_once_with(1)
 
     @patch('banzai.stacking.sys.exit', side_effect=SystemExit(1))
+    @patch('banzai.stacking.multiprocessing.connection.wait')
     @patch('banzai.stacking.multiprocessing.Process')
-    @patch('banzai.stacking.dbs.get_instruments_at_site', return_value=[])
-    def test_run_supervisor_exits_when_no_cameras(self, mock_instruments, mock_process_cls,
-                                                  mock_exit):
+    @patch('banzai.stacking.time.sleep')
+    @patch('banzai.stacking.dbs.get_instruments_at_site',
+           side_effect=[[], [SimpleNamespace(camera='cam1')]])
+    def test_run_supervisor_waits_for_cameras(self, mock_instruments, mock_sleep, mock_process_cls,
+                                             mock_wait, mock_exit):
         runtime_context = SimpleNamespace(
             site_id='tst', db_address='sqlite:///fake.db',
             stack_retention_days=30, stack_timeout_minutes=20, instrument_types='*',
@@ -1027,7 +1030,10 @@ class TestSupervisor:
         with pytest.raises(SystemExit):
             run_supervisor(runtime_context)
 
-        mock_process_cls.assert_not_called()
+        mock_sleep.assert_called_once_with(30)
+        assert mock_instruments.call_count == 2
+        mock_process_cls.return_value.start.assert_called_once()
+        mock_wait.assert_called_once()
         mock_exit.assert_called_once_with(1)
 
     @patch('banzai.stacking.sys.exit', side_effect=SystemExit(1))
