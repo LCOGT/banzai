@@ -6,11 +6,13 @@ from unittest import mock
 import numpy as np
 import pytest
 from astropy.io import fits
+from psycopg.errors import UndefinedTable
+from sqlalchemy.exc import ProgrammingError
 
 from banzai import dbs, settings
 from banzai.cache.download_worker import (
     get_calibrations_to_cache, get_cache_path, download_calibration,
-    delete_calibration, run_download_worker, run_download_worker_daemon,
+    delete_calibration, run_download_worker, run_download_worker_daemon, _site_has_calibrations,
 )
 from banzai.tests.utils import FakeContext
 
@@ -263,11 +265,13 @@ def test_download_happy_path_with_real_db(db_address, tmp_path):
 
 # --- worker loop tests ---
 
-@pytest.mark.parametrize('lookup_failure, download_failure', [
-    (None, None),
-    (RuntimeError('Archive unavailable'), OSError('Download failed')),
+@pytest.mark.parametrize('lookup_failure, download_failure, startup_waits', [
+    (None, None, 0),
+    (None, None, 2),
+    (RuntimeError('Archive unavailable'), OSError('Download failed'), 0),
 ])
-def test_worker_recovers_ids_after_cache_work(db_address, tmp_path, lookup_failure, download_failure):
+def test_worker_recovers_ids_after_cache_work(db_address, tmp_path, caplog, lookup_failure, download_failure,
+                                             startup_waits):
     inst_id = _seed_db(db_address)
     contents = _make_fits_buffer().getvalue()
     older_path = tmp_path / 'tst/fa01/20240102/processed/older.fits'
@@ -291,14 +295,27 @@ def test_worker_recovers_ids_after_cache_work(db_address, tmp_path, lookup_failu
             raise lookup_failure
         return None
 
+    pending_startup_waits = startup_waits
+
+    def site_has_calibrations(*args):
+        nonlocal pending_startup_waits
+        if pending_startup_waits:
+            pending_startup_waits -= 1
+            raise ProgrammingError(None, None, UndefinedTable('calimages is not initialized'))
+        return _site_has_calibrations(*args)
+
     download_results = [io.BytesIO(contents), download_failure or io.BytesIO(contents)]
     with mock.patch('banzai.utils.fits_utils.basename_search_in_archive', side_effect=find_frame) as lookup, \
          mock.patch('banzai.utils.fits_utils.download_from_s3', side_effect=download_results) as download, \
+         mock.patch('banzai.cache.download_worker._site_has_calibrations', side_effect=site_has_calibrations), \
          mock.patch('banzai.cache.download_worker.time.monotonic', return_value=0), \
-         mock.patch('banzai.cache.download_worker.time.sleep', side_effect=[None, None, KeyboardInterrupt]):
+         mock.patch('banzai.cache.download_worker.time.sleep',
+                    side_effect=[None] * (startup_waits + 2) + [KeyboardInterrupt]):
         with pytest.raises(KeyboardInterrupt):
             run_download_worker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
 
+    assert caplog.text.count('Waiting for database tables to be initialized') == bool(startup_waits)
+    assert 'Error in worker loop' not in caplog.text
     assert [call.args[0] for call in lookup.call_args_list] == ['unavailable.fits', 'missing.fits']
     assert [call.args[0] for call in download.call_args_list] == [
         {'frameid': 2, 'filename': 'known.fits'}, {'frameid': 42, 'filename': 'missing.fits'}]
