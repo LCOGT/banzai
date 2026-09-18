@@ -283,7 +283,10 @@ def test_worker_recovers_ids_after_cache_work(db_address, tmp_path, lookup_failu
         session.query(dbs.CalibrationImage).filter_by(filename='older.fits').update(
             {'filepath': str(older_path.parent)})
 
+    lookup_passes = []
+
     def find_frame(filename, *args):
+        lookup_passes.append(sleep.call_count)
         assert known_path.exists()  # Normal downloads must finish before any archive lookups.
         if filename == 'missing.fits':
             return 42
@@ -295,11 +298,12 @@ def test_worker_recovers_ids_after_cache_work(db_address, tmp_path, lookup_failu
     with mock.patch('banzai.utils.fits_utils.basename_search_in_archive', side_effect=find_frame) as lookup, \
          mock.patch('banzai.utils.fits_utils.download_from_s3', side_effect=download_results) as download, \
          mock.patch('banzai.cache.download_worker.time.monotonic', return_value=0), \
-         mock.patch('banzai.cache.download_worker.time.sleep', side_effect=[None, None, KeyboardInterrupt]):
+         mock.patch('banzai.cache.download_worker.time.sleep', side_effect=[None, None, None, KeyboardInterrupt]) as sleep:
         with pytest.raises(KeyboardInterrupt):
             run_download_worker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
 
     assert [call.args[0] for call in lookup.call_args_list] == ['unavailable.fits', 'missing.fits']
+    assert lookup_passes == [0, 1 if lookup_failure else 0]
     assert [call.args[0] for call in download.call_args_list] == [
         {'frameid': 2, 'filename': 'known.fits'}, {'frameid': 42, 'filename': 'missing.fits'}]
     # A failed replacement must not evict the older file, even on the following cooldown pass.

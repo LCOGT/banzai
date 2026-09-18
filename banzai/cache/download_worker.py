@@ -255,6 +255,7 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                     logger.info(f"Found archive frame {frame_id} for {cal.filename}")
                 except Exception as e:
                     logger.warning(f"Failed to resolve archive ID for {cal.filename}: {e}", exc_info=True)
+                    break
 
             time.sleep(poll_interval)
         except Exception as e:
