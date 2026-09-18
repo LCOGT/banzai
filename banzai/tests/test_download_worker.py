@@ -287,7 +287,10 @@ def test_worker_recovers_ids_after_cache_work(db_address, tmp_path, caplog, look
         session.query(dbs.CalibrationImage).filter_by(filename='older.fits').update(
             {'filepath': str(older_path.parent)})
 
+    lookup_passes = []
+
     def find_frame(filename, *args):
+        lookup_passes.append(sleep.call_count - startup_waits)
         assert known_path.exists()  # Normal downloads must finish before any archive lookups.
         if filename == 'missing.fits':
             return 42
@@ -310,13 +313,14 @@ def test_worker_recovers_ids_after_cache_work(db_address, tmp_path, caplog, look
          mock.patch('banzai.cache.download_worker._site_has_calibrations', side_effect=site_has_calibrations), \
          mock.patch('banzai.cache.download_worker.time.monotonic', return_value=0), \
          mock.patch('banzai.cache.download_worker.time.sleep',
-                    side_effect=[None] * (startup_waits + 2) + [KeyboardInterrupt]):
+                    side_effect=[None] * (startup_waits + 3) + [KeyboardInterrupt]) as sleep:
         with pytest.raises(KeyboardInterrupt):
             run_download_worker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
 
     assert caplog.text.count('Waiting for database tables to be initialized') == bool(startup_waits)
     assert 'Error in worker loop' not in caplog.text
     assert [call.args[0] for call in lookup.call_args_list] == ['unavailable.fits', 'missing.fits']
+    assert lookup_passes == [0, 1 if lookup_failure else 0]
     assert [call.args[0] for call in download.call_args_list] == [
         {'frameid': 2, 'filename': 'known.fits'}, {'frameid': 42, 'filename': 'missing.fits'}]
     # A failed replacement must not evict the older file, even on the following cooldown pass.
