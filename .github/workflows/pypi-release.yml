@@ -5,9 +5,11 @@ on:
     types: [published]
 
 jobs:
-  build:
+  publish_to_pypi:
     runs-on: ubuntu-latest
-
+    environment: release  # configured in repo Settings/Environments; referenced in PyPI OIDC
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
       - uses: actions/checkout@v3
       - uses: astral-sh/setup-uv@v4
