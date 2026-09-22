@@ -18,5 +18,7 @@ jobs:
           enable-cache: true
       - name: Set up project
         run: uv sync --locked --extra test
+      - name: Build project
+        run: uv build
       - name: Publish to PyPI with pypi-publish (trusted publishing)
         uses: pypa/gh-action-pypi-publish@v1.14.2
