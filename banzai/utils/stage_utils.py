@@ -6,7 +6,8 @@ from banzai.metrics import trace_function
 logger = get_logger()
 
 
-def get_stages_for_individual_frame(ordered_stages, start_stage=None, last_stage=None, extra_stages=None):
+def get_stages_for_individual_frame(ordered_stages, start_stage=None, last_stage=None, extra_stages=None,
+                                   skip_stages=None):
     """
 
     Parameters
@@ -17,6 +18,7 @@ def get_stages_for_individual_frame(ordered_stages, start_stage=None, last_stage
     last_stage: banzai.stages.Stage
                 Last stage to do
     extra_stages: Stages to do after the last stage
+    skip_stages: Stages to omit from the selected stages, including extra stages
 
     Returns
     -------
@@ -43,7 +45,7 @@ def get_stages_for_individual_frame(ordered_stages, start_stage=None, last_stage
     stages_todo = [stage for stage in ordered_stages[start_index:last_index]]
     stages_todo += [stage for stage in extra_stages]
 
-    return stages_todo
+    return [stage for stage in stages_todo if stage not in (skip_stages or [])]
 
 
 @trace_function("run_pipeline_stages")
@@ -56,12 +58,15 @@ def run_pipeline_stages(image_paths: list, runtime_context: Context, calibration
     if calibration_maker:
         stages_to_do = runtime_context.CALIBRATION_STACKER_STAGES[images[0].obstype.upper()]
     else:
+        obstype = images[0].obstype.upper()
         reduction_level = image_utils.get_reduction_level(images[0].meta)
         start_stage = runtime_context.START_STAGE_BY_REDUCTION_LEVEL.get(reduction_level)
+        skip_stages = getattr(runtime_context, 'SKIPPED_STAGES', {}).get(obstype, [])
         stages_to_do = get_stages_for_individual_frame(runtime_context.ORDERED_STAGES,
                                                        start_stage=start_stage,
-                                                       last_stage=runtime_context.LAST_STAGE[images[0].obstype.upper()],
-                                                       extra_stages=runtime_context.EXTRA_STAGES[images[0].obstype.upper()])
+                                                       last_stage=runtime_context.LAST_STAGE[obstype],
+                                                       extra_stages=runtime_context.EXTRA_STAGES[obstype],
+                                                       skip_stages=skip_stages)
 
     for stage_name in stages_to_do:
         stage_constructor = import_utils.import_attribute(stage_name)
