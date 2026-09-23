@@ -21,7 +21,7 @@ classifiers = [
   "Operating System :: OS Independent"
 ]
 dependencies = [
-  "astropy @ git+https://github.com/cmccully/astropy.git@fix/funpack",
+  "astropy>=7.2.0",
   "scipy",
   "sqlalchemy>=2",
   "logutils",
