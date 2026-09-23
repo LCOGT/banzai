@@ -6,9 +6,9 @@ import numpy as np
 
 from ocs_ingester import ingester
 from ocs_ingester.exceptions import RetryError, DoNotRetryError, BackoffRetryError, NonFatalDoNotRetryError
-from astropy.hdu.hdulist import HDUList
-from astropy.hdu.compressed.compressed import CompImageHDU
-from astropy.hdu.image import ImageHDU, PrimaryHDU
+from astropy.io.fits.hdu.hdulist import HDUList
+from astropy.io.fits.hdu.compressed.compressed import CompImageHDU
+from astropy.io.fits.hdu.image import ImageHDU, PrimaryHDU
 
 from banzai.utils import import_utils
 from banzai.logs import get_logger
