@@ -167,40 +167,6 @@ def basename_search_in_archive(filename, dateobs, context, is_raw_frame=False):
     return frame_id
 
 
-def open_fits_file(file_info, context, is_raw_frame=False):
-    if file_info.get('data_buffer') is not None:
-        filename = file_info.get('filename')
-        frame_id = None
-        buffer = file_info.get('data_buffer')
-    elif file_info.get('path') is not None and os.path.exists(file_info.get('path')):
-        buffer = open(file_info.get('path'), 'rb')
-        filename = os.path.basename(file_info.get('path'))
-        frame_id = None
-    elif file_info.get('frameid') is not None:
-        buffer = download_from_s3(file_info, context, is_raw_frame=is_raw_frame)
-        filename = file_info.get('filename')
-        frame_id = file_info.get('frameid')
-    elif file_info.get('filename') is not None and file_info.get('dateobs') is not None:
-        filename = file_info.get('filename')
-        date_obs = file_info.get('dateobs')
-        frame_id = basename_search_in_archive(filename, date_obs, context, is_raw_frame=is_raw_frame)
-        if frame_id is None:
-            raise ValueError(f'No frame with the filename {filename} exists in the archive near date-obs {date_obs}')
-        file_info['frameid'] = frame_id
-        buffer = download_from_s3(file_info, context, is_raw_frame=is_raw_frame)
-    else:
-        raise ValueError('This file does not exist and there is no frame id to get it from S3.')
-
-    hdu_list = fits.open(buffer, memmap=False)
-    uncompressed_hdu_list = fits.unpack(hdu_list)
-    hdu_list.close()
-    buffer.close()
-    del hdu_list
-    del buffer
-
-    return uncompressed_hdu_list, filename, frame_id
-
-
 def unpack(compressed_hdulist: HDUList) -> HDUList:
     """
     Unpack a compressed FITS HDUList in an equivalent way to funpack from
@@ -317,6 +283,40 @@ def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: Iterable) -> f
         else:
             hdulist.append(hdu)
     return HDUList(hdulist)
+
+
+def open_fits_file(file_info, context, is_raw_frame=False):
+    if file_info.get('data_buffer') is not None:
+        filename = file_info.get('filename')
+        frame_id = None
+        buffer = file_info.get('data_buffer')
+    elif file_info.get('path') is not None and os.path.exists(file_info.get('path')):
+        buffer = open(file_info.get('path'), 'rb')
+        filename = os.path.basename(file_info.get('path'))
+        frame_id = None
+    elif file_info.get('frameid') is not None:
+        buffer = download_from_s3(file_info, context, is_raw_frame=is_raw_frame)
+        filename = file_info.get('filename')
+        frame_id = file_info.get('frameid')
+    elif file_info.get('filename') is not None and file_info.get('dateobs') is not None:
+        filename = file_info.get('filename')
+        date_obs = file_info.get('dateobs')
+        frame_id = basename_search_in_archive(filename, date_obs, context, is_raw_frame=is_raw_frame)
+        if frame_id is None:
+            raise ValueError(f'No frame with the filename {filename} exists in the archive near date-obs {date_obs}')
+        file_info['frameid'] = frame_id
+        buffer = download_from_s3(file_info, context, is_raw_frame=is_raw_frame)
+    else:
+        raise ValueError('This file does not exist and there is no frame id to get it from S3.')
+
+    hdu_list = fits.open(buffer, memmap=False)
+    uncompressed_hdu_list = unpack(hdu_list)
+    hdu_list.close()
+    buffer.close()
+    del hdu_list
+    del buffer
+
+    return uncompressed_hdu_list, filename, frame_id
 
 
 def to_fits_image_extension(data, master_extension_name, extension_name, context, extension_version=None):
