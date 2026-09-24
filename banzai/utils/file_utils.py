@@ -118,8 +118,3 @@ def make_calibration_filename_function(calibration_type, context):
         return cal_file
 
     return get_calibration_filename
-
-
-
-
-
