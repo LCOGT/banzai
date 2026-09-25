@@ -233,11 +233,9 @@ def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: Iterable) -> f
     ----------
     uncompressed_hdulist : `HDUList`
         The uncompressed FITS HDUList to be packed.
-    extension_quantizations : dict, optional
-        A dictionary specifying the quantization levels for each extension.
-        The keys are the extension names (EXTNAME) and the values are the
-        quantization levels. If not provided, a default quantization level
-        of 64 is used for all extensions.
+    lossless_extensions : iterable
+        An iterable of image extension names used to build a dictionary specifying
+        the quantization levels for each extension.
 
     Notes
     -----
