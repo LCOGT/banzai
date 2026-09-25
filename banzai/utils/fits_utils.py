@@ -185,7 +185,7 @@ def unpack(compressed_hdulist: HDUList) -> HDUList:
     Notes
     -----
     If the primary HDU of the uncompressed HDUList is an image HDU, then
-    fpacked file will have a primary header with only the manadatory header
+    fpacked file will have a primary header with only the mandatory header
     keywords for a FITS file. In this case, we remove this and make the original primary HDU, the uncompressed HDU so the newly uncompressed
     file matches the original. If there are other keywords, in the header
     of the compressed file, then the next HDU was not the primary and we
