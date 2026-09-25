@@ -21,7 +21,7 @@ jobs:
           enable-cache: false
 
       - name: Build
-        run: uv build
+        run: uv build --no-sources
 
       # # Optional, but recommended: run smoke tests on distributions
       # - name: Smoke test (wheel)
