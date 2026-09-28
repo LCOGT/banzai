@@ -235,9 +235,10 @@ The following markers can be used to run subsets of the site E2E tests:
 
 Publish Changes to PyPI
 -----------------------
-#. Commit changes and merge into ``main``
+#. Update Change log in ``CHANGES.md``.
+#. ``uv version --bump [major/minor/patch]`` # use UV to bump version, sync, and update lock file.
+#. Commit changes and merge into ``main``.
 #. ``git checkout main`` # checkout main branch (be sure to pull/push as need to be in sync)
-#. ``uv version --bump [major/minor/patch]`` # us UV to bump version, sync, and update lock file.
 #. ``git tag -m '[message]' x.x.x`` # tag main to the new version
 #. ``git push --tags`` # Push tags up to github
 #. Go to tags on github, select new tag and generate a release.

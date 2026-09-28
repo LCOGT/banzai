@@ -1,5 +1,16 @@
 Versions
 ========
+1.39.0 (2026-09-28)
+-------------------
+
+- Support single instrument stacking in scheduling.schedule_calibration_stacking to be more
+  compatible with banzai-web.
+
+1.38.18 (2026-09-28)
+--------------------
+
+- add workflows that perform a release to PyPI
+- Use basic, PyPI dependency for astropy
 
 1.38.2 (2026-09-02)
 -------------------
