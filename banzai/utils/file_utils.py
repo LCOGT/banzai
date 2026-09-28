@@ -10,6 +10,7 @@ from banzai.logs import get_logger
 
 logger = get_logger()
 
+
 def get_processed_path(base_path, site, camera, epoch):
     return os.path.join(base_path, site, camera, epoch, 'processed')
 

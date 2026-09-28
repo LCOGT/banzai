@@ -1,0 +1,59 @@
+name: Release to PyPi
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build_wheel:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v4.2.1
+        with:
+          extras: "uv"
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-ubuntu-latest-0
+          path: ./wheelhouse/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-sdist
+          path: dist/*.tar.gz
+
+  publish:
+    needs: [build_wheel, build_sdist]
+    runs-on: ubuntu-latest
+    environment:
+      name: release # configured in repo Settings/Environments; referenced in PyPI OIDC
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          # unpacks all CIBW artifacts into dist/
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
