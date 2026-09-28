@@ -6,18 +6,17 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lco-banzai"
 requires-python = ">=3.11,<4"
-version = "1.38.16"
+version = "1.38.17"
 description = "Python data reduction package for LCOGT data"
 
 authors = [
   { name="Curtis McCully", email="cmccully@lco.global" },
 ]
-license = {text="GPL-3.0-or-later"}
+license = "GPL-3.0-or-later"
 readme = "README.rst"
 keywords = ["astronomy", "reduction", "LCOGT"]
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
   "Operating System :: OS Independent"
 ]
 dependencies = [
