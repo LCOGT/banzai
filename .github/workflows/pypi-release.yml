@@ -57,21 +57,3 @@ jobs:
           merge-multiple: true
 
       - uses: pypa/gh-action-pypi-publish@release/v1
-
-  # publish_to_pypi:
-  #   runs-on: ubuntu-latest
-  #   environment: release  # configured in repo Settings/Environments; referenced in PyPI OIDC
-  #   permissions:
-  #     id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: astral-sh/setup-uv@v4
-  #       with:
-  #         python-version: '3.12'
-  #         enable-cache: true
-  #     - name: Set up project
-  #       run: uv sync --locked --extra test
-  #     - name: Build project
-  #       run: uv build --no-sources
-  #     - name: Publish to PyPI with trusted publishing
-  #       uses: uv publish
