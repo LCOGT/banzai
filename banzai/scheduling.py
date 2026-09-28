@@ -74,7 +74,8 @@ logging.getLogger('celery.bootsteps').setLevel(logging.WARNING)
 
 @app.task(name='celery.schedule_calibration_stacking', reject_on_worker_lost=True, max_retries=5)
 def schedule_calibration_stacking(site: str, runtime_context: dict,
-                                  min_date: str = None, max_date: str = None, frame_types=None):
+                                  min_date: str = None, max_date: str = None, frame_types=None,
+                                  instrument_ids: list = None):
     logger.info('Scheduling when to stack frames.', extra_tags={'site': site})
     add_telemetry_span_attribute("site", site)
     add_telemetry_span_attribute("min_date", min_date or "auto")
@@ -112,6 +113,10 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
 
             instruments = dbs.get_instruments_at_site(site=site, db_address=runtime_context.db_address)
             for instrument in instruments:
+                # bypass other instruments at the site if an instrument id is supplied for scheduling.
+                if instrument_ids and instrument.id not in instrument_ids:
+                    continue
+
                 logger.info('Checking for scheduled calibration blocks',
                             extra_tags={'site': site,
                                         'min_date': stacking_min_date,
