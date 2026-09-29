@@ -19,8 +19,8 @@ class MosaicCreator(Stage):
         binned_shape = [length // binning for length, binning in zip(mosaiced_detector_region.shape, image.binning)]
         mosaiced_data_section = Section(x_start=1, y_start=1, x_stop=binned_shape[1], y_stop=binned_shape[0])
         data_type = image.data_type
-        reuse_component = len(ccd_hdus) == 1 and self._can_reuse_component(
-            ccd_hdus[0], mosaiced_detector_region, mosaiced_data_section, data_type)
+        reuse_component = self._can_reuse_component(ccd_hdus, mosaiced_detector_region, mosaiced_data_section,
+                                                    data_type)
         # Save time by reusing compatible arrays when a single component already matches the output mosaic layout.
         if reuse_component:
             # Borrow the existing arrays while keeping the same primary-header normalization below.
@@ -58,7 +58,10 @@ class MosaicCreator(Stage):
         return image
 
     @staticmethod
-    def _can_reuse_component(data, detector_section, data_section, data_type):
+    def _can_reuse_component(ccd_hdus, detector_section, data_section, data_type):
+        if len(ccd_hdus) != 1:
+            return False
+        data = ccd_hdus[0]
         # A single component can still need cropping, flipping, or science/mask dtype conversion.
         # Other science dtypes can be promoted when the normal constructor initializes uncertainties.
         return (data_type == np.float64

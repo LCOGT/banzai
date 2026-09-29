@@ -115,6 +115,8 @@ def test_single_component_reuses_arrays_and_matches_general_mosaic(
 @pytest.mark.parametrize(('detsec', 'datasec', 'expected_slice'), [
     ('[6:1,1:4]', '[1:6,1:4]', (slice(None), slice(None, None, -1))),
     ('[1:6,1:4]', '[6:1,1:4]', (slice(None), slice(None, None, -1))),
+    ('[1:6,4:1]', '[1:6,1:4]', (slice(None, None, -1), slice(None))),
+    ('[1:6,1:4]', '[1:6,4:1]', (slice(None, None, -1), slice(None))),
     ('[1:4,1:4]', '[2:5,1:4]', (slice(None), slice(1, 5))),
 ])
 def test_single_component_still_crops_and_flips(detsec, datasec, expected_slice):
