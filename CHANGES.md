@@ -1,5 +1,12 @@
 Versions
 ========
+1.39.1 (2026-09-28)
+-------------------
+
+- Restore plugin compatibility (banzai-floyds, banzai-nres): calibration stacking
+  (``init_master_frame`` and ``CalibrationStacker``) uses each frame's primary HDU again
+  instead of requiring an HDU named 'SCI'.
+
 1.39.0 (2026-09-28)
 -------------------
 
