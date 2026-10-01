@@ -149,9 +149,13 @@ def schedule_calibration_stacking(site: str, runtime_context: dict,
                                 extra_tags={'site': site, 'min_date': stacking_min_date, 'max_date': stacking_max_date,
                                             'instrument': instrument.camera, 'frame_type': frame_type})
                     if instrument.nx * instrument.ny > runtime_context.LARGE_WORKER_THRESHOLD:
+                        print(1)
                         queue_name = runtime_context.LARGE_WORKER_QUEUE
                     else:
+                        print(2)
                         queue_name = runtime_context.CELERY_TASK_QUEUE_NAME
+                    print(queue_name)
+                    print(message_delay_in_seconds)
 
                     stack_calibrations.apply_async(args=(stacking_min_date, stacking_max_date, instrument.id,
                                                          frame_type, vars(runtime_context), blocks_for_calibration),
