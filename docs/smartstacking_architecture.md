@@ -24,7 +24,7 @@ This page describes the Smartstack path in `docker-compose-site.yml`. The progra
 The reduction level suffixes used:
 
 - `n00` is a raw stackframe with obstype=SUB_EXP.
-- `n09` is a reduced stackframe, following BANZAI's default ordered reduction steps.
+- `n09` is a reduced stackframe, calibrated through flat-fielding.
 - `e45` is the combined Smartstack product, with obstype=EXPOSE.
 - `e91` is the archive-facing product after central BANZAI runs the configured tail stages on the `e45`.
 
@@ -59,12 +59,41 @@ flowchart LR
 
 1. Site software writes a raw `n00` FITS file and sends its absolute path to RabbitMQ `banzai_stack_queue`.
 2. The listener checks the message and publishes a Celery reduction task to Redis.
-3. A Celery worker runs the default BANZAI ordered reduction steps for the raw `n00`, and writes the `n09` file as output. By default the reductions use super calibration frames from the central AWS BANZAI instance that have been cached locally.
+3. A Celery worker runs a subset of the BANZAI reduction stages for the raw `n00` (see [Stackframe reduction stages](#stackframe-reduction-stages)), and writes the `n09` file as output. By default the reductions use super calibration frames from the central AWS BANZAI instance that have been cached locally.
 4. After that succeeds, the worker saves the `n09` path and stack information in PostgreSQL.
 5. A stacking process checks PostgreSQL about every five seconds. It opens the `n09` files and makes a preview or final product when needed.
 6. BANZAI sends the product paths through RabbitMQ to the shipper.
 7. The shipper uploads the final site-produced `e45` to the archive.
 8. Central BANZAI receives the archived `e45`, runs the configured tail stages, and writes a distinct `e91` product.
+
+### Stackframe reduction stages
+
+Stackframes run these stages, in order:
+
+1. `BadPixelMaskLoader`
+2. `ReadNoiseLoader`
+3. `SaturatedPixelFlagger`
+4. `HeaderChecker`
+5. `SaturationTest`
+6. `OverscanSubtractor`
+7. `CrosstalkCorrector`
+8. `GainNormalizer`
+9. `MosaicCreator`
+10. `Trimmer`
+11. `BiasSubtractor`
+12. `PoissonInitializer`
+13. `DarkSubtractor`
+14. `FlatDivider`
+
+These stages from the default BANZAI reduction are skipped:
+
+- `ThousandsTest`
+- `PatternNoiseDetector`
+- `CosmicRayDetector`
+- `SourceDetector`
+- `WCSSolver`
+- `PointingTest`
+- `PhotometricCalibrator`
 
 ### Local calibration cache
 
