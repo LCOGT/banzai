@@ -1,11 +1,24 @@
 Versions
 ========
-1.39.1 (2026-09-28)
+1.40.0 (2026-10-06)
+-------------------
+
+- Skip reduction stages not needed for smartstack stackframes (cosmic ray detection,
+  source detection, WCS, photometry, and related QC)
+- Recover missing archive frame IDs in the calibration download worker so those
+  calibrations are cached instead of re-downloaded
+- Avoid mapping CCDData uncertainty arrays to disk twice
+- Avoid unnecessary copies in MosaicCreator for single-component frames that already
+  match the output geometry
+
+1.39.1 (2026-09-29)
 -------------------
 
 - Restore plugin compatibility (banzai-floyds, banzai-nres): calibration stacking
   (``init_master_frame`` and ``CalibrationStacker``) uses each frame's primary HDU again
   instead of requiring an HDU named 'SCI'.
+- Preserve archive frame IDs when registering BPMs and super calibrations, and save
+  IDs recovered during reduction
 
 1.39.0 (2026-09-28)
 -------------------
@@ -39,6 +52,8 @@ Versions
   finalization, bounded retries, and restart recovery
 - Made the site deployment smartstack-only and added structured lifecycle
   logging
+- Known issue: calibration stacking requires an HDU named 'SCI', which breaks
+  banzai-floyds and banzai-nres. Affects 1.38.0 - 1.39.0; fixed in 1.39.1.
 
 1.37.1 (2026-07-22)
 -------------------
@@ -53,6 +68,8 @@ Versions
   and tracking stack completion.
 - Separated Redis and RabbitMQ into reusable site deployment dependencies.
 - Improved calibration-cache reliability and site end-to-end testing.
+- Moved ``post_to_archive_queue`` from ``banzai.utils.file_utils`` to
+  ``banzai.utils.messaging``; plugins (banzai-floyds, banzai-nres) must update imports.
 
 1.36.3 (2026-06-23)
 -------------------
