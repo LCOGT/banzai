@@ -1,4 +1,7 @@
+import json
+
 from banzai.utils import photometry_utils
+from banzai.utils.background_utils import background_header_cards
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy import units
@@ -58,3 +61,9 @@ def test_photometric_calibration():
     matched_catalog = Table(fits.open(ogg_catalog_filename)[1].data)
     zeropoint, _, _, _ = photometry_utils.fit_photometry(matched_catalog, 'g', 'g-r', 60.0)
     assert np.abs(zeropoint - 25.15) < 0.1
+
+
+def test_background_header_cards_are_json_serializable_for_float32_data():
+    # e45 frames are float32 and their header is posted as JSON to the reference catalog service
+    cards = background_header_cards(np.ones((64, 64), dtype=np.float32))
+    json.dumps({keyword: value for keyword, (value, _) in cards.items()})
