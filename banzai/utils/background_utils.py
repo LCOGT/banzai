@@ -19,9 +19,9 @@ def estimate_background(data):
 def background_header_cards(background):
     """Build the L1 background-statistic FITS header cards."""
     return {
-        'L1MEAN': (stats.sigma_clipped_mean(background, _BACKGROUND_NSIGMA_CLIP),
+        'L1MEAN': (float(stats.sigma_clipped_mean(background, _BACKGROUND_NSIGMA_CLIP)),
                    '[counts] Sigma clipped mean of frame background'),
-        'L1MEDIAN': (np.median(background), '[counts] Median of frame background'),
-        'L1SIGMA': (stats.robust_standard_deviation(background),
+        'L1MEDIAN': (float(np.median(background)), '[counts] Median of frame background'),
+        'L1SIGMA': (float(stats.robust_standard_deviation(background)),
                     '[counts] Robust std dev of frame background'),
     }
