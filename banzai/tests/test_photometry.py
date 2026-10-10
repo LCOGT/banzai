@@ -1,4 +1,5 @@
 import json
+from unittest import mock
 
 from banzai.utils import photometry_utils
 from banzai.utils.background_utils import background_header_cards
@@ -67,3 +68,10 @@ def test_background_header_cards_are_json_serializable_for_float32_data():
     # e45 frames are float32 and their header is posted as JSON to the reference catalog service
     cards = background_header_cards(np.ones((64, 64), dtype=np.float32))
     json.dumps({keyword: value for keyword, (value, _) in cards.items()})
+
+
+@mock.patch('banzai.utils.photometry_utils.requests.post')
+def test_get_reference_sources_posts_json_serializable_header(mock_post):
+    header = fits.Header({'CRVAL1': np.float32(1.5), 'NAXIS1': np.int64(10), 'WCSERR': 0})
+    photometry_utils.get_reference_sources(header, 'http://fake/image')
+    json.dumps(mock_post.call_args.kwargs['json'])
