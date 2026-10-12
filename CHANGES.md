@@ -1,6 +1,6 @@
 Versions
 ========
-1.40.0 (2026-10-06)
+1.40.0 (2026-10-12)
 -------------------
 
 - Skip reduction stages not needed for smartstack stackframes (cosmic ray detection,
