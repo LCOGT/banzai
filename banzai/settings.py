@@ -55,8 +55,10 @@ LAST_STAGE = {'BIAS': 'banzai.trim.Trimmer',
               'SKYFLAT': 'banzai.dark.DarkSubtractor',
               'STANDARD': None,
               'EXPOSE': None,
-              'SUB_EXP': None,
+              'SUB_EXP': 'banzai.flats.FlatDivider',
               'EXPERIMENTAL': None}
+
+SKIPPED_STAGES = {'SUB_EXP': ['banzai.qc.sinistro_1000s.ThousandsTest']}
 
 EXTRA_STAGES = {'BIAS': ['banzai.bias.BiasMasterLevelSubtractor', 'banzai.bias.BiasComparer'],
                 'DARK': ['banzai.dark.DarkNormalizer', 'banzai.dark.DarkTemperatureChecker',
