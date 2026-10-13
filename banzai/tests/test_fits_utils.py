@@ -242,21 +242,6 @@ def test_open_fits_file_prefers_uncompressed_sibling(tmp_path):
         assert sibling[0].data[0, 0] == 1.0
 
 
-def test_open_fits_file_ignores_stale_sibling(tmp_path):
-    path = str(tmp_path / 'master.fits.fz')
-    sibling = fits_utils.uncompressed_sibling(path)
-    write_uncompressed_sibling(sibling, 2.0)
-    write_compressed_master(path, 1.0)
-    compressed_mtime = os.path.getmtime(path)
-    os.utime(sibling, (compressed_mtime - 10, compressed_mtime - 10))
-
-    with patch('banzai.utils.fits_utils.unpack', wraps=fits_utils.unpack) as unpack:
-        hdus, _, _ = fits_utils.open_fits_file({'path': path}, FakeContext())
-
-    unpack.assert_called_once()
-    np.testing.assert_array_equal(hdus[0].data, 1.0)
-
-
 def test_open_fits_file_ignores_sibling_for_raw_frames(tmp_path):
     path = str(tmp_path / 'raw.fits.fz')
     write_compressed_master(path, 1.0)

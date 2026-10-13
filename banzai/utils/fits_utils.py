@@ -290,19 +290,6 @@ def uncompressed_sibling(path):
     return path[:-3]
 
 
-def _usable_uncompressed_sibling(path):
-    sibling = uncompressed_sibling(path)
-    if sibling is None:
-        return None
-    try:
-        # A sibling older than its compressed file belongs to a previous version of the calibration.
-        if os.path.getmtime(sibling) >= os.path.getmtime(path):
-            return sibling
-    except OSError:
-        pass
-    return None
-
-
 def read_uncompressed_file(path):
     """Load a plain FITS file into memory with the HDU types and native byte order unpack() produces."""
     with fits.open(path, memmap=False) as hdu_list:
@@ -324,8 +311,8 @@ def open_fits_file(file_info, context, is_raw_frame=False):
         path = file_info.get('path')
         filename = os.path.basename(path)
         frame_id = None
-        sibling = None if is_raw_frame else _usable_uncompressed_sibling(path)
-        if sibling is not None:
+        sibling = None if is_raw_frame else uncompressed_sibling(path)
+        if sibling is not None and os.path.exists(sibling):
             try:
                 return read_uncompressed_file(sibling), filename, frame_id
             except Exception:
