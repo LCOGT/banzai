@@ -11,6 +11,9 @@ import os
 import sys
 import time
 
+from psycopg.errors import UndefinedTable
+from sqlalchemy.exc import ProgrammingError
+
 from banzai import dbs, smartstack_products
 from banzai.context import Context
 from banzai.logs import get_logger
@@ -34,6 +37,7 @@ if not FINALIZE_BACKOFF_SECONDS:
     raise ValueError(f'FINALIZE_BACKOFF_SECONDS must contain at least one integer, got {_backoff_env!r}')
 MAX_FINALIZE_ATTEMPTS = len(FINALIZE_BACKOFF_SECONDS) + 1
 CLEANUP_INTERVAL_SECONDS = 3600
+STARTUP_LOG_INTERVAL_SECONDS = 600
 
 
 def validate_message(body):
@@ -163,7 +167,8 @@ def run_supervisor(runtime_context):
     This design keeps supervision simple by relying on the container restart policy for worker
     lifecycle management. The supervisor starts all workers and waits for one to exit. It then
     exits with status 1 so the container can restart, rediscover cameras, and start a new set of
-    workers. The same restart path is used when no cameras match the configured filters.
+    workers. At startup it waits for database initialization and cameras matching the configured
+    filters to become available through replication.
 
     Restarting the container also restarts workers that were still healthy. This is the trade-off
     for avoiding a separate per-worker restart loop. Stack progress is stored in the database, so
@@ -176,14 +181,26 @@ def run_supervisor(runtime_context):
     """
     instrument_types = ([t.strip() for t in runtime_context.instrument_types.split(',')]
                         if runtime_context.instrument_types != '*' else ['*'])
-    instruments = dbs.get_instruments_at_site(runtime_context.site_id, runtime_context.db_address)
-    if instrument_types != ['*']:
-        instruments = [instrument for instrument in instruments if instrument.type in instrument_types]
-    cameras = [instrument.camera for instrument in instruments]
-    if not cameras:
-        logger.error('No cameras found at site; exiting so Docker restarts the container',
-                     extra_tags={'site_id': runtime_context.site_id})
-        sys.exit(1)
+    last_wait_log = None
+    while True:
+        try:
+            instruments = dbs.get_instruments_at_site(runtime_context.site_id, runtime_context.db_address)
+        except ProgrammingError as exc:
+            if not isinstance(exc.orig, UndefinedTable):
+                raise
+            instruments = []
+        if instrument_types != ['*']:
+            instruments = [instrument for instrument in instruments if instrument.type in instrument_types]
+        cameras = [instrument.camera for instrument in instruments]
+        if cameras:
+            break
+        now = time.monotonic()
+        if last_wait_log is None or now - last_wait_log >= STARTUP_LOG_INTERVAL_SECONDS:
+            logger.info('Waiting for database initialization or matching cameras at site',
+                        extra_tags={'site_id': runtime_context.site_id,
+                                    'instrument_types': runtime_context.instrument_types})
+            last_wait_log = now
+        time.sleep(30)
 
     runtime_context_dict = vars(runtime_context)
     processes = [multiprocessing.Process(target=run_worker_loop, args=(camera, runtime_context_dict), daemon=True)
