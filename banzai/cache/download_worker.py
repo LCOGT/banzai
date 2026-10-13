@@ -71,8 +71,37 @@ def update_filepath(db_address, cal_id, filepath):
             cal.filepath = filepath
 
 
+def _cache_file_paths(local_path):
+    """Every path a cached master may occupy: the file, its uncompressed sibling, and their temporaries."""
+    paths = [local_path, local_path + '.tmp']
+    sibling = fits_utils.uncompressed_sibling(local_path)
+    if sibling is not None:
+        paths += [sibling, sibling + '.tmp']
+    return paths
+
+
+def _remove_if_exists(path):
+    try:
+        os.remove(path)
+        return True
+    except FileNotFoundError:
+        return False
+
+
+def write_uncompressed_copy(compressed_path, uncompressed_path):
+    """funpack a cached .fz master beside it so stackframe reduction can skip decompression."""
+    temporary_path = uncompressed_path + '.tmp'
+    with fits.open(compressed_path) as compressed:
+        fits_utils.unpack(compressed).writeto(temporary_path, overwrite=True)
+    os.replace(temporary_path, uncompressed_path)
+
+
 def download_calibration(db_address, processed_path, runtime_context, cal):
-    """Ensure cal is cached: download, validate FITS, write to disk, update DB filepath. """
+    """Ensure cal is cached: download, validate FITS, write it and its uncompressed sibling, update DB filepath.
+
+    The compressed file is renamed into place last, so a master that exists in the cache always has its
+    sibling. A failure at any step leaves no files behind and is retried on a later pass.
+    """
     dest_dir = get_cache_path(processed_path, cal)
     local_path = os.path.join(dest_dir, cal.filename)
 
@@ -90,22 +119,31 @@ def download_calibration(db_address, processed_path, runtime_context, cal):
         runtime_context, is_raw_frame=False, log_attempts=True,
     )
 
+    compressed_temporary = local_path + '.tmp'
+    sibling = fits_utils.uncompressed_sibling(local_path)
     try:
-        hdulist = fits.open(buffer)
-        hdulist.writeto(local_path)
-        hdulist.close()
-    finally:
-        buffer.close()
+        try:
+            hdulist = fits.open(buffer)
+            hdulist.writeto(compressed_temporary, overwrite=True)
+            hdulist.close()
+        finally:
+            buffer.close()
+        if sibling is not None:
+            write_uncompressed_copy(compressed_temporary, sibling)
+        os.replace(compressed_temporary, local_path)
+    except BaseException:
+        for path in _cache_file_paths(local_path):
+            _remove_if_exists(path)
+        raise
     update_filepath(db_address, cal.id, dest_dir)
     logger.info(f"Cached {cal.filename}")
 
 
 def delete_calibration(db_address, cal):
-    """Remove file from disk and clear filepath in DB."""
-    file_path = os.path.join(cal.filepath, cal.filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        logger.info(f"Deleted {cal.filename}")
+    """Remove the file, its uncompressed sibling and any temporaries from disk, and clear filepath in DB."""
+    for path in _cache_file_paths(os.path.join(cal.filepath, cal.filename)):
+        if _remove_if_exists(path):
+            logger.info(f"Deleted {os.path.basename(path)}")
     update_filepath(db_address, cal.id, None)
 
 
