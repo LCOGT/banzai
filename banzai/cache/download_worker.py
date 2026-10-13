@@ -72,7 +72,7 @@ def update_filepath(db_address, cal_id, filepath):
 
 
 def _cache_file_paths(local_path):
-    """Every path a cached master may occupy: the file, its uncompressed sibling, and their temporaries."""
+    """Every path a cached calibration may occupy: the file, its uncompressed sibling, and their temporaries."""
     paths = [local_path, local_path + '.tmp']
     sibling = fits_utils.uncompressed_sibling(local_path)
     if sibling is not None:
@@ -89,7 +89,7 @@ def _remove_if_exists(path):
 
 
 def write_uncompressed_copy(compressed_path, uncompressed_path):
-    """funpack a cached .fz master beside it so stackframe reduction can skip decompression."""
+    """funpack a cached .fz calibration beside it so stackframe reduction can skip decompression."""
     temporary_path = uncompressed_path + '.tmp'
     with fits.open(compressed_path) as compressed:
         fits_utils.unpack(compressed).writeto(temporary_path, overwrite=True)
@@ -99,8 +99,11 @@ def write_uncompressed_copy(compressed_path, uncompressed_path):
 def download_calibration(db_address, processed_path, runtime_context, cal):
     """Ensure cal is cached: download, validate FITS, write it and its uncompressed sibling, update DB filepath.
 
-    The compressed file is renamed into place last, so a master that exists in the cache always has its
+    The compressed file is renamed into place last, so a calibration that exists in the cache always has its
     sibling. A failure at any step leaves no files behind and is retried on a later pass.
+
+    We add a decompressed version here to save all stackframe reductions from duplicating this work
+    (~20s savings per reduction).
     """
     dest_dir = get_cache_path(processed_path, cal)
     local_path = os.path.join(dest_dir, cal.filename)

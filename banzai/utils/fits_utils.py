@@ -295,7 +295,7 @@ def _usable_uncompressed_sibling(path):
     if sibling is None:
         return None
     try:
-        # A sibling older than its compressed file belongs to a previous version of the master.
+        # A sibling older than its compressed file belongs to a previous version of the calibration.
         if os.path.getmtime(sibling) >= os.path.getmtime(path):
             return sibling
     except OSError:
