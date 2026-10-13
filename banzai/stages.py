@@ -56,7 +56,15 @@ class Stage(abc.ABC):
                         image = image_set
                     logger.info('Running {0}'.format(self.stage_name), image=image)
                     add_telemetry_span_event(f"stage started for image {image}")
-                    processed_image = self.do_stage(image_set)
+                    grouped = isinstance(image_set, Iterable)
+                    with logs.time_operation('stage', image=image, stage=self.stage_name,
+                                             scope='group' if grouped else 'frame',
+                                             input_count=len(image_set) if grouped else 1,
+                                             input_filenames=[member.filename for member in image_set]
+                                             if grouped else [image.filename]) as timing:
+                        processed_image = self.do_stage(image_set)
+                        if processed_image is None:
+                            timing['outcome'] = 'rejected'
                     if processed_image is not None:
                         processed_images.append(processed_image)
                 except Exception:

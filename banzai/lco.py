@@ -12,7 +12,7 @@ from astropy.table import Table
 from astropy.coordinates import Angle
 import hashlib
 
-from banzai import dbs
+from banzai import dbs, logs
 from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData, DataProduct, create_combination_output_hdu
 from banzai.frames import ObservationFrame, CalibrationFrame, logger, FrameFactory
 from banzai.utils import date_utils, fits_utils, image_utils, file_utils
@@ -226,33 +226,42 @@ class LCOObservationFrame(ObservationFrame):
         return output_filename
 
     def get_output_data_products(self, runtime_context):
-        output_filename = self.get_output_filename(runtime_context)
-        output_fits = self.to_fits(runtime_context)
-        output_product = DataProduct.from_fits(output_fits, output_filename, self.get_output_directory(runtime_context))
+        with logs.time_operation('output_preparation', image=self) as timing:
+            output_filename = self.get_output_filename(runtime_context)
+            timing['output_filename'] = output_filename
+            output_fits = self.to_fits(runtime_context)
+            output_directory = self.get_output_directory(runtime_context)
+        with logs.time_operation('fits_serialization', image=self, output_filename=output_filename):
+            output_product = DataProduct.from_fits(output_fits, output_filename, output_directory)
         return [output_product]
 
     @trace_function("write_LcoObservationFrame")
     def write(self, runtime_context):
-        self.save_processing_metadata(runtime_context)
+        with logs.time_operation('output_metadata', image=self):
+            self.save_processing_metadata(runtime_context)
         output_products = self.get_output_data_products(runtime_context)
         for data_product in output_products:
             if runtime_context.post_to_archive:
-                archived_image_info = file_utils.post_to_ingester(data_product.file_buffer, self,
-                                                                  data_product.filename, meta=data_product.meta)
-                try:
-                    data_product.frame_id = archived_image_info['frameid']
-                except KeyError:
-                    raise RuntimeError("Archive ingester response did not contain a frameid, cannot continue")
+                with logs.time_operation('archive_upload', image=self, output_filename=data_product.filename):
+                    archived_image_info = file_utils.post_to_ingester(data_product.file_buffer, self,
+                                                                      data_product.filename, meta=data_product.meta)
+                    try:
+                        data_product.frame_id = archived_image_info['frameid']
+                    except KeyError:
+                        raise RuntimeError("Archive ingester response did not contain a frameid, cannot continue")
 
             if not runtime_context.no_file_cache:
-                os.makedirs(self.get_output_directory(runtime_context), exist_ok=True)
-                data_product.file_buffer.seek(0)
-                with open(os.path.join(data_product.filepath, data_product.filename), 'wb') as f:
-                    f.write(data_product.file_buffer.read())
+                with logs.time_operation('file_cache_write', image=self, output_filename=data_product.filename):
+                    os.makedirs(self.get_output_directory(runtime_context), exist_ok=True)
+                    data_product.file_buffer.seek(0)
+                    with open(os.path.join(data_product.filepath, data_product.filename), 'wb') as f:
+                        f.write(data_product.file_buffer.read())
 
-            data_product.file_buffer.seek(0)
-            md5 = hashlib.md5(data_product.file_buffer.read()).hexdigest()
-            dbs.save_processed_image(data_product.filename, md5, db_address=runtime_context.db_address)
+            with logs.time_operation('checksum', image=self, output_filename=data_product.filename):
+                data_product.file_buffer.seek(0)
+                md5 = hashlib.md5(data_product.file_buffer.read()).hexdigest()
+            with logs.time_operation('processed_image_record', image=self, output_filename=data_product.filename):
+                dbs.save_processed_image(data_product.filename, md5, db_address=runtime_context.db_address)
         return output_products
 
 

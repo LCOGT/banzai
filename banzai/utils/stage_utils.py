@@ -1,3 +1,6 @@
+import os
+
+from banzai import logs
 from banzai.utils import image_utils, import_utils
 from banzai.context import Context
 from banzai.logs import get_logger
@@ -50,32 +53,56 @@ def get_stages_for_individual_frame(ordered_stages, start_stage=None, last_stage
 
 @trace_function("run_pipeline_stages")
 def run_pipeline_stages(image_paths: list, runtime_context: Context, calibration_maker: bool = False):
-    frame_factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)()
-    images = [frame_factory.open(image_path, runtime_context) for image_path in image_paths]
-    images = [image for image in images if image is not None]
-    if len(images) == 0:
-        return
-    if calibration_maker:
-        stages_to_do = runtime_context.CALIBRATION_STACKER_STAGES[images[0].obstype.upper()]
-    else:
-        obstype = images[0].obstype.upper()
-        reduction_level = image_utils.get_reduction_level(images[0].meta)
-        start_stage = runtime_context.START_STAGE_BY_REDUCTION_LEVEL.get(reduction_level)
-        skip_stages = getattr(runtime_context, 'SKIPPED_STAGES', {}).get(obstype, [])
-        stages_to_do = get_stages_for_individual_frame(runtime_context.ORDERED_STAGES,
-                                                       start_stage=start_stage,
-                                                       last_stage=runtime_context.LAST_STAGE[obstype],
-                                                       extra_stages=runtime_context.EXTRA_STAGES[obstype],
-                                                       skip_stages=skip_stages)
+    """Reduce and write frames; timing excludes task/queue work and later stacking.
 
-    for stage_name in stages_to_do:
-        stage_constructor = import_utils.import_attribute(stage_name)
-        stage = stage_constructor(runtime_context)
-        images = stage.run(images)
-
-        if not images:
+    Only a single-input, non-calibration-maker invocation has a frame total.
+    Batch totals are not individual-frame latency or a claim that all inputs survived.
+    """
+    input_filenames = [os.path.basename(path.get('path') or path.get('filename') or '') for path in image_paths]
+    scope = 'frame' if len(image_paths) == 1 and not calibration_maker else 'batch'
+    with logs.time_operation('reduction_total', scope=scope, input_count=len(image_paths),
+                             input_filenames=input_filenames, calibration_maker=calibration_maker) as total:
+        if scope == 'frame':
+            total['input_filename'] = input_filenames[0]
+        frame_factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)()
+        images = []
+        for image_path, filename in zip(image_paths, input_filenames):
+            with logs.time_operation('input_open', input_filename=filename) as timing:
+                images.append(frame_factory.open(image_path, runtime_context))
+                timing.update(logs.image_timing_tags(images[-1]))
+                if images[-1] is None:
+                    timing['outcome'] = 'rejected'
+        images = [image for image in images if image is not None]
+        if scope == 'frame' and images:
+            total.update(logs.image_timing_tags(images[0]))
+        total['opened_count'] = len(images)
+        if len(images) == 0:
+            total['outcome'] = 'rejected'
             return
+        if calibration_maker:
+            stages_to_do = runtime_context.CALIBRATION_STACKER_STAGES[images[0].obstype.upper()]
+        else:
+            obstype = images[0].obstype.upper()
+            reduction_level = image_utils.get_reduction_level(images[0].meta)
+            start_stage = runtime_context.START_STAGE_BY_REDUCTION_LEVEL.get(reduction_level)
+            skip_stages = getattr(runtime_context, 'SKIPPED_STAGES', {}).get(obstype, [])
+            stages_to_do = get_stages_for_individual_frame(runtime_context.ORDERED_STAGES,
+                                                           start_stage=start_stage,
+                                                           last_stage=runtime_context.LAST_STAGE[obstype],
+                                                           extra_stages=runtime_context.EXTRA_STAGES[obstype],
+                                                           skip_stages=skip_stages)
 
-    for image in images:
-        image.write(runtime_context)
-    return images
+        for stage_name in stages_to_do:
+            stage_constructor = import_utils.import_attribute(stage_name)
+            stage = stage_constructor(runtime_context)
+            images = stage.run(images)
+
+            if not images:
+                total['outcome'] = 'stopped'
+                return
+
+        for image in images:
+            with logs.time_operation('output_write', image=image):
+                image.write(runtime_context)
+        total.update(outcome='outputs_written', output_count=len(images))
+        return images
