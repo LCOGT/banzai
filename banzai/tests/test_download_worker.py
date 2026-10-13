@@ -299,21 +299,22 @@ def test_download_writes_uncompressed_sibling(db_address, tmp_path):
         assert session.query(dbs.CalibrationImage).get(cal_id).filepath == expected_path
 
 
-def test_download_leaves_nothing_when_sibling_write_fails(db_address, tmp_path):
+def test_download_keeps_compressed_file_when_sibling_write_fails(db_address, tmp_path, caplog):
     cal_id = _add_fz_cal(db_address)
     cal = _make_cal(id=cal_id, filename='bias.fits.fz')
     with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=_make_compressed_fits_buffer()), \
          mock.patch('banzai.utils.fits_utils.unpack', side_effect=RuntimeError('decompression failed')):
-        with pytest.raises(RuntimeError):
-            download_calibration(db_address, str(tmp_path), FakeContext(), cal)
+        download_calibration(db_address, str(tmp_path), FakeContext(), cal)
 
-    assert os.listdir(get_cache_path(str(tmp_path), cal)) == []
+    expected_path = get_cache_path(str(tmp_path), cal)
+    assert os.listdir(expected_path) == ['bias.fits.fz']
+    assert 'Could not write uncompressed copy' in caplog.text
     with dbs.get_session(db_address) as session:
-        assert session.query(dbs.CalibrationImage).get(cal_id).filepath is None
+        assert session.query(dbs.CalibrationImage).get(cal_id).filepath == expected_path
 
 
 def test_delete_removes_sibling_and_leftovers(tmp_path):
-    for name in ['del.fits.fz', 'del.fits', 'del.fits.fz.tmp', 'del.fits.tmp', 'other.fits.fz']:
+    for name in ['del.fits.fz', 'del.fits', 'del.fits.tmp', 'other.fits.fz']:
         open(tmp_path / name, 'w').close()
     cal = mock.MagicMock(id=1, filename='del.fits.fz', filepath=str(tmp_path))
     with mock.patch('banzai.cache.download_worker.update_filepath') as up:

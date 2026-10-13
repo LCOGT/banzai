@@ -71,25 +71,13 @@ def update_filepath(db_address, cal_id, filepath):
             cal.filepath = filepath
 
 
-def _cache_file_paths(local_path):
-    """Every path a cached calibration may occupy: the file, its uncompressed sibling, and their temporaries."""
-    paths = [local_path, local_path + '.tmp']
-    sibling = fits_utils.uncompressed_sibling(local_path)
-    if sibling is not None:
-        paths += [sibling, sibling + '.tmp']
-    return paths
-
-
-def _remove_if_exists(path):
-    try:
-        os.remove(path)
-        return True
-    except FileNotFoundError:
-        return False
-
-
 def write_uncompressed_copy(compressed_path, uncompressed_path):
-    """funpack a cached .fz calibration beside it so stackframe reduction can skip decompression."""
+    """funpack a cached .fz calibration beside it so stackframe reduction can skip decompression.
+
+    We add a decompressed version here to save all stackframe reductions from duplicating this work
+    (~20s savings per reduction). The copy is written to a temporary name and renamed into place so a
+    partially written file is never read.
+    """
     temporary_path = uncompressed_path + '.tmp'
     with fits.open(compressed_path) as compressed:
         fits_utils.unpack(compressed).writeto(temporary_path, overwrite=True)
@@ -97,14 +85,7 @@ def write_uncompressed_copy(compressed_path, uncompressed_path):
 
 
 def download_calibration(db_address, processed_path, runtime_context, cal):
-    """Ensure cal is cached: download, validate FITS, write it and its uncompressed sibling, update DB filepath.
-
-    The compressed file is renamed into place last, so a calibration that exists in the cache always has its
-    sibling. A failure at any step leaves no files behind and is retried on a later pass.
-
-    We add a decompressed version here to save all stackframe reductions from duplicating this work
-    (~20s savings per reduction).
-    """
+    """Ensure cal is cached: download, validate FITS, write it and its uncompressed copy, update DB filepath."""
     dest_dir = get_cache_path(processed_path, cal)
     local_path = os.path.join(dest_dir, cal.filename)
 
@@ -122,30 +103,31 @@ def download_calibration(db_address, processed_path, runtime_context, cal):
         runtime_context, is_raw_frame=False, log_attempts=True,
     )
 
-    compressed_temporary = local_path + '.tmp'
-    sibling = fits_utils.uncompressed_sibling(local_path)
     try:
-        try:
-            hdulist = fits.open(buffer)
-            hdulist.writeto(compressed_temporary, overwrite=True)
-            hdulist.close()
-        finally:
-            buffer.close()
-        if sibling is not None:
-            write_uncompressed_copy(compressed_temporary, sibling)
-        os.replace(compressed_temporary, local_path)
-    except BaseException:
-        for path in _cache_file_paths(local_path):
-            _remove_if_exists(path)
-        raise
+        hdulist = fits.open(buffer)
+        hdulist.writeto(local_path)
+        hdulist.close()
+    finally:
+        buffer.close()
     update_filepath(db_address, cal.id, dest_dir)
     logger.info(f"Cached {cal.filename}")
 
+    sibling = fits_utils.uncompressed_sibling(local_path)
+    if sibling is not None:
+        try:
+            write_uncompressed_copy(local_path, sibling)
+        except Exception as e:
+            # Reduction decompresses this file itself until the cache is next rebuilt.
+            logger.warning(f"Could not write uncompressed copy of {cal.filename}: {e}", exc_info=True)
+
 
 def delete_calibration(db_address, cal):
-    """Remove the file, its uncompressed sibling and any temporaries from disk, and clear filepath in DB."""
-    for path in _cache_file_paths(os.path.join(cal.filepath, cal.filename)):
-        if _remove_if_exists(path):
+    """Remove the file and its uncompressed copy from disk and clear filepath in DB."""
+    file_path = os.path.join(cal.filepath, cal.filename)
+    sibling = fits_utils.uncompressed_sibling(file_path)
+    for path in [file_path] + ([sibling, sibling + '.tmp'] if sibling else []):
+        if os.path.exists(path):
+            os.remove(path)
             logger.info(f"Deleted {os.path.basename(path)}")
     update_filepath(db_address, cal.id, None)
 
