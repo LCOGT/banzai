@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from astropy.io.fits import Header
 from astropy.table import Table
@@ -186,3 +187,93 @@ def test_open_image():
         # Read an image with a single extension and a datacube
         # Read an image with multiple sci extensions
         pass
+
+
+# --- uncompressed sibling tests ---
+
+def write_compressed_master(path, value):
+    header = fits.Header({'OBSTYPE': 'BIAS', 'EXTNAME': 'SCI', 'GAIN': 1.0, 'ISMASTER': True})
+    fits.HDUList([fits.PrimaryHDU(),
+                  fits.CompImageHDU(np.full((4, 6), value, dtype=np.float32), header, name='SCI'),
+                  fits.CompImageHDU(np.ones((4, 6), dtype=np.float32) * 0.1, name='ERR'),
+                  fits.CompImageHDU(np.zeros((4, 6), dtype=np.uint8), name='BPM')]).writeto(path, overwrite=True)
+
+
+def write_uncompressed_sibling(path, value):
+    """An uncompressed file in the layout the download worker writes beside a .fz master."""
+    header = fits.Header({'OBSTYPE': 'BIAS', 'EXTNAME': 'SCI', 'GAIN': 1.0, 'ISMASTER': True})
+    fits.HDUList([fits.PrimaryHDU(np.full((4, 6), value, dtype=np.float32), header),
+                  fits.ImageHDU(np.ones((4, 6), dtype=np.float32) * 0.1, name='ERR'),
+                  fits.ImageHDU(np.zeros((4, 6), dtype=np.uint8), name='BPM')]).writeto(path, overwrite=True)
+
+
+def assert_same_hdus(actual, expected):
+    assert len(actual) == len(expected)
+    for a, e in zip(actual, expected):
+        assert type(a) is type(e)
+        assert a.name == e.name
+        assert a.data.dtype == e.data.dtype
+        assert a.data.dtype.isnative
+        np.testing.assert_array_equal(a.data, e.data)
+        assert a.header.tostring() == e.header.tostring()
+
+
+def test_uncompressed_sibling_path():
+    assert fits_utils.uncompressed_sibling('/cals/master.fits.fz') == '/cals/master.fits'
+    assert fits_utils.uncompressed_sibling('/cals/master.fits') is None
+
+
+def test_open_fits_file_prefers_uncompressed_sibling(tmp_path):
+    path = str(tmp_path / 'master.fits.fz')
+    write_compressed_master(path, 1.0)
+    expected, _, _ = fits_utils.open_fits_file({'path': path}, FakeContext())
+    with fits.open(path) as compressed:
+        fits_utils.unpack(compressed).writeto(fits_utils.uncompressed_sibling(path))
+
+    with patch('banzai.utils.fits_utils.unpack', wraps=fits_utils.unpack) as unpack:
+        hdus, filename, frame_id = fits_utils.open_fits_file({'path': path}, FakeContext())
+
+    unpack.assert_not_called()
+    assert (filename, frame_id) == ('master.fits.fz', None)
+    assert_same_hdus(hdus, expected)
+    assert hdus[0].data.flags.writeable
+    hdus[0].data[0, 0] = -1  # private, in-memory arrays: the file is closed and untouched
+    with fits.open(fits_utils.uncompressed_sibling(path)) as sibling:
+        assert sibling[0].data[0, 0] == 1.0
+
+
+def test_open_fits_file_ignores_stale_sibling(tmp_path):
+    path = str(tmp_path / 'master.fits.fz')
+    sibling = fits_utils.uncompressed_sibling(path)
+    write_uncompressed_sibling(sibling, 2.0)
+    write_compressed_master(path, 1.0)
+    compressed_mtime = os.path.getmtime(path)
+    os.utime(sibling, (compressed_mtime - 10, compressed_mtime - 10))
+
+    with patch('banzai.utils.fits_utils.unpack', wraps=fits_utils.unpack) as unpack:
+        hdus, _, _ = fits_utils.open_fits_file({'path': path}, FakeContext())
+
+    unpack.assert_called_once()
+    np.testing.assert_array_equal(hdus[0].data, 1.0)
+
+
+def test_open_fits_file_ignores_sibling_for_raw_frames(tmp_path):
+    path = str(tmp_path / 'raw.fits.fz')
+    write_compressed_master(path, 1.0)
+    write_uncompressed_sibling(fits_utils.uncompressed_sibling(path), 2.0)
+
+    hdus, _, _ = fits_utils.open_fits_file({'path': path}, FakeContext(), is_raw_frame=True)
+
+    np.testing.assert_array_equal(hdus[0].data, 1.0)
+
+
+def test_open_fits_file_falls_back_on_unreadable_sibling(tmp_path, caplog):
+    path = str(tmp_path / 'master.fits.fz')
+    write_compressed_master(path, 1.0)
+    with open(fits_utils.uncompressed_sibling(path), 'wb') as corrupt:
+        corrupt.write(b'not a fits file')
+
+    hdus, _, _ = fits_utils.open_fits_file({'path': path}, FakeContext())
+
+    np.testing.assert_array_equal(hdus[0].data, 1.0)
+    assert 'uncompressed' in caplog.text.lower()
