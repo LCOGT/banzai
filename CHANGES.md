@@ -1,5 +1,12 @@
 Versions
 ========
+Unreleased
+----------
+
+- Cache an uncompressed copy of each master calibration beside the compressed file the
+  site download worker fetches, and read it during stackframe reduction to skip
+  decompression
+
 1.40.0 (2026-10-12)
 -------------------
 
