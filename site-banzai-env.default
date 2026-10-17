@@ -18,6 +18,8 @@ STACKFRAME_TASK_QUEUE_NAME=stackframe_reduction_task_queue
 BANZAI_WORKER_LOGLEVEL=debug
 OMP_NUM_THREADS=2
 DOWNLOAD_WORKER_POLL_INTERVAL=10
+CACHE_INACTIVE_INSTRUMENT_DAYS=90       # Only cache masters for instruments that produced a master in the last N days.
+                                        # Drops cameras that moved to another site; 0 disables the filter.
 
 # Smart stacking
 STACK_TIMEOUT_MINUTES=20                # Minutes without a reduced stackframe before finalizing a partial stack.
