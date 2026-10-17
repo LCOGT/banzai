@@ -54,6 +54,10 @@ for _key, _default in _HOST_DIR_DEFAULTS.items():
             f"Update banzai/tests/site_e2e/site_e2e.env."
         )
 
+# The seeded publication masters have fixed historical dateobs values, so the
+# download worker's inactive-instrument filter must stay off for the e2e stack.
+os.environ.setdefault('CACHE_INACTIVE_INSTRUMENT_DAYS', '0')
+
 # Configuration constants (from env vars with defaults)
 PUBLICATION_DB_ADDRESS = os.environ.get(
     "PUBLICATION_DB_ADDRESS",

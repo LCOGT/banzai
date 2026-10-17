@@ -9,8 +9,8 @@ from astropy.io import fits
 
 from banzai import dbs, settings
 from banzai.cache.download_worker import (
-    get_calibrations_to_cache, get_cache_path, download_calibration,
-    delete_calibration, run_download_worker, run_download_worker_daemon,
+    get_calibrations_to_cache, get_cache_path, download_calibration, delete_calibration,
+    count_inactive_instruments, run_download_worker, run_download_worker_daemon,
 )
 from banzai.tests.utils import FakeContext
 
@@ -138,7 +138,7 @@ def test_returns_top_2_per_config(db_address):
         _add_cal(session, inst_id, 'BIAS', 'mid.fits', 2, datetime(2024, 1, 2), bias_attrs)
         _add_cal(session, inst_id, 'BIAS', 'new.fits', 3, datetime(2024, 1, 3), bias_attrs)
 
-    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'])}
+    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'], inactive_instrument_days=None)}
     assert filenames == {'mid.fits', 'new.fits'}
 
 
@@ -151,7 +151,7 @@ def test_partitions_independently_by_config(db_address):
                 _add_cal(session, inst_id, 'BIAS', f'bias_{binning}_{j}.fits',
                          i * 10 + j, datetime(2024, 1, j + 1), attrs)
 
-    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'])}
+    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'], inactive_instrument_days=None)}
     assert filenames == {'bias_1x1_1.fits', 'bias_1x1_2.fits',
                          'bias_2x2_1.fits', 'bias_2x2_2.fits'}
 
@@ -165,7 +165,8 @@ def test_filters_by_instrument_type(db_address):
         _add_cal(session, floyds_id, 'BIAS', 'floyds.fits', 2, datetime(2024, 1, 1), bias_attrs)
 
     filenames = {r.filename for r in
-                 get_calibrations_to_cache(db_address, 'tst', ['1m0-SciCam-Sinistro'])}
+                 get_calibrations_to_cache(db_address, 'tst', ['1m0-SciCam-Sinistro'],
+                                           inactive_instrument_days=None)}
     assert filenames == {'sinistro.fits'}
 
 
@@ -177,7 +178,7 @@ def test_wildcard_returns_all_instrument_types(db_address):
         _add_cal(session, sinistro_id, 'BIAS', 'sinistro.fits', 1, datetime(2024, 1, 1), bias_attrs)
         _add_cal(session, floyds_id, 'BIAS', 'floyds.fits', 2, datetime(2024, 1, 1), bias_attrs)
 
-    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'])}
+    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'], inactive_instrument_days=None)}
     assert filenames == {'sinistro.fits', 'floyds.fits'}
 
 
@@ -190,7 +191,7 @@ def test_biases_ignore_filter(db_address):
         _add_cal(session, inst_id, 'BIAS', 'bias_B.fits', 2, datetime(2024, 1, 2), bias_attrs)
         _add_cal(session, inst_id, 'BIAS', 'bias_R.fits', 3, datetime(2024, 1, 3), bias_attrs)
 
-    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'])}
+    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'], inactive_instrument_days=None)}
     assert filenames == {'bias_B.fits', 'bias_R.fits'}
 
 
@@ -204,7 +205,7 @@ def test_darks_partitioned_by_temperature(db_address):
                          _attrs_for_type('DARK', configuration_mode='default', binning='1x1',
                                          ccd_temperature=temp))
 
-    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'])}
+    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'], inactive_instrument_days=None)}
     assert filenames == {'dark_t5_1.fits', 'dark_t5_2.fits',
                          'dark_t10_1.fits', 'dark_t10_2.fits'}
 
@@ -216,7 +217,7 @@ def test_get_calibrations_to_cache_excludes_null_frameid(db_address):
         _add_cal(session, inst_id, 'BIAS', 'has_frameid.fits', 1, datetime(2024, 1, 1), bias_attrs)
         _add_cal(session, inst_id, 'BIAS', 'null_frameid.fits', None, datetime(2024, 1, 2), bias_attrs)
 
-    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'])}
+    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'], inactive_instrument_days=None)}
     assert filenames == {'has_frameid.fits'}
 
 
@@ -230,7 +231,7 @@ def test_skyflats_partitioned_by_filter(db_address):
                          _attrs_for_type('SKYFLAT', configuration_mode='default', binning='1x1',
                                          filter=filt))
 
-    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'])}
+    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'], inactive_instrument_days=None)}
     assert filenames == {'flat_V_1.fits', 'flat_V_2.fits',
                          'flat_B_1.fits', 'flat_B_2.fits'}
 
@@ -253,7 +254,7 @@ def test_inactive_instrument_contributes_nothing(db_address):
         _add_bias(session, moved_id, 'moved_newest.fits', 3, now - timedelta(days=91))
 
     with mock.patch('banzai.cache.download_worker.datetime') as dt:
-        dt.utcnow.return_value = now
+        dt.now.return_value = now
         filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'],
                                                                      inactive_instrument_days=90)}
         missing = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'],
@@ -273,7 +274,7 @@ def test_active_instrument_keeps_old_bpm(db_address):
                  _attrs_for_type('BPM', configuration_mode='default', binning='1x1'))
 
     with mock.patch('banzai.cache.download_worker.datetime') as dt:
-        dt.utcnow.return_value = now
+        dt.now.return_value = now
         filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'],
                                                                      inactive_instrument_days=90)}
     assert filenames == {'bias.fits', 'bpm.fits'}
@@ -288,7 +289,7 @@ def test_inactive_instrument_boundary(db_address, age_days, expected):
         _add_bias(session, inst_id, 'bias.fits', 1, now - timedelta(days=age_days))
 
     with mock.patch('banzai.cache.download_worker.datetime') as dt:
-        dt.utcnow.return_value = now
+        dt.now.return_value = now
         filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'],
                                                                      inactive_instrument_days=90)}
     assert filenames == expected
@@ -302,6 +303,47 @@ def test_inactive_instrument_filter_disabled_with_none(db_address):
     filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'],
                                                                  inactive_instrument_days=None)}
     assert filenames == {'ancient.fits'}
+
+
+def test_count_inactive_instruments(db_address):
+    active_id = _seed_db(db_address, camera='sq01')
+    moved_id = _seed_db(db_address, camera='sq02')
+    other_type_id = _seed_db(db_address, camera='en01', inst_type='2m0-FLOYDS-SciCam')
+    now = datetime(2026, 10, 16, 12)
+    with dbs.get_session(db_address) as session:
+        _add_bias(session, active_id, 'active.fits', 1, now - timedelta(days=5))
+        _add_bias(session, moved_id, 'moved.fits', 2, now - timedelta(days=200))
+        _add_bias(session, other_type_id, 'floyds.fits', 3, now - timedelta(days=200))
+
+    with mock.patch('banzai.cache.download_worker.datetime') as dt:
+        dt.now.return_value = now
+        assert count_inactive_instruments(db_address, 'tst', ['*'], 90) == 2
+        assert count_inactive_instruments(db_address, 'tst', ['1m0-SciCam-Sinistro'], 90) == 1
+        assert count_inactive_instruments(db_address, 'tst', ['*'], None) == 0
+
+
+def test_worker_logs_inactive_instrument_count(db_address, tmp_path, caplog):
+    active_id = _seed_db(db_address, camera='sq01')
+    moved_id = _seed_db(db_address, camera='sq02')
+    now = datetime(2026, 10, 16, 12)
+    with dbs.get_session(db_address) as session:
+        _add_bias(session, active_id, 'active.fits', 1, now - timedelta(days=5))
+        _add_bias(session, moved_id, 'moved.fits', 2, now - timedelta(days=200))
+
+    with mock.patch('banzai.cache.download_worker.datetime') as dt, \
+         mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=_make_fits_buffer()), \
+         mock.patch('banzai.cache.download_worker.time.sleep', side_effect=[None, None, KeyboardInterrupt]):
+        dt.now.return_value = now
+        with pytest.raises(KeyboardInterrupt):
+            run_download_worker(db_address, 'tst', ['*'], str(tmp_path), FakeContext(),
+                                inactive_instrument_days=90)
+
+    status_lines = [r.message for r in caplog.records if r.message.startswith('Cache status:')]
+    # Pass 1 downloads, pass 2 sees it cached, pass 3 matches pass 2 and is not logged again.
+    assert len(status_lines) == 2
+    for line in status_lines:
+        assert '1 needed' in line
+        assert '1 instruments inactive (no master in 90 days)' in line
 
 
 # --- download integration test ---
@@ -369,7 +411,8 @@ def test_worker_recovers_ids_after_cache_work(db_address, tmp_path, lookup_failu
          mock.patch('banzai.cache.download_worker.time.monotonic', return_value=0), \
          mock.patch('banzai.cache.download_worker.time.sleep', side_effect=[None, None, None, KeyboardInterrupt]) as sleep:
         with pytest.raises(KeyboardInterrupt):
-            run_download_worker(db_address, 'tst', ['*'], str(tmp_path), FakeContext())
+            run_download_worker(db_address, 'tst', ['*'], str(tmp_path), FakeContext(),
+                                inactive_instrument_days=None)
 
     assert [call.args[0] for call in lookup.call_args_list] == ['unavailable.fits', 'missing.fits']
     assert lookup_passes == [0, 1 if lookup_failure else 0]
