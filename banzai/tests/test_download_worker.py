@@ -1,6 +1,6 @@
 import io
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest import mock
 
 import numpy as np
@@ -235,6 +235,75 @@ def test_skyflats_partitioned_by_filter(db_address):
                          'flat_B_1.fits', 'flat_B_2.fits'}
 
 
+# --- inactive instrument filter tests ---
+
+def _add_bias(session, inst_id, filename, frameid, dateobs):
+    _add_cal(session, inst_id, 'BIAS', filename, frameid, dateobs,
+             _attrs_for_type('BIAS', configuration_mode='default', binning='1x1'))
+
+
+def test_inactive_instrument_contributes_nothing(db_address):
+    """An instrument whose newest master is older than N days is dropped entirely."""
+    active_id = _seed_db(db_address, camera='sq01')
+    moved_id = _seed_db(db_address, camera='sq02')
+    now = datetime(2026, 10, 16, 12)
+    with dbs.get_session(db_address) as session:
+        _add_bias(session, active_id, 'active.fits', 1, now - timedelta(days=5))
+        _add_bias(session, moved_id, 'moved_old.fits', 2, now - timedelta(days=400))
+        _add_bias(session, moved_id, 'moved_newest.fits', 3, now - timedelta(days=91))
+
+    with mock.patch('banzai.cache.download_worker.datetime') as dt:
+        dt.utcnow.return_value = now
+        filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'],
+                                                                     inactive_instrument_days=90)}
+        missing = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'],
+                                                                   include_missing_frameids=True,
+                                                                   inactive_instrument_days=90)}
+    assert filenames == {'active.fits'}
+    assert missing == {'active.fits'}
+
+
+def test_active_instrument_keeps_old_bpm(db_address):
+    """A recent master of any type keeps the instrument active, so its old BPM is still cached."""
+    inst_id = _seed_db(db_address, camera='sq01')
+    now = datetime(2026, 10, 16, 12)
+    with dbs.get_session(db_address) as session:
+        _add_bias(session, inst_id, 'bias.fits', 1, now - timedelta(days=5))
+        _add_cal(session, inst_id, 'BPM', 'bpm.fits', 2, now - timedelta(days=900),
+                 _attrs_for_type('BPM', configuration_mode='default', binning='1x1'))
+
+    with mock.patch('banzai.cache.download_worker.datetime') as dt:
+        dt.utcnow.return_value = now
+        filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'],
+                                                                     inactive_instrument_days=90)}
+    assert filenames == {'bias.fits', 'bpm.fits'}
+
+
+@pytest.mark.parametrize('age_days, expected', [(90, {'bias.fits'}), (91, set())])
+def test_inactive_instrument_boundary(db_address, age_days, expected):
+    """A newest master exactly N days old still counts as active; one day older does not."""
+    inst_id = _seed_db(db_address, camera='sq01')
+    now = datetime(2026, 10, 16, 12)
+    with dbs.get_session(db_address) as session:
+        _add_bias(session, inst_id, 'bias.fits', 1, now - timedelta(days=age_days))
+
+    with mock.patch('banzai.cache.download_worker.datetime') as dt:
+        dt.utcnow.return_value = now
+        filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'],
+                                                                     inactive_instrument_days=90)}
+    assert filenames == expected
+
+
+def test_inactive_instrument_filter_disabled_with_none(db_address):
+    inst_id = _seed_db(db_address, camera='sq01')
+    with dbs.get_session(db_address) as session:
+        _add_bias(session, inst_id, 'ancient.fits', 1, datetime(2015, 1, 1))
+
+    filenames = {r.filename for r in get_calibrations_to_cache(db_address, 'tst', ['*'],
+                                                                 inactive_instrument_days=None)}
+    assert filenames == {'ancient.fits'}
+
+
 # --- download integration test ---
 
 def test_download_happy_path_with_real_db(db_address, tmp_path):
@@ -335,3 +404,24 @@ def test_daemon_parses_instrument_types(types_arg, expected):
         with pytest.raises(SystemExit):
             run_download_worker_daemon()
     assert run.call_args[0][2] == expected
+
+
+def test_daemon_parses_inactive_instrument_days():
+    argv = ['banzai_download_worker', '--db-address=sqlite:///test.db',
+            '--site-id=tst', '--inactive-instrument-days=30']
+    with mock.patch('sys.argv', argv), \
+         mock.patch('banzai.cache.download_worker.run_download_worker') as run:
+        run.side_effect = SystemExit(0)
+        with pytest.raises(SystemExit):
+            run_download_worker_daemon()
+    assert run.call_args[1]['inactive_instrument_days'] == 30
+
+
+def test_daemon_default_inactive_instrument_days():
+    argv = ['banzai_download_worker', '--db-address=sqlite:///test.db', '--site-id=tst']
+    with mock.patch('sys.argv', argv), \
+         mock.patch('banzai.cache.download_worker.run_download_worker') as run:
+        run.side_effect = SystemExit(0)
+        with pytest.raises(SystemExit):
+            run_download_worker_daemon()
+    assert run.call_args[1]['inactive_instrument_days'] == 90
