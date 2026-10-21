@@ -133,10 +133,7 @@ def delete_calibration(db_address, cal):
 
 
 def remove_orphaned_copies(processed_path):
-    """Delete partial uncompressed copies left by a failed or killed write.
-
-    Called between passes, when no copy can be in progress, so every .tmp is an orphan.
-    """
+    """Delete partial uncompressed copies left by a failed or killed write."""
     for root, _, files in os.walk(processed_path):
         for name in files:
             if name.endswith('.fits.tmp'):
