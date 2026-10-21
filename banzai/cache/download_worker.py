@@ -132,6 +132,21 @@ def delete_calibration(db_address, cal):
     update_filepath(db_address, cal.id, None)
 
 
+def remove_orphaned_copies(processed_path):
+    """Delete partial uncompressed copies left by a failed or killed write.
+
+    Called between passes, when no copy can be in progress, so every .tmp is an orphan.
+    """
+    for root, _, files in os.walk(processed_path):
+        for name in files:
+            if name.endswith('.fits.tmp'):
+                try:
+                    os.remove(os.path.join(root, name))
+                    logger.info(f"Removed partial uncompressed copy {name}")
+                except OSError as e:
+                    logger.warning(f"Could not remove partial uncompressed copy {name}: {e}")
+
+
 def _site_has_calibrations(db_address, site_id):
     """True once any CalibrationImage row for this site is visible locally.
     Replication of instruments/sites is effectively instant; calimages is the
@@ -185,6 +200,7 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                 time.sleep(poll_interval)
                 continue
 
+            remove_orphaned_copies(processed_path)
             now = time.monotonic()
             failed_calibrations = {cal_id: t for cal_id, t in failed_calibrations.items()
                                    if now - t < FAILURE_RETRY_SECONDS}

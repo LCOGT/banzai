@@ -11,7 +11,7 @@ from banzai import dbs, settings
 from banzai.utils import fits_utils
 from banzai.cache.download_worker import (
     get_calibrations_to_cache, get_cache_path, download_calibration,
-    delete_calibration, run_download_worker, run_download_worker_daemon,
+    delete_calibration, remove_orphaned_copies, run_download_worker, run_download_worker_daemon,
 )
 from banzai.tests.utils import FakeContext
 
@@ -322,6 +322,15 @@ def test_delete_removes_sibling_and_leftovers(tmp_path):
 
     assert os.listdir(tmp_path) == ['other.fits.fz']
     up.assert_called_once_with('sqlite:///test.db', 1, None)
+
+
+def test_remove_orphaned_copies(tmp_path):
+    nested = tmp_path / 'tst' / 'fa01' / '20240115' / 'processed'
+    nested.mkdir(parents=True)
+    for name in ['bias.fits.fz', 'bias.fits', 'bias.fits.tmp', 'dark.fits.fz', 'dark.fits.tmp']:
+        open(nested / name, 'w').close()
+    remove_orphaned_copies(str(tmp_path))
+    assert sorted(os.listdir(nested)) == ['bias.fits', 'bias.fits.fz', 'dark.fits.fz']
 
 
 # --- worker loop tests ---
