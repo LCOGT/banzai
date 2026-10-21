@@ -1,3 +1,6 @@
+import json
+from unittest import mock
+
 from banzai.utils import photometry_utils
 import numpy as np
 from astropy.coordinates import SkyCoord
@@ -58,3 +61,10 @@ def test_photometric_calibration():
     matched_catalog = Table(fits.open(ogg_catalog_filename)[1].data)
     zeropoint, _, _, _ = photometry_utils.fit_photometry(matched_catalog, 'g', 'g-r', 60.0)
     assert np.abs(zeropoint - 25.15) < 0.1
+
+
+@mock.patch('banzai.utils.photometry_utils.requests.post')
+def test_get_reference_sources_posts_json_serializable_header(mock_post):
+    header = fits.Header({'CRVAL1': np.float32(1.5), 'NAXIS1': np.int64(10), 'WCSERR': 0})
+    photometry_utils.get_reference_sources(header, 'http://fake/image')
+    json.dumps(mock_post.call_args.kwargs['json'])

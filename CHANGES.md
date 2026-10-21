@@ -1,11 +1,15 @@
 Versions
 ========
-1.41.0 (2026-10-13)
+1.41.0 (2026-10-21)
 -------------------
 
 - Cache an uncompressed copy of each super calibration beside the compressed file the
   site download worker fetches, and read it during stackframe reduction to skip
   decompression
+
+1.40.1 (2026-10-21)
+-------------------
+
 - Fix smartstack e91 reductions failing in PhotometricCalibrator on numpy float32
   header values (L1MEDIAN) that could not be serialized to JSON
 
