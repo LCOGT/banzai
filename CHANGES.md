@@ -1,5 +1,11 @@
 Versions
 ========
+1.40.1 (2026-10-21)
+-------------------
+
+- Fix smartstack e91 reductions failing in PhotometricCalibrator on numpy float32
+  header values (L1MEDIAN) that could not be serialized to JSON
+
 1.40.0 (2026-10-12)
 -------------------
 
