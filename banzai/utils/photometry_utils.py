@@ -11,7 +11,8 @@ from banzai.utils.stats import robust_standard_deviation
 def get_reference_sources(header, reference_catalog_url, nx=None, ny=None):
     # We need to covert to a dict instead of a fits header here. We also need to drop any comment and history cards
     # so we just do this dict comprehension because oddly enough astropy.io.fits does not seem to have this.
-    payload = {key: header[key] for key in header}
+    # Numpy scalars are converted to native types so that the payload is JSON serializable.
+    payload = {key: value.item() if isinstance(value, np.generic) else value for key, value in header.items()}
     payload['NAXIS'] = 2
     if nx is not None:
         payload['NAXIS1'] = nx

@@ -8,9 +8,10 @@ import pytest
 from astropy.io import fits
 
 from banzai import dbs, settings
+from banzai.utils import fits_utils
 from banzai.cache.download_worker import (
     get_calibrations_to_cache, get_cache_path, download_calibration,
-    delete_calibration, run_download_worker, run_download_worker_daemon,
+    delete_calibration, remove_orphaned_copies, run_download_worker, run_download_worker_daemon,
 )
 from banzai.tests.utils import FakeContext
 
@@ -256,9 +257,80 @@ def test_download_happy_path_with_real_db(db_address, tmp_path):
     assert dl.call_args[1]['is_raw_frame'] is False
 
     expected_path = get_cache_path(processed_path, cal)
-    assert os.path.exists(os.path.join(expected_path, 'bias.fits'))
+    assert os.listdir(expected_path) == ['bias.fits']  # no uncompressed sibling for a non-.fz name
     with dbs.get_session(db_address) as session:
         assert session.query(dbs.CalibrationImage).get(cal_id).filepath == expected_path
+
+
+def _make_compressed_fits_buffer(value=1.0):
+    buf = io.BytesIO()
+    fits.HDUList([fits.PrimaryHDU(),
+                  fits.CompImageHDU(np.full((4, 6), value, dtype=np.float32), name='SCI'),
+                  fits.CompImageHDU(np.zeros((4, 6), dtype=np.uint8), name='BPM')]).writeto(buf)
+    buf.seek(0)
+    return buf
+
+
+def _add_fz_cal(db_address, filename='bias.fits.fz'):
+    inst_id = _seed_db(db_address)
+    with dbs.get_session(db_address) as session:
+        _add_cal(session, inst_id, 'BIAS', filename, 123, datetime(2024, 1, 15),
+                 _attrs_for_type('BIAS', configuration_mode='default', binning='1x1'))
+    with dbs.get_session(db_address) as session:
+        return session.query(dbs.CalibrationImage).filter_by(filename=filename).first().id
+
+
+def test_download_writes_uncompressed_sibling(db_address, tmp_path):
+    cal_id = _add_fz_cal(db_address)
+    cal = _make_cal(id=cal_id, filename='bias.fits.fz')
+    with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=_make_compressed_fits_buffer()):
+        download_calibration(db_address, str(tmp_path), FakeContext(), cal)
+
+    expected_path = get_cache_path(str(tmp_path), cal)
+    assert sorted(os.listdir(expected_path)) == ['bias.fits', 'bias.fits.fz']
+    with fits.open(os.path.join(expected_path, 'bias.fits.fz')) as compressed, \
+         fits.open(os.path.join(expected_path, 'bias.fits')) as sibling:
+        expected = fits_utils.unpack(compressed)
+        assert [type(hdu) for hdu in sibling] == [type(hdu) for hdu in expected]
+        assert [hdu.name for hdu in sibling] == [hdu.name for hdu in expected]
+        for actual_hdu, expected_hdu in zip(sibling, expected):
+            np.testing.assert_array_equal(actual_hdu.data, expected_hdu.data)
+    with dbs.get_session(db_address) as session:
+        assert session.query(dbs.CalibrationImage).get(cal_id).filepath == expected_path
+
+
+def test_download_keeps_compressed_file_when_sibling_write_fails(db_address, tmp_path, caplog):
+    cal_id = _add_fz_cal(db_address)
+    cal = _make_cal(id=cal_id, filename='bias.fits.fz')
+    with mock.patch('banzai.utils.fits_utils.download_from_s3', return_value=_make_compressed_fits_buffer()), \
+         mock.patch('banzai.utils.fits_utils.unpack', side_effect=RuntimeError('decompression failed')):
+        download_calibration(db_address, str(tmp_path), FakeContext(), cal)
+
+    expected_path = get_cache_path(str(tmp_path), cal)
+    assert os.listdir(expected_path) == ['bias.fits.fz']
+    assert 'Could not write uncompressed copy' in caplog.text
+    with dbs.get_session(db_address) as session:
+        assert session.query(dbs.CalibrationImage).get(cal_id).filepath == expected_path
+
+
+def test_delete_removes_sibling_and_leftovers(tmp_path):
+    for name in ['del.fits.fz', 'del.fits', 'del.fits.tmp', 'other.fits.fz']:
+        open(tmp_path / name, 'w').close()
+    cal = mock.MagicMock(id=1, filename='del.fits.fz', filepath=str(tmp_path))
+    with mock.patch('banzai.cache.download_worker.update_filepath') as up:
+        delete_calibration('sqlite:///test.db', cal)
+
+    assert os.listdir(tmp_path) == ['other.fits.fz']
+    up.assert_called_once_with('sqlite:///test.db', 1, None)
+
+
+def test_remove_orphaned_copies(tmp_path):
+    nested = tmp_path / 'tst' / 'fa01' / '20240115' / 'processed'
+    nested.mkdir(parents=True)
+    for name in ['bias.fits.fz', 'bias.fits', 'bias.fits.tmp', 'dark.fits.fz', 'dark.fits.tmp']:
+        open(nested / name, 'w').close()
+    remove_orphaned_copies(str(tmp_path))
+    assert sorted(os.listdir(nested)) == ['bias.fits', 'bias.fits.fz', 'dark.fits.fz']
 
 
 # --- worker loop tests ---

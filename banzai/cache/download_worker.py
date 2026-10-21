@@ -71,8 +71,21 @@ def update_filepath(db_address, cal_id, filepath):
             cal.filepath = filepath
 
 
+def write_uncompressed_copy(compressed_path, uncompressed_path):
+    """funpack a cached .fz calibration beside it so stackframe reduction can skip decompression.
+
+    We add a decompressed version here to save all stackframe reductions from duplicating this work
+    (~20s savings per reduction). The copy is written to a temporary name and renamed into place so a
+    partially written file is never read.
+    """
+    temporary_path = uncompressed_path + '.tmp'
+    with fits.open(compressed_path) as compressed:
+        fits_utils.unpack(compressed).writeto(temporary_path, overwrite=True)
+    os.replace(temporary_path, uncompressed_path)
+
+
 def download_calibration(db_address, processed_path, runtime_context, cal):
-    """Ensure cal is cached: download, validate FITS, write to disk, update DB filepath. """
+    """Ensure cal is cached: download, validate FITS, write it and its uncompressed copy, update DB filepath."""
     dest_dir = get_cache_path(processed_path, cal)
     local_path = os.path.join(dest_dir, cal.filename)
 
@@ -99,14 +112,36 @@ def download_calibration(db_address, processed_path, runtime_context, cal):
     update_filepath(db_address, cal.id, dest_dir)
     logger.info(f"Cached {cal.filename}")
 
+    sibling = fits_utils.uncompressed_sibling(local_path)
+    if sibling is not None:
+        try:
+            write_uncompressed_copy(local_path, sibling)
+        except Exception as e:
+            # Reduction decompresses this file itself until the cache is next rebuilt.
+            logger.warning(f"Could not write uncompressed copy of {cal.filename}: {e}", exc_info=True)
+
 
 def delete_calibration(db_address, cal):
-    """Remove file from disk and clear filepath in DB."""
+    """Remove the file and its uncompressed copy from disk and clear filepath in DB."""
     file_path = os.path.join(cal.filepath, cal.filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        logger.info(f"Deleted {cal.filename}")
+    sibling = fits_utils.uncompressed_sibling(file_path)
+    for path in [file_path] + ([sibling, sibling + '.tmp'] if sibling else []):
+        if os.path.exists(path):
+            os.remove(path)
+            logger.info(f"Deleted {os.path.basename(path)}")
     update_filepath(db_address, cal.id, None)
+
+
+def remove_orphaned_copies(processed_path):
+    """Delete partial uncompressed copies left by a failed or killed write."""
+    for root, _, files in os.walk(processed_path):
+        for name in files:
+            if name.endswith('.fits.tmp'):
+                try:
+                    os.remove(os.path.join(root, name))
+                    logger.info(f"Removed partial uncompressed copy {name}")
+                except OSError as e:
+                    logger.warning(f"Could not remove partial uncompressed copy {name}: {e}")
 
 
 def _site_has_calibrations(db_address, site_id):
@@ -162,6 +197,7 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
                 time.sleep(poll_interval)
                 continue
 
+            remove_orphaned_copies(processed_path)
             now = time.monotonic()
             failed_calibrations = {cal_id: t for cal_id, t in failed_calibrations.items()
                                    if now - t < FAILURE_RETRY_SECONDS}

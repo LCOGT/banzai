@@ -283,15 +283,42 @@ def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: Iterable) -> f
     return HDUList(hdulist)
 
 
+def uncompressed_sibling(path):
+    """Path of the funpacked copy the calibration download worker writes beside a .fz file."""
+    if path is None or not path.endswith('.fz'):
+        return None
+    return path[:-3]
+
+
+def read_uncompressed_file(path):
+    """Load a plain FITS file into memory with the HDU types and native byte order unpack() produces."""
+    with fits.open(path, memmap=False) as hdu_list:
+        hdus = []
+        for hdu in hdu_list:
+            data = hdu.data
+            if data is not None and not data.dtype.isnative:
+                data = data.astype(data.dtype.newbyteorder('='))
+            hdus.append(type(hdu)(data=data, header=hdu.header))
+    return HDUList(hdus)
+
+
 def open_fits_file(file_info, context, is_raw_frame=False):
     if file_info.get('data_buffer') is not None:
         filename = file_info.get('filename')
         frame_id = None
         buffer = file_info.get('data_buffer')
     elif file_info.get('path') is not None and os.path.exists(file_info.get('path')):
-        buffer = open(file_info.get('path'), 'rb')
-        filename = os.path.basename(file_info.get('path'))
+        path = file_info.get('path')
+        filename = os.path.basename(path)
         frame_id = None
+        sibling = None if is_raw_frame else uncompressed_sibling(path)
+        if sibling is not None and os.path.exists(sibling):
+            try:
+                return read_uncompressed_file(sibling), filename, frame_id
+            except Exception:
+                logger.warning('Could not read the uncompressed copy of the calibration; decompressing instead',
+                               extra_tags={'filename': filename, 'uncompressed_path': sibling})
+        buffer = open(path, 'rb')
     elif file_info.get('frameid') is not None:
         buffer = download_from_s3(file_info, context, is_raw_frame=is_raw_frame)
         filename = file_info.get('filename')
