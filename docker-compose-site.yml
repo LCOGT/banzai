@@ -56,7 +56,8 @@ services:
               "--site-id=${SITE_ID}",
               "--instrument-types=${INSTRUMENT_TYPES:-*}",
               "--processed-path=${HOST_CALS_DIR}",
-              "--poll-interval=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}"]
+              "--poll-interval=${DOWNLOAD_WORKER_POLL_INTERVAL:-10}",
+              "--inactive-instrument-days=${CACHE_INACTIVE_INSTRUMENT_DAYS:-90}"]
     restart: unless-stopped
 
   banzai-stackframe-listener:

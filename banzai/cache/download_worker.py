@@ -4,6 +4,7 @@ import argparse
 import os
 import sys
 import time
+from datetime import datetime, timedelta, timezone
 
 from astropy.io import fits
 from sqlalchemy import cast, func, String
@@ -18,12 +19,24 @@ FAILURE_RETRY_SECONDS = 60 * 60 * 2     # 2 hours (in seconds)
 MAX_ID_LOOKUPS_PER_PASS = 10
 
 
-def get_calibrations_to_cache(db_address, site_id, instrument_types, include_missing_frameids=False):
+def _active_instrument_ids(session, inactive_instrument_days):
+    """Instruments that produced any master within the last N days."""
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=inactive_instrument_days)
+    return session.query(dbs.CalibrationImage.instrument_id).filter(
+        dbs.CalibrationImage.is_master == True,
+        dbs.CalibrationImage.dateobs >= cutoff,
+    ).distinct()
+
+
+def get_calibrations_to_cache(db_address, site_id, instrument_types, include_missing_frameids=False,
+                              inactive_instrument_days=None):
     """Return top 2 calibrations per config via SQL window function.
 
     Runs one query per calibration type so each type partitions by its own
     criteria from settings.CALIBRATION_SET_CRITERIA. Include missing IDs only
     when selecting candidates for archive lookup, not for cache retention.
+    Instruments with no master newer than inactive_instrument_days are skipped
+    entirely if value is not None.
     """
     results = []
     with dbs.get_session(db_address) as session:
@@ -53,6 +66,9 @@ def get_calibrations_to_cache(db_address, site_id, instrument_types, include_mis
                 query = query.filter(dbs.CalibrationImage.frameid.isnot(None))
             if instrument_types != ['*']:
                 query = query.filter(dbs.Instrument.type.in_(instrument_types))
+            if inactive_instrument_days is not None:
+                query = query.filter(dbs.CalibrationImage.instrument_id.in_(
+                    _active_instrument_ids(session, inactive_instrument_days)))
 
             subq = query.subquery()
             results.extend(session.query(subq).filter(subq.c.rank <= 2).all())
@@ -169,7 +185,7 @@ def get_cached_calibrations(db_address, site_id, processed_path):
 
 
 def run_download_worker(db_address, site_id, instrument_types, processed_path,
-                        runtime_context, poll_interval=10):
+                        runtime_context, poll_interval=10, inactive_instrument_days=None):
     """Main loop: poll DB, download missing files, delete stale ones."""
     logger.info("Download worker started")
 
@@ -201,7 +217,8 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
             now = time.monotonic()
             failed_calibrations = {cal_id: t for cal_id, t in failed_calibrations.items()
                                    if now - t < FAILURE_RETRY_SECONDS}
-            needed = get_calibrations_to_cache(db_address, site_id, instrument_types)
+            needed = get_calibrations_to_cache(db_address, site_id, instrument_types,
+                                               inactive_instrument_days=inactive_instrument_days)
             needed_filenames = {cal.filename for cal in needed}
 
             to_download = []
@@ -273,7 +290,8 @@ def run_download_worker(db_address, site_id, instrument_types, processed_path,
 
             # Do archive lookups after normal cache work; recovered IDs are downloaded next pass.
             candidates = get_calibrations_to_cache(db_address, site_id, instrument_types,
-                                                   include_missing_frameids=True)
+                                                   include_missing_frameids=True,
+                                                   inactive_instrument_days=inactive_instrument_days)
             unresolved = [cal for cal in candidates if cal.frameid is None and cal.id not in failed_calibrations]
             for cal in unresolved[:MAX_ID_LOOKUPS_PER_PASS]:
                 failed_calibrations[cal.id] = time.monotonic()
@@ -311,6 +329,9 @@ def _download_worker_arg_parser():
                         help='Path for cached calibration files (default: /calibrations)')
     parser.add_argument('--poll-interval', dest='poll_interval', type=int, default=10,
                         help='Seconds between poll cycles (default: 10)')
+    parser.add_argument('--inactive-instrument-days', dest='inactive_instrument_days', type=int,
+                        help='Skip instruments with no master newer than this many days '
+                             '(default: unset, 0 or unset disables)')
     return parser
 
 
@@ -324,7 +345,8 @@ def run_download_worker_daemon():
 
     try:
         run_download_worker(args.db_address, args.site_id, instrument_types, args.processed_path,
-                            runtime_context, args.poll_interval)
+                            runtime_context, args.poll_interval,
+                            inactive_instrument_days=args.inactive_instrument_days or None)
     except KeyboardInterrupt:
         logger.info("Download worker stopped")
         sys.exit(0)

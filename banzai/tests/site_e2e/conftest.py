@@ -54,6 +54,10 @@ for _key, _default in _HOST_DIR_DEFAULTS.items():
             f"Update banzai/tests/site_e2e/site_e2e.env."
         )
 
+# Seeded masters are real January 2026 archive frames, so keep the download
+# worker's inactive-instrument filter off.
+os.environ.setdefault('CACHE_INACTIVE_INSTRUMENT_DAYS', '0')
+
 # Configuration constants (from env vars with defaults)
 PUBLICATION_DB_ADDRESS = os.environ.get(
     "PUBLICATION_DB_ADDRESS",
