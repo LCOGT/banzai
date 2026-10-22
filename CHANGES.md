@@ -1,5 +1,11 @@
 Versions
 ========
+1.41.1 (2026-10-21)
+-------------------
+
+- Wait for database initialization and replication in the stacking supervisor at
+  startup instead of crash-looping until the instruments table is available
+
 1.41.0 (2026-10-21)
 -------------------
 
