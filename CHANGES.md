@@ -1,5 +1,12 @@
 Versions
 ========
+1.42.0 (2026-10-22)
+-------------------
+
+- Skip inactive instruments in the site calibration cache: only instruments with a
+  master calibration in the last `--inactive-instrument-days` (default 90 via
+  `CACHE_INACTIVE_INSTRUMENT_DAYS` in docker-compose-site.yml) are cached
+
 1.41.1 (2026-10-21)
 -------------------
 
