@@ -1,5 +1,12 @@
 Versions
 ========
+1.42.1 (2026-10-26)
+-------------------
+
+- Write valid FITS CHECKSUM/DATASUM keywords in every HDU of the output files, and drop checksum
+  keywords inherited from the input frame so that stale values no longer end up as ZHECKSUM/ZDATASUM
+  of compressed images (#504)
+
 1.42.0 (2026-10-22)
 -------------------
 

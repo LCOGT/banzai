@@ -23,6 +23,9 @@ logger = logs.get_logger()
 
 FITS_MANDATORY_KEYWORDS = ['SIMPLE', 'BITPIX', 'NAXIS', 'EXTEND', 'COMMENT', 'CHECKSUM', 'DATASUM']
 
+# Checksum keywords of an HDU (CHECKSUM, DATASUM) and of the image inside a tile-compressed HDU (ZHECKSUM, ZDATASUM)
+FITS_CHECKSUM_KEYWORDS = ['CHECKSUM', 'DATASUM', 'ZHECKSUM', 'ZDATASUM']
+
 
 def sanitize_header(header):
     # Remove the mandatory keywords from a header so it can be copied to a new
@@ -34,6 +37,19 @@ def sanitize_header(header):
         if i in header.keys():
             header.pop(i)
 
+    return header
+
+
+def remove_checksum_keywords(header):
+    """Return a copy of the header without checksum keywords.
+
+    Headers copied from the input frame still carry its checksums, which do not describe the new data.
+    When the image is compressed, astropy writes the image CHECKSUM/DATASUM as ZHECKSUM/ZDATASUM, so the
+    stale values would end up in the output file.
+    """
+    header = header.copy()
+    for keyword in FITS_CHECKSUM_KEYWORDS:
+        header.remove(keyword, ignore_missing=True, remove_all=True)
     return header
 
 
@@ -257,7 +273,7 @@ def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: Iterable) -> f
         quantize_level = extension_quantizations.get(extname, 64)
         compressed_hdu = CompImageHDU(
             data=data,
-            header=uncompressed_hdulist[0].header,
+            header=remove_checksum_keywords(uncompressed_hdulist[0].header),
             quantize_level=quantize_level,
             quantize_method=1,
         )
@@ -273,7 +289,7 @@ def pack(uncompressed_hdulist: fits.HDUList, lossless_extensions: Iterable) -> f
             quantize_level = extension_quantizations.get(extname, 64)
             compressed_hdu = CompImageHDU(
                 data=data,
-                header=hdu.header,
+                header=remove_checksum_keywords(hdu.header),
                 quantize_level=quantize_level,
                 quantize_method=1,
             )
