@@ -440,7 +440,7 @@ class TestSiteE2E:
                 "Smartstack did not reach status='complete' within timeout"
 
             # The first stackframe-based e45 FITS and both JPEGs exist under the processed dir.
-            fits_matches = list(OUTPUT_DIR.rglob('*-0001-e45.fits'))
+            fits_matches = list(OUTPUT_DIR.rglob('*-0001-e45.fits.fz'))
             assert len(fits_matches) == 1, f"Expected exactly one e45 FITS, found {fits_matches}"
             e45_path = fits_matches[0]
             assert e45_path.stat().st_size > 0, f"e45 FITS is empty: {e45_path}"
@@ -456,13 +456,17 @@ class TestSiteE2E:
                 f"Expected three ordered stackframe paths, got {input_basenames}"
 
             with fits.open(e45_path) as hdul:
-                for header in (hdul[0].header, hdul['SCI'].header):
-                    assert header['OBSTYPE'] == 'EXPOSE'
-                    assert header['NCOMBINE'] == 3
-                    assert [header[f'IMCOM{index:03d}'] for index in range(1, 4)] == input_basenames
-                    assert 'IMCOM004' not in header
+                assert hdul[0].data is None  # packed: bare primary, image data lives in compressed extensions
+                for name in ('SCI', 'BPM', 'ERR'):
+                    assert isinstance(hdul[name], fits.CompImageHDU), f"{name} is not fpacked in {e45_path}"
+                header = hdul['SCI'].header
+                assert header['OBSTYPE'] == 'EXPOSE'
+                assert header['NCOMBINE'] == 3
+                assert [header[f'IMCOM{index:03d}'] for index in range(1, 4)] == input_basenames
+                assert 'IMCOM004' not in header
+                assert header['ORIGNAME'] == e45_path.name[:-len('.fits.fz')]
 
-            base = e45_path.name[:-len('.fits')]
+            base = e45_path.name[:-len('.fits.fz')]
             large_jpg = e45_path.with_name(f'{base}-large_thumbnail.jpg')
             small_jpg = e45_path.with_name(f'{base}-small_thumbnail.jpg')
             assert large_jpg.exists() and large_jpg.stat().st_size > 0, f"Missing large JPEG: {large_jpg}"

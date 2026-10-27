@@ -15,6 +15,14 @@ def get_processed_path(base_path, site, camera, epoch):
     return os.path.join(base_path, site, camera, epoch, 'processed')
 
 
+def fits_basename(filename):
+    """Strip the .fits or .fits.fz extension from a filename."""
+    for extension in ('.fits.fz', '.fits'):
+        if filename.endswith(extension):
+            return filename[:-len(extension)]
+    raise ValueError(f'Could not parse FITS filename: {filename}')
+
+
 def make_jpg_filenames(smartstack_filename):
     """Build small and large JPEG filenames for a smartstack FITS filename.
 
@@ -29,13 +37,7 @@ def make_jpg_filenames(smartstack_filename):
         Tuple of ``(small_thumbnail, large_thumbnail)`` JPEG filenames, matching
         the ``small_thumbnail``/``large_thumbnail`` keys in the shipper message.
     """
-    if smartstack_filename.endswith('.fits.fz'):
-        base = smartstack_filename[:-len('.fits.fz')]
-    elif smartstack_filename.endswith('.fits'):
-        base = smartstack_filename[:-len('.fits')]
-    else:
-        base = smartstack_filename
-
+    base = fits_basename(smartstack_filename)
     return f'{base}-small_thumbnail.jpg', f'{base}-large_thumbnail.jpg'
 
 

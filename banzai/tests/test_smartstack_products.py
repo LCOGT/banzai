@@ -12,7 +12,7 @@ from banzai.context import Context
 from banzai.data import CCDData, HeaderOnly
 from banzai.lco import LCOObservationFrame
 from banzai.tests.utils import FakeCCDData, FakeContext, FakeInstrument, FakeLCOObservationFrame
-from banzai.utils import date_utils
+from banzai.utils import date_utils, fits_utils
 from banzai.utils.file_utils import make_jpg_filenames
 
 
@@ -142,6 +142,7 @@ def test_metadata():
         assert header['NCOMBINE'] == 2
         assert header['MOLUID'] == 'mol-1'
         assert header['OBSTYPE'] == 'EXPOSE'
+        assert header['ORIGNAME'] == 'cpt1m010-fa16-20240706-0031-e45'
         assert 'DATE' in header
         assert 'MOLFRNUM' not in header
         assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-n09.fits'
@@ -299,7 +300,8 @@ def test_open_stackframe_images_raises_on_unopenable():
         products.open_stackframe_images([stackframe(1, '/tmp/good.fits'), stackframe(2, '/tmp/missing.fits')], context)
 
 
-def test_write_and_reopen_smoke(monkeypatch, tmp_path):
+@pytest.mark.parametrize('fpack', [False, True], ids=['fits', 'fpack'])
+def test_write_and_reopen_smoke(monkeypatch, tmp_path, fpack):
     input_images = [
         make_frame('/tmp/cpt1m010-fa16-20240706-0031-n09.fits', value=2.0, frame_class=LCOObservationFrame),
         make_frame('/tmp/cpt1m010-fa16-20240706-0032-n09.fits', value=3.0, frame_class=LCOObservationFrame),
@@ -309,7 +311,7 @@ def test_write_and_reopen_smoke(monkeypatch, tmp_path):
     context = Context(vars(FakeContext(
         processed_path=str(tmp_path),
         reduction_level=91,
-        fpack=False,
+        fpack=fpack,
         post_to_archive=False,
         no_file_cache=False,
     )))
@@ -320,7 +322,17 @@ def test_write_and_reopen_smoke(monkeypatch, tmp_path):
 
     fits_path, _, _ = products.run_final(stackframes, context, 'mol-1')
 
-    with fits.open(fits_path) as hdul:
+    assert fits_path.endswith('-e45.fits.fz' if fpack else '-e45.fits')
+    if fpack:
+        # The e45 must be Rice-compressed on disk exactly like an e91, with the data intact after unpacking.
+        with fits.open(fits_path, disable_image_compression=True) as packed:
+            assert packed[0].data is None
+            assert packed['SCI'].header['ZCMPTYPE'] == 'RICE_1'
+            assert packed['BPM'].header['ZCMPTYPE'] == 'RICE_1'
+            assert packed['ERR'].header['ZCMPTYPE'] == 'RICE_1'
+
+    with fits.open(fits_path) as opened:
+        hdul = fits_utils.unpack(opened) if fpack else opened
         assert 'SCI' in hdul
         assert 'BPM' in hdul
         assert 'ERR' in hdul
@@ -328,6 +340,7 @@ def test_write_and_reopen_smoke(monkeypatch, tmp_path):
         for header in (hdul[0].header, hdul['SCI'].header):
             assert header['NCOMBINE'] == 2
             assert header['MOLUID'] == 'mol-1'
+            assert header['ORIGNAME'] == 'cpt1m010-fa16-20240706-0031-e45'
             assert 'MOLFRNUM' not in header
             assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-n09.fits'
             assert header['IMCOM002'] == 'cpt1m010-fa16-20240706-0032-n09.fits'
@@ -338,4 +351,4 @@ def test_write_and_reopen_smoke(monkeypatch, tmp_path):
             assert header['L1MEAN'] == pytest.approx(5.0)
             assert header['L1MEDIAN'] == pytest.approx(5.0)
             assert header['L1SIGMA'] == pytest.approx(0.0)
-        assert np.all(hdul['SCI'].data == 5.0)
+        assert hdul['SCI'].data == pytest.approx(5.0)

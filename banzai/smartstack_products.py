@@ -8,7 +8,7 @@ from banzai.data import CCDData, HeaderOnly, combine_images, create_combination_
 from banzai.logs import get_logger
 from banzai.utils import date_utils, import_utils
 from banzai.utils.background_utils import background_header_cards, estimate_background
-from banzai.utils.file_utils import make_jpg_filenames
+from banzai.utils.file_utils import fits_basename, make_jpg_filenames
 from banzai.utils.jpg_utils import save_jpg, stretch_for_display
 from banzai.utils.messaging import post_to_shipper_queue
 
@@ -119,8 +119,12 @@ def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
     # (raw-pixel stats would inflate L1SIGMA with pixel noise; the map measures background variation).
     background_cards = background_header_cards(estimate_background(output_frame['SCI'].data))
 
+    # The archive uses ORIGNAME to link the e91 and this e45 as related frames.
+    origname = fits_basename(output_frame.filename)
+
     for header in headers:
         header['OBSTYPE'] = ('EXPOSE', 'Observation type')
+        header['ORIGNAME'] = (origname, 'Basename of this smartstack')
         header['EXPTIME'] = (total_exptime, '[s] Total exposure time')
         header['DATE-OBS'] = (date_utils.date_obs_to_string(earliest_dateobs), '[UTC] Earliest observation time')
         header['NCOMBINE'] = (n_stacked, 'Number of images combined')
@@ -160,13 +164,7 @@ def build_stacked_frame(stackframes, runtime_context, moluid):
 
 def build_thumbnail_metadata(output_frame):
     """Build the aggregate metadata submitted with a JPEG-only preview."""
-    frame_basename = output_frame.filename
-    for extension in ('.fits.fz', '.fits'):
-        if frame_basename.endswith(extension):
-            frame_basename = frame_basename[:-len(extension)]
-            break
-    else:
-        raise ValueError(f'Could not parse smartstack output filename: {output_frame.filename}')
+    frame_basename = fits_basename(output_frame.filename)
 
     header = output_frame.primary_hdu.meta
     metadata = {'frame_basename': frame_basename, 'RLEVEL': SMARTSTACK_REDUCTION_LEVEL}
