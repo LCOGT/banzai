@@ -117,6 +117,10 @@ services:
               "-l", "${BANZAI_WORKER_LOGLEVEL}",
               "-c", "4",
               "-Q", "${STACKFRAME_TASK_QUEUE_NAME:-stackframe_reduction_task_queue}"]
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 524288
     restart: unless-stopped
 
   banzai-stacking-supervisor:
@@ -150,6 +154,12 @@ services:
       "--stack-retention-days=${STACK_RETENTION_DAYS:-30}",
       "--stack-timeout-minutes=${STACK_TIMEOUT_MINUTES:-20}"
     ]
+    # Every frame held open during a stack build costs several descriptors; the Docker default soft limit
+    # of 1024 fails at ~165-245 sub-exposures.
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 524288
     restart: always
 
 volumes:
