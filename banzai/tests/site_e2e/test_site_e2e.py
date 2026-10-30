@@ -60,7 +60,7 @@ def _assert_cache_matches(expected_files, timeout=180):
         assert p.stat().st_size > 0, f"Cached file is empty: {p}"
 
 
-def _prepare_stackframe(source_path, destination_filename, moluid, stack_num, frmtotal):
+def _prepare_stackframe(source_path, destination_filename, moluid, stack_num, frmtotal, molnum=1):
     """Copy the archive seed to an n00 member and add Smartstack metadata."""
     frame_path = RAW_DIR / destination_filename
     shutil.copy2(str(source_path), str(frame_path))
@@ -70,6 +70,7 @@ def _prepare_stackframe(source_path, destination_filename, moluid, stack_num, fr
                 continue
             hdu.header['OBSTYPE'] = 'SUB_EXP'
             hdu.header['MOLUID'] = moluid
+            hdu.header['MOLNUM'] = molnum
             hdu.header['MOLFRNUM'] = stack_num
             hdu.header['FRMTOTAL'] = frmtotal
             hdu.header['STACK'] = 'T'

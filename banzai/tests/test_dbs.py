@@ -1,3 +1,4 @@
+import importlib.util
 import io
 import os
 
@@ -5,7 +6,9 @@ import mock
 import pytest
 import argparse
 
-from sqlalchemy import create_engine, inspect
+from alembic.migration import MigrationContext
+from alembic.operations import Operations
+from sqlalchemy import create_engine, inspect, text
 from astropy.io import fits
 
 import banzai.main
@@ -179,6 +182,8 @@ def test_create_db_site_deploy_true_creates_site_tables(tmp_path):
     stackframe_columns = {column['name']: column for column in inspector.get_columns('stackframes')}
     assert stackframe_columns['moluid']['nullable'] is False
     assert stackframe_columns['stack_num']['nullable'] is False
+    assert stackframe_columns['molnum']['nullable'] is False
+    assert inspector.get_pk_constraint('stacks')['constrained_columns'] == ['moluid', 'molnum']
 
 
 def test_get_session_site_deploy_true_raises_when_site_tables_missing(tmp_path):
@@ -194,3 +199,70 @@ def test_get_session_site_deploy_true_succeeds_with_site_tables(tmp_path):
     dbs.create_db(addr, site_deploy=True)
     with dbs.get_session(addr, site_deploy=True) as session:
         assert session is not None
+
+
+def _load_molnum_migration():
+    path = os.path.join(os.path.dirname(dbs.__file__), 'alembic', 'versions',
+                        'c7d2e8a41f60_key_stacks_on_moluid_molnum.py')
+    spec = importlib.util.spec_from_file_location('molnum_migration', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _run_migration(engine, migration_step):
+    with engine.begin() as connection:
+        with Operations.context(MigrationContext.configure(connection)):
+            migration_step()
+
+
+def test_molnum_migration_upgrades_old_schema_and_keeps_rows(tmp_path):
+    engine = create_engine(f'sqlite:///{tmp_path}/site.db')
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE stacks (moluid VARCHAR(100) PRIMARY KEY, camera VARCHAR(50), "
+                                "frmtotal INTEGER, status VARCHAR(20), created_at DATETIME, "
+                                "last_stackframe_at DATETIME, completed_at DATETIME, finalize_attempts INTEGER, "
+                                "next_attempt_at DATETIME, last_preview_count INTEGER)"))
+        connection.execute(text("CREATE TABLE stackframes (id INTEGER PRIMARY KEY, moluid VARCHAR(100) NOT NULL, "
+                                "stack_num INTEGER NOT NULL, filepath VARCHAR(255) NOT NULL, dateobs DATETIME, "
+                                "is_last BOOLEAN, created_at DATETIME, UNIQUE (moluid, stack_num))"))
+        connection.execute(text("INSERT INTO stacks (moluid, camera, status) VALUES ('mol-old', 'cam1', 'timeout')"))
+        connection.execute(text("INSERT INTO stackframes (moluid, stack_num, filepath) "
+                                "VALUES ('mol-old', 1, '/data/old.fits')"))
+
+    _run_migration(engine, _load_molnum_migration().upgrade)
+
+    inspector = inspect(engine)
+    assert inspector.get_pk_constraint('stacks')['constrained_columns'] == ['moluid', 'molnum']
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT moluid, molnum, status FROM stacks")).one() == ('mol-old', 0, 'timeout')
+        assert connection.execute(text("SELECT moluid, molnum, stack_num FROM stackframes")).one() == ('mol-old', 0, 1)
+
+
+def test_molnum_migration_skips_tables_already_on_new_schema(tmp_path):
+    addr = f'sqlite:///{tmp_path}/site.db'
+    dbs.create_db(addr, site_deploy=True)
+    with dbs.get_session(addr, site_deploy=True) as session:
+        session.add(dbs.Stack(moluid='mol-new', molnum=5, camera='cam1', status='active'))
+
+    _run_migration(create_engine(addr), _load_molnum_migration().upgrade)
+
+    with dbs.get_session(addr, site_deploy=True) as session:
+        assert session.query(dbs.Stack.moluid, dbs.Stack.molnum).one() == ('mol-new', 5)
+
+
+def test_molnum_migration_downgrade_restores_moluid_key(tmp_path):
+    addr = f'sqlite:///{tmp_path}/site.db'
+    dbs.create_db(addr, site_deploy=True)
+    with dbs.get_session(addr, site_deploy=True) as session:
+        session.add(dbs.Stack(moluid='mol-rgb', molnum=81, camera='cam1', status='active'))
+        session.add(dbs.Stack(moluid='mol-rgb', molnum=82, camera='cam1', status='active'))
+    engine = create_engine(addr)
+
+    _run_migration(engine, _load_molnum_migration().downgrade)
+
+    inspector = inspect(engine)
+    assert inspector.get_pk_constraint('stacks')['constrained_columns'] == ['moluid']
+    assert 'molnum' not in {column['name'] for column in inspector.get_columns('stackframes')}
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT moluid FROM stacks")).all() == [('mol-rgb',)]

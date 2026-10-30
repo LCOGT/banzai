@@ -4,10 +4,11 @@ Send raw FITS stackframes to banzai_stack_queue for site-deployment stacking.
 
 Used with docker-compose-site.yml. The banzai-stackframe-listener consumes from
 this queue, reduces each stackframe, and the stacking supervisor produces a
-stacked frame when the final stackframe in a MOLUID group is signalled.
+stacked frame when the final stackframe in a (MOLUID, MOLNUM) group is signalled.
 
 Each FITS file's SCI header must contain:
     MOLUID   - observation group identifier
+    MOLNUM   - expose command within the group
     MOLFRNUM - frame number within the group (1-indexed)
     FRMTOTAL - total frames in the group
     STACK    - 'T'

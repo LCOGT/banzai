@@ -343,6 +343,7 @@ def process_stackframe(self, body: dict, runtime_context: dict):
         stack_created = upsert_stack_and_stackframe(
             runtime_context.db_address,
             moluid=header['MOLUID'],
+            molnum=header['MOLNUM'],
             stack_num=header['MOLFRNUM'],
             frmtotal=header['FRMTOTAL'],
             camera=camera,
@@ -354,6 +355,7 @@ def process_stackframe(self, body: dict, runtime_context: dict):
             logger.info('Ignored reduced stackframe for timed-out smartstack',
                         extra_tags={'smartstack_event': 'frame_ignored',
                                     'smartstack_moluid': header['MOLUID'],
+                                    'smartstack_molnum': header['MOLNUM'],
                                     'smartstack_camera': camera,
                                     'smartstack_stack_num': header['MOLFRNUM'],
                                     'smartstack_filepath': reduced_path,
@@ -362,10 +364,12 @@ def process_stackframe(self, body: dict, runtime_context: dict):
         if stack_created:
             logger.info('Smartstack created', extra_tags={'smartstack_event': 'created',
                                                           'smartstack_moluid': header['MOLUID'],
+                                                          'smartstack_molnum': header['MOLNUM'],
                                                           'smartstack_camera': camera,
                                                           'smartstack_frmtotal': header['FRMTOTAL']})
         logger.info('Reduced stackframe', extra_tags={'smartstack_event': 'frame_reduced',
                                                       'smartstack_moluid': header['MOLUID'],
+                                                      'smartstack_molnum': header['MOLNUM'],
                                                       'smartstack_camera': camera,
                                                       'smartstack_stack_num': header['MOLFRNUM'],
                                                       'smartstack_filepath': reduced_path})
