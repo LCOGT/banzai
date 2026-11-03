@@ -75,7 +75,7 @@ def init_smartstack_frame(first_image, output_filename):
         if isinstance(hdu, HeaderOnly):
             hdu_list.append(HeaderOnly(meta=hdu.meta.copy(), name=hdu.name))
         elif hdu is science_hdu:
-            hdu_list.append(create_combination_output_hdu(science_hdu, science_hdu.meta, memmap=True))
+            hdu_list.append(create_combination_output_hdu(science_hdu, science_hdu.meta, memmap=False))
 
     hdu_order = first_image.hdu_order
     if hdu_list and isinstance(hdu_list[0], HeaderOnly):

@@ -299,7 +299,7 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
     def init_master_frame(cls, images: list, file_path: str, frame_id: int = None,
                           grouping_criteria: list = None, hdu_order: list = None):
         master_header = cls.init_master_header(images[0].meta, images)
-        hdu_list = [create_combination_output_hdu(images[0].primary_hdu, master_header, memmap=True)]
+        hdu_list = [create_combination_output_hdu(images[0].primary_hdu, master_header, memmap=False)]
         frame = cls(hdu_list=hdu_list, file_path=file_path, frame_id=frame_id,
                     grouping_criteria=grouping_criteria, hdu_order=hdu_order)
         frame.is_master = True

@@ -653,7 +653,9 @@ def stack(data_to_stack, nsigma_reject, method='mean') -> CCDData:
     else:
         raise ValueError(f"Unknown stack method: {method!r}; expected 'mean' or 'sum'")
 
-    return CCDData(data=stacked_data, meta=data_to_stack[0].meta, uncertainty=stacked_uncertainty, mask=stacked_mask)
+    # A section result is copied into the output straight away; it never needs a memory map of its own.
+    return CCDData(data=stacked_data, meta=data_to_stack[0].meta, uncertainty=stacked_uncertainty, mask=stacked_mask,
+                   memmap=False)
 
 
 def _warn_if_exposure_times_differ(images):
