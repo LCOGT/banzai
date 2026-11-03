@@ -377,4 +377,3 @@ def test_build_stacked_frame_closes_sectioned_inputs_on_failure(tmp_path, factor
 
     gc.collect()
     assert open_fds() == baseline
-
