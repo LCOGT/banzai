@@ -12,6 +12,7 @@ import json
 import os
 import os.path
 import logging
+import resource
 import traceback
 
 from kombu import Exchange, Connection, Queue
@@ -325,6 +326,11 @@ def run_stacking_supervisor():
                         'help': 'Comma-separated instrument types to stack, or * for all (default: *)'}},
         ],
     )
+    # Raise the open file limit from the 1024 default to the soft max (around 5e5 on linux). This prevents stacks
+    # of ~180 images from failing, since each frame in the stack opens ~6 files due to memory mapping.
+    _, max_open_files = resource.getrlimit(resource.RLIMIT_NOFILE)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (max_open_files, max_open_files))
+    logger.info('Raised the open-file limit', extra_tags={'max_open_files': max_open_files})
     stacking.run_supervisor(runtime_context)
 
 
