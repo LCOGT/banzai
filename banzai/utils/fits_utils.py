@@ -302,7 +302,25 @@ def read_uncompressed_file(path):
     return HDUList(hdus)
 
 
-def open_fits_file(file_info, context, is_raw_frame=False):
+def image_hdus(hdu_list):
+    """The HDUs of an unmodified HDUList in the order ``unpack`` would give them.
+
+    An fpacked file whose primary HDU carries only the mandatory keywords keeps its real primary at index 1.
+    """
+    mandatory_only = all(keyword in FITS_MANDATORY_KEYWORDS for keyword in hdu_list[0].header)
+    if mandatory_only and len(hdu_list) > 1 and isinstance(hdu_list[1], CompImageHDU):
+        return hdu_list[1:]
+    return hdu_list
+
+
+def open_fits_file(file_info, context, is_raw_frame=False, sectioned=False):
+    """Open a frame from a buffer, a local path, or the archive.
+
+    By default the whole file is read, decompressed with ``unpack`` and returned as an in-memory HDUList.
+    With ``sectioned`` the HDUList is returned as astropy opened it, with every data array still in the file
+    (or in the downloaded buffer), to be read a section at a time through ``hdu.section``. The caller owns a
+    sectioned HDUList and must close it; walk it with ``image_hdus``.
+    """
     if file_info.get('data_buffer') is not None:
         filename = file_info.get('filename')
         frame_id = None
@@ -314,10 +332,14 @@ def open_fits_file(file_info, context, is_raw_frame=False):
         sibling = None if is_raw_frame else uncompressed_sibling(path)
         if sibling is not None and os.path.exists(sibling):
             try:
+                if sectioned:
+                    return fits.open(sibling, memmap=False), filename, frame_id
                 return read_uncompressed_file(sibling), filename, frame_id
             except Exception:
                 logger.warning('Could not read the uncompressed copy of the calibration; decompressing instead',
                                extra_tags={'filename': filename, 'uncompressed_path': sibling})
+        if sectioned:
+            return fits.open(path, memmap=False), filename, frame_id
         buffer = open(path, 'rb')
     elif file_info.get('frameid') is not None:
         buffer = download_from_s3(file_info, context, is_raw_frame=is_raw_frame)
@@ -334,6 +356,8 @@ def open_fits_file(file_info, context, is_raw_frame=False):
     else:
         raise ValueError('This file does not exist and there is no frame id to get it from S3.')
 
+    if sectioned:
+        return fits.open(buffer, memmap=False), filename, frame_id
     hdu_list = fits.open(buffer, memmap=False)
     uncompressed_hdu_list = unpack(hdu_list)
     hdu_list.close()

@@ -49,12 +49,22 @@ def get_stages_for_individual_frame(ordered_stages, start_stage=None, last_stage
 
 
 @trace_function("run_pipeline_stages")
-def run_pipeline_stages(image_paths: list, runtime_context: Context, calibration_maker: bool = False):
+def run_pipeline_stages(image_paths: list, runtime_context: Context, calibration_maker: bool = False,
+                        sectioned: bool = False):
     frame_factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)()
-    images = [frame_factory.open(image_path, runtime_context) for image_path in image_paths]
+    images = [frame_factory.open(image_path, runtime_context, sectioned=sectioned) for image_path in image_paths]
     images = [image for image in images if image is not None]
     if len(images) == 0:
         return
+    opened_images = images
+    try:
+        return _run_stages(images, runtime_context, calibration_maker)
+    finally:
+        for image in opened_images:
+            image.close()
+
+
+def _run_stages(images, runtime_context, calibration_maker):
     if calibration_maker:
         stages_to_do = runtime_context.CALIBRATION_STACKER_STAGES[images[0].obstype.upper()]
     else:

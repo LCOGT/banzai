@@ -51,11 +51,15 @@ REQUIRED_THUMBNAIL_METADATA = (
 
 
 def open_stackframe_images(stackframes, runtime_context):
+    """Open the stackframes as sectioned frames, so the stacking process can read them a section at a time
+    without ever loading a whole frame."""
     frame_factory = import_utils.import_attribute(runtime_context.FRAME_FACTORY)()
     images = []
     for stackframe in stackframes:
-        image = frame_factory.open({'path': stackframe.filepath}, runtime_context)
+        image = frame_factory.open({'path': stackframe.filepath}, runtime_context, sectioned=True)
         if image is None:
+            for opened_image in images:
+                opened_image.close()
             raise RuntimeError(f'Could not open smartstack input image: {stackframe.filepath}')
         images.append(image)
     return images
@@ -71,8 +75,7 @@ def init_smartstack_frame(first_image, output_filename):
         if isinstance(hdu, HeaderOnly):
             hdu_list.append(HeaderOnly(meta=hdu.meta.copy(), name=hdu.name))
         elif hdu is science_hdu:
-            hdu_list.append(create_combination_output_hdu(science_hdu, science_hdu.meta,
-                                                          memmap=science_hdu.memmap))
+            hdu_list.append(create_combination_output_hdu(science_hdu, science_hdu.meta, memmap=True))
 
     hdu_order = first_image.hdu_order
     if hdu_list and isinstance(hdu_list[0], HeaderOnly):
@@ -147,15 +150,19 @@ def build_stacked_frame(stackframes, runtime_context, moluid):
         raise ValueError('Cannot build a smartstack without stackframes')
     stackframes = sorted(stackframes, key=lambda stackframe: stackframe.stack_num)
     input_images = open_stackframe_images(stackframes, runtime_context)
-    base, rlevel, file_extension = input_images[0].filename.rpartition('-n09')
-    if rlevel != '-n09' or file_extension not in ('.fits', '.fits.fz'):
-        raise ValueError(f'Could not parse smartstack input filename: {input_images[0].filename}')
-    output_filename = f'{base}-e{SMARTSTACK_REDUCTION_LEVEL}{file_extension}'
-    output_frame = init_smartstack_frame(input_images[0], output_filename)
-    combine_images([image['SCI'] for image in input_images], output_frame['SCI'],
-                   nsigma=STACK_NSIGMA_REJECT, method='sum')
-    apply_smartstack_metadata(output_frame, input_images, stackframes, moluid)
-    return output_frame
+    try:
+        base, rlevel, file_extension = input_images[0].filename.rpartition('-n09')
+        if rlevel != '-n09' or file_extension not in ('.fits', '.fits.fz'):
+            raise ValueError(f'Could not parse smartstack input filename: {input_images[0].filename}')
+        output_filename = f'{base}-e{SMARTSTACK_REDUCTION_LEVEL}{file_extension}'
+        output_frame = init_smartstack_frame(input_images[0], output_filename)
+        combine_images([image['SCI'] for image in input_images], output_frame['SCI'],
+                       nsigma=STACK_NSIGMA_REJECT, method='sum')
+        apply_smartstack_metadata(output_frame, input_images, stackframes, moluid)
+        return output_frame
+    finally:
+        for image in input_images:
+            image.close()
 
 
 def build_thumbnail_metadata(output_frame):

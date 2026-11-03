@@ -14,6 +14,10 @@ from banzai.utils import fits_utils, stats
 logger = logs.get_logger()
 
 
+class SectionedFrameError(TypeError):
+    """Raised when a sectioned frame is used as a whole in-memory array."""
+
+
 class DataProduct:
     def __init__(self, file_buffer: BytesIO, filename: str, filepath: str = None,
                  meta: dict = None, frame_id: int = None):
@@ -427,6 +431,128 @@ class CCDData(Data):
         self.data -= self._background
 
 
+class SectionedCCDData(CCDData):
+    """A CCDData whose pixels stay in the FITS file and can only be read in sections.
+
+    The frame factory builds these for stacking inputs. One holds the SCI HDU, and the BPM and ERR HDUs when
+    present, of an HDUList that astropy opened without loading data, so a frame costs one file descriptor
+    and no temporary memory maps. ``trim`` reads one section into an ordinary in-memory CCDData, which is
+    all ``combine_images`` needs. Whole-array access raises ``SectionedFrameError``. The one mutation allowed
+    is scaling by a scalar, which calibration makers do before combining; it is applied to each section as
+    it is read.
+    """
+
+    def __init__(self, science_hdu, meta, name='', mask_hdu=None, uncertainty_hdu=None, hdu_list=None):
+        self._science_hdu = science_hdu
+        self._mask_hdu = mask_hdu
+        self._uncertainty_hdu = uncertainty_hdu
+        self._hdu_list = hdu_list
+        self.meta = meta.copy()
+        self.name = name
+        self.memmap = False
+        self._file_handles = []
+        self._scale = 1.0
+        # Uncertainties derived from read noise use the header as it was at open, before any scaling.
+        self._read_noise_at_open = self.read_noise
+        self._n_sub_exposures_at_open = self.n_sub_exposures
+        self._gain_at_open = self.gain
+        self._shape = tuple(science_hdu.shape)
+        probe = science_hdu.section[0:1, 0:1]
+        if probe.dtype in (np.uint16, np.uint32):
+            self._dtype = np.dtype(np.float64)
+        else:
+            self._dtype = probe.dtype.newbyteorder('=')
+        self._detector_section = Section.parse_region_keyword(self.meta.get('DETSEC'))
+        self._data_section = Section.parse_region_keyword(self.meta.get('DATASEC'))
+        self._background = None
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @staticmethod
+    def _unavailable(array_name):
+        return SectionedFrameError(f'The {array_name} array of a sectioned frame is only available '
+                                   f'in sections through trim()')
+
+    @property
+    def data(self):
+        raise self._unavailable('data')
+
+    @data.setter
+    def data(self, value):
+        raise self._unavailable('data')
+
+    @property
+    def mask(self):
+        raise self._unavailable('mask')
+
+    @mask.setter
+    def mask(self, value):
+        raise self._unavailable('mask')
+
+    @property
+    def uncertainty(self):
+        raise self._unavailable('uncertainty')
+
+    @uncertainty.setter
+    def uncertainty(self, value):
+        raise self._unavailable('uncertainty')
+
+    def __imul__(self, value):
+        if isinstance(value, (np.ndarray, Data)):
+            raise SectionedFrameError('A sectioned frame can only be scaled by a scalar')
+        self._scale *= value
+        self.meta['SATURATE'] *= value
+        self.meta['GAIN'] /= value
+        self.meta['MAXLIN'] *= value
+        return self
+
+    def trim(self, trim_section=None, memmap=None):
+        """Read one section from the file into an in-memory CCDData, applying any scalar scaling."""
+        if memmap:
+            raise SectionedFrameError('A sectioned frame only provides in-memory sections')
+        if trim_section is None:
+            trim_section = Section.parse_region_keyword(self.meta.get('TRIMSEC', 'N/A'))
+        region = trim_section.to_slice()
+
+        data = np.array(self._science_hdu.section[region], dtype=self._dtype)
+        if self._mask_hdu is not None:
+            mask = np.array(self._mask_hdu.section[region], dtype=np.uint8)
+        else:
+            mask = np.zeros(data.shape, dtype=np.uint8)
+        if self._uncertainty_hdu is not None:
+            uncertainty = self._uncertainty_hdu.section[region]
+            uncertainty = np.array(uncertainty, dtype=uncertainty.dtype.newbyteorder('='))
+        elif self.meta.get('ISMASTER', False):
+            uncertainty = np.zeros(data.shape, dtype=data.dtype)
+        else:
+            # The same arithmetic CCDData.__init__ uses when no uncertainty is given.
+            uncertainty = self._read_noise_at_open * np.sqrt(self._n_sub_exposures_at_open) \
+                * np.ones(data.shape, dtype=data.dtype)
+            uncertainty /= self._gain_at_open
+        if self._scale != 1.0:
+            data *= self._scale
+            uncertainty *= self._scale
+
+        trimmed_image = CCDData(data=data, meta=self.meta, mask=mask, name=self.name, uncertainty=uncertainty,
+                                memmap=False)
+        trimmed_image.detector_section = self.data_to_detector_section(trim_section)
+        trimmed_image.data_section = Section(x_start=1, y_start=1, x_stop=data.shape[1], y_stop=data.shape[0])
+        return trimmed_image
+
+    def close(self):
+        if self._hdu_list is not None:
+            self._hdu_list.close()
+
+    def __del__(self):
+        pass
+
+
 def _apply_sigma_rejection(data_to_stack, nsigma_reject):
     """Build masked stack arrays after applying robust sigma rejection.
 
@@ -557,13 +683,16 @@ def _warn_if_exposure_times_differ(images):
 
 
 def create_combination_output_hdu(source, meta, *, memmap):
-    """Create the blank SCI HDU populated in place by combine_images."""
-    return type(source)(
-        data=np.zeros_like(source.data),
+    """Create the blank SCI HDU populated in place by combine_images.
+
+    Only the source's shape and dtype are used, so a sectioned source works.
+    """
+    return CCDData(
+        data=np.zeros(source.shape, dtype=source.dtype),
         meta=meta.copy(),
         name=source.name,
-        mask=np.zeros_like(source.mask),
-        uncertainty=np.zeros_like(source.uncertainty),
+        mask=np.zeros(source.shape, dtype=np.uint8),
+        uncertainty=np.zeros(source.shape, dtype=source.dtype),
         memmap=memmap,
     )
 
@@ -574,7 +703,8 @@ def combine_images(images, output_image, nsigma=3.0, method='mean'):
     Parameters
     ----------
     images : list of CCDData
-        Input CCD data to combine.
+        Input CCD data to combine. Only ``trim``, ``shape`` and ``meta`` are used, so inputs may be
+        ``SectionedCCDData`` objects that read each section from their file on demand.
     output_image : CCDData
         CCD data object that receives the combined result.
     nsigma : float, optional
@@ -592,9 +722,9 @@ def combine_images(images, output_image, nsigma=3.0, method='mean'):
 
     input_image = images[0]
 
-    # Split the image into order-N sections. This is just for convenience: technically N can be anything, but
-    # assuming we can read a couple of images at once makes order-N sections good for memory management.
-    # Clamp the section count so tiny images never get y_step=0.
+    # Split the image into order-N sections so the N-by-rows cube built per section holds about one image's
+    # worth of pixels whatever N is. With sectioned inputs that cube, plus the output, is all the pixel data
+    # held at once. Clamp the section count so tiny images never get y_step=0.
     n_sections = min(len(images), input_image.shape[0])
 
     # Split along the y-direction to get more sequential reads off of disk.
@@ -609,9 +739,9 @@ def combine_images(images, output_image, nsigma=3.0, method='mean'):
         else:
             y_stop = (i + 1) * y_step
 
-        section_to_stack = Section(x_start=1, x_stop=input_image.data.shape[1], y_start=y_start, y_stop=y_stop)
-        # Source arrays are already memory mapped. Keep each section as a view of its source instead of copying it
-        # into another temporary memory map.
+        section_to_stack = Section(x_start=1, x_stop=input_image.shape[1], y_start=y_start, y_stop=y_stop)
+        # Sections stay in memory and are consumed immediately: a SectionedCCDData reads its rows from the file,
+        # and an in-memory CCDData hands out a view. Neither needs a temporary memory map of its own.
         data_to_stack = [image.trim(trim_section=section_to_stack, memmap=False) for image in images]
         stacked_data = stack(data_to_stack, nsigma, method=method)
 
