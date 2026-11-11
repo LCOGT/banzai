@@ -109,20 +109,32 @@ By default, stackframe reduction selects an applicable master from the local dat
 
 The RabbitMQ `banzai_stack_queue` message must contain `fits_file` and `last_frame`. Producers may include extra metadata such as their enqueue timestamp; BANZAI ignores it. `last_frame` is stored in PostgreSQL as `is_last`.
 
-The reduction task reads `MOLUID`, `MOLFRNUM`, `FRMTOTAL`, and `INSTRUME` from the FITS header. `DATE-OBS` is optional.
+The reduction task reads these FITS header keys. The instrument agent writes them as described from site-software 3.12.0.
+
+| Key | What the instrument agent writes | How BANZAI uses it |
+|---|---|---|
+| `STACKID` | A random 12-character hex string, new for each stack. Written only on stackframes. | Groups frames into a stack. Required: a frame without it is rejected before reduction. Must be a FITS string value. |
+| `MOLFRNUM` | The frame's position in its stack, starting at 1. | Identifies the frame within the stack and sets the order frames are combined in. Previews wait for frame 1. |
+| `FRMTOTAL` | The number of frames in the stack. | Stored for metadata and progress only. |
+| `INSTRUME` | The camera name. | Selects which stacking worker handles the stack. |
+| `DATE-OBS` | The exposure start time. | Optional. |
+
+One exposure command can produce several stacks. `STACKID` changes and `MOLFRNUM` restarts at 1 for each one, and `last_frame` is sent on the last frame of each stack.
+
+`MOLFRNUM` and `FRMTOTAL` are general LCO keys, written on every frame from every instrument. Outside a stack they count exposures within the whole sequence, and other software reads them, so they keep their names.
 
 The listener checks that the two required message keys exist. It does not check their types or whether the values agree with the FITS header. Sending the message is what puts a frame into Smartstack; BANZAI does not inspect a FITS `STACK` flag.
 
 PostgreSQL has two Smartstack tables:
 
-- `stacks` has one row for each `MOLUID`. It stores the camera, expected frame count, status, preview count, timeout clock, and final retry information.
-- `stackframes` has one row for each `(MOLUID, MOLFRNUM)`. It stores the reduced `n09` path and the information needed to build and send products.
+- `stacks` has one row for each `STACKID`, stored as `stack_id`. It stores the camera, expected frame count, status, preview count, timeout clock, and final retry information.
+- `stackframes` has one row for each `(STACKID, MOLFRNUM)`. It stores the reduced `n09` path and the information needed to build and send products.
 
 A frame is added only after its reduction succeeds. Failed reductions do not appear in these tables, so a timeout product may contain fewer frames than the producer sent.
 
-Frames may reduce out of order. Products are always sorted by `MOLFRNUM`. While a stack still accepts frames, reprocessing the same `(MOLUID, MOLFRNUM)` updates its row instead of adding a duplicate. It also restarts the timeout clock.
+Frames may reduce out of order. Products are always sorted by `MOLFRNUM`. While a stack still accepts frames, reprocessing the same `(STACKID, MOLFRNUM)` updates its row instead of adding a duplicate. It also restarts the timeout clock.
 
-Every frame with the same `MOLUID` is treated as part of the same group. The producer must not reuse a `MOLUID`, change its camera, or change its `FRMTOTAL`. The database does not enforce those rules.
+Every frame with the same `STACKID` is treated as part of the same group. The producer must not reuse a `STACKID`, change its camera, or change its `FRMTOTAL`. The database does not enforce those rules.
 
 ## What the stacking process decides
 
@@ -224,4 +236,4 @@ The main behavior settings are:
 
 Restart the supervisor after changing the site instrument rows.
 
-To follow one group in the logs, search for `smartstack_moluid`. The main `smartstack_event` values are `created`, `frame_reduced`, `finalize_failed`, `terminal`, and `frame_ignored`.
+To follow one group in the logs, search for `smartstack_id`. The main `smartstack_event` values are `created`, `frame_reduced`, `finalize_failed`, `terminal`, `frame_ignored`, and `frame_rejected`.

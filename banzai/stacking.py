@@ -68,21 +68,21 @@ def finalize_stack(runtime_context, stack_row, stackframes, status):
     after the shipper has been notified. If generation or publishing fails, leave the stack active
     and retry after ``next_attempt_at``. Mark the stack as error when its attempt budget is exhausted.
     """
-    moluid = stack_row.moluid
+    stack_id = stack_row.stack_id
     if stack_row.finalize_attempts >= MAX_FINALIZE_ATTEMPTS:
-        dbs.mark_stack_terminal(runtime_context.db_address, moluid, 'error')
+        dbs.mark_stack_terminal(runtime_context.db_address, stack_id, 'error')
         logger.error('Smartstack exhausted finalize attempts; marking error',
                      extra_tags={'smartstack_event': 'terminal',
                                  'smartstack_status': 'error',
-                                 'smartstack_moluid': moluid,
+                                 'smartstack_id': stack_id,
                                  'smartstack_camera': stack_row.camera,
                                  'smartstack_finalize_attempt': stack_row.finalize_attempts})
         return
 
-    finalize_attempt = dbs.claim_finalize_attempt(runtime_context.db_address, moluid, FINALIZE_BACKOFF_SECONDS)
+    finalize_attempt = dbs.claim_finalize_attempt(runtime_context.db_address, stack_id, FINALIZE_BACKOFF_SECONDS)
     try:
         fits_path, small_thumbnail, large_thumbnail = smartstack_products.run_final(
-            stackframes, runtime_context, moluid)
+            stackframes, runtime_context, stack_id)
         post_to_shipper_queue(
             runtime_context.broker_url,
             runtime_context.SHIPPER_EXCHANGE,
@@ -91,17 +91,17 @@ def finalize_stack(runtime_context, stack_row, stackframes, status):
             small_thumbnail=small_thumbnail,
             large_thumbnail=large_thumbnail,
         )
-        dbs.mark_stack_terminal(runtime_context.db_address, moluid, status)
+        dbs.mark_stack_terminal(runtime_context.db_address, stack_id, status)
         logger.info('Finalized smartstack', extra_tags={'smartstack_event': 'terminal',
                                                         'smartstack_status': status,
-                                                        'smartstack_moluid': moluid,
+                                                        'smartstack_id': stack_id,
                                                         'smartstack_camera': stack_row.camera,
                                                         'smartstack_finalize_attempt': finalize_attempt})
     except Exception:
         logger.error('Failed to finalize smartstack', exc_info=True,
                      extra_tags={'smartstack_event': 'finalize_failed',
                                  'smartstack_target_status': status,
-                                 'smartstack_moluid': moluid,
+                                 'smartstack_id': stack_id,
                                  'smartstack_camera': stack_row.camera,
                                  'smartstack_finalize_attempt': finalize_attempt})
 
@@ -110,10 +110,9 @@ def process_camera_tick(runtime_context, camera):
     """Do one poll pass for a camera: finalize terminal stacks, otherwise preview growing ones."""
     now = datetime.datetime.utcnow()
     for stack in dbs.get_active_stacks(runtime_context.db_address, camera):
-        stackframes = dbs.get_stackframes(runtime_context.db_address, stack.moluid)
+        stackframes = dbs.get_stackframes(runtime_context.db_address, stack.stack_id)
 
-        # Complete wins over timeout: a stack with the final-frame signal finalizes as
-        # 'complete' even if it also happens to be past the cadence timeout.
+        # If the last frame has arrived, finish the stack as 'complete', even if it has also timed out.
         if check_stack_complete(stackframes):
             terminal_status = 'complete'
         elif stack_has_timed_out(stack, runtime_context.stack_timeout_minutes, now=now):
@@ -131,12 +130,12 @@ def process_camera_tick(runtime_context, camera):
               and stackframes[0].stack_num == 1
               and len(stackframes) > stack.last_preview_count):
             try:
-                smartstack_products.run_preview(stackframes, runtime_context, stack.moluid)
-                dbs.set_preview_count(runtime_context.db_address, stack.moluid, len(stackframes))
+                smartstack_products.run_preview(stackframes, runtime_context, stack.stack_id)
+                dbs.set_preview_count(runtime_context.db_address, stack.stack_id, len(stackframes))
             except Exception:
                 # Do not advance the preview count on failure so the next tick retries it.
                 logger.warning('Failed to render smartstack preview', exc_info=True,
-                               extra_tags={'moluid': stack.moluid})
+                               extra_tags={'stack_id': stack.stack_id})
 
 
 def run_worker_loop(camera, runtime_context_dict, poll_interval=5):
