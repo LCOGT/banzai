@@ -60,7 +60,7 @@ def _assert_cache_matches(expected_files, timeout=180):
         assert p.stat().st_size > 0, f"Cached file is empty: {p}"
 
 
-def _prepare_stackframe(source_path, destination_filename, moluid, stack_num, frmtotal):
+def _prepare_stackframe(source_path, destination_filename, stack_id, stack_num, frmtotal):
     """Copy the archive seed to an n00 member and add Smartstack metadata."""
     frame_path = RAW_DIR / destination_filename
     shutil.copy2(str(source_path), str(frame_path))
@@ -69,7 +69,7 @@ def _prepare_stackframe(source_path, destination_filename, moluid, stack_num, fr
             if 'OBSTYPE' not in hdu.header:
                 continue
             hdu.header['OBSTYPE'] = 'SUB_EXP'
-            hdu.header['MOLUID'] = moluid
+            hdu.header['STACKID'] = stack_id
             hdu.header['MOLFRNUM'] = stack_num
             hdu.header['FRMTOTAL'] = frmtotal
             hdu.header['STACK'] = 'T'
@@ -307,7 +307,7 @@ class TestSiteE2E:
         assert src_path.exists(), f"Raw frame not found: {src_path}"
         stackframe_path = _prepare_stackframe(
             src_path, 'lsc0m476-sq34-20260121-0301-n00.fits.fz',
-            'mol-e2e-test', stack_num=1, frmtotal=1,
+            'stack-e2e-test', stack_num=1, frmtotal=1,
         )
 
         body = json.dumps({
@@ -320,11 +320,11 @@ class TestSiteE2E:
         def check():
             with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
                 stack = session.query(dbs.Stack).filter(
-                    dbs.Stack.moluid == 'mol-e2e-test'
+                    dbs.Stack.stack_id == 'stack-e2e-test'
                 ).one_or_none()
                 if stack and stack.status == 'complete':
                     stackframes = session.query(dbs.Stackframe).filter(
-                        dbs.Stackframe.moluid == 'mol-e2e-test'
+                        dbs.Stackframe.stack_id == 'stack-e2e-test'
                     ).order_by(dbs.Stackframe.stack_num).all()
                     return [s.filepath for s in stackframes]
                 return None
@@ -400,13 +400,13 @@ class TestSiteE2E:
             src_path = raw_dir / RAW_FRAME_FILENAME
             assert src_path.exists(), f"Raw frame not found: {src_path}"
 
-            moluid = 'mol-e2e-stack'
+            stack_id = 'stack-e2e-stack'
             stack_queue = os.environ.get('STACK_QUEUE_NAME', 'banzai_stack_queue')
 
             def publish_stackframe(stack_num, is_last):
                 frame_path = _prepare_stackframe(
                     src_path, f'lsc0m476-sq34-20260121-{stack_num:04d}-n00.fits.fz',
-                    moluid, stack_num=stack_num, frmtotal=3,
+                    stack_id, stack_num=stack_num, frmtotal=3,
                 )
                 body = json.dumps({
                     'fits_file': str(frame_path),
@@ -416,7 +416,7 @@ class TestSiteE2E:
 
             def preview_rendered(minimum_count):
                 with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
-                    stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == moluid).one_or_none()
+                    stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == stack_id).one_or_none()
                     return stack is not None and stack.last_preview_count >= minimum_count
 
             # Drive two distinct previews so the test proves both publishes reuse the
@@ -433,7 +433,7 @@ class TestSiteE2E:
 
             def stack_complete():
                 with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
-                    stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == moluid).one_or_none()
+                    stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == stack_id).one_or_none()
                     return stack is not None and stack.status == 'complete'
 
             assert poll_until(stack_complete, timeout=600, interval=5), \
@@ -449,7 +449,7 @@ class TestSiteE2E:
                 input_basenames = [
                     Path(stackframe.filepath).name
                     for stackframe in session.query(dbs.Stackframe).filter(
-                        dbs.Stackframe.moluid == moluid
+                        dbs.Stackframe.stack_id == stack_id
                     ).order_by(dbs.Stackframe.stack_num).all()
                 ]
             assert len(input_basenames) == 3, \
@@ -493,7 +493,7 @@ class TestSiteE2E:
                 ]
                 assert not missing, f"Preview thumbnail_metadata has blank required fields {missing}: {metadata}"
                 assert metadata['frame_basename'] == base
-                assert metadata['MOLUID'] == moluid
+                assert metadata['STACKID'] == stack_id
                 assert metadata['RLEVEL'] == 45
                 assert metadata['FRMTOTAL'] == 3
                 preview_metadata.append(metadata)
@@ -522,12 +522,12 @@ class TestSiteE2E:
         assert src_path.exists(), f"Raw frame not found: {src_path}"
 
         stack_queue = os.environ.get('STACK_QUEUE_NAME', 'banzai_stack_queue')
-        poison_moluid = 'mol-e2e-poison'
-        sibling_moluid = 'mol-e2e-poison-sibling'
+        poison_stack_id = 'stack-e2e-poison'
+        sibling_stack_id = 'stack-e2e-poison-sibling'
 
-        def publish_stackframe(moluid, stack_num, frmtotal, is_last, filename):
+        def publish_stackframe(stack_id, stack_num, frmtotal, is_last, filename):
             frame_path = _prepare_stackframe(
-                src_path, filename, moluid, stack_num=stack_num,
+                src_path, filename, stack_id, stack_num=stack_num,
                 frmtotal=frmtotal,
             )
             body = json.dumps({
@@ -537,12 +537,12 @@ class TestSiteE2E:
             publish_raw_string_to_queue(stack_queue, body)
 
         # 1. Publish the poison stack's first frame and wait for it to reduce.
-        publish_stackframe(poison_moluid, 1, 2, False, 'lsc0m476-sq34-20260121-0101-n00.fits.fz')
+        publish_stackframe(poison_stack_id, 1, 2, False, 'lsc0m476-sq34-20260121-0101-n00.fits.fz')
 
         def poison_frame_reduced():
             with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
                 row = session.query(dbs.Stackframe).filter(
-                    dbs.Stackframe.moluid == poison_moluid,
+                    dbs.Stackframe.stack_id == poison_stack_id,
                     dbs.Stackframe.stack_num == 1,
                 ).one_or_none()
                 return row.filepath if row else None
@@ -556,14 +556,14 @@ class TestSiteE2E:
         _corrupt_file(n09_path)
 
         # 3. Complete the poison stack, and publish a healthy sibling in the same window.
-        publish_stackframe(poison_moluid, 2, 2, True, 'lsc0m476-sq34-20260121-0102-n00.fits.fz')
-        publish_stackframe(sibling_moluid, 1, 2, False, 'lsc0m476-sq34-20260121-0201-n00.fits.fz')
-        publish_stackframe(sibling_moluid, 2, 2, True, 'lsc0m476-sq34-20260121-0202-n00.fits.fz')
+        publish_stackframe(poison_stack_id, 2, 2, True, 'lsc0m476-sq34-20260121-0102-n00.fits.fz')
+        publish_stackframe(sibling_stack_id, 1, 2, False, 'lsc0m476-sq34-20260121-0201-n00.fits.fz')
+        publish_stackframe(sibling_stack_id, 2, 2, True, 'lsc0m476-sq34-20260121-0202-n00.fits.fz')
 
         # 4. The poison stack exhausts the attempt ladder and lands in 'error'.
         def poison_errored():
             with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
-                stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == poison_moluid).one_or_none()
+                stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == poison_stack_id).one_or_none()
                 return stack is not None and stack.status == 'error'
 
         assert poll_until(poison_errored, timeout=300, interval=5), \
@@ -572,7 +572,7 @@ class TestSiteE2E:
         # 5. The healthy sibling still completes despite the poison stack failing.
         def sibling_complete():
             with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
-                stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == sibling_moluid).one_or_none()
+                stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == sibling_stack_id).one_or_none()
                 return stack is not None and stack.status == 'complete'
 
         assert poll_until(sibling_complete, timeout=600, interval=5), \
@@ -618,12 +618,12 @@ class TestSiteE2E:
         src_path = raw_dir / RAW_FRAME_FILENAME
         assert src_path.exists(), f"Raw frame not found: {src_path}"
 
-        moluid = 'mol-e2e-restart'
+        stack_id = 'stack-e2e-restart'
         stack_queue = os.environ.get('STACK_QUEUE_NAME', 'banzai_stack_queue')
 
         def publish_stackframe(stack_num, is_last, filename):
             frame_path = _prepare_stackframe(
-                src_path, filename, moluid, stack_num=stack_num,
+                src_path, filename, stack_id, stack_num=stack_num,
                 frmtotal=2,
             )
             body = json.dumps({
@@ -637,7 +637,7 @@ class TestSiteE2E:
 
         def stack_complete():
             with dbs.get_session(LOCAL_DB_ADDRESS, site_deploy=True) as session:
-                stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == moluid).one_or_none()
+                stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == stack_id).one_or_none()
                 return stack is not None and stack.status == 'complete'
 
         assert poll_until(stack_complete, timeout=600, interval=5), \

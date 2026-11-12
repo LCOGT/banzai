@@ -132,7 +132,7 @@ class ProcessedImage(Base):
 
 class Stack(SiteBase):
     __tablename__ = 'stacks'
-    moluid = Column(String(100), primary_key=True)
+    stack_id = Column(String(100), primary_key=True)
     camera = Column(String(50), index=True)
     frmtotal = Column(Integer)
     status = Column(String(20), default='active')
@@ -147,14 +147,14 @@ class Stack(SiteBase):
 class Stackframe(SiteBase):
     __tablename__ = 'stackframes'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    moluid = Column(String(100), ForeignKey('stacks.moluid', ondelete='CASCADE'), nullable=False, index=True)
+    stack_id = Column(String(100), ForeignKey('stacks.stack_id', ondelete='CASCADE'), nullable=False, index=True)
     stack_num = Column(Integer, nullable=False)
     filepath = Column(String(255), nullable=False)
     dateobs = Column(DateTime, nullable=True)
     is_last = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     __table_args__ = (
-        UniqueConstraint('moluid', 'stack_num', name='uq_stackframe_moluid_num'),
+        UniqueConstraint('stack_id', 'stack_num', name='uq_stackframe_stack_id_num'),
     )
 
 
@@ -645,7 +645,7 @@ def _insert_for_session(session):
     raise NotImplementedError("Only postgres and sqlite are supported")
 
 
-def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera, filepath, is_last, dateobs):
+def upsert_stack_and_stackframe(db_address, stack_id, stack_num, frmtotal, camera, filepath, is_last, dateobs):
     """Upsert a stack and one stackframe in a single transaction.
 
     Returns
@@ -663,13 +663,13 @@ def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera,
         try:
             with get_session(db_address, site_deploy=True) as session:
                 now = datetime.datetime.utcnow()
-                stack = session.query(Stack).filter(Stack.moluid == moluid).with_for_update().one_or_none()
+                stack = session.query(Stack).filter(Stack.stack_id == stack_id).with_for_update().one_or_none()
                 stack_created = stack is None
                 if stack is not None and stack.status == 'timeout':
                     return None
                 if stack is None:
                     stack = Stack(
-                        moluid=moluid,
+                        stack_id=stack_id,
                         camera=camera,
                         frmtotal=frmtotal,
                         status='active',
@@ -693,7 +693,7 @@ def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera,
 
                 insert = _insert_for_session(session)
                 stmt = insert(Stackframe).values(
-                    moluid=moluid,
+                    stack_id=stack_id,
                     stack_num=stack_num,
                     filepath=filepath,
                     dateobs=dateobs,
@@ -701,7 +701,7 @@ def upsert_stack_and_stackframe(db_address, moluid, stack_num, frmtotal, camera,
                     created_at=now,
                 )
                 stmt = stmt.on_conflict_do_update(
-                    index_elements=['moluid', 'stack_num'],
+                    index_elements=['stack_id', 'stack_num'],
                     set_={
                         'filepath': stmt.excluded.filepath,
                         'dateobs': stmt.excluded.dateobs,
@@ -722,25 +722,25 @@ def get_active_stacks(db_address, camera):
         return session.query(Stack).filter(
             Stack.camera == camera,
             Stack.status == 'active',
-        ).order_by(Stack.created_at, Stack.moluid).all()
+        ).order_by(Stack.created_at, Stack.stack_id).all()
 
 
-def get_stackframes(db_address, moluid):
+def get_stackframes(db_address, stack_id):
     """Get all stackframes for a stack ordered by stack number."""
     with get_session(db_address, site_deploy=True) as session:
         return session.query(Stackframe).filter(
-            Stackframe.moluid == moluid
+            Stackframe.stack_id == stack_id
         ).order_by(Stackframe.stack_num).all()
 
 
-def claim_finalize_attempt(db_address, moluid, backoff_seconds):
+def claim_finalize_attempt(db_address, stack_id, backoff_seconds):
     """Claim and return the next finalize attempt number.
 
     The attempt is claimed BEFORE the work starts, so a violent crash mid-finalize has already burned an attempt.
     That lets poison stacks self-heal to 'error' after the backoff ladder instead of crash-looping forever.
     """
     with get_session(db_address, site_deploy=True) as session:
-        stack = session.query(Stack).filter(Stack.moluid == moluid).with_for_update().one()
+        stack = session.query(Stack).filter(Stack.stack_id == stack_id).with_for_update().one()
         stack.finalize_attempts += 1
         attempt = stack.finalize_attempts
         backoff_index = min(attempt - 1, len(backoff_seconds) - 1)
@@ -748,20 +748,20 @@ def claim_finalize_attempt(db_address, moluid, backoff_seconds):
         return attempt
 
 
-def mark_stack_terminal(db_address, moluid, status):
+def mark_stack_terminal(db_address, stack_id, status):
     """Mark a stack as complete, timeout, or error."""
     now = datetime.datetime.utcnow()
     with get_session(db_address, site_deploy=True) as session:
         session.query(Stack).filter(
-            Stack.moluid == moluid
+            Stack.stack_id == stack_id
         ).update({'status': status, 'completed_at': now})
 
 
-def set_preview_count(db_address, moluid, preview_count):
+def set_preview_count(db_address, stack_id, preview_count):
     """Store the number of stackframes included in the newest preview."""
     with get_session(db_address, site_deploy=True) as session:
         session.query(Stack).filter(
-            Stack.moluid == moluid
+            Stack.stack_id == stack_id
         ).update({'last_preview_count': preview_count})
 
 
@@ -769,14 +769,14 @@ def cleanup_old_stacks(db_address, retention_days):
     """Delete old terminal data while retaining timeout stacks as permanent tombstones."""
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=retention_days)
     with get_session(db_address, site_deploy=True) as session:
-        terminal_stacks = session.query(Stack.moluid, Stack.status).filter(
+        terminal_stacks = session.query(Stack.stack_id, Stack.status).filter(
             Stack.status != 'active',
             Stack.completed_at < cutoff,
         ).all()
         if not terminal_stacks:
             return
-        moluids = [row[0] for row in terminal_stacks]
-        session.query(Stackframe).filter(Stackframe.moluid.in_(moluids)).delete(synchronize_session=False)
-        deletable_moluids = [moluid for moluid, status in terminal_stacks if status != 'timeout']
-        if deletable_moluids:
-            session.query(Stack).filter(Stack.moluid.in_(deletable_moluids)).delete(synchronize_session=False)
+        stack_ids = [row[0] for row in terminal_stacks]
+        session.query(Stackframe).filter(Stackframe.stack_id.in_(stack_ids)).delete(synchronize_session=False)
+        deletable_stack_ids = [stack_id for stack_id, status in terminal_stacks if status != 'timeout']
+        if deletable_stack_ids:
+            session.query(Stack).filter(Stack.stack_id.in_(deletable_stack_ids)).delete(synchronize_session=False)

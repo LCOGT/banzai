@@ -49,13 +49,13 @@ def db_address(tmp_path):
 class TestDBOperations:
 
     @staticmethod
-    def _upsert(db_address, moluid='mol-001', stack_num=1, frmtotal=5, camera='cam1',
+    def _upsert(db_address, stack_id='stack-001', stack_num=1, frmtotal=5, camera='cam1',
                 filepath='/data/frame1.fits', is_last=False, dateobs=None):
         if dateobs is None:
             dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         return dbs.upsert_stack_and_stackframe(
             db_address,
-            moluid=moluid,
+            stack_id=stack_id,
             stack_num=stack_num,
             frmtotal=frmtotal,
             camera=camera,
@@ -65,20 +65,20 @@ class TestDBOperations:
         )
 
     def test_upsert_returns_created_flag(self, db_address):
-        assert self._upsert(db_address, moluid='mol-created', stack_num=1) is True
-        assert self._upsert(db_address, moluid='mol-created', stack_num=2) is False
+        assert self._upsert(db_address, stack_id='stack-created', stack_num=1) is True
+        assert self._upsert(db_address, stack_id='stack-created', stack_num=2) is False
 
     def test_upsert_creates_stack_and_stackframe(self, db_address):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         self._upsert(
-            db_address, moluid='mol-001', stack_num=1, frmtotal=5,
+            db_address, stack_id='stack-001', stack_num=1, frmtotal=5,
             camera='cam1', filepath='/data/frame1.fits', is_last=False, dateobs=dateobs,
         )
         with dbs.get_session(db_address, site_deploy=True) as session:
-            stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-001').one()
-            stackframes = session.query(dbs.Stackframe).filter(dbs.Stackframe.moluid == 'mol-001').all()
+            stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-001').one()
+            stackframes = session.query(dbs.Stackframe).filter(dbs.Stackframe.stack_id == 'stack-001').all()
 
-        assert stack.moluid == 'mol-001'
+        assert stack.stack_id == 'stack-001'
         assert stack.frmtotal == 5
         assert stack.camera == 'cam1'
         assert stack.status == 'active'
@@ -95,17 +95,17 @@ class TestDBOperations:
         assert stackframe.is_last is False
 
     def test_upsert_second_stackframe_updates_stack(self, db_address):
-        self._upsert(db_address, moluid='mol-update', stack_num=1, frmtotal=5, filepath='/data/frame1.fits')
+        self._upsert(db_address, stack_id='stack-update', stack_num=1, frmtotal=5, filepath='/data/frame1.fits')
         with dbs.get_session(db_address, site_deploy=True) as session:
-            first_stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-update').one()
+            first_stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-update').one()
             first_last_stackframe_at = first_stack.last_stackframe_at
 
-        dbs.set_preview_count(db_address, 'mol-update', 1)
-        self._upsert(db_address, moluid='mol-update', stack_num=2, frmtotal=5, filepath='/data/frame2.fits')
+        dbs.set_preview_count(db_address, 'stack-update', 1)
+        self._upsert(db_address, stack_id='stack-update', stack_num=2, frmtotal=5, filepath='/data/frame2.fits')
 
         with dbs.get_session(db_address, site_deploy=True) as session:
-            stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-update').one()
-            stackframe_count = session.query(dbs.Stackframe).filter(dbs.Stackframe.moluid == 'mol-update').count()
+            stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-update').one()
+            stackframe_count = session.query(dbs.Stackframe).filter(dbs.Stackframe.stack_id == 'stack-update').count()
 
         assert stack.frmtotal == 5
         assert stack.camera == 'cam1'
@@ -118,15 +118,15 @@ class TestDBOperations:
     def test_upsert_requeue_resets_terminal_stack(self, db_address, terminal_status):
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         self._upsert(
-            db_address, moluid='mol-dup', stack_num=1, frmtotal=3,
+            db_address, stack_id='stack-dup', stack_num=1, frmtotal=3,
             camera='cam1', filepath='/data/dup1.fits', is_last=False, dateobs=dateobs,
         )
-        dbs.mark_stack_terminal(db_address, 'mol-dup', terminal_status)
-        dbs.claim_finalize_attempt(db_address, 'mol-dup', [60, 300])
-        dbs.set_preview_count(db_address, 'mol-dup', 2)
+        dbs.mark_stack_terminal(db_address, 'stack-dup', terminal_status)
+        dbs.claim_finalize_attempt(db_address, 'stack-dup', [60, 300])
+        dbs.set_preview_count(db_address, 'stack-dup', 2)
         with dbs.get_session(db_address, site_deploy=True) as session:
-            original_stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-dup').one()
-            original_stack_id = original_stack.moluid
+            original_stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-dup').one()
+            original_stack_id = original_stack.stack_id
             assert original_stack.status == terminal_status
             assert original_stack.completed_at is not None
             assert original_stack.finalize_attempts == 1
@@ -134,16 +134,16 @@ class TestDBOperations:
 
         new_dateobs = datetime.datetime(2024, 6, 15, 13, 0, 0)
         self._upsert(
-            db_address, moluid='mol-dup', stack_num=1, frmtotal=3,
+            db_address, stack_id='stack-dup', stack_num=1, frmtotal=3,
             camera='cam1', filepath='/data/dup2.fits', is_last=True, dateobs=new_dateobs,
         )
 
         with dbs.get_session(db_address, site_deploy=True) as session:
-            stacks = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-dup').all()
-            stackframes = session.query(dbs.Stackframe).filter(dbs.Stackframe.moluid == 'mol-dup').all()
+            stacks = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-dup').all()
+            stackframes = session.query(dbs.Stackframe).filter(dbs.Stackframe.stack_id == 'stack-dup').all()
 
         assert len(stacks) == 1
-        assert stacks[0].moluid == original_stack_id
+        assert stacks[0].stack_id == original_stack_id
         assert stacks[0].status == 'active'
         assert stacks[0].completed_at is None
         assert stacks[0].finalize_attempts == 0
@@ -158,16 +158,16 @@ class TestDBOperations:
     def test_upsert_ignores_stackframe_after_timeout(self, db_address, late_stack_num):
         original_dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         self._upsert(
-            db_address, moluid='mol-timeout', stack_num=1, frmtotal=3,
+            db_address, stack_id='stack-timeout', stack_num=1, frmtotal=3,
             camera='cam1', filepath='/data/original.fits', is_last=False, dateobs=original_dateobs,
         )
-        dbs.claim_finalize_attempt(db_address, 'mol-timeout', [60, 300])
-        dbs.set_preview_count(db_address, 'mol-timeout', 1)
-        dbs.mark_stack_terminal(db_address, 'mol-timeout', 'timeout')
+        dbs.claim_finalize_attempt(db_address, 'stack-timeout', [60, 300])
+        dbs.set_preview_count(db_address, 'stack-timeout', 1)
+        dbs.mark_stack_terminal(db_address, 'stack-timeout', 'timeout')
 
         with dbs.get_session(db_address, site_deploy=True) as session:
-            original_stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-timeout').one()
-            original_frame = session.query(dbs.Stackframe).filter(dbs.Stackframe.moluid == 'mol-timeout').one()
+            original_stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-timeout').one()
+            original_frame = session.query(dbs.Stackframe).filter(dbs.Stackframe.stack_id == 'stack-timeout').one()
             original_stack_state = (
                 original_stack.camera, original_stack.frmtotal, original_stack.status,
                 original_stack.last_stackframe_at, original_stack.completed_at,
@@ -180,14 +180,14 @@ class TestDBOperations:
             )
 
         result = self._upsert(
-            db_address, moluid='mol-timeout', stack_num=late_stack_num, frmtotal=99,
+            db_address, stack_id='stack-timeout', stack_num=late_stack_num, frmtotal=99,
             camera='cam2', filepath='/data/late.fits', is_last=True,
             dateobs=datetime.datetime(2024, 6, 15, 13, 0, 0),
         )
 
         with dbs.get_session(db_address, site_deploy=True) as session:
-            stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-timeout').one()
-            stackframes = session.query(dbs.Stackframe).filter(dbs.Stackframe.moluid == 'mol-timeout').all()
+            stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-timeout').one()
+            stackframes = session.query(dbs.Stackframe).filter(dbs.Stackframe.stack_id == 'stack-timeout').all()
 
         assert result is None
         assert (
@@ -205,7 +205,7 @@ class TestDBOperations:
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         with pytest.raises(ValueError, match='filepath is required'):
             self._upsert(
-                db_address, moluid='mol-upd', stack_num=1, frmtotal=3,
+                db_address, stack_id='stack-upd', stack_num=1, frmtotal=3,
                 camera='cam1', filepath=None, is_last=False, dateobs=dateobs,
             )
 
@@ -217,45 +217,45 @@ class TestDBOperations:
 class TestStatusTransitions:
 
     def test_claim_finalize_attempt_increments_and_sets_backoff(self, db_address):
-        TestDBOperations._upsert(db_address, moluid='mol-claim')
+        TestDBOperations._upsert(db_address, stack_id='stack-claim')
         before_first_claim = datetime.datetime.utcnow()
 
-        attempt_one = dbs.claim_finalize_attempt(db_address, 'mol-claim', [60, 300])
-        attempt_two = dbs.claim_finalize_attempt(db_address, 'mol-claim', [60, 300])
-        attempt_three = dbs.claim_finalize_attempt(db_address, 'mol-claim', [60, 300])
+        attempt_one = dbs.claim_finalize_attempt(db_address, 'stack-claim', [60, 300])
+        attempt_two = dbs.claim_finalize_attempt(db_address, 'stack-claim', [60, 300])
+        attempt_three = dbs.claim_finalize_attempt(db_address, 'stack-claim', [60, 300])
 
         assert (attempt_one, attempt_two, attempt_three) == (1, 2, 3)
         with dbs.get_session(db_address, site_deploy=True) as session:
-            stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-claim').one()
+            stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-claim').one()
         assert stack.finalize_attempts == 3
         assert stack.next_attempt_at >= before_first_claim + datetime.timedelta(seconds=300)
 
     def test_mark_stack_terminal(self, db_address):
-        TestDBOperations._upsert(db_address, moluid='mol-comp')
-        dbs.mark_stack_terminal(db_address, 'mol-comp', 'complete')
+        TestDBOperations._upsert(db_address, stack_id='stack-comp')
+        dbs.mark_stack_terminal(db_address, 'stack-comp', 'complete')
 
         with dbs.get_session(db_address, site_deploy=True) as session:
-            stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-comp').one()
+            stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-comp').one()
 
         assert stack.status == 'complete'
         assert stack.completed_at is not None
 
     def test_get_active_stacks_filters_by_camera_and_status(self, db_address):
-        TestDBOperations._upsert(db_address, moluid='mol-cam1-active', camera='cam1')
-        TestDBOperations._upsert(db_address, moluid='mol-cam2-active', camera='cam2')
-        TestDBOperations._upsert(db_address, moluid='mol-cam1-complete', camera='cam1')
-        dbs.mark_stack_terminal(db_address, 'mol-cam1-complete', 'complete')
+        TestDBOperations._upsert(db_address, stack_id='stack-cam1-active', camera='cam1')
+        TestDBOperations._upsert(db_address, stack_id='stack-cam2-active', camera='cam2')
+        TestDBOperations._upsert(db_address, stack_id='stack-cam1-complete', camera='cam1')
+        dbs.mark_stack_terminal(db_address, 'stack-cam1-complete', 'complete')
 
         active_cam1 = dbs.get_active_stacks(db_address, 'cam1')
 
-        assert [stack.moluid for stack in active_cam1] == ['mol-cam1-active']
+        assert [stack.stack_id for stack in active_cam1] == ['stack-cam1-active']
 
     def test_set_preview_count(self, db_address):
-        TestDBOperations._upsert(db_address, moluid='mol-preview')
-        dbs.set_preview_count(db_address, 'mol-preview', 7)
+        TestDBOperations._upsert(db_address, stack_id='stack-preview')
+        dbs.set_preview_count(db_address, 'stack-preview', 7)
 
         with dbs.get_session(db_address, site_deploy=True) as session:
-            stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-preview').one()
+            stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-preview').one()
 
         assert stack.last_preview_count == 7
 
@@ -270,11 +270,11 @@ class TestConcurrentStacks:
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         for stack_num in (3, 1, 2):
             TestDBOperations._upsert(
-                db_address, moluid='mol-order', stack_num=stack_num, frmtotal=3,
+                db_address, stack_id='stack-order', stack_num=stack_num, frmtotal=3,
                 camera='cam1', filepath=f'/data/order{stack_num}.fits', is_last=(stack_num == 3), dateobs=dateobs,
             )
 
-        stackframes = dbs.get_stackframes(db_address, 'mol-order')
+        stackframes = dbs.get_stackframes(db_address, 'stack-order')
 
         assert [stackframe.stack_num for stackframe in stackframes] == [1, 2, 3]
 
@@ -282,17 +282,17 @@ class TestConcurrentStacks:
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         for i in range(3):
             TestDBOperations._upsert(
-                db_address, moluid='mol-A', stack_num=i + 1, frmtotal=3,
+                db_address, stack_id='stack-A', stack_num=i + 1, frmtotal=3,
                 camera='cam1', filepath=f'/data/a{i}.fits', is_last=(i == 2), dateobs=dateobs,
             )
         for i in range(2):
             TestDBOperations._upsert(
-                db_address, moluid='mol-B', stack_num=i + 1, frmtotal=5,
+                db_address, stack_id='stack-B', stack_num=i + 1, frmtotal=5,
                 camera='cam1', filepath=f'/data/b{i}.fits', is_last=False, dateobs=dateobs,
             )
 
-        stackframes_a = dbs.get_stackframes(db_address, 'mol-A')
-        stackframes_b = dbs.get_stackframes(db_address, 'mol-B')
+        stackframes_a = dbs.get_stackframes(db_address, 'stack-A')
+        stackframes_b = dbs.get_stackframes(db_address, 'stack-B')
         assert len(stackframes_a) == 3
         assert len(stackframes_b) == 2
         assert check_stack_complete(stackframes_a) is True
@@ -334,49 +334,49 @@ class TestRetention:
         dateobs = datetime.datetime(2024, 6, 15, 12, 0, 0)
         for stack_num in range(1, 4):
             TestDBOperations._upsert(
-                db_address, moluid='mol-old', stack_num=stack_num, frmtotal=3,
+                db_address, stack_id='stack-old', stack_num=stack_num, frmtotal=3,
                 camera='cam1', filepath=f'/data/old{stack_num}.fits', is_last=(stack_num == 3), dateobs=dateobs,
             )
         for stack_num in range(1, 4):
             TestDBOperations._upsert(
-                db_address, moluid='mol-active-old', stack_num=stack_num, frmtotal=3,
+                db_address, stack_id='stack-active-old', stack_num=stack_num, frmtotal=3,
                 camera='cam1', filepath=f'/data/active{stack_num}.fits',
                 is_last=(stack_num == 3), dateobs=dateobs,
             )
         for stack_num in range(1, 3):
             TestDBOperations._upsert(
-                db_address, moluid='mol-timeout-old', stack_num=stack_num, frmtotal=3,
+                db_address, stack_id='stack-timeout-old', stack_num=stack_num, frmtotal=3,
                 camera='cam1', filepath=f'/data/timeout{stack_num}.fits',
                 is_last=False, dateobs=dateobs,
             )
-        dbs.mark_stack_terminal(db_address, 'mol-old', 'complete')
-        dbs.mark_stack_terminal(db_address, 'mol-timeout-old', 'timeout')
+        dbs.mark_stack_terminal(db_address, 'stack-old', 'complete')
+        dbs.mark_stack_terminal(db_address, 'stack-timeout-old', 'timeout')
 
         with dbs.get_session(db_address) as session:
             old_date = datetime.datetime.utcnow() - datetime.timedelta(days=30)
             session.execute(
-                text("UPDATE stacks SET completed_at = :old_date WHERE moluid = :moluid"),
-                {'old_date': old_date, 'moluid': 'mol-old'},
+                text("UPDATE stacks SET completed_at = :old_date WHERE stack_id = :stack_id"),
+                {'old_date': old_date, 'stack_id': 'stack-old'},
             )
             session.execute(
-                text("UPDATE stacks SET completed_at = :old_date WHERE moluid = :moluid"),
-                {'old_date': old_date, 'moluid': 'mol-active-old'},
+                text("UPDATE stacks SET completed_at = :old_date WHERE stack_id = :stack_id"),
+                {'old_date': old_date, 'stack_id': 'stack-active-old'},
             )
             session.execute(
-                text("UPDATE stacks SET completed_at = :old_date WHERE moluid = :moluid"),
-                {'old_date': old_date, 'moluid': 'mol-timeout-old'},
+                text("UPDATE stacks SET completed_at = :old_date WHERE stack_id = :stack_id"),
+                {'old_date': old_date, 'stack_id': 'stack-timeout-old'},
             )
 
         dbs.cleanup_old_stacks(db_address, retention_days=7)
 
         with dbs.get_session(db_address, site_deploy=True) as session:
-            old_stack_count = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-old').count()
-            old_frame_count = session.query(dbs.Stackframe).filter(dbs.Stackframe.moluid == 'mol-old').count()
-            active_stack_count = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-active-old').count()
-            active_frame_count = session.query(dbs.Stackframe).filter(dbs.Stackframe.moluid == 'mol-active-old').count()
-            timeout_stack = session.query(dbs.Stack).filter(dbs.Stack.moluid == 'mol-timeout-old').one()
+            old_stack_count = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-old').count()
+            old_frame_count = session.query(dbs.Stackframe).filter(dbs.Stackframe.stack_id == 'stack-old').count()
+            active_stack_count = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-active-old').count()
+            active_frame_count = session.query(dbs.Stackframe).filter(dbs.Stackframe.stack_id == 'stack-active-old').count()
+            timeout_stack = session.query(dbs.Stack).filter(dbs.Stack.stack_id == 'stack-timeout-old').one()
             timeout_frame_count = session.query(dbs.Stackframe).filter(
-                dbs.Stackframe.moluid == 'mol-timeout-old').count()
+                dbs.Stackframe.stack_id == 'stack-timeout-old').count()
 
         assert old_stack_count == 0
         assert old_frame_count == 0
@@ -385,7 +385,7 @@ class TestRetention:
         assert timeout_stack.status == 'timeout'
         assert timeout_frame_count == 0
         assert TestDBOperations._upsert(
-            db_address, moluid='mol-timeout-old', stack_num=3, frmtotal=3,
+            db_address, stack_id='stack-timeout-old', stack_num=3, frmtotal=3,
             camera='cam1', filepath='/data/late.fits', is_last=True, dateobs=dateobs,
         ) is None
 
@@ -521,7 +521,7 @@ class TestProcessStackframe:
         h['STACK'] = 'T'
         h['MOLFRNUM'] = 1
         h['FRMTOTAL'] = 5
-        h['MOLUID'] = 'mol-xyz'
+        h['STACKID'] = 'stack-xyz'
         for k, v in overrides.items():
             h[k] = v
         return h
@@ -548,7 +548,7 @@ class TestProcessStackframe:
         mock_logger.info.assert_called_once_with(
             'Ignored reduced stackframe for timed-out smartstack',
             extra_tags={'smartstack_event': 'frame_ignored',
-                        'smartstack_moluid': 'mol-xyz',
+                        'smartstack_stackid': 'stack-xyz',
                         'smartstack_camera': 'cam1',
                         'smartstack_stack_num': 1,
                         'smartstack_filepath': '/data/processed/frame-n09.fits',
@@ -582,7 +582,7 @@ class TestProcessStackframe:
         mock_run_stages.assert_called_once()
         mock_upsert.assert_called_once_with(
             db_address,
-            moluid='mol-xyz',
+            stack_id='stack-xyz',
             stack_num=1,
             frmtotal=5,
             camera='cam1',
@@ -640,6 +640,22 @@ class TestProcessStackframe:
         mock_upsert.assert_not_called()
         redis_module.Redis.from_url.assert_not_called()
 
+    @patch('banzai.scheduling.logger')
+    @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
+    def test_process_stackframe_rejects_frame_without_stackid(self, mock_run_stages, mock_logger,
+                                                              db_address, monkeypatch):
+        mock_upsert = MagicMock()
+        monkeypatch.setattr(scheduling, 'upsert_stack_and_stackframe', mock_upsert)
+        header = self._make_fits_header()
+        del header['STACKID']
+
+        with patch('banzai.scheduling.fits_utils.get_primary_header', return_value=header):
+            process_stackframe({'fits_file': '/path/to/frame.fits'}, {'db_address': db_address})
+
+        mock_run_stages.assert_not_called()
+        mock_upsert.assert_not_called()
+        assert mock_logger.error.call_args.kwargs['extra_tags']['smartstack_event'] == 'frame_rejected'
+
     def test_process_stackframe_retries_on_unreadable_header(self, db_address):
         """If get_primary_header returns None (I/O error), the task must retry, not swallow the failure."""
         body = {
@@ -675,12 +691,12 @@ def _runtime_context(**overrides):
     return SimpleNamespace(**defaults)
 
 
-def _stack(moluid='mol-w', frmtotal=3, finalize_attempts=0, next_attempt_at=None,
+def _stack(stack_id='stack-w', frmtotal=3, finalize_attempts=0, next_attempt_at=None,
            last_preview_count=0, last_stackframe_at=None):
     if last_stackframe_at is None:
         last_stackframe_at = datetime.datetime.utcnow()
     return SimpleNamespace(
-        moluid=moluid, camera='cam1', frmtotal=frmtotal, status='active',
+        stack_id=stack_id, camera='cam1', frmtotal=frmtotal, status='active',
         finalize_attempts=finalize_attempts, next_attempt_at=next_attempt_at,
         last_preview_count=last_preview_count, last_stackframe_at=last_stackframe_at,
     )
@@ -713,12 +729,12 @@ class TestFinalizeStack:
             finalize_stack(rc, stack, stackframes, 'complete')
 
         assert [call[0] for call in manager.mock_calls] == ['claim', 'run_final', 'publish', 'mark_terminal']
-        mock_dbs.claim_finalize_attempt.assert_called_once_with(rc.db_address, stack.moluid, FINALIZE_BACKOFF_SECONDS)
+        mock_dbs.claim_finalize_attempt.assert_called_once_with(rc.db_address, stack.stack_id, FINALIZE_BACKOFF_SECONDS)
         mock_publish.assert_called_once_with(
             rc.broker_url, rc.SHIPPER_EXCHANGE, rc.SHIPPER_QUEUE_NAME,
             fits_path='/o/e45.fits', small_thumbnail='/o/small.jpg', large_thumbnail='/o/large.jpg',
         )
-        mock_dbs.mark_stack_terminal.assert_called_once_with(rc.db_address, stack.moluid, 'complete')
+        mock_dbs.mark_stack_terminal.assert_called_once_with(rc.db_address, stack.stack_id, 'complete')
 
     def test_finalize_failure_leaves_stack_active(self):
         """A run_final error leaves the claimed stack active for retry."""
@@ -764,7 +780,7 @@ class TestFinalizeStack:
 
             finalize_stack(rc, stack, stackframes, 'complete')
 
-        mock_dbs.mark_stack_terminal.assert_called_once_with(rc.db_address, stack.moluid, 'error')
+        mock_dbs.mark_stack_terminal.assert_called_once_with(rc.db_address, stack.stack_id, 'error')
         mock_dbs.claim_finalize_attempt.assert_not_called()
         mock_products.run_final.assert_not_called()
         mock_publish.assert_not_called()
@@ -861,9 +877,9 @@ class TestProcessCameraTick:
     def test_preview_only_when_count_grew(self):
         """Only stacks whose stackframe count exceeds last_preview_count get a new preview."""
         rc = _runtime_context(SMARTSTACK_PREVIEWS=True)
-        grown = _stack(moluid='grown', frmtotal=5, last_preview_count=2)
-        same = _stack(moluid='same', frmtotal=5, last_preview_count=3)
-        frames_by_mol = {
+        grown = _stack(stack_id='grown', frmtotal=5, last_preview_count=2)
+        same = _stack(stack_id='same', frmtotal=5, last_preview_count=3)
+        frames_by_stack = {
             'grown': [_frame(1), _frame(2), _frame(3)],
             'same': [_frame(1), _frame(2), _frame(3)],
         }
@@ -871,12 +887,12 @@ class TestProcessCameraTick:
              patch('banzai.stacking.finalize_stack') as mock_finalize, \
              patch('banzai.stacking.smartstack_products') as mock_products:
             mock_dbs.get_active_stacks.return_value = [grown, same]
-            mock_dbs.get_stackframes.side_effect = lambda db_address, moluid: frames_by_mol[moluid]
+            mock_dbs.get_stackframes.side_effect = lambda db_address, stack_id: frames_by_stack[stack_id]
 
             process_camera_tick(rc, 'cam1')
 
         mock_finalize.assert_not_called()
-        mock_products.run_preview.assert_called_once_with(frames_by_mol['grown'], rc, 'grown')
+        mock_products.run_preview.assert_called_once_with(frames_by_stack['grown'], rc, 'grown')
         mock_dbs.set_preview_count.assert_called_once_with(rc.db_address, 'grown', 3)
 
     def test_preview_waits_for_stackframe_one(self):

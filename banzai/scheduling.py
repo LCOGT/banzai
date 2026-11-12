@@ -325,6 +325,13 @@ def process_stackframe(self, body: dict, runtime_context: dict):
             raise self.retry(countdown=30, exc=IOError(f"Could not read header from {filepath}"))
 
         camera = header.get('INSTRUME', '').strip()
+        stack_id = str(header.get('STACKID', '')).strip()
+        if not stack_id:
+            logger.error('Rejected stackframe without a STACKID header',
+                         extra_tags={'smartstack_event': 'frame_rejected',
+                                     'smartstack_camera': camera,
+                                     'filepath': filepath})
+            return
         dateobs_str = header.get('DATE-OBS', '')
         dateobs = parse_date_obs(dateobs_str) if dateobs_str else None
 
@@ -332,7 +339,7 @@ def process_stackframe(self, body: dict, runtime_context: dict):
         images = stage_utils.run_pipeline_stages([{'path': filepath}], runtime_context)
         if not images:
             logger.error('Stackframe reduction produced no output image',
-                         extra_tags={'filepath': filepath, 'moluid': header['MOLUID']})
+                         extra_tags={'filepath': filepath, 'smartstack_stackid': stack_id})
             return
 
         reduced_path = os.path.join(
@@ -342,7 +349,7 @@ def process_stackframe(self, body: dict, runtime_context: dict):
         # Phase 2: Record reduced stackframes in the DB; the stacking worker polls from there.
         stack_created = upsert_stack_and_stackframe(
             runtime_context.db_address,
-            moluid=header['MOLUID'],
+            stack_id=stack_id,
             stack_num=header['MOLFRNUM'],
             frmtotal=header['FRMTOTAL'],
             camera=camera,
@@ -353,7 +360,7 @@ def process_stackframe(self, body: dict, runtime_context: dict):
         if stack_created is None:
             logger.info('Ignored reduced stackframe for timed-out smartstack',
                         extra_tags={'smartstack_event': 'frame_ignored',
-                                    'smartstack_moluid': header['MOLUID'],
+                                    'smartstack_stackid': stack_id,
                                     'smartstack_camera': camera,
                                     'smartstack_stack_num': header['MOLFRNUM'],
                                     'smartstack_filepath': reduced_path,
@@ -361,11 +368,11 @@ def process_stackframe(self, body: dict, runtime_context: dict):
             return
         if stack_created:
             logger.info('Smartstack created', extra_tags={'smartstack_event': 'created',
-                                                          'smartstack_moluid': header['MOLUID'],
+                                                          'smartstack_stackid': stack_id,
                                                           'smartstack_camera': camera,
                                                           'smartstack_frmtotal': header['FRMTOTAL']})
         logger.info('Reduced stackframe', extra_tags={'smartstack_event': 'frame_reduced',
-                                                      'smartstack_moluid': header['MOLUID'],
+                                                      'smartstack_stackid': stack_id,
                                                       'smartstack_camera': camera,
                                                       'smartstack_stack_num': header['MOLFRNUM'],
                                                       'smartstack_filepath': reduced_path})
