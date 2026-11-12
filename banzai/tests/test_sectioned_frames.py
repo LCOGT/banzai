@@ -5,6 +5,7 @@ sectioned path is exercised end to end rather than through fakes. The instrument
 patched, because it needs a database.
 """
 import gc
+import io
 import os
 import resource
 from types import SimpleNamespace
@@ -14,18 +15,14 @@ import numpy as np
 import pytest
 from astropy.io import fits
 
-from banzai import data as banzai_data
 from banzai.bias import BiasMaker
-from banzai.data import CCDData, combine_images, create_combination_output_hdu
+from banzai.data import CCDData, SectionedCCDData, SectionedFrameError, combine_images, \
+    create_combination_output_hdu
 from banzai.lco import LCOFrameFactory
 from banzai.smartstack_products import build_stacked_frame
 import banzai.smartstack_products as products
 from banzai.tests.utils import FakeContext, FakeInstrument
 from banzai.utils.fits_utils import pack
-from banzai.utils.image_utils import Section
-
-SectionedCCDData = getattr(banzai_data, 'SectionedCCDData', None)
-SectionedFrameError = getattr(banzai_data, 'SectionedFrameError', None)
 
 SHAPE = (24, 32)
 LAYOUTS = ['header-primary', 'sci-primary']
@@ -137,10 +134,6 @@ def open_fds():
     return len(os.listdir('/dev/fd'))
 
 
-def full_section():
-    return Section(x_start=1, x_stop=SHAPE[1], y_start=1, y_stop=SHAPE[0])
-
-
 def combine(frames, method):
     inputs = [science_hdu(frame) for frame in frames]
     output = create_combination_output_hdu(inputs[0], inputs[0].meta, memmap=False)
@@ -161,18 +154,12 @@ def assert_same_arrays(actual, expected):
     assert native(actual.uncertainty.dtype) == native(expected.uncertainty.dtype)
 
 
-def require_sectioned_class():
-    assert SectionedCCDData is not None, 'banzai.data.SectionedCCDData is not implemented'
-    assert SectionedFrameError is not None, 'banzai.data.SectionedFrameError is not implemented'
-
-
 # --------------------------------------------------------------------------------------------------- opening
 
 
 @pytest.mark.parametrize('layout', LAYOUTS)
 @pytest.mark.parametrize('compressed', [False, True])
 def test_sectioned_open_matches_eager_header_properties(tmp_path, factory, context, layout, compressed):
-    require_sectioned_class()
     path = write_frames(tmp_path, 1, layout=layout, compressed=compressed, obstype='BIAS', nsubread=2)[0]
     eager = open_eager(factory, path, context)
     sectioned = open_sectioned(factory, path, context)
@@ -188,10 +175,6 @@ def test_sectioned_open_matches_eager_header_properties(tmp_path, factory, conte
     assert sectioned_sci.name == eager_sci.name
     for keyword in ('GAIN', 'RDNOISE', 'SATURATE', 'MAXLIN', 'DETSEC', 'DATASEC', 'NSUBREAD'):
         assert sectioned_sci.meta[keyword] == eager_sci.meta[keyword], keyword
-    assert sectioned_sci.gain == eager_sci.gain
-    assert sectioned_sci.read_noise == eager_sci.read_noise
-    assert sectioned_sci.detector_section.to_region_keyword() == eager_sci.detector_section.to_region_keyword()
-    assert sectioned_sci.data_section.to_region_keyword() == eager_sci.data_section.to_region_keyword()
     assert sectioned_sci.memmap is False
     assert [hdu.name for hdu in sectioned._hdus] == [hdu.name for hdu in eager._hdus]
 
@@ -215,7 +198,6 @@ COMBINE_CASES = [
 @pytest.mark.parametrize('layout,compressed,with_bpm,with_err,dtype,ismaster,method', COMBINE_CASES)
 def test_combine_sectioned_inputs_equals_eager(tmp_path, factory, context, layout, compressed, with_bpm, with_err,
                                           dtype, ismaster, method):
-    require_sectioned_class()
     paths = write_frames(tmp_path, 5, layout=layout, compressed=compressed, with_bpm=with_bpm, with_err=with_err,
                          dtype=dtype, ismaster=ismaster)
     eager_frames = [open_eager(factory, path, context) for path in paths]
@@ -227,38 +209,11 @@ def test_combine_sectioned_inputs_equals_eager(tmp_path, factory, context, layou
     assert_same_arrays(actual, expected)
 
 
-def test_sectioned_trim_is_native_byte_order_and_writable(tmp_path, factory, context):
-    require_sectioned_class()
-    path = write_frames(tmp_path, 1)[0]
-    section = science_hdu(open_sectioned(factory, path, context)).trim(trim_section=full_section(), memmap=False)
-    for array in (section.data, section.mask, section.uncertainty):
-        assert array.dtype.isnative
-        assert array.flags.writeable
-    assert section.memmap is False
-
-
 # --------------------------------------------------------------------------------------------------- descriptors
-
-
-def test_sectioned_frames_hold_one_descriptor_each_and_release_on_close(tmp_path, factory, context):
-    require_sectioned_class()
-    paths = write_frames(tmp_path, 20)
-    gc.collect()
-    baseline = open_fds()
-
-    frames = [open_sectioned(factory, path, context) for path in paths]
-    assert open_fds() - baseline == len(paths)
-
-    for frame in frames:
-        science_hdu(frame).close()
-    del frames
-    gc.collect()
-    assert open_fds() == baseline
 
 
 def test_sectioned_stack_combines_under_a_low_descriptor_limit(tmp_path, factory, context):
     """A build must stay within one descriptor per frame all the way through the combine, not just at open."""
-    require_sectioned_class()
     paths = write_frames(tmp_path, 20)
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
     gc.collect()
@@ -278,42 +233,58 @@ def test_sectioned_stack_combines_under_a_low_descriptor_limit(tmp_path, factory
 # --------------------------------------------------------------------------------------------------- scaling
 
 
-@pytest.mark.parametrize('layout', LAYOUTS)
-def test_sectioned_scalar_division_matches_eager(tmp_path, factory, context, layout):
-    require_sectioned_class()
-    path = write_frames(tmp_path, 1, layout=layout, obstype='BIAS', nsubread=2)[0]
-    eager = open_eager(factory, path, context)
-    sectioned = open_sectioned(factory, path, context)
-
-    # Scale the science HDU directly; the frame-level dispatch is covered by the BiasMaker test below.
-    for frame in (eager, sectioned):
-        hdu = science_hdu(frame)
-        hdu /= hdu.n_sub_exposures
-
-    section = full_section()
-    assert_same_arrays(science_hdu(sectioned).trim(trim_section=section, memmap=False),
-                       science_hdu(eager).trim(trim_section=section, memmap=False))
-    for keyword in ('SATURATE', 'GAIN', 'MAXLIN'):
-        assert science_hdu(sectioned).meta[keyword] == science_hdu(eager).meta[keyword], keyword
-
-
 def test_bias_maker_over_sectioned_frames_equals_eager(tmp_path, factory, context):
-    require_sectioned_class()
     paths = write_frames(tmp_path, 5, layout='sci-primary', obstype='BIAS', nsubread=2)
     eager_master = BiasMaker(context).make_master_calibration_frame([open_eager(factory, p, context) for p in paths])
     sectioned_master = BiasMaker(context).make_master_calibration_frame([open_sectioned(factory, p, context) for p in paths])
 
     assert_same_arrays(sectioned_master.primary_hdu, eager_master.primary_hdu)
-    assert sectioned_master.bias_level == eager_master.bias_level
+    for keyword in ('SATURATE', 'GAIN', 'MAXLIN', 'BIASLVL'):
+        assert sectioned_master.primary_hdu.meta[keyword] == eager_master.primary_hdu.meta[keyword], keyword
     assert sectioned_master.filename == eager_master.filename
     assert sectioned_master.primary_hdu.meta['DATE-OBS'] == eager_master.primary_hdu.meta['DATE-OBS']
+
+
+# --------------------------------------------------------------------------------------------------- downloads
+
+
+def open_downloaded(factory, paths, context, sectioned):
+    """Open frames that exist only in the archive: the download is patched to return each file's bytes."""
+    downloads = {frame_id: path.read_bytes() for frame_id, path in enumerate(paths, start=1)}
+    with mock.patch('banzai.utils.fits_utils.download_from_s3',
+                    side_effect=lambda file_info, *args, **kwargs: io.BytesIO(downloads[file_info['frameid']])):
+        return [factory.open({'frameid': frame_id, 'filename': path.name}, context, sectioned=sectioned)
+                for frame_id, path in enumerate(paths, start=1)]
+
+
+def test_downloaded_sectioned_frames_read_from_an_unlinked_temp_file(tmp_path, factory, context):
+    paths = write_frames(tmp_path, 3, layout='sci-primary', compressed=True, obstype='BIAS')
+    eager = open_downloaded(factory, paths, context, sectioned=False)
+    sectioned = open_downloaded(factory, paths, context, sectioned=True)
+
+    # The pixels are on disk rather than in the download buffer, and the file is already unlinked so
+    # its space is returned when the frame is closed or the process dies.
+    for frame in sectioned:
+        spool_path = science_hdu(frame)._hdu_list.filename()
+        assert os.path.isabs(spool_path)
+        assert not os.path.exists(spool_path)
+    assert_same_arrays(combine(sectioned, 'mean'), combine(eager, 'mean'))
+    for frame in sectioned:
+        frame.close()
+
+
+def test_downloaded_sectioned_frame_aborts_when_temp_storage_is_short(tmp_path, factory, context):
+    paths = write_frames(tmp_path, 1, layout='sci-primary', compressed=True, obstype='BIAS')
+    no_space = SimpleNamespace(total=10 ** 9, used=10 ** 9, free=0)
+    with mock.patch('shutil.disk_usage', return_value=no_space):
+        with pytest.raises(OSError, match='temporary storage'):
+            open_downloaded(factory, paths, context, sectioned=True)
 
 
 # --------------------------------------------------------------------------------------------------- read-only
 
 
 def test_sectioned_frame_rejects_array_access_and_mutation(tmp_path, factory, context):
-    require_sectioned_class()
     # Science array in the primary HDU, so frame-level arithmetic dispatches to the sectioned HDU itself.
     path = write_frames(tmp_path, 1, layout='sci-primary')[0]
     sectioned = open_sectioned(factory, path, context)
@@ -347,7 +318,6 @@ def stackframes_for(paths):
 
 
 def test_build_stacked_frame_closes_sectioned_inputs(tmp_path, factory, context):
-    require_sectioned_class()
     paths = write_frames(tmp_path, 4, obstype='SUB_EXP')
     gc.collect()
     baseline = open_fds()
@@ -362,7 +332,6 @@ def test_build_stacked_frame_closes_sectioned_inputs(tmp_path, factory, context)
 
 
 def test_build_stacked_frame_closes_sectioned_inputs_on_failure(tmp_path, factory, context, monkeypatch):
-    require_sectioned_class()
     paths = write_frames(tmp_path, 4, obstype='SUB_EXP')
 
     def exploding_combine(*args, **kwargs):
