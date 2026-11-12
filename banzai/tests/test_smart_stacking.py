@@ -548,7 +548,7 @@ class TestProcessStackframe:
         mock_logger.info.assert_called_once_with(
             'Ignored reduced stackframe for timed-out smartstack',
             extra_tags={'smartstack_event': 'frame_ignored',
-                        'smartstack_id': 'stack-xyz',
+                        'smartstack_stackid': 'stack-xyz',
                         'smartstack_camera': 'cam1',
                         'smartstack_stack_num': 1,
                         'smartstack_filepath': '/data/processed/frame-n09.fits',

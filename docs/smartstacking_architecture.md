@@ -236,4 +236,4 @@ The main behavior settings are:
 
 Restart the supervisor after changing the site instrument rows.
 
-To follow one group in the logs, search for `smartstack_id`. The main `smartstack_event` values are `created`, `frame_reduced`, `finalize_failed`, `terminal`, `frame_ignored`, and `frame_rejected`.
+To follow one group in the logs, search for `smartstack_stackid`. The main `smartstack_event` values are `created`, `frame_reduced`, `finalize_failed`, `terminal`, `frame_ignored`, and `frame_rejected`.

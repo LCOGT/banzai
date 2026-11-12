@@ -74,7 +74,7 @@ def finalize_stack(runtime_context, stack_row, stackframes, status):
         logger.error('Smartstack exhausted finalize attempts; marking error',
                      extra_tags={'smartstack_event': 'terminal',
                                  'smartstack_status': 'error',
-                                 'smartstack_id': stack_id,
+                                 'smartstack_stackid': stack_id,
                                  'smartstack_camera': stack_row.camera,
                                  'smartstack_finalize_attempt': stack_row.finalize_attempts})
         return
@@ -94,14 +94,14 @@ def finalize_stack(runtime_context, stack_row, stackframes, status):
         dbs.mark_stack_terminal(runtime_context.db_address, stack_id, status)
         logger.info('Finalized smartstack', extra_tags={'smartstack_event': 'terminal',
                                                         'smartstack_status': status,
-                                                        'smartstack_id': stack_id,
+                                                        'smartstack_stackid': stack_id,
                                                         'smartstack_camera': stack_row.camera,
                                                         'smartstack_finalize_attempt': finalize_attempt})
     except Exception:
         logger.error('Failed to finalize smartstack', exc_info=True,
                      extra_tags={'smartstack_event': 'finalize_failed',
                                  'smartstack_target_status': status,
-                                 'smartstack_id': stack_id,
+                                 'smartstack_stackid': stack_id,
                                  'smartstack_camera': stack_row.camera,
                                  'smartstack_finalize_attempt': finalize_attempt})
 
