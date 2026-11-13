@@ -172,7 +172,7 @@ def make_master_calibrations(instrument, frame_type, min_date, max_date, runtime
     if len(calibration_frames_info) == 0:
         logger.info("No calibration frames found to stack", extra_tags=extra_tags)
     try:
-        stage_utils.run_pipeline_stages(calibration_frames_info, runtime_context, calibration_maker=True)
+        stage_utils.run_pipeline_stages(calibration_frames_info, runtime_context, calibration_maker=True, sectioned=True)
     except Exception:
         logger.error(logs.format_exception())
     logger.info("Finished")

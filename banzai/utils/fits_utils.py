@@ -14,8 +14,11 @@ from astropy.io.fits.hdu.hdulist import HDUList
 from astropy.io.fits.hdu.image import ImageHDU, PrimaryHDU
 from astropy.io.fits.hdu.compressed.compressed import CompImageHDU
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_not_exception_type
+import errno
 import io
 import os
+import shutil
+import tempfile
 from banzai.metrics import add_telemetry_span_attribute, trace_function
 from banzai.query import archive_get
 
@@ -302,7 +305,47 @@ def read_uncompressed_file(path):
     return HDUList(hdus)
 
 
-def open_fits_file(file_info, context, is_raw_frame=False):
+def image_hdus(hdu_list):
+    """The HDUs of an unmodified HDUList in the order ``unpack`` would give them.
+
+    An fpacked file whose primary HDU carries only the mandatory keywords keeps its real primary at index 1.
+    """
+    mandatory_only = all(keyword in FITS_MANDATORY_KEYWORDS for keyword in hdu_list[0].header)
+    if mandatory_only and len(hdu_list) > 1 and isinstance(hdu_list[1], CompImageHDU):
+        return hdu_list[1:]
+    return hdu_list
+
+
+def open_from_temporary_file(buffer, filename):
+    """Write a downloaded frame to temporary storage and open it from there without loading any data.
+
+    The file is unlinked as soon as astropy has it open. The open descriptor keeps it readable, and its
+    space is returned when the HDUList is closed or the process dies, so a failed task leaves nothing behind.
+    """
+    temporary_directory = tempfile.gettempdir()
+    required_bytes = buffer.seek(0, io.SEEK_END)
+    buffer.seek(0)
+    free_bytes = shutil.disk_usage(temporary_directory).free
+    if required_bytes > free_bytes:
+        message = (f'Not enough temporary storage to open {filename}: it needs {required_bytes} bytes and '
+                   f'{temporary_directory} has {free_bytes} bytes free')
+        logger.error(message, extra_tags={'filename': filename})
+        raise OSError(errno.ENOSPC, message)
+    with tempfile.NamedTemporaryFile(dir=temporary_directory, suffix='.fits') as temporary_file:
+        shutil.copyfileobj(buffer, temporary_file)
+        temporary_file.flush()
+        return fits.open(temporary_file.name, memmap=False)
+
+
+def open_fits_file(file_info, context, is_raw_frame=False, sectioned=False):
+    """Open a frame from a buffer, a local path, or the archive.
+
+    By default the whole file is read, decompressed with ``unpack`` and returned as an in-memory HDUList.
+    With ``sectioned`` the HDUList is returned as astropy opened it, with every data array still in the file,
+    to be read a section at a time through ``hdu.section``. A frame that arrives as a buffer is written to a
+    temporary file first, so a sectioned frame never holds its pixels in memory. The caller owns a sectioned
+    HDUList and must close it; walk it with ``image_hdus``.
+    """
     if file_info.get('data_buffer') is not None:
         filename = file_info.get('filename')
         frame_id = None
@@ -314,10 +357,14 @@ def open_fits_file(file_info, context, is_raw_frame=False):
         sibling = None if is_raw_frame else uncompressed_sibling(path)
         if sibling is not None and os.path.exists(sibling):
             try:
+                if sectioned:
+                    return fits.open(sibling, memmap=False), filename, frame_id
                 return read_uncompressed_file(sibling), filename, frame_id
             except Exception:
                 logger.warning('Could not read the uncompressed copy of the calibration; decompressing instead',
                                extra_tags={'filename': filename, 'uncompressed_path': sibling})
+        if sectioned:
+            return fits.open(path, memmap=False), filename, frame_id
         buffer = open(path, 'rb')
     elif file_info.get('frameid') is not None:
         buffer = download_from_s3(file_info, context, is_raw_frame=is_raw_frame)
@@ -334,6 +381,8 @@ def open_fits_file(file_info, context, is_raw_frame=False):
     else:
         raise ValueError('This file does not exist and there is no frame id to get it from S3.')
 
+    if sectioned:
+        return open_from_temporary_file(buffer, filename), filename, frame_id
     hdu_list = fits.open(buffer, memmap=False)
     uncompressed_hdu_list = unpack(hdu_list)
     hdu_list.close()

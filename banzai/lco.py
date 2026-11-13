@@ -13,7 +13,8 @@ from astropy.coordinates import Angle
 import hashlib
 
 from banzai import dbs
-from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData, DataProduct, create_combination_output_hdu
+from banzai.data import CCDData, HeaderOnly, DataTable, ArrayData, DataProduct, SectionedCCDData, \
+    create_combination_output_hdu
 from banzai.frames import ObservationFrame, CalibrationFrame, logger, FrameFactory
 from banzai.utils import date_utils, fits_utils, image_utils, file_utils
 from banzai.utils.image_utils import Section
@@ -298,7 +299,7 @@ class LCOCalibrationFrame(LCOObservationFrame, CalibrationFrame):
     def init_master_frame(cls, images: list, file_path: str, frame_id: int = None,
                           grouping_criteria: list = None, hdu_order: list = None):
         master_header = cls.init_master_header(images[0].meta, images)
-        hdu_list = [create_combination_output_hdu(images[0].primary_hdu, master_header, memmap=True)]
+        hdu_list = [create_combination_output_hdu(images[0].primary_hdu, master_header, memmap=False)]
         frame = cls(hdu_list=hdu_list, file_path=file_path, frame_id=frame_id,
                     grouping_criteria=grouping_criteria, hdu_order=hdu_order)
         frame.is_master = True
@@ -497,12 +498,27 @@ class LCOFrameFactory(FrameFactory):
     def associated_extensions(self):
         return [{'FITS_NAME': 'BPM', 'NAME': 'mask'}, {'FITS_NAME': 'ERR', 'NAME': 'uncertainty'}]
 
-    def open(self, file_info, runtime_context) -> Optional[ObservationFrame]:
+    def open(self, file_info, runtime_context, sectioned=False) -> Optional[ObservationFrame]:
         if file_info.get('RLEVEL') is not None:
             is_raw = file_info.get('RLEVEL', 0) == 0
         else:
             is_raw = False
-        fits_hdu_list, filename, frame_id = fits_utils.open_fits_file(file_info, runtime_context, is_raw_frame=is_raw)
+        fits_hdu_list, filename, frame_id = fits_utils.open_fits_file(file_info, runtime_context,
+                                                                      is_raw_frame=is_raw, sectioned=sectioned)
+        if sectioned:
+            hdu_list = self._sectioned_hdus_from_fits(fits_hdu_list, runtime_context)
+            if hdu_list is None:
+                fits_hdu_list.close()
+                logger.warning('Sectioned open does not cover this file layout; reading it into memory instead',
+                               extra_tags={'filename': filename})
+                return self.open(file_info, runtime_context)
+        else:
+            hdu_list = self._hdus_from_fits(fits_hdu_list, runtime_context)
+
+        return self._make_frame(hdu_list, filename, frame_id, file_info, runtime_context)
+
+    def _hdus_from_fits(self, fits_hdu_list, runtime_context):
+        """Turn an in-memory HDUList into BANZAI data objects."""
         hdu_list = []
         associated_fits_extensions = [associated_extension['FITS_NAME']
                                       for associated_extension in self.associated_extensions]
@@ -565,7 +581,65 @@ class LCOFrameFactory(FrameFactory):
                                                     **associated_data))
                 else:
                     hdu_list.append(ArrayData(data=hdu.data, meta=hdu.header, name=hdu.header.get('EXTNAME')))
+        return hdu_list
 
+    def _sectioned_hdus_from_fits(self, fits_hdu_list, runtime_context):
+        """Turn an HDUList opened without data into HeaderOnly and SectionedCCDData objects, loading no pixels.
+
+        Returns None for layouts the sectioned walk does not cover (data cubes, several CCD extensions, files
+        made only of BPM/ERR arrays, fs01, image extensions without GAIN) so the caller can fall back to
+        the in-memory open. Catalog tables are left out: stacking never reads them.
+        """
+        associated_fits_extensions = [associated_extension['FITS_NAME']
+                                      for associated_extension in self.associated_extensions]
+        image_hdus = fits_utils.image_hdus(fits_hdu_list)
+        if image_hdus[0].header.get('OBSTYPE') in associated_fits_extensions:
+            return None
+        hdu_list = []
+        primary_hdu = None
+        for hdu in image_hdus:
+            if any(associated_extension['FITS_NAME'] in hdu.header.get('EXTNAME', '')
+                   for associated_extension in self.associated_extensions):
+                continue
+            if hdu.header.get('NAXIS', 0) == 0:
+                hdu_list.append(HeaderOnly(meta=hdu.header, name=hdu.header.get('EXTNAME')))
+                primary_hdu = hdu
+            elif isinstance(hdu, fits.BinTableHDU):
+                continue
+            elif 'GAIN' in hdu.header:
+                if hdu.header.get('NAXIS') != 2 or hdu.header.get('INSTRUME') == 'fs01':
+                    return None
+                associated_hdus = {}
+                condensed_name = hdu.header.get('EXTNAME', '')
+                for extension_name_to_condense in runtime_context.EXTENSION_NAMES_TO_CONDENSE:
+                    condensed_name = condensed_name.replace(extension_name_to_condense, '')
+                for associated_extension in self.associated_extensions:
+                    associated_extension_name = condensed_name + associated_extension['FITS_NAME']
+                    if associated_extension_name in fits_hdu_list:
+                        if hdu.header.get('EXTVER') == 0:
+                            extension_version = None
+                        else:
+                            extension_version = hdu.header.get('EXTVER')
+                        associated_hdus[associated_extension['NAME']] = fits_hdu_list[associated_extension_name,
+                                                                                      extension_version]
+                    else:
+                        associated_hdus[associated_extension['NAME']] = None
+                meta = hdu.header.copy()
+                if primary_hdu is not None:
+                    for keyword in self.primary_header_keys_to_propagate:
+                        if keyword in primary_hdu.header and keyword not in meta:
+                            meta[keyword] = primary_hdu.header[keyword]
+                hdu_list.append(SectionedCCDData(hdu, meta, name=hdu.header.get('EXTNAME'),
+                                            mask_hdu=associated_hdus['mask'],
+                                            uncertainty_hdu=associated_hdus['uncertainty'],
+                                            hdu_list=fits_hdu_list))
+            else:
+                return None
+        if sum(isinstance(hdu, SectionedCCDData) for hdu in hdu_list) != 1:
+            return None
+        return hdu_list
+
+    def _make_frame(self, hdu_list, filename, frame_id, file_info, runtime_context):
         # Either use the calibration frame type or normal frame type depending on the OBSTYPE keyword
         hdu_order = runtime_context.REDUCED_DATA_EXTENSION_ORDERING.get(hdu_list[0].meta.get('OBSTYPE'))
 
