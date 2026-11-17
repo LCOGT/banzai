@@ -142,7 +142,7 @@ def test_metadata():
         assert header['NCOMBINE'] == 2
         assert header['MOLUID'] == 'mol-1'
         assert header['OBSTYPE'] == 'EXPOSE'
-        assert header['ORIGNAME'] == 'cpt1m010-fa16-20240706-0031-e45'
+        assert header['ORIGNAME'] == 'cpt1m010-fa16-20240706-0031-e45.fits'
         assert 'DATE' in header
         assert 'MOLFRNUM' not in header
         assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-n09.fits'
@@ -340,7 +340,7 @@ def test_write_and_reopen_smoke(monkeypatch, tmp_path, fpack):
         for header in (hdul[0].header, hdul['SCI'].header):
             assert header['NCOMBINE'] == 2
             assert header['MOLUID'] == 'mol-1'
-            assert header['ORIGNAME'] == 'cpt1m010-fa16-20240706-0031-e45'
+            assert header['ORIGNAME'] == 'cpt1m010-fa16-20240706-0031-e45.fits'
             assert 'MOLFRNUM' not in header
             assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-n09.fits'
             assert header['IMCOM002'] == 'cpt1m010-fa16-20240706-0032-n09.fits'

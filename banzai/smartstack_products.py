@@ -120,11 +120,12 @@ def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
     background_cards = background_header_cards(estimate_background(output_frame['SCI'].data))
 
     # The archive uses ORIGNAME to link the e91 and this e45 as related frames.
-    origname = fits_basename(output_frame.filename)
+    # Keep the .fits extension (never .fz) to match the ORIGNAME site software writes on raw frames.
+    origname = fits_basename(output_frame.filename) + '.fits'
 
     for header in headers:
         header['OBSTYPE'] = ('EXPOSE', 'Observation type')
-        header['ORIGNAME'] = (origname, 'Basename of this smartstack')
+        header['ORIGNAME'] = (origname, 'Filename of this smartstack')
         header['EXPTIME'] = (total_exptime, '[s] Total exposure time')
         header['DATE-OBS'] = (date_utils.date_obs_to_string(earliest_dateobs), '[UTC] Earliest observation time')
         header['NCOMBINE'] = (n_stacked, 'Number of images combined')

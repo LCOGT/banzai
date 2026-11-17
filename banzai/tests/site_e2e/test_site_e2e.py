@@ -464,7 +464,7 @@ class TestSiteE2E:
                 assert header['NCOMBINE'] == 3
                 assert [header[f'IMCOM{index:03d}'] for index in range(1, 4)] == input_basenames
                 assert 'IMCOM004' not in header
-                assert header['ORIGNAME'] == e45_path.name[:-len('.fits.fz')]
+                assert header['ORIGNAME'] == e45_path.name[:-len('.fz')]
 
             base = e45_path.name[:-len('.fits.fz')]
             large_jpg = e45_path.with_name(f'{base}-large_thumbnail.jpg')

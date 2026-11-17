@@ -2,6 +2,7 @@ import numpy as np
 from opensearchpy import OpenSearch
 
 from banzai import logs
+from banzai.utils.file_utils import fits_basename
 
 logger = logs.get_logger()
 
@@ -18,7 +19,7 @@ def format_qc_results(qc_results, image):
         if type(value) == np.bool_:
             value = bool(value)
         results_to_save[key] = value
-    filename = image.filename.replace('.fits', '').replace('.fz', '')
+    filename = fits_basename(image.filename)
     return filename, results_to_save
 
 
