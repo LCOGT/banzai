@@ -23,7 +23,7 @@ FRAME_SHAPE = (64, 64)
 class FakeFrameFactory:
     images_by_path = {}
 
-    def open(self, file_info, runtime_context):
+    def open(self, file_info, runtime_context, sectioned=False):
         return self.images_by_path.get(file_info['path'])
 
 

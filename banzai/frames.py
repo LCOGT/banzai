@@ -21,6 +21,13 @@ class ObservationFrame(metaclass=abc.ABCMeta):
         self.hdu_order = hdu_order
         self._hdu_mapping = {hdu.name: i for i, hdu in enumerate(hdu_list)}
 
+    def close(self):
+        """Release the file behind sectioned HDUs. A no-op for in-memory frames."""
+        for hdu in self._hdus:
+            close = getattr(hdu, 'close', None)
+            if close is not None:
+                close()
+
     @property
     def primary_hdu(self):
         return self._hdus[0]
@@ -350,7 +357,7 @@ class FrameFactory:
         pass
 
     @abc.abstractmethod
-    def open(self, file_info, context) -> Optional[ObservationFrame]:
+    def open(self, file_info, context, sectioned=False) -> Optional[ObservationFrame]:
         pass
 
     @staticmethod

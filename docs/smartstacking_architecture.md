@@ -165,6 +165,8 @@ Smartstack does not align or resample images. The input arrays must already line
 
 Input filenames are expected to end in `-n09.fits` or `-n09.fits.fz`.
 
+Inputs are opened without loading their pixels: each one costs a single file descriptor, and the stacking process reads each row section straight from the `n09` file. The output and the per-section results are ordinary in-memory arrays. A build therefore writes no temporary files and its memory use does not grow with the number of frames.
+
 - **Preview:** waits for logical frame 1 so the filename does not change. It writes a small JPEG of up to 300 pixels and a large JPEG of up to 900 pixels. Each preview replaces the same files. The shipper message has `fits: null` and includes `thumbnail_metadata`.
 - **Final:** writes an `e45` FITS and replaces the same two JPEGs. A timed-out stack that never received frame 1 uses its lowest-numbered frame instead.
 
