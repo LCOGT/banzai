@@ -24,7 +24,7 @@ These tests validate the full system by:
 
 6. **Smartstack Reduction and Stacking** - The tests cover `n00` -> `n09` ->
    `e45`: raw stackframes are reduced using the cached calibrations, then
-   stacked into final products with JPEG previews and shipper messages.
+   stacked into fpacked final products with JPEG previews and shipper messages.
 
 7. **Replication Slot Reuse** - Cache initialization succeeds when a publisher
    replication slot already exists.
