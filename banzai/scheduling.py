@@ -325,7 +325,8 @@ def process_stackframe(self, body: dict, runtime_context: dict):
             raise self.retry(countdown=30, exc=IOError(f"Could not read header from {filepath}"))
 
         camera = header.get('INSTRUME', '').strip()
-        stack_id = str(header.get('STACKID', '')).strip()
+        stack_id = header.get('STACKID', '')
+        stack_id = stack_id.strip() if isinstance(stack_id, str) else ''
         if not stack_id:
             logger.error('Rejected stackframe without a STACKID header',
                          extra_tags={'smartstack_event': 'frame_rejected',

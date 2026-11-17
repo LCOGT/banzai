@@ -640,14 +640,18 @@ class TestProcessStackframe:
         mock_upsert.assert_not_called()
         redis_module.Redis.from_url.assert_not_called()
 
+    @pytest.mark.parametrize('stackid', ['absent', None, '   ', 12345, True])
     @patch('banzai.scheduling.logger')
     @patch('banzai.scheduling.stage_utils.run_pipeline_stages')
-    def test_process_stackframe_rejects_frame_without_stackid(self, mock_run_stages, mock_logger,
-                                                              db_address, monkeypatch):
+    def test_process_stackframe_rejects_invalid_stackid(self, mock_run_stages, mock_logger,
+                                                        stackid, db_address, monkeypatch):
         mock_upsert = MagicMock()
         monkeypatch.setattr(scheduling, 'upsert_stack_and_stackframe', mock_upsert)
         header = self._make_fits_header()
-        del header['STACKID']
+        if stackid == 'absent':
+            del header['STACKID']
+        else:
+            header['STACKID'] = stackid
 
         with patch('banzai.scheduling.fits_utils.get_primary_header', return_value=header):
             process_stackframe({'fits_file': '/path/to/frame.fits'}, {'db_address': db_address})
