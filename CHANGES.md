@@ -1,5 +1,19 @@
 Versions
 ========
+1.43.0 (2026-11-17)
+-------------------
+
+- Key smartstacks on the per-stack `STACKID` header instead of `MOLUID`, so several
+  stacks from one Configuration no longer overwrite or mix into each other. Frames
+  without `STACKID` are rejected, so sites need site-software 3.12.0 or later. The
+  `moluid` column in the `stacks` and `stackframes` tables is renamed to `stack_id`;
+  run the alembic migration before starting the new containers
+- Fpack the smartstack e45 before sending it to the archive
+- Set ORIGNAME on the smartstack e45 to its own basename instead of the first
+  stackframe's, removing a phantom related frame in the archive
+- Raise the stacking supervisor's open-file soft limit to the hard limit at startup so
+  long smartstacks no longer fail with "Too many open files"
+
 1.42.0 (2026-10-22)
 -------------------
 
