@@ -18,6 +18,7 @@ import io
 import os
 from banzai.metrics import add_telemetry_span_attribute, trace_function
 from banzai.query import archive_get
+from banzai.utils.file_utils import fits_basename
 
 logger = logs.get_logger()
 
@@ -151,7 +152,7 @@ def basename_search_in_archive(filename, dateobs, context, is_raw_frame=False):
         url = f'{context.ARCHIVE_FRAME_URL}/'
         archive_auth_header = context.ARCHIVE_AUTH_HEADER
 
-    basename = filename.replace('.fz', '').replace('.fits', '')
+    basename = fits_basename(filename)
     start = (dateobs - datetime.timedelta(days=3)).strftime('%Y-%m-%d')
     end = (dateobs + datetime.timedelta(days=3)).strftime('%Y-%m-%d')
 
