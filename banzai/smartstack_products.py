@@ -8,15 +8,17 @@ from banzai.data import CCDData, HeaderOnly, combine_images, create_combination_
 from banzai.logs import get_logger
 from banzai.utils import date_utils, import_utils
 from banzai.utils.background_utils import background_header_cards, estimate_background
-from banzai.utils.file_utils import fits_basename, make_jpg_filenames
+from banzai.utils.file_utils import fits_basename
 from banzai.utils.jpg_utils import save_jpg, stretch_for_display
-from banzai.utils.messaging import post_to_shipper_queue
 
 
 logger = get_logger()
 
 STACK_NSIGMA_REJECT = 3.0
 SMARTSTACK_REDUCTION_LEVEL = 45
+
+# Longest side in pixels of each JPEG, keyed by its name in the shipper message and in the JPEG's filename.
+THUMBNAIL_SIZES = {'small_thumbnail': 300, 'large_thumbnail': 900}
 
 THUMBNAIL_HEADER_KEYS = (
     'DATE-OBS',
@@ -174,49 +176,60 @@ def build_thumbnail_metadata(output_frame):
         if value is not None and not (isinstance(value, str) and not value.strip()):
             metadata[key] = value
 
-    missing_keys = [
-        key for key in REQUIRED_THUMBNAIL_METADATA
-        if key not in metadata or metadata[key] is None
-        or (isinstance(metadata[key], str) and not metadata[key].strip())
-    ]
+    missing_keys = [key for key in REQUIRED_THUMBNAIL_METADATA if key not in metadata]
     if missing_keys:
         raise ValueError(f'Missing required smartstack thumbnail metadata: {", ".join(missing_keys)}')
     return metadata
 
 
-def render_jpgs(output_frame, runtime_context):
+def preview_progress(output_frame):
+    """Return the fraction of the stack's planned subs that are in ``output_frame``.
+
+    Returns 1.0 when the header does not give a usable NCOMBINE and FRMTOTAL, so the preview falls back to the
+    stretch a finished stack gets.
+    """
+    header = output_frame.primary_hdu.meta
+    n_stacked = header.get('NCOMBINE')
+    n_planned = header.get('FRMTOTAL')
+    if not n_stacked or not n_planned or n_stacked < 0 or n_planned < 0:
+        return 1.0
+    return n_stacked / n_planned
+
+
+def render_jpgs(output_frame, runtime_context, progress=1.0):
+    """Write the stack's JPEGs and return their paths keyed by thumbnail name, ready for the shipper message."""
     output_directory = output_frame.get_output_directory(runtime_context)
     os.makedirs(output_directory, exist_ok=True)
-    small_filename, large_filename = make_jpg_filenames(output_frame.filename)
-    small_path = os.path.join(output_directory, small_filename)
-    large_path = os.path.join(output_directory, large_filename)
-    display_image = stretch_for_display(output_frame['SCI'].data)
-    save_jpg(display_image, large_path, 900)
-    save_jpg(display_image, small_path, 300)
-    return small_path, large_path
+    basename = fits_basename(output_frame.filename)
+    # Stretch at twice the largest JPEG so the resize down to each one has pixels to average.
+    display_image = stretch_for_display(output_frame['SCI'].data, max_size=2 * max(THUMBNAIL_SIZES.values()),
+                                        progress=progress)
+    thumbnail_paths = {}
+    for name, size in THUMBNAIL_SIZES.items():
+        thumbnail_paths[name] = os.path.join(output_directory, f'{basename}-{name}.jpg')
+        save_jpg(display_image, thumbnail_paths[name], size)
+    return thumbnail_paths
 
 
 def run_preview(stackframes, runtime_context, moluid):
+    """Render the JPEGs for a stack that is still filling in.
+
+    Returns the JPEG paths keyed by thumbnail name, and the metadata the shipper needs because a preview has no
+    FITS file to read it from.
+    """
     output_frame = build_stacked_frame(stackframes, runtime_context, moluid)
     thumbnail_metadata = build_thumbnail_metadata(output_frame)
-    small_path, large_path = render_jpgs(output_frame, runtime_context)
-    post_to_shipper_queue(
-        runtime_context.broker_url,
-        runtime_context.SHIPPER_EXCHANGE,
-        runtime_context.SHIPPER_QUEUE_NAME,
-        fits_path=None,
-        small_thumbnail=small_path,
-        large_thumbnail=large_path,
-        thumbnail_metadata=thumbnail_metadata,
-    )
-    logger.debug('Published smartstack preview', image=output_frame, extra_tags={'moluid': moluid})
+    thumbnail_paths = render_jpgs(output_frame, runtime_context, progress=preview_progress(output_frame))
+    logger.debug('Rendered smartstack preview', image=output_frame, extra_tags={'moluid': moluid})
+    return thumbnail_paths, thumbnail_metadata
 
 
 def run_final(stackframes, runtime_context, moluid):
+    """Write the finished stack's FITS file and JPEGs; returns the FITS path and the JPEG paths by thumbnail name."""
     output_frame = build_stacked_frame(stackframes, runtime_context, moluid)
     write_context = Context({**vars(runtime_context), 'reduction_level': SMARTSTACK_REDUCTION_LEVEL})
     output_products = output_frame.write(write_context)
-    small_path, large_path = render_jpgs(output_frame, runtime_context)
+    thumbnail_paths = render_jpgs(output_frame, runtime_context)
     fits_path = os.path.join(output_products[0].filepath, output_products[0].filename)
     logger.info('Created final smartstack', image=output_frame, extra_tags={'moluid': moluid})
-    return fits_path, small_path, large_path
+    return fits_path, thumbnail_paths

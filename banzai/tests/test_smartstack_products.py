@@ -13,7 +13,6 @@ from banzai.data import CCDData, HeaderOnly
 from banzai.lco import LCOObservationFrame
 from banzai.tests.utils import FakeCCDData, FakeContext, FakeInstrument, FakeLCOObservationFrame
 from banzai.utils import date_utils, fits_utils
-from banzai.utils.file_utils import make_jpg_filenames
 
 
 # Large enough for the (32, 32) background mesh that apply_smartstack_metadata measures L1 stats on.
@@ -235,61 +234,84 @@ def test_build_stacked_frame_rejects_invalid_filename(monkeypatch, filename):
 
 @pytest.mark.parametrize('written_suffix', ['', '.fz'], ids=['fits', 'fpack'])
 def test_run_final_returns_paths_and_writes(monkeypatch, tmp_path, written_suffix):
-    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0, obstype='EXPOSE')
+    # FRMTOTAL is larger than the two stackframes, as for a stack that timed out short of its planned subs.
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0, obstype='EXPOSE', frmtotal=12)
     context = FakeContext(processed_path=str(tmp_path))
     output_dir = output_frame.get_output_directory(context)
     written_filename = output_frame.filename + written_suffix
     output_frame.write = MagicMock(
         return_value=[SimpleNamespace(filepath=str(output_dir), filename=written_filename)]
     )
-    small_name, large_name = make_jpg_filenames(output_frame.filename)
+    stretch_for_display = MagicMock(return_value=np.zeros(FRAME_SHAPE, dtype=np.uint8))
     monkeypatch.setattr(products, 'build_stacked_frame', lambda rows, runtime_context, moluid: output_frame)
-    monkeypatch.setattr(products, 'stretch_for_display', lambda data: np.zeros(FRAME_SHAPE, dtype=np.uint8))
+    monkeypatch.setattr(products, 'stretch_for_display', stretch_for_display)
     monkeypatch.setattr(products, 'save_jpg', lambda display, path, max_size: open(path, 'wb').close())
 
-    fits_path, small_path, large_path = products.run_final([stackframe(31), stackframe(32)], context, 'mol-1')
+    fits_path, thumbnail_paths = products.run_final([stackframe(31), stackframe(32)], context, 'mol-1')
 
     assert fits_path == os.path.join(output_dir, written_filename)
-    assert small_path == os.path.join(output_dir, small_name)
-    assert large_path == os.path.join(output_dir, large_name)
-    assert os.path.exists(small_path)
-    assert os.path.exists(large_path)
+    assert thumbnail_paths == {
+        'small_thumbnail': os.path.join(output_dir, 'cpt1m010-fa16-20240706-0031-e45-small_thumbnail.jpg'),
+        'large_thumbnail': os.path.join(output_dir, 'cpt1m010-fa16-20240706-0031-e45-large_thumbnail.jpg'),
+    }
+    assert all(os.path.exists(path) for path in thumbnail_paths.values())
+    # The final JPEGs always get the finished-stack stretch, however many of the planned subs arrived.
+    assert stretch_for_display.call_args.kwargs['progress'] == 1.0
     output_frame.write.assert_called_once()
     (write_context,) = output_frame.write.call_args.args
     assert write_context.reduction_level == products.SMARTSTACK_REDUCTION_LEVEL
     assert write_context.processed_path == context.processed_path
 
 
-def test_run_preview_publishes_null_fits(monkeypatch, tmp_path):
-    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0, obstype='EXPOSE')
+def test_run_preview_returns_thumbnails_and_metadata(monkeypatch, tmp_path):
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0, obstype='EXPOSE', frmtotal=12)
     for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
         header['MOLUID'] = 'mol-1'
         header['NCOMBINE'] = 3
     output_frame.write = MagicMock(return_value=[])
-    publish = MagicMock()
-    context = FakeContext(
-        processed_path=str(tmp_path),
-        broker_url='amqp://broker',
-        SHIPPER_EXCHANGE='ship_files',
-        SHIPPER_QUEUE_NAME='ship',
-    )
+    context = FakeContext(processed_path=str(tmp_path))
     rows = [stackframe(31), stackframe(32), stackframe(33)]
+    render_jpgs = MagicMock(return_value={'small_thumbnail': '/tmp/small.jpg', 'large_thumbnail': '/tmp/large.jpg'})
     monkeypatch.setattr(products, 'build_stacked_frame', lambda stackframes, runtime_context, moluid: output_frame)
-    monkeypatch.setattr(products, 'render_jpgs', lambda frame, runtime_context: ('/tmp/small.jpg', '/tmp/large.jpg'))
-    monkeypatch.setattr(products, 'post_to_shipper_queue', publish)
+    monkeypatch.setattr(products, 'render_jpgs', render_jpgs)
 
-    products.run_preview(rows, context, 'mol-1')
+    thumbnail_paths, thumbnail_metadata = products.run_preview(rows, context, 'mol-1')
 
     output_frame.write.assert_not_called()
-    publish.assert_called_once_with(
-        context.broker_url,
-        context.SHIPPER_EXCHANGE,
-        context.SHIPPER_QUEUE_NAME,
-        fits_path=None,
-        small_thumbnail='/tmp/small.jpg',
-        large_thumbnail='/tmp/large.jpg',
-        thumbnail_metadata=products.build_thumbnail_metadata(output_frame),
-    )
+    # Three of twelve planned subs: the preview is rendered a quarter of the way to the finished image.
+    render_jpgs.assert_called_once_with(output_frame, context, progress=pytest.approx(0.25))
+    assert thumbnail_paths == {'small_thumbnail': '/tmp/small.jpg', 'large_thumbnail': '/tmp/large.jpg'}
+    assert thumbnail_metadata == products.build_thumbnail_metadata(output_frame)
+
+
+@pytest.mark.parametrize('frmtotal,expected', [(12, 0.25), (0, 1.0), (None, 1.0)],
+                         ids=['part-way', 'zero-frmtotal', 'no-frmtotal'])
+def test_preview_progress(frmtotal, expected):
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', obstype='EXPOSE')
+    header = output_frame.primary_hdu.meta
+    header['NCOMBINE'] = 3
+    if frmtotal is None:
+        del header['FRMTOTAL']
+    else:
+        header['FRMTOTAL'] = frmtotal
+
+    assert products.preview_progress(output_frame) == pytest.approx(expected)
+
+
+def test_render_jpgs_stretches_once_and_saves_each_thumbnail_size(monkeypatch, tmp_path):
+    output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', obstype='EXPOSE')
+    stretch_for_display = MagicMock(return_value=np.zeros(FRAME_SHAPE, dtype=np.uint8))
+    monkeypatch.setattr(products, 'stretch_for_display', stretch_for_display)
+    saved_sizes = {}
+    monkeypatch.setattr(products, 'save_jpg',
+                        lambda display, path, max_size: saved_sizes.update({os.path.basename(path): max_size}))
+
+    products.render_jpgs(output_frame, FakeContext(processed_path=str(tmp_path)), progress=0.25)
+
+    stretch_for_display.assert_called_once()
+    assert stretch_for_display.call_args.kwargs == {'max_size': 1800, 'progress': 0.25}
+    assert saved_sizes == {'cpt1m010-fa16-20240706-0031-e45-small_thumbnail.jpg': 300,
+                           'cpt1m010-fa16-20240706-0031-e45-large_thumbnail.jpg': 900}
 
 
 def test_open_stackframe_images_raises_on_unopenable():
@@ -316,11 +338,12 @@ def test_write_and_reopen_smoke(monkeypatch, tmp_path, fpack):
         no_file_cache=False,
     )))
     monkeypatch.setattr(products, 'open_stackframe_images', lambda rows, runtime_context: input_images)
-    monkeypatch.setattr(products, 'stretch_for_display', lambda data: np.zeros(FRAME_SHAPE, dtype=np.uint8))
+    monkeypatch.setattr(products, 'stretch_for_display',
+                        lambda data, **kwargs: np.zeros(FRAME_SHAPE, dtype=np.uint8))
     monkeypatch.setattr(products, 'save_jpg', lambda display, path, max_size: open(path, 'wb').close())
     monkeypatch.setattr('banzai.lco.dbs.save_processed_image', lambda filename, md5, db_address: None)
 
-    fits_path, _, _ = products.run_final(stackframes, context, 'mol-1')
+    fits_path, _ = products.run_final(stackframes, context, 'mol-1')
 
     assert fits_path.endswith('-e45.fits.fz' if fpack else '-e45.fits')
     if fpack:
