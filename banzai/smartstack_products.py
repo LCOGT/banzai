@@ -27,6 +27,7 @@ THUMBNAIL_HEADER_KEYS = (
     'SITEID',
     'TELID',
     'MOLUID',
+    'STACKID',
     'NCOMBINE',
     'FRMTOTAL',
     'PROPID',
@@ -47,6 +48,7 @@ REQUIRED_THUMBNAIL_METADATA = (
     'SITEID',
     'TELID',
     'MOLUID',
+    'STACKID',
     'NCOMBINE',
     'FRMTOTAL',
 )
@@ -88,7 +90,7 @@ def init_smartstack_frame(first_image, output_filename):
     return output_frame
 
 
-def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
+def apply_smartstack_metadata(output_frame, input_images, stackframes, stack_id):
     sorted_inputs = sorted(zip(stackframes, input_images), key=lambda item: item[0].stack_num)
 
     total_exptime = 0.0
@@ -131,7 +133,7 @@ def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
         header['EXPTIME'] = (total_exptime, '[s] Total exposure time')
         header['DATE-OBS'] = (date_utils.date_obs_to_string(earliest_dateobs), '[UTC] Earliest observation time')
         header['NCOMBINE'] = (n_stacked, 'Number of images combined')
-        header['MOLUID'] = (moluid, 'Observation request UID')
+        header['STACKID'] = (stack_id, 'Smartstack identifier')
         header['DATE'] = (date_utils.date_obs_to_string(date_created), '[UTC] Date this FITS file was written')
         # MOLFRNUM is a per-exposure sequence number; the combined product has no single position.
         if 'MOLFRNUM' in header:
@@ -149,7 +151,7 @@ def apply_smartstack_metadata(output_frame, input_images, stackframes, moluid):
             header[f'IMCOM{index:03d}'] = (image.filename, 'Image combined to create smartstack')
 
 
-def build_stacked_frame(stackframes, runtime_context, moluid):
+def build_stacked_frame(stackframes, runtime_context, stack_id):
     if not stackframes:
         raise ValueError('Cannot build a smartstack without stackframes')
     stackframes = sorted(stackframes, key=lambda stackframe: stackframe.stack_num)
@@ -161,7 +163,7 @@ def build_stacked_frame(stackframes, runtime_context, moluid):
     output_frame = init_smartstack_frame(input_images[0], output_filename)
     combine_images([image['SCI'] for image in input_images], output_frame['SCI'],
                    nsigma=STACK_NSIGMA_REJECT, method='sum')
-    apply_smartstack_metadata(output_frame, input_images, stackframes, moluid)
+    apply_smartstack_metadata(output_frame, input_images, stackframes, stack_id)
     return output_frame
 
 
@@ -211,25 +213,25 @@ def render_jpgs(output_frame, runtime_context, progress=1.0):
     return thumbnail_paths
 
 
-def run_preview(stackframes, runtime_context, moluid):
+def run_preview(stackframes, runtime_context, stack_id):
     """Render the JPEGs for a stack that is still filling in.
 
     Returns the JPEG paths keyed by thumbnail name, and the metadata the shipper needs because a preview has no
     FITS file to read it from.
     """
-    output_frame = build_stacked_frame(stackframes, runtime_context, moluid)
+    output_frame = build_stacked_frame(stackframes, runtime_context, stack_id)
     thumbnail_metadata = build_thumbnail_metadata(output_frame)
     thumbnail_paths = render_jpgs(output_frame, runtime_context, progress=preview_progress(output_frame))
-    logger.debug('Rendered smartstack preview', image=output_frame, extra_tags={'moluid': moluid})
+    logger.debug('Rendered smartstack preview', image=output_frame, extra_tags={'stack_id': stack_id})
     return thumbnail_paths, thumbnail_metadata
 
 
-def run_final(stackframes, runtime_context, moluid):
+def run_final(stackframes, runtime_context, stack_id):
     """Write the finished stack's FITS file and JPEGs; returns the FITS path and the JPEG paths by thumbnail name."""
-    output_frame = build_stacked_frame(stackframes, runtime_context, moluid)
+    output_frame = build_stacked_frame(stackframes, runtime_context, stack_id)
     write_context = Context({**vars(runtime_context), 'reduction_level': SMARTSTACK_REDUCTION_LEVEL})
     output_products = output_frame.write(write_context)
     thumbnail_paths = render_jpgs(output_frame, runtime_context)
     fits_path = os.path.join(output_products[0].filepath, output_products[0].filename)
-    logger.info('Created final smartstack', image=output_frame, extra_tags={'moluid': moluid})
+    logger.info('Created final smartstack', image=output_frame, extra_tags={'stack_id': stack_id})
     return fits_path, thumbnail_paths

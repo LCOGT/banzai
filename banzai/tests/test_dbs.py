@@ -177,7 +177,7 @@ def test_create_db_site_deploy_true_creates_site_tables(tmp_path):
     assert inspector.has_table('stacks')
     assert inspector.has_table('stackframes')
     stackframe_columns = {column['name']: column for column in inspector.get_columns('stackframes')}
-    assert stackframe_columns['moluid']['nullable'] is False
+    assert stackframe_columns['stack_id']['nullable'] is False
     assert stackframe_columns['stack_num']['nullable'] is False
 
 

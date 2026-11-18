@@ -125,7 +125,7 @@ def test_metadata():
     ]
     stackframes = [stackframe(33), stackframe(31)]
 
-    products.apply_smartstack_metadata(output_frame, input_images, stackframes, 'mol-1')
+    products.apply_smartstack_metadata(output_frame, input_images, stackframes, 'stack-1')
 
     for header in (output_frame.primary_hdu.meta, output_frame.ccd_hdus[0].meta):
         assert header['SATURATE'] == pytest.approx(2.0 * 65535.0)
@@ -139,7 +139,7 @@ def test_metadata():
         assert header.comments['EXPTIME'] == '[s] Total exposure time'
         assert header['DATE-OBS'] == date_utils.date_obs_to_string(input_images[1].dateobs)
         assert header['NCOMBINE'] == 2
-        assert header['MOLUID'] == 'mol-1'
+        assert header['STACKID'] == 'stack-1'
         assert header['OBSTYPE'] == 'EXPOSE'
         assert header['ORIGNAME'] == 'cpt1m010-fa16-20240706-0031-e45.fits'
         assert 'DATE' in header
@@ -157,6 +157,7 @@ def test_build_thumbnail_metadata(file_extension):
     for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
         header['DAY-OBS'] = '20240706'
         header['MOLUID'] = 'mol-1'
+        header['STACKID'] = 'stack-1'
         header['NCOMBINE'] = 2
         header['RLEVEL'] = 9
         header['MOLFRNUM'] = 1
@@ -174,6 +175,7 @@ def test_build_thumbnail_metadata(file_extension):
         'SITEID': 'cpt',
         'TELID': '1m0a',
         'MOLUID': 'mol-1',
+        'STACKID': 'stack-1',
         'NCOMBINE': 2,
         'FRMTOTAL': 3,
         'PROPID': 'standard',
@@ -188,6 +190,7 @@ def test_build_thumbnail_metadata_rejects_missing_required_primary_value():
     output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', obstype='EXPOSE')
     for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
         header['MOLUID'] = 'mol-1'
+        header['STACKID'] = 'stack-1'
         header['NCOMBINE'] = 1
     output_frame.primary_hdu.meta['TELID'] = '  '
 
@@ -243,7 +246,7 @@ def test_run_final_returns_paths_and_writes(monkeypatch, tmp_path, written_suffi
         return_value=[SimpleNamespace(filepath=str(output_dir), filename=written_filename)]
     )
     stretch_for_display = MagicMock(return_value=np.zeros(FRAME_SHAPE, dtype=np.uint8))
-    monkeypatch.setattr(products, 'build_stacked_frame', lambda rows, runtime_context, moluid: output_frame)
+    monkeypatch.setattr(products, 'build_stacked_frame', lambda rows, runtime_context, stack_id: output_frame)
     monkeypatch.setattr(products, 'stretch_for_display', stretch_for_display)
     monkeypatch.setattr(products, 'save_jpg', lambda display, path, max_size: open(path, 'wb').close())
 
@@ -267,15 +270,16 @@ def test_run_preview_returns_thumbnails_and_metadata(monkeypatch, tmp_path):
     output_frame = make_frame('/tmp/cpt1m010-fa16-20240706-0031-e45.fits', value=1.0, obstype='EXPOSE', frmtotal=12)
     for header in (output_frame.primary_hdu.meta, output_frame['SCI'].meta):
         header['MOLUID'] = 'mol-1'
+        header['STACKID'] = 'stack-1'
         header['NCOMBINE'] = 3
     output_frame.write = MagicMock(return_value=[])
     context = FakeContext(processed_path=str(tmp_path))
     rows = [stackframe(31), stackframe(32), stackframe(33)]
     render_jpgs = MagicMock(return_value={'small_thumbnail': '/tmp/small.jpg', 'large_thumbnail': '/tmp/large.jpg'})
-    monkeypatch.setattr(products, 'build_stacked_frame', lambda stackframes, runtime_context, moluid: output_frame)
+    monkeypatch.setattr(products, 'build_stacked_frame', lambda stackframes, runtime_context, stack_id: output_frame)
     monkeypatch.setattr(products, 'render_jpgs', render_jpgs)
 
-    thumbnail_paths, thumbnail_metadata = products.run_preview(rows, context, 'mol-1')
+    thumbnail_paths, thumbnail_metadata = products.run_preview(rows, context, 'stack-1')
 
     output_frame.write.assert_not_called()
     # Three of twelve planned subs: the preview is rendered a quarter of the way to the finished image.
@@ -343,7 +347,7 @@ def test_write_and_reopen_smoke(monkeypatch, tmp_path, fpack):
     monkeypatch.setattr(products, 'save_jpg', lambda display, path, max_size: open(path, 'wb').close())
     monkeypatch.setattr('banzai.lco.dbs.save_processed_image', lambda filename, md5, db_address: None)
 
-    fits_path, _ = products.run_final(stackframes, context, 'mol-1')
+    fits_path, _ = products.run_final(stackframes, context, 'stack-1')
 
     assert fits_path.endswith('-e45.fits.fz' if fpack else '-e45.fits')
     if fpack:
@@ -362,7 +366,7 @@ def test_write_and_reopen_smoke(monkeypatch, tmp_path, fpack):
         assert hdul[0].header['RLEVEL'] == 45
         for header in (hdul[0].header, hdul['SCI'].header):
             assert header['NCOMBINE'] == 2
-            assert header['MOLUID'] == 'mol-1'
+            assert header['STACKID'] == 'stack-1'
             assert header['ORIGNAME'] == 'cpt1m010-fa16-20240706-0031-e45.fits'
             assert 'MOLFRNUM' not in header
             assert header['IMCOM001'] == 'cpt1m010-fa16-20240706-0031-n09.fits'
