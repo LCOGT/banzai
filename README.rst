@@ -33,6 +33,8 @@ Installation
 ------------
 BANZAI uses `uv <https://docs.astral.sh/uv/>`_ for dependency management. Install uv first if you don't have it:
 
+To run banzai using jupyter notebooks or any other anacode application, you must install banzai from the anaconda terminal using the same procedure.
+
 .. code-block:: bash
 
     curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -60,6 +62,10 @@ avoid pulling the full CUDA-bundled PyTorch wheel from PyPI (~2GB):
     uv pip install lco-banzai --extra-index-url https://download.pytorch.org/whl/cpu
 
 The same flag applies when using ``pip`` instead of ``uv pip``.
+
+If the error `ERROR: Could not build wheels for banzai, which is required to install pyproject.toml-based projects` comes up, on Windows you need to download Microsoft Visual C++ 14.0 or greater.
+
+You may also need to install lcogt_logging, as it is a separate module. This can be done by running `pip3 install lcogt_logging`
 
 Usage
 -----
