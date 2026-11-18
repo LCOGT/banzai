@@ -26,7 +26,8 @@ class DataProduct:
     @classmethod
     def from_fits(cls, hdu: fits.HDUList, filename: str, file_path: str):
         buffer = BytesIO()
-        hdu.writeto(buffer, output_verify='silentfix')
+        # Write CHECKSUM/DATASUM for every HDU, so the integrity of the products can be verified downstream
+        hdu.writeto(buffer, output_verify='silentfix', checksum=True)
         buffer.seek(0)
         return cls(buffer, filename, filepath=file_path)
 

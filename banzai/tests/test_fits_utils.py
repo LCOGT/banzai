@@ -8,6 +8,7 @@ import io
 from unittest.mock import patch, MagicMock
 
 from banzai.utils import fits_utils
+from banzai.data import DataProduct
 from banzai.exceptions import FrameNotAvailableError
 
 pytestmark = pytest.mark.fits_utils
@@ -178,6 +179,58 @@ def test_lossless_compression():
     buffer.seek(0)
     packed_hdu = fits.open(buffer, memmap=False)
     np.testing.assert_allclose(uncompressed_error, packed_hdu['ERR'].data, atol=1e-9)
+
+
+STALE_CHECKSUM_KEYWORDS = {'CHECKSUM': 'AAAAAAAAAAAAAAAA', 'DATASUM': '12345',
+                           'ZHECKSUM': 'BBBBBBBBBBBBBBBB', 'ZDATASUM': '0'}
+
+
+def make_hdu_list_with_stale_checksums():
+    # Headers copied from a raw frame keep the raw frame's checksums, which do not match the new data
+    primary_hdu = fits.PrimaryHDU(header=Header({'OBJECT': 'test', **STALE_CHECKSUM_KEYWORDS}))
+    science_hdu = fits.ImageHDU(data=np.random.normal(100.0, 5.0, size=(101, 103)).astype(np.float32),
+                                header=Header({'EXTNAME': 'SCI', **STALE_CHECKSUM_KEYWORDS}))
+    error_hdu = fits.ImageHDU(data=np.random.uniform(size=(101, 103)),
+                              header=Header({'EXTNAME': 'ERR', **STALE_CHECKSUM_KEYWORDS}))
+    catalog_hdu = fits.BinTableHDU.from_columns([fits.Column(name='flux', format='E', array=np.arange(5.0))],
+                                                header=Header({'EXTNAME': 'CAT', **STALE_CHECKSUM_KEYWORDS}))
+    return fits.HDUList([primary_hdu, science_hdu, error_hdu, catalog_hdu])
+
+
+def test_remove_checksum_keywords():
+    header = Header({'EXTNAME': 'SCI', **STALE_CHECKSUM_KEYWORDS})
+    cleaned_header = fits_utils.remove_checksum_keywords(header)
+    for keyword in fits_utils.FITS_CHECKSUM_KEYWORDS:
+        assert keyword not in cleaned_header
+    assert cleaned_header['EXTNAME'] == 'SCI'
+    # the input header is not modified
+    assert header['CHECKSUM'] == STALE_CHECKSUM_KEYWORDS['CHECKSUM']
+
+
+def test_pack_drops_stale_checksums_of_compressed_images():
+    packed_hdu_list = fits_utils.pack(make_hdu_list_with_stale_checksums(), ['ERR'])
+    buffer = io.BytesIO()
+    packed_hdu_list.writeto(buffer)
+    buffer.seek(0)
+    with fits.open(buffer, disable_image_compression=True) as stored_hdu_list:
+        for extension_name in ['SCI', 'ERR']:
+            stored_header = stored_hdu_list[extension_name].header
+            assert stored_header.get('ZHECKSUM') != STALE_CHECKSUM_KEYWORDS['ZHECKSUM']
+            assert stored_header.get('ZHECKSUM') != STALE_CHECKSUM_KEYWORDS['CHECKSUM']
+            assert stored_header.get('ZDATASUM') not in (STALE_CHECKSUM_KEYWORDS['ZDATASUM'],
+                                                         STALE_CHECKSUM_KEYWORDS['DATASUM'])
+
+
+@pytest.mark.parametrize('fpack', [True, False])
+def test_data_product_has_valid_checksums(fpack):
+    hdu_list = make_hdu_list_with_stale_checksums()
+    if fpack:
+        hdu_list = fits_utils.pack(hdu_list, ['ERR'])
+    data_product = DataProduct.from_fits(hdu_list, 'test.fits.fz' if fpack else 'test.fits', '/tmp')
+    with fits.open(data_product.file_buffer, disable_image_compression=True) as written_hdu_list:
+        for hdu in written_hdu_list:
+            assert hdu.verify_checksum() == 1, f'invalid CHECKSUM in {hdu.name}'
+            assert hdu.verify_datasum() == 1, f'invalid DATASUM in {hdu.name}'
 
 
 def test_open_image():
