@@ -723,7 +723,8 @@ class TestFinalizeStack:
         with patch('banzai.stacking.dbs') as mock_dbs, \
              patch('banzai.stacking.smartstack_products') as mock_products, \
              patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
-            mock_products.run_final.return_value = ('/o/e45.fits', '/o/small.jpg', '/o/large.jpg')
+            mock_products.run_final.return_value = (
+                '/o/e45.fits', {'small_thumbnail': '/o/small.jpg', 'large_thumbnail': '/o/large.jpg'})
             manager = MagicMock()
             manager.attach_mock(mock_dbs.claim_finalize_attempt, 'claim')
             manager.attach_mock(mock_products.run_final, 'run_final')
@@ -736,7 +737,8 @@ class TestFinalizeStack:
         mock_dbs.claim_finalize_attempt.assert_called_once_with(rc.db_address, stack.stack_id, FINALIZE_BACKOFF_SECONDS)
         mock_publish.assert_called_once_with(
             rc.broker_url, rc.SHIPPER_EXCHANGE, rc.SHIPPER_QUEUE_NAME,
-            fits_path='/o/e45.fits', small_thumbnail='/o/small.jpg', large_thumbnail='/o/large.jpg',
+            fits_path='/o/e45.fits', thumbnail_metadata=None,
+            small_thumbnail='/o/small.jpg', large_thumbnail='/o/large.jpg',
         )
         mock_dbs.mark_stack_terminal.assert_called_once_with(rc.db_address, stack.stack_id, 'complete')
 
@@ -764,7 +766,8 @@ class TestFinalizeStack:
         with patch('banzai.stacking.dbs') as mock_dbs, \
              patch('banzai.stacking.smartstack_products') as mock_products, \
              patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
-            mock_products.run_final.return_value = ('/o/e45.fits', '/o/small.jpg', '/o/large.jpg')
+            mock_products.run_final.return_value = (
+                '/o/e45.fits', {'small_thumbnail': '/o/small.jpg', 'large_thumbnail': '/o/large.jpg'})
             mock_publish.side_effect = RuntimeError('broker down')
 
             finalize_stack(rc, stack, stackframes, 'complete')
@@ -887,16 +890,24 @@ class TestProcessCameraTick:
             'grown': [_frame(1), _frame(2), _frame(3)],
             'same': [_frame(1), _frame(2), _frame(3)],
         }
+        thumbnail_paths = {'small_thumbnail': '/o/small.jpg', 'large_thumbnail': '/o/large.jpg'}
         with patch('banzai.stacking.dbs') as mock_dbs, \
              patch('banzai.stacking.finalize_stack') as mock_finalize, \
-             patch('banzai.stacking.smartstack_products') as mock_products:
+             patch('banzai.stacking.smartstack_products') as mock_products, \
+             patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
             mock_dbs.get_active_stacks.return_value = [grown, same]
             mock_dbs.get_stackframes.side_effect = lambda db_address, stack_id: frames_by_stack[stack_id]
+            mock_products.run_preview.return_value = (thumbnail_paths, {'STACKID': 'grown'})
 
             process_camera_tick(rc, 'cam1')
 
         mock_finalize.assert_not_called()
         mock_products.run_preview.assert_called_once_with(frames_by_stack['grown'], rc, 'grown')
+        # A preview has no FITS file; the shipper gets the JPEGs plus the metadata it would read from one.
+        mock_publish.assert_called_once_with(
+            rc.broker_url, rc.SHIPPER_EXCHANGE, rc.SHIPPER_QUEUE_NAME,
+            fits_path=None, thumbnail_metadata={'STACKID': 'grown'}, **thumbnail_paths,
+        )
         mock_dbs.set_preview_count.assert_called_once_with(rc.db_address, 'grown', 3)
 
     def test_preview_waits_for_stackframe_one(self):
@@ -916,21 +927,26 @@ class TestProcessCameraTick:
         mock_products.run_preview.assert_not_called()
         mock_dbs.set_preview_count.assert_not_called()
 
-    def test_preview_failure_does_not_update_count(self):
-        """If run_preview raises, the preview count is not advanced and the tick keeps going."""
+    @pytest.mark.parametrize('failing_step', ['render', 'publish'])
+    def test_preview_failure_does_not_update_count(self, failing_step):
+        """If rendering or publishing a preview raises, the count is not advanced so the next tick retries it."""
         rc = _runtime_context(SMARTSTACK_PREVIEWS=True)
         stack = _stack(frmtotal=5, last_preview_count=2)
         stackframes = [_frame(1), _frame(2), _frame(3)]
         with patch('banzai.stacking.dbs') as mock_dbs, \
              patch('banzai.stacking.finalize_stack') as mock_finalize, \
-             patch('banzai.stacking.smartstack_products') as mock_products:
+             patch('banzai.stacking.smartstack_products') as mock_products, \
+             patch('banzai.stacking.post_to_shipper_queue') as mock_publish:
             mock_dbs.get_active_stacks.return_value = [stack]
             mock_dbs.get_stackframes.return_value = stackframes
-            mock_products.run_preview.side_effect = RuntimeError('render failed')
+            mock_products.run_preview.return_value = (
+                {'small_thumbnail': '/o/small.jpg', 'large_thumbnail': '/o/large.jpg'}, {})
+            failing_call = mock_products.run_preview if failing_step == 'render' else mock_publish
+            failing_call.side_effect = RuntimeError(f'{failing_step} failed')
 
             process_camera_tick(rc, 'cam1')
 
-        mock_products.run_preview.assert_called_once()
+        failing_call.assert_called_once()
         mock_dbs.set_preview_count.assert_not_called()
         mock_finalize.assert_not_called()
 

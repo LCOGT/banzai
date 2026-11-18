@@ -23,24 +23,6 @@ def fits_basename(filename):
     raise ValueError(f'Could not parse FITS filename: {filename}')
 
 
-def make_jpg_filenames(smartstack_filename):
-    """Build small and large JPEG filenames for a smartstack FITS filename.
-
-    Parameters
-    ----------
-    smartstack_filename : str
-        Smartstack FITS filename.
-
-    Returns
-    -------
-    tuple
-        Tuple of ``(small_thumbnail, large_thumbnail)`` JPEG filenames, matching
-        the ``small_thumbnail``/``large_thumbnail`` keys in the shipper message.
-    """
-    base = fits_basename(smartstack_filename)
-    return f'{base}-small_thumbnail.jpg', f'{base}-large_thumbnail.jpg'
-
-
 def post_to_ingester(file_object, image, output_filename, meta=None):
     logger.info('Posting file to the archive', image=image)
     retry = True

@@ -60,6 +60,22 @@ def stack_has_timed_out(stack_row, timeout_minutes, now=None):
     return (now - stack_row.last_stackframe_at) > datetime.timedelta(minutes=timeout_minutes)
 
 
+def publish_products(runtime_context, fits_path, thumbnail_paths, thumbnail_metadata=None):
+    """Tell the site shipper about smartstack products: a final FITS file with its JPEGs, or preview JPEGs alone.
+
+    A preview has no FITS file, so it passes ``fits_path=None`` and the ``thumbnail_metadata`` the shipper would
+    otherwise read from the FITS header.
+    """
+    post_to_shipper_queue(
+        runtime_context.broker_url,
+        runtime_context.SHIPPER_EXCHANGE,
+        runtime_context.SHIPPER_QUEUE_NAME,
+        fits_path=fits_path,
+        thumbnail_metadata=thumbnail_metadata,
+        **thumbnail_paths,
+    )
+
+
 def finalize_stack(runtime_context, stack_row, stackframes, status):
     """Create and publish final products for a complete or timed-out stack.
 
@@ -81,16 +97,8 @@ def finalize_stack(runtime_context, stack_row, stackframes, status):
 
     finalize_attempt = dbs.claim_finalize_attempt(runtime_context.db_address, stack_id, FINALIZE_BACKOFF_SECONDS)
     try:
-        fits_path, small_thumbnail, large_thumbnail = smartstack_products.run_final(
-            stackframes, runtime_context, stack_id)
-        post_to_shipper_queue(
-            runtime_context.broker_url,
-            runtime_context.SHIPPER_EXCHANGE,
-            runtime_context.SHIPPER_QUEUE_NAME,
-            fits_path=fits_path,
-            small_thumbnail=small_thumbnail,
-            large_thumbnail=large_thumbnail,
-        )
+        fits_path, thumbnail_paths = smartstack_products.run_final(stackframes, runtime_context, stack_id)
+        publish_products(runtime_context, fits_path, thumbnail_paths)
         dbs.mark_stack_terminal(runtime_context.db_address, stack_id, status)
         logger.info('Finalized smartstack', extra_tags={'smartstack_event': 'terminal',
                                                         'smartstack_status': status,
@@ -130,11 +138,13 @@ def process_camera_tick(runtime_context, camera):
               and stackframes[0].stack_num == 1
               and len(stackframes) > stack.last_preview_count):
             try:
-                smartstack_products.run_preview(stackframes, runtime_context, stack.stack_id)
+                thumbnail_paths, thumbnail_metadata = smartstack_products.run_preview(
+                    stackframes, runtime_context, stack.stack_id)
+                publish_products(runtime_context, None, thumbnail_paths, thumbnail_metadata)
                 dbs.set_preview_count(runtime_context.db_address, stack.stack_id, len(stackframes))
             except Exception:
                 # Do not advance the preview count on failure so the next tick retries it.
-                logger.warning('Failed to render smartstack preview', exc_info=True,
+                logger.warning('Failed to render or publish smartstack preview', exc_info=True,
                                extra_tags={'stack_id': stack.stack_id})
 
 

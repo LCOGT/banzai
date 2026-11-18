@@ -177,8 +177,8 @@ Smartstack does not align or resample images. The input arrays must already line
 
 Input filenames are expected to end in `-n09.fits` or `-n09.fits.fz`.
 
-- **Preview:** waits for logical frame 1 so the filename does not change. It writes a small JPEG of up to 300 pixels and a large JPEG of up to 900 pixels. Each preview replaces the same files. The shipper message has `fits: null` and includes `thumbnail_metadata`.
-- **Final:** writes an `e45` FITS and replaces the same two JPEGs. A timed-out stack that never received frame 1 uses its lowest-numbered frame instead.
+- **Preview:** waits for logical frame 1 so the filename does not change. It writes a small JPEG of up to 300 pixels and a large JPEG of up to 900 pixels. Each preview replaces the same files. The shipper message has `fits: null` and includes `thumbnail_metadata`. Previews are stretched like an exposure building up: the stretch is the one the finished stack is expected to get, applied to the fraction of light collected so far (`NCOMBINE / FRMTOTAL`), so early previews are dark and brighten into the final image. A preview without a usable `FRMTOTAL` gets the finished-stack stretch.
+- **Final:** writes an `e45` FITS and replaces the same two JPEGs. A timed-out stack that never received frame 1 uses its lowest-numbered frame instead. The final JPEGs always get the finished-stack stretch, including for a stack that timed out short of `FRMTOTAL`.
 
 For example:
 
